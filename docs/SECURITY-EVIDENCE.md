@@ -13,7 +13,7 @@ checklist in [SECURITY.md](../SECURITY.md) still has to be walked against the li
 
 | What | Command | CI job |
 | --- | --- | --- |
-| Unit + API tests (80) | `cd backend && pytest` | `backend` |
+| Unit + API tests (136) | `cd backend && pytest` | `backend` |
 | Full games, secrecy checks | `python scripts/simulate.py --base http://localhost:10000` | `docker` |
 | Abuse suite (Locust) | `bash scripts/loadtest/run.sh` | `abuse` |
 | OWASP ZAP baseline | see `docker` job in `.github/workflows/ci.yml` | `docker` |
@@ -140,6 +140,46 @@ around the table.
   escaped 12% at 5 players before the change and 37-43% at 4-8 players after it (37-38% at 5). Bots are
   a model of play, not people: real tables will vary.
 
+## 6. Blackjack, Crossword, Claude content, supply chain (run 2026-10-03)
+
+- **Backend:** 136 tests. New coverage:
+  - Blackjack: a 300-game fuzz checks chip conservation and that the hole card and shoe never reach a
+    view before the reveal.
+  - Crossword: 200 generated grids checked for legality; unsolved answers never appear in a view.
+  - Content generation (stubbed client): validation per kind, de-duplication, the hourly budget and
+    backoff, refusal handling, persistence across restarts, and committed extras going through the
+    same validator.
+  - Edge secret: requests without the CDN header are refused, and production won't start with 2 hops
+    and no secret.
+- **Simulator:** all seven games pass with 5 bots against the final image.
+  - Blackjack: no frame shows more than one dealer card before settling, and chip changes equal the
+    reported net.
+  - Crossword: no unsolved answer ever appears, a wrong guess is rejected, and the answers are
+    revealed at the end.
+- **Playwright:** 14/14 on the final image. Reviewing its screenshots found a real bug: the lobby
+  card's bare `mural` class pulled in the tile grid and squashed the card on phones. Fixed in `454144d`.
+- **Claude content:**
+  - Generated text is validated and length-capped before it joins a pool.
+  - It's rendered by React as text (no HTML), so a hostile completion can at worst be odd words on
+    screen.
+  - The key is `repr=False` and is never logged; failures log only the exception type.
+  - **Not run against the real API**: no key has been used yet.
+- **Image:**
+  - Trivy (`aquasec/trivy` v0.75.0, pinned by digest), CRITICAL/HIGH with a fix available: **0**.
+  - The first scan found 1 Debian HIGH (libpcre2) and 4 HIGH in pip's vendored urllib3/msgpack and in
+    setuptools. The fix: apply Debian security updates at build time, and remove pip, setuptools and
+    wheel from the runtime image (nothing installs at runtime).
+- **CI supply chain:**
+  - Every action is pinned to a commit SHA (`carabiner fix`), checkouts set `persist-credentials:
+    false`, and the default token is read-only.
+  - The old `aquasecurity/trivy-action@0.28.0` ref never existed, so the docker job could not have
+    passed; it's replaced by the digest-pinned image.
+  - `carabiner scan`: one informational finding (`*.pem`/`*.key` not gitignored), now fixed.
+  - gitleaks v8.28.0 over all 29 commits: no leaks.
+- **Abuse suite:** 7/7 pass on the final image (13th socket 403, flood 1008, oversize 1009 in 1 ms,
+  slow reader dropped after 15 s while the room played on, create flood 429 from #6, code guessing 429
+  from #4).
+
 ## What is not covered (be honest)
 
 - **Single instance, in-memory limits.** Rate limits and rooms reset on restart and are per process.
@@ -147,7 +187,8 @@ around the table.
   Cloudflare (WAF rate rules, Bot Fight Mode, optionally Turnstile on room creation), and none of that
   is set up or tested yet.
 - **No volumetric DDoS testing**, and none would be meaningful against a laptop.
-- **Not run against Render.** `TRUSTED_PROXY_HOPS=1` (Render's proxy) and `2` (Cloudflare) are
-  untested until Phase 5.
+- **Not run against Render or Cloudflare.** `TRUSTED_PROXY_HOPS=1` (Render) and `2` (Cloudflare +
+  `EDGE_SECRET`) are untested against the real proxies. SECURITY.md "Edge setup" step 7 is the check.
+- **CI has not run on GitHub Actions yet**; every job's commands were run locally.
 - **No external review or penetration test.** Treat this as a strong, evidenced baseline, not a
   certification.
