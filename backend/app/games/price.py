@@ -11,124 +11,9 @@ import hashlib
 from typing import Any, ClassVar
 
 from .base import Game, GameError, as_int
+from .content import PRICE_ITEMS
 
-ITEMS: list[dict[str, Any]] = [
-    {
-        "name": "Used lighthouse",
-        "blurb": "Minor haunting. Sold as-is. Lamp not included.",
-        "emoji": "🗼",
-        "price": 450_000,
-    },
-    {
-        "name": "Sentient toaster",
-        "blurb": "Judges your bread choices. Has opinions about rye.",
-        "emoji": "🍞",
-        "price": 2_400,
-    },
-    {
-        "name": "Pre-owned submarine",
-        "blurb": "One careful owner. Smells faintly of soup.",
-        "emoji": "🚢",
-        "price": 1_200_000,
-    },
-    {
-        "name": "Haunted vending machine",
-        "blurb": "Dispenses regret and sometimes crisps.",
-        "emoji": "🥤",
-        "price": 6_000,
-    },
-    {
-        "name": "Suit of armour, medium",
-        "blurb": "Squeaks when it thinks no one is listening.",
-        "emoji": "🛡️",
-        "price": 14_000,
-    },
-    {
-        "name": "Vintage typewriter, cursed",
-        "blurb": "Only types the word 'soon'.",
-        "emoji": "⌨️",
-        "price": 3_800,
-    },
-    {"name": "Small cloud", "blurb": "Hand-harvested. Rains on request. Mostly.", "emoji": "☁️", "price": 900},
-    {
-        "name": "Gently used time machine",
-        "blurb": "Only goes forward. At the normal speed.",
-        "emoji": "⏳",
-        "price": 88_000,
-    },
-    {
-        "name": "Medieval castle (draughty)",
-        "blurb": "Moat is more of a puddle these days.",
-        "emoji": "🏰",
-        "price": 2_600_000,
-    },
-    {
-        "name": "Talking parrot, rude",
-        "blurb": "Fluent in three languages and all the wrong words.",
-        "emoji": "🦜",
-        "price": 1_500,
-    },
-    {
-        "name": "Rocking chair, self-rocking",
-        "blurb": "Never fully stops. Please do not make eye contact.",
-        "emoji": "🪑",
-        "price": 1_100,
-    },
-    {
-        "name": "Mini monorail",
-        "blurb": "Seats four. Goes in one loop. Very proud of it.",
-        "emoji": "🚝",
-        "price": 320_000,
-    },
-    {
-        "name": "Crystal ball, slightly cracked",
-        "blurb": "Predictions arrive a bit late.",
-        "emoji": "🔮",
-        "price": 700,
-    },
-    {
-        "name": "Lifetime supply of left socks",
-        "blurb": "Right socks sold separately. And never.",
-        "emoji": "🧦",
-        "price": 240,
-    },
-    {
-        "name": "Hot-air balloon with opinions",
-        "blurb": "Refuses to fly on Mondays.",
-        "emoji": "🎈",
-        "price": 52_000,
-    },
-    {
-        "name": "Antique robot butler",
-        "blurb": "Polite, thorough, quietly keeping notes.",
-        "emoji": "🤖",
-        "price": 19_000,
-    },
-    {
-        "name": "Private island, tiny",
-        "blurb": "One palm tree. Very exclusive. Very windy.",
-        "emoji": "🏝️",
-        "price": 740_000,
-    },
-    {
-        "name": "Dragon egg (probably)",
-        "blurb": "Warm to the touch. Do not leave near curtains.",
-        "emoji": "🥚",
-        "price": 36_000,
-    },
-    {
-        "name": "Grand piano, bit damp",
-        "blurb": "Plays itself at 3 a.m. Always the same song.",
-        "emoji": "🎹",
-        "price": 9_500,
-    },
-    {
-        "name": "Wizard's tower, fixer-upper",
-        "blurb": "Stairs rearrange themselves. Planning permission pending.",
-        "emoji": "🧙",
-        "price": 380_000,
-    },
-]
+ITEMS = PRICE_ITEMS
 
 MODIFIERS = [0.5, 1.0, 2.0]
 MODIFIER_WEIGHTS = [0.35, 0.30, 0.35]
@@ -158,7 +43,7 @@ class PriceIsWeird(Game):
         return {"guess": 25.0, "reveal": 10.0}
 
     def start(self) -> None:
-        self.items = self.rng.sample(ITEMS, self.ROUNDS)
+        self.items = [ITEMS[i] for i in self.deal("items", len(ITEMS), self.ROUNDS)]
         self.round = 0
         self.chips = {p.id: CHIPS_PER_GAME for p in self.players}
         self.rollover = 0

@@ -68,7 +68,7 @@ export function Alibi({ view, you, receivedAt, send, tv = false }: Props) {
   return (
     <div className="seg-alibi stack">
       {show.node}
-      <ShowHead sign={sign ?? view.phase} title="Murder at the Manor" remaining={view.remaining} receivedAt={receivedAt}>
+      <ShowHead sign={sign ?? view.phase} title={view.setting} remaining={view.remaining} receivedAt={receivedAt}>
         <p>
           {view.victim} was found in the <b>{view.scene}</b> around <b>{view.murder_label}</b>. One of you did it.
         </p>

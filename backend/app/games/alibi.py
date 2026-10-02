@@ -21,10 +21,10 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from .base import Game, GameError, as_int
+from .content import ALIBI_SETTINGS
 
-SLOT_LABELS = ["7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM"]
-LOCATIONS = ["Kitchen", "Garden", "Library", "Cellar", "Balcony", "Garage"]
-VICTIM = "Lord Ashby"
+# Every setting has 6 locations and 6 half-hour slots; the setting changes each game (no repeats).
+SLOT_LABELS = ALIBI_SETTINGS[0]["slots"]  # shape reference: all settings have this many slots
 INTERROGATION_ROUNDS = 3
 ASKS_PER_ROUND = 2
 
@@ -46,10 +46,15 @@ class Alibi(Game):
     # -- setup --------------------------------------------------------------
     def start(self) -> None:
         rng = self.rng
+        setting = ALIBI_SETTINGS[self.deal("settings", len(ALIBI_SETTINGS), 1)[0]]
+        self.setting: str = setting["title"]
+        self.victim: str = setting["victim"]
+        self.locations: list[str] = list(setting["locations"])
+        self.slots: list[str] = list(setting["slots"])
         ids = self.player_ids
         self.killer = rng.choice(ids)
         innocents = [i for i in ids if i != self.killer]
-        n_slots = len(SLOT_LABELS)
+        n_slots = len(self.slots)
         self.murder_slot = rng.randrange(1, n_slots - 1)
         self.witness_slot = rng.choice([s for s in range(n_slots) if s != self.murder_slot])
 
@@ -59,20 +64,20 @@ class Alibi(Game):
         self.witness_true_location = ""
         for s in range(n_slots):
             if s == self.murder_slot:
-                scene = rng.choice(LOCATIONS)
-                empty = rng.choice([x for x in LOCATIONS if x != scene])
+                scene = rng.choice(self.locations)
+                empty = rng.choice([x for x in self.locations if x != scene])
                 self.scene = scene
                 truth[self.killer][s] = scene
-                pool = [x for x in LOCATIONS if x not in (scene, empty)]
+                pool = [x for x in self.locations if x not in (scene, empty)]
                 for i in innocents:
                     truth[i][s] = rng.choice(pool)
                 fake[s] = empty
             elif s == self.witness_slot:
-                true_loc = rng.choice(LOCATIONS)
-                empty = rng.choice([x for x in LOCATIONS if x != true_loc])
+                true_loc = rng.choice(self.locations)
+                empty = rng.choice([x for x in self.locations if x != true_loc])
                 self.witness_true_location = true_loc
                 truth[self.killer][s] = true_loc
-                pool = [x for x in LOCATIONS if x != empty]
+                pool = [x for x in self.locations if x != empty]
                 witness = rng.choice(innocents)
                 truth[witness][s] = true_loc
                 for i in innocents:
@@ -81,7 +86,7 @@ class Alibi(Game):
                 fake[s] = empty
             else:
                 for i in ids:
-                    truth[i][s] = rng.choice(LOCATIONS)
+                    truth[i][s] = rng.choice(self.locations)
         self.truth = truth
         self.fake = fake
 
@@ -119,7 +124,7 @@ class Alibi(Game):
         self.claims[key] = {
             "speaker": pid,
             "slot": slot,
-            "label": SLOT_LABELS[slot],
+            "label": self.slots[slot],
             "location": entry["location"],
             "with": list(entry["with"]),
         }
@@ -131,7 +136,7 @@ class Alibi(Game):
             "kind": "camera",
             "location": location,
             "slot": slot,
-            "label": SLOT_LABELS[slot],
+            "label": self.slots[slot],
             "occupants": occupants,
         }
 
@@ -148,7 +153,7 @@ class Alibi(Game):
             self.clues.append(self._camera(self.witness_true_location, self.witness_slot))
             self.log.append({"kind": "clue", "text": "New clue: a camera feed was recovered."})
         elif self.round == 2:
-            non_scene = [x for x in LOCATIONS if x != self.scene]
+            non_scene = [x for x in self.locations if x != self.scene]
             self.clues.append(self._camera(self.rng.choice(non_scene), self.murder_slot))
             self.log.append({"kind": "clue", "text": "New clue: another camera feed was recovered."})
         self.bump()
@@ -204,11 +209,11 @@ class Alibi(Game):
                         {
                             "kind": "mismatch",
                             "slot": slot,
-                            "label": SLOT_LABELS[slot],
+                            "label": self.slots[slot],
                             "players": sorted((speaker, other)),
                             "text": (
                                 f"{self.name_of(speaker)} says they were with {self.name_of(other)} "
-                                f"at {SLOT_LABELS[slot]}, but {self.name_of(other)}'s story doesn't match."
+                                f"at {self.slots[slot]}, but {self.name_of(other)}'s story doesn't match."
                             ),
                         }
                     )
@@ -229,10 +234,10 @@ class Alibi(Game):
                         {
                             "kind": "camera",
                             "slot": slot,
-                            "label": SLOT_LABELS[slot],
+                            "label": self.slots[slot],
                             "players": [speaker],
                             "text": (
-                                f"The {clue['location']} camera at {SLOT_LABELS[slot]} "
+                                f"The {clue['location']} camera at {self.slots[slot]} "
                                 f"contradicts {self.name_of(speaker)}'s story."
                             ),
                         }
@@ -243,13 +248,13 @@ class Alibi(Game):
     def handle(self, pid: str, action: dict[str, Any]) -> None:
         self.require_player(pid)
         kind = action.get("a")
-        n_slots = len(SLOT_LABELS)
+        n_slots = len(self.slots)
         if kind == "reveal":
             self._need("interrogate")
             slot = as_int(action.get("slot"), lo=0, hi=n_slots - 1, field="Slot")
             if self._publish(pid, slot):
                 self.log.append(
-                    {"kind": "reveal", "text": f"{self.name_of(pid)} shared their {SLOT_LABELS[slot]} alibi."}
+                    {"kind": "reveal", "text": f"{self.name_of(pid)} shared their {self.slots[slot]} alibi."}
                 )
                 self.bump()
         elif kind == "ask":
@@ -268,9 +273,7 @@ class Alibi(Game):
             self.log.append(
                 {
                     "kind": "ask",
-                    "text": (
-                        f"{self.name_of(pid)} grilled {self.name_of(target)} about {SLOT_LABELS[slot]}."
-                    ),
+                    "text": (f"{self.name_of(pid)} grilled {self.name_of(target)} about {self.slots[slot]}."),
                 }
             )
             self.bump()
@@ -316,7 +319,7 @@ class Alibi(Game):
         card = [
             {
                 "slot": e["slot"],
-                "label": SLOT_LABELS[e["slot"]],
+                "label": self.slots[e["slot"]],
                 "location": e["location"],
                 "with": e["with"],
                 "shared": (pid, e["slot"]) in self.claims,
@@ -330,12 +333,13 @@ class Alibi(Game):
             "rounds": INTERROGATION_ROUNDS,
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],
-            "victim": VICTIM,
+            "setting": self.setting,
+            "victim": self.victim,
             "scene": self.scene,
             "murder_slot": self.murder_slot,
-            "murder_label": SLOT_LABELS[self.murder_slot],
-            "slots": SLOT_LABELS,
-            "locations": LOCATIONS,
+            "murder_label": self.slots[self.murder_slot],
+            "slots": self.slots,
+            "locations": self.locations,
             "you": {
                 "card": card,
                 "is_killer": is_killer,

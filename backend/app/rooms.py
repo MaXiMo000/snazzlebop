@@ -16,6 +16,7 @@ from typing import Any, Protocol
 
 from .config import Settings
 from .games import REGISTRY, Game, GameError, Player, catalog
+from .games.base import Deck
 from .security import sign_token
 
 log = logging.getLogger("snazzlebop.rooms")
@@ -64,6 +65,8 @@ class Room:
     conns: dict[str, Connection] = field(default_factory=dict)
     # TV (spectator) ids -> live connection or None. Not players: no seat, no score, read-only.
     viewers: dict[str, Connection | None] = field(default_factory=dict)
+    # No-repeat content decks, shared by every game played in this room.
+    decks: dict[str, Deck] = field(default_factory=dict)
     phase: str = "lobby"  # lobby | game | results
     game: Game | None = None
     total_scores: dict[str, int] = field(default_factory=dict)
@@ -320,6 +323,7 @@ class Hub:
                 rng=self.rng,
                 clock=self.clock,
                 timings=self.timings.get(cls.game_id),
+                decks=room.decks,
             )
             game.start()
             room.game, room.phase = game, "game"

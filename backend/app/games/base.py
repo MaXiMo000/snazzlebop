@@ -42,6 +42,40 @@ def as_int(value: Any, *, lo: int, hi: int, field: str) -> int:
     return value
 
 
+class Deck:
+    """Deals indices into a content pool without repeats until every card has been seen.
+
+    Rooms keep their decks across games, so a party never sees the same prompt or item twice
+    until the pool runs out. A reshuffle never opens with cards dealt just before it.
+    """
+
+    def __init__(self, size: int, rng: random.Random) -> None:
+        if size < 1:
+            raise ValueError("empty pool")
+        self.size = size
+        self.rng = rng
+        self._stack: list[int] = []
+        self._recent: list[int] = []
+
+    def draw(self, n: int) -> list[int]:
+        if n > self.size:
+            raise ValueError("pool smaller than the draw")
+        out: list[int] = []
+        while len(out) < n:
+            if not self._stack:
+                avoid = set(out) | set(self._recent[-min(n, self.size // 2) :])
+                fresh = [i for i in range(self.size) if i not in avoid]
+                self.rng.shuffle(fresh)
+                held = [i for i in self._recent if i in avoid and i not in out]
+                # pop() takes from the end: recent cards go to the bottom of the new pass.
+                self._stack = held + fresh
+            card = self._stack.pop()
+            if card not in out:
+                out.append(card)
+        self._recent = (self._recent + out)[-self.size :]
+        return out
+
+
 class Game(ABC):
     game_id: ClassVar[str]
     title: ClassVar[str]
@@ -55,6 +89,7 @@ class Game(ABC):
         rng: random.Random | None = None,
         clock: Callable[[], float] = time.monotonic,
         timings: dict[str, float] | None = None,
+        decks: dict[str, Deck] | None = None,
     ) -> None:
         if not self.min_players <= len(players) <= self.max_players:
             raise GameError(
@@ -65,6 +100,7 @@ class Game(ABC):
         self.rng: random.Random = rng or random.SystemRandom()
         self.clock = clock
         self.timings = {**self.default_timings(), **(timings or {})}
+        self.decks = decks if decks is not None else {}
         self.version = 0
         self.phase = "init"
         self.round = 0
@@ -95,6 +131,14 @@ class Game(ABC):
     def stage(self) -> str:
         """Identifies the current wait. Unlike `version` it doesn't change when someone acts."""
         return f"{self.phase}:{self.round}"
+
+    def deal(self, pool: str, size: int, n: int) -> list[int]:
+        """n distinct indices into a content pool, never repeating within this room's decks."""
+        key = f"{self.game_id}:{pool}"
+        deck = self.decks.get(key)
+        if deck is None or deck.size != size:
+            deck = self.decks[key] = Deck(size, self.rng)
+        return deck.draw(n)
 
     def bump(self) -> None:
         self.version += 1

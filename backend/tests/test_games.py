@@ -371,3 +371,54 @@ class SpectatorTests(unittest.TestCase):
             self.assertFalse(view["you"]["is_killer"])
             self.assertIsNone(view["you"]["fake_slots"])
             self.assertNotIn("result", view)
+
+
+class DeckTests(unittest.TestCase):
+    def test_no_repeats_until_the_pool_is_exhausted_then_no_back_to_back(self):
+        from app.games.base import Deck
+
+        deck = Deck(10, random.Random(5))
+        first = deck.draw(4) + deck.draw(3) + deck.draw(3)
+        self.assertEqual(sorted(first), list(range(10)))  # every card once before any repeat
+        nxt = deck.draw(4)
+        self.assertEqual(len(set(nxt)), 4)
+        self.assertTrue(set(nxt).isdisjoint(first[-3:]))  # the reshuffle doesn't open with recent cards
+        straddle = Deck(5, random.Random(1))
+        straddle.draw(3)
+        self.assertEqual(len(set(straddle.draw(4))), 4)  # a draw that crosses a reshuffle has no dupes
+
+    def test_games_share_a_rooms_decks_across_rounds_and_games(self):
+        decks: dict = {}
+        seen: list[str] = []
+        for _ in range(4):
+            g = FrenemyRadar([Player(f"p{i}", f"N{i}") for i in range(3)], rng=random.Random(), decks=decks)
+            g.start()
+            seen += g.prompts
+        self.assertEqual(len(seen), len(set(seen)))  # 4 games x 3 rounds, never the same prompt twice
+
+
+class ContentTests(unittest.TestCase):
+    """Long-term fun needs big pools: a group should go a long time without a repeat."""
+
+    def test_pools_are_big_unique_and_well_formed(self):
+        from app.games.content import ALIBI_SETTINGS, FRENEMY_PROMPTS, PRICE_ITEMS
+
+        self.assertGreaterEqual(len(set(FRENEMY_PROMPTS)), 150)
+        self.assertEqual(len(set(FRENEMY_PROMPTS)), len(FRENEMY_PROMPTS))
+        self.assertGreaterEqual(len({i["name"] for i in PRICE_ITEMS}), 150)
+        self.assertEqual(len({i["name"] for i in PRICE_ITEMS}), len(PRICE_ITEMS))
+        for it in PRICE_ITEMS:
+            self.assertTrue(it["emoji"] and it["blurb"] and 0 < it["price"] <= 10_000_000)
+        self.assertGreaterEqual(len(ALIBI_SETTINGS), 10)
+        for st in ALIBI_SETTINGS:
+            self.assertEqual(len(set(st["locations"])), 6, st["title"])
+            self.assertEqual(len(set(st["slots"])), 6, st["title"])
+
+    def test_alibi_setting_changes_every_game_in_a_room(self):
+        decks: dict = {}
+        titles = []
+        for _ in range(10):
+            g = Alibi([Player(f"p{i}", f"N{i}") for i in range(4)], rng=random.Random(), decks=decks)
+            g.start()
+            titles.append(g.view_for("p0")["setting"])
+        self.assertEqual(len(set(titles)), 10)

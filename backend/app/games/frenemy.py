@@ -5,29 +5,9 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from .base import Game, GameError
+from .content import FRENEMY_PROMPTS
 
-PROMPTS = [
-    "Most likely to survive a zombie apocalypse",
-    "Worst at keeping a secret",
-    "Most likely to become a millionaire by accident",
-    "Would get lost in their own neighbourhood",
-    "Most likely to cry at a dog food advert",
-    "First to text back 'on my way' while still in bed",
-    "Would win a staring contest against a cat",
-    "Most likely to adopt 14 houseplants and name them all",
-    "Best at talking their way out of a parking ticket",
-    "Most likely to accidentally join a cult",
-    "Would sleep through their own surprise party",
-    "Most likely to be a secret superhero",
-    "Always has snacks in their bag",
-    "Would panic-buy 40 rolls of tape",
-    "Most likely to go viral for the wrong reason",
-    "Gives the worst directions with the most confidence",
-    "Would survive a week on a desert island by sheer stubbornness",
-    "Most likely to reply-all by mistake",
-    "Runs on 'five more minutes' energy",
-    "Most likely to win a hot-dog eating contest",
-]
+PROMPTS = FRENEMY_PROMPTS
 
 
 class FrenemyRadar(Game):
@@ -47,7 +27,7 @@ class FrenemyRadar(Game):
         return {"rank": 60.0, "reveal": 20.0}
 
     def start(self) -> None:
-        self.prompts = self.rng.sample(PROMPTS, self.ROUNDS)
+        self.prompts = [PROMPTS[i] for i in self.deal("prompts", len(PROMPTS), self.ROUNDS)]
         self.round = 0
         # rankings[round][ranker_id] = ordered list of player ids, index 0 = "most"
         self.rankings: list[dict[str, list[str]]] = [{} for _ in range(self.ROUNDS)]

@@ -53,6 +53,7 @@ export interface AlibiClaim {
 export interface AlibiView extends GameBase {
   game: "alibi";
   players: { id: string; name: string }[];
+  setting: string;
   victim: string;
   scene: string;
   murder_slot: number;
