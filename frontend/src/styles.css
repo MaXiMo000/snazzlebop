@@ -1152,18 +1152,18 @@ details summary {
 .burst {
   position: relative;
   display: inline-block;
-  padding: 18px 26px;
+  padding: 34px 30px;
   isolation: isolate;
 }
+/* Rays stay inside the burst's own padded box, so they never sit behind neighbouring text. */
 .burst::before {
   content: "";
   position: absolute;
-  inset: -40%;
+  inset: 0;
   z-index: -1;
   background: repeating-conic-gradient(var(--mustard) 0 12deg, transparent 12deg 24deg);
-  border-radius: 50%;
-  -webkit-mask: radial-gradient(circle, #000 35%, transparent 70%);
-  mask: radial-gradient(circle, #000 35%, transparent 70%);
+  -webkit-mask: radial-gradient(closest-side, #000 55%, transparent 100%);
+  mask: radial-gradient(closest-side, #000 55%, transparent 100%);
   animation: rays 8s linear infinite;
 }
 @keyframes rays {

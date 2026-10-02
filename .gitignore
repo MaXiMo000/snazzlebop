@@ -22,3 +22,4 @@ scripts/loadtest/out/
 frontend/test-results/
 frontend/playwright-report/
 frontend/e2e/screenshots/
+frontend/lighthouse/
