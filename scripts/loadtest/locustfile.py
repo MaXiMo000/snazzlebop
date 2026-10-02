@@ -20,6 +20,7 @@ the proxy buffers on the client's behalf and would hide the slow-reader backpres
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import secrets
@@ -135,7 +136,7 @@ class Suite:
     def message_flood(self) -> str:
         ws = self.seat(1)
         self.state(ws)
-        sent, t0 = 0, time.perf_counter()
+        sent = 0
         try:
             for _ in range(100):
                 ws.send(json.dumps({"t": "ping"}))
@@ -153,10 +154,8 @@ class Suite:
             ws = self.seat(seat)
             self.state(ws)
             t0 = time.perf_counter()
-            try:
+            with contextlib.suppress(websocket.WebSocketConnectionClosedException, OSError):
                 ws.send("x" * size)
-            except (websocket.WebSocketConnectionClosedException, OSError):
-                pass
             code = self.close_code(ws, 5)
             took = time.perf_counter() - t0
             if size > 16_384:
