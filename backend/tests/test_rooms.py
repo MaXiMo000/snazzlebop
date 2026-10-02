@@ -57,7 +57,9 @@ class NameTests(unittest.TestCase):
                 clean_name(bad)
 
 
-class HubTests(unittest.IsolatedAsyncioTestCase):
+class HubHarness(unittest.IsolatedAsyncioTestCase):
+    """Helpers only (no tests), so other modules can build hubs without re-running these tests."""
+
     def make_hub(self, **overrides):
         settings = Settings(secret_key="s" * 40, **overrides)
         self.finished: list[tuple[str, dict]] = []
@@ -80,6 +82,8 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
             await hub.connect(room, p.id, conns[p.id])
         return room, host.id, conns
 
+
+class HubTests(HubHarness):
     async def test_create_join_and_limits(self):
         hub = self.make_hub(max_rooms=2, max_players_per_room=3)
         room, host, _ = hub.create_room("Host")
@@ -321,10 +325,13 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
     async def test_starting_a_game_asks_for_more_of_its_content(self):
         started = []
         hub = self.make_hub()
-        hub.on_game_started = started.append
+        hub.on_game_started = lambda game, theme: started.append((game, theme))
         room, host, conns = await self.party(hub, 3)
         await hub.handle_message(room, host, conns[host], {"t": "start", "game": "frenemy"})
-        self.assertEqual(started, ["frenemy"])
+        await hub.handle_message(room, host, conns[host], {"t": "lobby"})
+        await hub.handle_message(room, host, conns[host], {"t": "theme", "theme": "movies"})
+        await hub.handle_message(room, host, conns[host], {"t": "start", "game": "price"})
+        self.assertEqual(started, [("frenemy", ""), ("price", "movies")])
 
     async def test_stuck_reader_never_stalls_the_room(self):
         # A client that stops reading: its sends block forever once the buffers fill.

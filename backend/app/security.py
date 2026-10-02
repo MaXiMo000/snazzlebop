@@ -308,7 +308,11 @@ class HttpRateLimit:
         path, method = scope.get("path", ""), scope.get("method", "GET")
         if method == "POST" and path == "/api/rooms":
             return "create"
-        if method == "POST" and path.startswith("/api/rooms/") and path.endswith(("/join", "/tv")):
+        if (
+            method == "POST"
+            and path.startswith("/api/rooms/")
+            and path.endswith(("/join", "/tv", "/audience"))
+        ):
             return "join"
         return "default"
 

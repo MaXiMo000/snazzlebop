@@ -179,6 +179,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         return {"code": room.code, "token": token}
 
+    @app.post("/api/rooms/{code}/audience")
+    async def audience_seat(code: str, body: NameBody, request: Request) -> dict[str, str]:
+        """A named seat in the crowd (react, predict). Rate limited and penalised exactly like join."""
+        try:
+            room, watcher, token = hub.join_audience(code, body.name)
+        except HubError as exc:
+            if exc.code == "room_not_found":
+                limiters["join"].penalize(
+                    client_ip(request.scope, settings.trusted_proxy_hops, settings.client_ip_header), 4
+                )
+            raise
+        return {"code": room.code, "player_id": watcher.id, "token": token}
+
     @app.websocket("/ws/{code}")
     async def ws_route(websocket: WebSocket, code: str) -> None:
         await serve_socket(websocket, code)

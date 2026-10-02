@@ -293,3 +293,27 @@ def test_tv_mode_endpoint_and_socket(tmp_path):
         assert c.post("/api/rooms/ZZZZZ/tv").status_code == 404
         statuses = [c.post("/api/rooms/ZZZZZ/tv").status_code for _ in range(3)]
         assert 429 in statuses
+
+
+def test_audience_endpoint_and_socket(tmp_path):
+    s = settings(tmp_path, rate_join_burst=12, rate_join_per_min=0.001)
+    with TestClient(create_app(s)) as c:
+        room = make_room(c)
+        r = c.post(f"/api/rooms/{room['code']}/audience", json={"name": "Fan"})
+        assert r.status_code == 200 and set(r.json()) == {"code", "player_id", "token"}
+        assert r.json()["player_id"].startswith("au:")
+        with c.websocket_connect(f"/ws/{room['code']}") as ws:
+            state = auth(ws, r.json()["token"])
+            assert state["role"] == "audience" and state["tv"] is False
+            assert state["crowd"]["members"] == [
+                {"id": r.json()["player_id"], "name": "Fan", "points": 0, "connected": True}
+            ]
+            ws.send_json({"t": "start", "game": "price"})
+            assert ws.receive_json()["code"] == "audience_only"
+            ws.send_json({"t": "react", "e": "🔥"})
+            assert ws.receive_json()["reactions"][-1] == {"id": 1, "e": "🔥", "by": "Fan"}
+        assert c.post(f"/api/rooms/{room['code']}/audience", json={"name": "<b>"}).status_code == 400
+        # Guessing codes through the audience endpoint costs the same as through join.
+        assert c.post("/api/rooms/ZZZZZ/audience", json={"name": "Fan"}).status_code == 404
+        statuses = [c.post("/api/rooms/ZZZZZ/audience", json={"name": "Fan"}).status_code for _ in range(3)]
+        assert 429 in statuses

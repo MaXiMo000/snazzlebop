@@ -14,18 +14,30 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from . import show as showlib
 from .config import Settings
 from .games import REGISTRY, Game, GameError, Player, catalog
 from .games.base import Deck
+from .games.content import THEMES
+from .games.jackpot import Jackpot
 from .security import sign_token
 
 log = logging.getLogger("snazzlebop.rooms")
 
 ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: avoids lookalikes
 ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
-ALLOWED_MESSAGE_TYPES = {"ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"}
+ALLOWED_MESSAGE_TYPES = {
+    *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
+    *("show", "next", "theme", "react", "predict"),
+}
+AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict"}
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
 MAX_TV_PER_ROOM = 2  # big-screen viewers; issuing a third evicts the oldest
+MAX_AUDIENCE = 30  # named watchers who can react and predict, beyond the 8 seats
+REACTIONS = ("😂", "😱", "👏", "🔥", "🤯", "💀")
+REACT_GAP = 0.8  # seconds between reactions from one person (extra taps are ignored, not errors)
+ROOM_REACTS_PER_SEC = 6  # and a room-wide ceiling, so a big audience can't turn into a broadcast storm
+KEEP_REACTIONS = 12
 
 
 class HubError(Exception):
@@ -58,6 +70,16 @@ def clean_name(raw: object, max_len: int = 16) -> str:
 
 
 @dataclass
+class Watcher:
+    """An audience member: named, no seat and no game score, but can react and predict winners."""
+
+    id: str
+    name: str
+    conn: Connection | None = None
+    points: int = 0  # correct winner predictions
+
+
+@dataclass
 class Room:
     code: str
     created: float
@@ -66,18 +88,31 @@ class Room:
     conns: dict[str, Connection] = field(default_factory=dict)
     # TV (spectator) ids -> live connection or None. Not players: no seat, no score, read-only.
     viewers: dict[str, Connection | None] = field(default_factory=dict)
+    audience: dict[str, Watcher] = field(default_factory=dict)
     # No-repeat content decks, shared by every game played in this room.
     decks: dict[str, Deck] = field(default_factory=dict)
-    phase: str = "lobby"  # lobby | game | results
+    phase: str = "lobby"  # lobby | game | results | finale (end of a show)
     title: str = ""  # host-chosen show title
     locked: bool = False  # host stopped new players joining
+    theme: str = ""  # show pack (content.THEMES key) or "" for everything
     game: Game | None = None
+    show: showlib.Show | None = None
     total_scores: dict[str, int] = field(default_factory=dict)
+    highlights: list[dict[str, str]] = field(default_factory=list)  # from the last finished game
+    quip: str = ""  # the host's line about the last finished game
+    predictions: dict[str, str] = field(default_factory=dict)  # audience id -> predicted winner
+    reactions: list[dict[str, Any]] = field(default_factory=list)
+    react_seq: int = 0
+    react_last: dict[str, float] = field(default_factory=dict)
+    react_window: list[float] = field(default_factory=list)
     last_active: float = 0.0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def connected_players(self) -> list[Player]:
         return [p for p in self.players.values() if p.connected]
+
+    def names(self) -> dict[str, str]:
+        return {p.id: p.name for p in self.players.values()}
 
 
 class Hub:
@@ -87,7 +122,7 @@ class Hub:
         clock: Callable[[], float] = time.monotonic,
         rng: random.Random | None = None,
         on_game_finished: Callable[[str, dict[str, Any]], None] | None = None,
-        on_game_started: Callable[[str], None] | None = None,
+        on_game_started: Callable[[str, str], None] | None = None,  # (game id, show pack)
         timings: dict[str, dict[str, float]] | None = None,
     ) -> None:
         self.settings = settings
@@ -141,13 +176,35 @@ class Hub:
             raise HubError("in_progress", "That game has already started", 409)
         if len(room.players) >= self.settings.max_players_per_room:
             raise HubError("room_full", "That room is full", 409)
-        if any(p.name.casefold() == name.casefold() for p in room.players.values()):
-            raise HubError("name_taken", "Someone already has that name", 409)
+        self._name_free(room, name)
         player = Player(id=secrets.token_urlsafe(6), name=name, connected=False)
         room.players[player.id] = player
         room.total_scores[player.id] = 0
         room.last_active = self.clock()
         return room, player, self._issue(room, player)
+
+    @staticmethod
+    def _name_free(room: Room, name: str) -> None:
+        taken = [*(p.name for p in room.players.values()), *(w.name for w in room.audience.values())]
+        if any(n.casefold() == name.casefold() for n in taken):
+            raise HubError("name_taken", "Someone already has that name", 409)
+
+    def join_audience(self, code: str, name: str) -> tuple[Room, Watcher, str]:
+        """A named seat in the crowd: works when the room is full or mid-game, not when it's locked."""
+        room = self.get(code.upper() if isinstance(code, str) else code)
+        if room is None:
+            raise HubError("room_not_found", "No room with that code", 404)
+        name = clean_name(name)
+        if room.locked:
+            raise HubError("room_locked", "The host has locked this room", 409)
+        if len(room.audience) >= MAX_AUDIENCE:
+            raise HubError("audience_full", "The audience is full", 409)
+        self._name_free(room, name)
+        watcher = Watcher(id="au:" + secrets.token_urlsafe(6), name=name)
+        room.audience[watcher.id] = watcher
+        room.last_active = self.clock()
+        token = sign_token(self.settings.secret_key, watcher.id, room.code, self.settings.token_ttl_seconds)
+        return room, watcher, token
 
     def issue_tv(self, code: str) -> tuple[Room, str]:
         """A read-only big-screen seat. Same trust as joining: anyone holding the room code."""
@@ -165,7 +222,7 @@ class Hub:
         return room, token
 
     def is_member(self, room: Room, pid: str) -> bool:
-        return pid in room.players or pid in room.viewers
+        return pid in room.players or pid in room.viewers or pid in room.audience
 
     def cleanup(self) -> None:
         now = self.clock()
@@ -187,6 +244,15 @@ class Hub:
             if task is not None:
                 await asyncio.wait([task], timeout=0.25)
             return
+        if pid in room.audience:
+            watcher = room.audience[pid]
+            previous_conn, watcher.conn = watcher.conn, conn
+            room.last_active = self.clock()
+            if previous_conn is not None:
+                with contextlib.suppress(Exception):
+                    await previous_conn.close(1000)
+            await self.broadcast(room)  # players see the crowd grow
+            return
         async with room.lock:
             previous = room.conns.get(pid)
             room.conns[pid] = conn
@@ -201,6 +267,12 @@ class Hub:
         if pid in room.viewers or pid.startswith("tv:"):
             if room.viewers.get(pid) is conn:
                 room.viewers[pid] = None
+            return
+        if pid.startswith("au:"):
+            watcher = room.audience.get(pid)
+            if watcher is not None and watcher.conn is conn:
+                watcher.conn = None
+                await self.broadcast(room)
             return
         async with room.lock:
             if room.conns.get(pid) is not conn:
@@ -221,17 +293,27 @@ class Hub:
         game_view = None
         if room.game is not None and room.phase in ("game", "results"):
             game_view = room.game.view_for(pid)
+        between = room.phase in ("lobby", "results", "finale")
+        role = "tv" if pid in room.viewers else "audience" if pid in room.audience else "player"
         return {
             "t": "state",
             "you": pid,
-            "tv": pid in room.viewers,
+            "tv": role == "tv",
+            "role": role,
             "room": {
                 "code": room.code,
                 "phase": room.phase,
                 "host": room.host_id,
                 "title": room.title,
                 "locked": room.locked,
+                "theme": room.theme,
             },
+            "themes": THEMES if between else {},
+            "show": self._show_view(room),
+            "highlights": room.highlights if room.phase == "results" else [],
+            "quip": room.quip if room.phase in ("results", "finale") else "",
+            "reactions": room.reactions,
+            "crowd": self._crowd_view(room, pid),
             "players": [
                 {
                     "id": p.id,
@@ -242,9 +324,45 @@ class Hub:
                 }
                 for p in room.players.values()
             ],
-            "games": catalog() if room.phase in ("lobby", "results") else [],
+            "games": catalog() if between else [],
             "game": game_view,
             "stage": room.game.stage if room.game is not None else None,
+        }
+
+    @staticmethod
+    def _show_view(room: Room) -> dict[str, Any] | None:
+        s = room.show
+        if s is None:
+            return None
+        titles = {gid: cls.title for gid, cls in REGISTRY.items()} | {"jackpot": Jackpot.title}
+        return {
+            "playlist": [{"id": g, "title": titles.get(g, g)} for g in s.playlist],
+            "jackpot": s.jackpot,
+            "started": s.started,
+            "next": s.next_game(),
+            "finished": s.finished,
+            "games": [{"game": g["game"], "title": g["title"], "scores": g["scores"]} for g in s.games],
+            "reel": s.reel if s.finished else [],
+            "awards": s.awards if s.finished else [],
+        }
+
+    @staticmethod
+    def _predict_open(room: Room) -> bool:
+        g = room.game
+        return room.phase == "game" and g is not None and not g.finished and g.round <= 1
+
+    def _crowd_view(self, room: Room, pid: str) -> dict[str, Any]:
+        picks: dict[str, int] = {}
+        for target in room.predictions.values():
+            picks[target] = picks.get(target, 0) + 1
+        return {
+            "members": [
+                {"id": w.id, "name": w.name, "points": w.points, "connected": w.conn is not None}
+                for w in room.audience.values()
+            ],
+            "picks": picks,  # how many of the crowd back each player this game (never who)
+            "open": self._predict_open(room),
+            "you_picked": room.predictions.get(pid),
         }
 
     # -- outbound: one mailbox per connection, latest state wins ---------------------------------
@@ -281,7 +399,11 @@ class Hub:
         self._mail.pop(conn, None)
 
     async def broadcast(self, room: Room) -> None:
-        targets = [*room.conns.items(), *((v, c) for v, c in room.viewers.items() if c is not None)]
+        targets = [
+            *room.conns.items(),
+            *((v, c) for v, c in room.viewers.items() if c is not None),
+            *((w.id, w.conn) for w in room.audience.values() if w.conn is not None),
+        ]
         tasks = [
             task
             for pid, conn in targets
@@ -309,6 +431,8 @@ class Hub:
             if kind != "ping":
                 await self.send_error(conn, "read_only", "TV mode is read-only")
             return
+        if pid in room.audience and kind not in AUDIENCE_MESSAGE_TYPES:
+            return await self.send_error(conn, "audience_only", "The audience can react and predict")
         room.last_active = self.clock()
         if kind == "ping":
             return
@@ -320,8 +444,67 @@ class Hub:
         except (GameError, HubError) as exc:
             await self.send_error(conn, exc.code, exc.message)
 
+    def _make_game(self, room: Room, cls: type[Game], **extra: Any) -> Game:
+        """Build and start a game for everyone online. Raises (and changes nothing) if it can't start."""
+        members = [Player(id=p.id, name=p.name) for p in room.connected_players()]
+        game = cls(
+            members,
+            rng=self.rng,
+            clock=self.clock,
+            timings=self.timings.get(cls.game_id),
+            decks=room.decks,
+            theme=room.theme,
+            **extra,
+        )
+        game.start()
+        return game
+
+    def _begin(self, room: Room, game: Game) -> None:
+        room.game, room.phase = game, "game"
+        room.predictions, room.highlights, room.quip = {}, [], ""
+        if self.on_game_started and game.game_id in REGISTRY:  # top up content in the background
+            try:
+                self.on_game_started(game.game_id, room.theme)
+            except Exception:
+                log.exception("on_game_started failed")
+
+    def _start_next(self, room: Room, s: showlib.Show) -> None:
+        """Start the show's next segment, or close the show with the finale."""
+        nxt = s.next_game()
+        if nxt == "jackpot":
+            stakes = {p.id: room.total_scores.get(p.id, 0) for p in room.players.values()}
+            self._begin(room, self._make_game(room, Jackpot, stakes=stakes))
+            s.jackpot_played = True
+        elif nxt is not None:
+            self._begin(room, self._make_game(room, REGISTRY[nxt]))
+            s.started += 1
+        else:
+            self._finale(room, s)
+
+    def _finale(self, room: Room, s: showlib.Show) -> None:
+        s.finished = True
+        totals = {pid: room.total_scores.get(pid, 0) for pid in room.players}
+        names = room.names()
+        s.awards = showlib.awards(s, totals, names)
+        s.quip = room.quip = showlib.quip(
+            totals, names, room.title or "the show", room.decks, self.rng, "show"
+        )
+        room.game, room.phase = None, "finale"
+
     def _apply(self, room: Room, pid: str, kind: str, msg: dict[str, Any]) -> bool:
         is_host = pid == room.host_id
+        if kind == "react":
+            return self._react(room, pid, msg)
+        if kind == "predict":
+            if pid not in room.audience:
+                raise HubError("audience_only", "Only the audience predicts")
+            if not self._predict_open(room) or room.game is None:
+                raise HubError("predict_closed", "Predictions are closed for this game")
+            target = msg.get("target")
+            if not isinstance(target, str) or target not in room.game.player_ids:
+                raise HubError("bad_target", "Pick a contestant")
+            room.predictions[pid] = target
+            return True
         if kind == "start":
             if not is_host:
                 raise HubError("not_host", "Only the host can start a game", 403)
@@ -330,21 +513,47 @@ class Hub:
             cls = REGISTRY.get(msg.get("game")) if isinstance(msg.get("game"), str) else None
             if cls is None:
                 raise HubError("bad_game", "Unknown game")
-            members = [Player(id=p.id, name=p.name) for p in room.connected_players()]
-            game = cls(
-                members,
-                rng=self.rng,
-                clock=self.clock,
-                timings=self.timings.get(cls.game_id),
-                decks=room.decks,
-            )
-            game.start()
-            room.game, room.phase = game, "game"
-            if self.on_game_started:  # e.g. top up this game's content pool in the background
-                try:
-                    self.on_game_started(cls.game_id)
-                except Exception:
-                    log.exception("on_game_started failed")
+            self._begin(room, self._make_game(room, cls))
+            room.show = None  # a one-off game outside any show
+            return True
+        if kind == "show":
+            if not is_host:
+                raise HubError("not_host", "Only the host can start a show", 403)
+            if room.phase == "game":
+                raise HubError("in_progress", "A game is already running", 409)
+            raw = msg.get("games")
+            if (
+                not isinstance(raw, list)
+                or not showlib.MIN_GAMES <= len(raw) <= showlib.MAX_GAMES
+                or any(not isinstance(g, str) or g not in REGISTRY for g in raw)
+                or len(set(raw)) != len(raw)
+            ):
+                raise HubError("bad_show", f"Pick {showlib.MIN_GAMES}-{showlib.MAX_GAMES} different games")
+            jackpot = msg.get("jackpot", True)
+            if not isinstance(jackpot, bool):
+                raise HubError("bad_message", "Unknown message")
+            game = self._make_game(room, REGISTRY[raw[0]])  # raises before anything changes
+            room.show = showlib.Show(playlist=list(raw), jackpot=jackpot, started=1)
+            room.total_scores = {p: 0 for p in room.players}  # a new show, a fresh scoreboard
+            self._begin(room, game)
+            return True
+        if kind == "next":
+            if not is_host:
+                raise HubError("not_host", "Only the host can do that", 403)
+            s = room.show
+            if s is None or s.finished or room.phase != "results":
+                raise HubError("no_show", "No show segment to start")
+            if msg.get("skip") is True and s.next_game() not in (None, "jackpot"):
+                s.started += 1  # e.g. not enough players online for that game
+            self._start_next(room, s)
+            return True
+        if kind == "theme":
+            if not is_host:
+                raise HubError("not_host", "Only the host can do that", 403)
+            theme = msg.get("theme")
+            if not isinstance(theme, str) or (theme and theme not in THEMES):
+                raise HubError("bad_theme", "Unknown show pack")
+            room.theme = theme
             return True
         if kind == "act":
             if room.game is None or room.phase != "game":
@@ -370,7 +579,8 @@ class Hub:
         if kind == "lobby":
             if not is_host:
                 raise HubError("not_host", "Only the host can do that", 403)
-            room.game, room.phase = None, "lobby"
+            room.game, room.phase, room.show = None, "lobby", None
+            room.highlights, room.quip, room.predictions = [], "", {}
             return True
         if kind in ("kick", "lock", "title"):
             if not is_host:
@@ -398,6 +608,12 @@ class Hub:
             room.locked = msg["locked"]
             return True
         target = msg.get("target")
+        if isinstance(target, str) and target in room.audience:  # the crowd can go at any time
+            watcher = room.audience.pop(target)
+            room.predictions.pop(target, None)
+            if watcher.conn is not None:
+                asyncio.get_running_loop().create_task(watcher.conn.close(KICKED))
+            return True
         if not isinstance(target, str) or target not in room.players or target == pid:
             raise HubError("bad_target", "Pick another player")
         if room.phase == "game":
@@ -409,13 +625,51 @@ class Hub:
             asyncio.get_running_loop().create_task(conn.close(KICKED))
         return True
 
+    def _react(self, room: Room, pid: str, msg: dict[str, Any]) -> bool:
+        emoji = msg.get("e")
+        if emoji not in REACTIONS:
+            raise HubError("bad_reaction", "Unknown reaction")
+        now = self.clock()
+        if now - room.react_last.get(pid, -1e9) < REACT_GAP:
+            return False  # tapping faster than that just doesn't count
+        room.react_window = [t for t in room.react_window if now - t < 1.0]
+        if len(room.react_window) >= ROOM_REACTS_PER_SEC:
+            return False
+        room.react_last[pid] = now
+        room.react_window.append(now)
+        who = room.players.get(pid) or room.audience.get(pid)
+        room.react_seq += 1
+        room.reactions = [
+            *room.reactions[-(KEEP_REACTIONS - 1) :],
+            {"id": room.react_seq, "e": emoji, "by": who.name if who else "?"},
+        ]
+        return True
+
     def _maybe_finish(self, room: Room) -> None:
         game = room.game
         if game is None or not game.finished or room.phase != "game":
             return
-        for pid, pts in game.scores().items():
+        scores = game.scores()
+        for pid, pts in scores.items():
             room.total_scores[pid] = room.total_scores.get(pid, 0) + pts
         room.phase = "results"
+        names = room.names()
+        try:
+            room.highlights = game.highlights()
+        except Exception:  # a highlight bug must never cost anyone their result
+            log.exception("highlights failed")
+            room.highlights = []
+        final = "jackpot" if game.game_id == "jackpot" else None
+        room.quip = showlib.quip(scores, names, game.title, room.decks, self.rng, final)
+        if scores:  # the crowd's predictions: everyone who backed a winner gets a point
+            top = max(scores.values())
+            for au, target in room.predictions.items():
+                watcher = room.audience.get(au)
+                if watcher is not None and scores.get(target) == top:
+                    watcher.points += 1
+        if room.show is not None:
+            room.show.games.append({"game": game.game_id, "title": game.title, "scores": dict(scores)})
+            room.show.reel.extend({**h, "game": game.title} for h in room.highlights)
         if self.on_game_finished:
             try:
                 self.on_game_finished(game.game_id, game.summary())
