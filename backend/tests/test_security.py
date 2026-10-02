@@ -237,3 +237,18 @@ class ConfigTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LoggingTests(unittest.TestCase):
+    def test_uvicorn_socket_lines_with_room_codes_are_dropped(self):
+        import logging
+
+        from app.logging_setup import DropSocketPaths
+
+        f = DropSocketPaths()
+
+        def rec(msg, *args):
+            return logging.LogRecord("uvicorn.error", logging.INFO, "", 0, msg, args, None)
+
+        self.assertFalse(f.filter(rec('%s - "WebSocket %s" [accepted]', "1.2.3.4:5", "/ws/ABCDE")))
+        self.assertTrue(f.filter(rec("Application startup complete.")))

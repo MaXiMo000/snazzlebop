@@ -113,7 +113,7 @@ function Reveal({ view, you }: { view: FrenemyView; you: string }) {
     () =>
       view.players
         .map((p) => ({ p, r: view.result![p.id]! }))
-        .sort((a, b) => b.r.blind_pct - a.r.blind_pct),
+        .sort((a, b) => b.r.played - a.r.played || b.r.blind_pct - a.r.blind_pct),
     [view],
   );
   return (
@@ -127,7 +127,7 @@ function Reveal({ view, you }: { view: FrenemyView; you: string }) {
                 {p.name}
                 {p.id === you ? " (you)" : ""}
               </b>
-              <span className="tag pink">Blind spot {r.blind_pct}%</span>
+              {r.played ? <span className="tag pink">Blind spot {r.blind_pct}%</span> : null}
             </div>
             {r.played ? (
               <>
@@ -155,6 +155,7 @@ function Final({ view, you }: { view: FrenemyView; you: string }) {
     <>
       <Panel themed className="halftone">
         <h2>Final reveal</h2>
+        {!mine && <p>You sat this one out, so no blind-spot score.</p>}
         {mine && (
           <p>
             Your blind-spot score: <b>{mine.blind_spot}%</b> ({mine.avg_gap > 0.4 ? "a touch of optimism" : mine.avg_gap < -0.4 ? "secretly adored" : "pretty self-aware"})

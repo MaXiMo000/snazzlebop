@@ -64,6 +64,18 @@ class FrenemyTests(unittest.TestCase):
         award_names = {a["award"] for a in final["awards"]}
         self.assertIn("Unknown to Self", award_names)
 
+    def test_absent_player_gets_no_award(self):
+        game, _, players = make(FrenemyRadar, 4)
+        ids = [p.id for p in players]
+        for _rnd in range(FrenemyRadar.ROUNDS):
+            for pid in ids[:3]:  # p3 never ranks
+                game.handle(pid, {"a": "rank", "order": list(ids)})
+            game.advance()
+            game.advance()
+        final = game.view_for("p0")["final"]
+        self.assertNotIn("p3", {a["player"] for a in final["awards"]})
+        self.assertNotIn("p3", final["per_player"])
+
     def test_rankings_are_secret_until_reveal(self):
         game, _, players = make(FrenemyRadar, 3)
         game.handle("p0", {"a": "rank", "order": ["p2", "p1", "p0"]})

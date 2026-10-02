@@ -21,6 +21,14 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload)
 
 
+class DropSocketPaths(logging.Filter):
+    """uvicorn logs '"WebSocket /ws/<CODE>" [accepted]' on uvicorn.error, which --no-access-log
+    doesn't cover. Those lines carry the room code and client IP, so drop them."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return '"WebSocket ' not in record.getMessage()
+
+
 def setup_logging(production: bool) -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
@@ -29,3 +37,7 @@ def setup_logging(production: bool) -> None:
     root.setLevel(logging.INFO if production else logging.DEBUG)
     # uvicorn's access log would record room codes in URLs; we run it with --no-access-log.
     logging.getLogger("uvicorn.access").disabled = True
+    uv_error = logging.getLogger("uvicorn.error")
+    if not any(isinstance(f, DropSocketPaths) for f in uv_error.filters):
+        uv_error.addFilter(DropSocketPaths())
+    logging.getLogger("aiosqlite").setLevel(logging.INFO)  # per-query debug noise

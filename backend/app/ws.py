@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from collections import defaultdict
@@ -43,6 +44,12 @@ class WSConn:
         await self.ws.close(code=code)
 
 
+async def _close(ws: WebSocket, code: int) -> None:
+    # The peer may already be gone (closing an already-closed socket raises); nothing to do then.
+    with contextlib.suppress(Exception):
+        await ws.close(code=code)
+
+
 def _origin_ok(ws: WebSocket, allowed: tuple[str, ...], production: bool) -> bool:
     origin = ws.headers.get("origin")
     if origin is None:
@@ -78,14 +85,14 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
     ip = client_ip(ws.scope, settings.trusted_proxy_hops)
 
     if not _origin_ok(ws, settings.allowed_origins, settings.is_production):
-        await ws.close(code=1008)
+        await _close(ws, 1008)
         return
     room = hub.get(code)
     if room is None:
-        await ws.close(code=1008)
+        await _close(ws, 1008)
         return
     if counter.total >= settings.max_ws_total or counter.per_ip.get(ip, 0) >= settings.max_ws_per_ip:
-        await ws.close(code=1013)
+        await _close(ws, 1013)
         return
 
     counter.add(ip)
@@ -95,7 +102,7 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
         await ws.accept()
         pid = await _authenticate(ws, hub, room, settings.ws_auth_timeout, settings.ws_max_message_bytes)
         if pid is None:
-            await ws.close(code=1008)
+            await _close(ws, 1008)
             return
         await hub.connect(room, pid, conn)
 
@@ -104,15 +111,15 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
             try:
                 text = await asyncio.wait_for(ws.receive_text(), settings.ws_idle_timeout)
             except TimeoutError:
-                await ws.close(code=1001)
+                await _close(ws, 1001)
                 break
             except Exception:  # disconnect, or a non-text frame
                 break
             if len(text.encode()) > settings.ws_max_message_bytes:
-                await ws.close(code=1009)
+                await _close(ws, 1009)
                 break
             if not bucket.allow("c"):
-                await ws.close(code=1008)
+                await _close(ws, 1008)
                 break
             try:
                 msg = json.loads(text)

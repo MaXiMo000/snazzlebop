@@ -114,11 +114,10 @@ class FrenemyRadar(Game):
         per_player: dict[str, dict[str, float]] = {}
         for p in self.players:
             rows = [res[p.id] for res in self.results if res[p.id]["played"]]
-            if rows:
-                blind = sum(r["blind_pct"] for r in rows) / len(rows)
-                gap = sum(r["gap"] for r in rows) / len(rows)
-            else:
-                blind, gap = 50.0, 0.0
+            if not rows:
+                continue  # never ranked: no score, no awards
+            blind = sum(r["blind_pct"] for r in rows) / len(rows)
+            gap = sum(r["gap"] for r in rows) / len(rows)
             per_player[p.id] = {"blind_spot": round(blind, 1), "avg_gap": round(gap, 2)}
         awards: list[dict[str, str]] = []
         played = list(per_player)
