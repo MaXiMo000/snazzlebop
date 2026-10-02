@@ -360,6 +360,10 @@ class Hub:
                 {"id": w.id, "name": w.name, "points": w.points, "connected": w.conn is not None}
                 for w in room.audience.values()
             ],
+            # who can be backed this game: the game's own contestants (not everyone ever seated)
+            "contestants": [{"id": p.id, "name": p.name} for p in room.game.players]
+            if room.game is not None and room.phase == "game"
+            else [],
             "picks": picks,  # how many of the crowd back each player this game (never who)
             "open": self._predict_open(room),
             "you_picked": room.predictions.get(pid),

@@ -28,7 +28,8 @@
   --accent-ink: var(--plum);
 
   --display: "Bungee", "Arial Black", Impact, sans-serif;
-  --body: "Fredoka Variable", "Fredoka", ui-rounded, "Segoe UI", system-ui, sans-serif;
+  --body:
+    "Fredoka Variable", "Fredoka", ui-rounded, "Segoe UI", system-ui, sans-serif;
   --radius: 22px;
   --radius-sm: 14px;
   --lift: 0 6px 0 var(--plum);
@@ -96,8 +97,16 @@ body {
   background-color: var(--cream);
   /* Sunburst rays fanning down from the top of the "studio". */
   background-image:
-    radial-gradient(ellipse at 50% -10%, rgba(255, 241, 220, 0) 0, var(--cream) 70%),
-    repeating-conic-gradient(from -90deg at 50% -8%, rgba(255, 107, 44, 0.16) 0 7deg, transparent 7deg 14deg);
+    radial-gradient(
+      ellipse at 50% -10%,
+      rgba(255, 241, 220, 0) 0,
+      var(--cream) 70%
+    ),
+    repeating-conic-gradient(
+      from -90deg at 50% -8%,
+      rgba(255, 107, 44, 0.16) 0 7deg,
+      transparent 7deg 14deg
+    );
   background-attachment: fixed;
   overflow-x: hidden;
 }
@@ -294,8 +303,13 @@ a {
   inset: 4px;
   border-radius: calc(var(--radius) - 3px);
   padding: 18px; /* exactly one bulb wide, so bulbs are never cut in half */
-  background: radial-gradient(circle, var(--bulb) 0 3.5px, rgba(255, 231, 161, 0.35) 4.5px, transparent 6px) 0 0 / 18px
-    18px round;
+  background: radial-gradient(
+      circle,
+      var(--bulb) 0 3.5px,
+      rgba(255, 231, 161, 0.35) 4.5px,
+      transparent 6px
+    )
+    0 0 / 18px 18px round;
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -1163,7 +1177,12 @@ details summary {
 /* ---- blackjack -------------------------------------------------------------------------- */
 .card.stage.felt {
   /* lightest point #147043 keeps cream >= 5.5:1 and bulb >= 5:1 (scripts/contrast.mjs) */
-  background: radial-gradient(ellipse at 50% 0%, #147043 0, #11643f 55%, #0b4a2e 100%);
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    #147043 0,
+    #11643f 55%,
+    #0b4a2e 100%
+  );
 }
 .card.stage.felt .muted {
   color: var(--cream);
@@ -1195,7 +1214,11 @@ details summary {
 }
 .pcard.back {
   color: var(--bulb);
-  background: repeating-linear-gradient(45deg, var(--cherry) 0 6px, #a0162c 6px 12px);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--cherry) 0 6px,
+    #a0162c 6px 12px
+  );
 }
 @keyframes deal {
   from {
@@ -1447,18 +1470,54 @@ details summary {
 .confetti i:nth-child(4n + 3) {
   background: var(--cherry);
 }
-.confetti i:nth-child(9n + 1) { left: 4%; animation-delay: 0s; }
-.confetti i:nth-child(9n + 2) { left: 16%; animation-delay: 0.25s; }
-.confetti i:nth-child(9n + 3) { left: 27%; animation-delay: 0.1s; }
-.confetti i:nth-child(9n + 4) { left: 39%; animation-delay: 0.4s; }
-.confetti i:nth-child(9n + 5) { left: 50%; animation-delay: 0.05s; }
-.confetti i:nth-child(9n + 6) { left: 61%; animation-delay: 0.3s; }
-.confetti i:nth-child(9n + 7) { left: 72%; animation-delay: 0.15s; }
-.confetti i:nth-child(9n + 8) { left: 84%; animation-delay: 0.45s; }
-.confetti i:nth-child(9n) { left: 95%; animation-delay: 0.2s; }
-.confetti i:nth-child(n + 10) { margin-left: -3%; animation-duration: 3s; }
-.confetti i:nth-child(n + 19) { margin-left: 2%; animation-duration: 2.3s; }
-.confetti i:nth-child(n + 28) { margin-left: -1%; animation-duration: 3.3s; }
+.confetti i:nth-child(9n + 1) {
+  left: 4%;
+  animation-delay: 0s;
+}
+.confetti i:nth-child(9n + 2) {
+  left: 16%;
+  animation-delay: 0.25s;
+}
+.confetti i:nth-child(9n + 3) {
+  left: 27%;
+  animation-delay: 0.1s;
+}
+.confetti i:nth-child(9n + 4) {
+  left: 39%;
+  animation-delay: 0.4s;
+}
+.confetti i:nth-child(9n + 5) {
+  left: 50%;
+  animation-delay: 0.05s;
+}
+.confetti i:nth-child(9n + 6) {
+  left: 61%;
+  animation-delay: 0.3s;
+}
+.confetti i:nth-child(9n + 7) {
+  left: 72%;
+  animation-delay: 0.15s;
+}
+.confetti i:nth-child(9n + 8) {
+  left: 84%;
+  animation-delay: 0.45s;
+}
+.confetti i:nth-child(9n) {
+  left: 95%;
+  animation-delay: 0.2s;
+}
+.confetti i:nth-child(n + 10) {
+  margin-left: -3%;
+  animation-duration: 3s;
+}
+.confetti i:nth-child(n + 19) {
+  margin-left: 2%;
+  animation-duration: 2.3s;
+}
+.confetti i:nth-child(n + 28) {
+  margin-left: -1%;
+  animation-duration: 3.3s;
+}
 @keyframes fall {
   to {
     transform: translate3d(40px, 110vh, 0) rotate(720deg);
@@ -1478,7 +1537,10 @@ details summary {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: repeating-conic-gradient(var(--mustard) 0 12deg, transparent 12deg 24deg);
+  background: repeating-conic-gradient(
+    var(--mustard) 0 12deg,
+    transparent 12deg 24deg
+  );
   -webkit-mask: radial-gradient(closest-side, #000 55%, transparent 100%);
   mask: radial-gradient(closest-side, #000 55%, transparent 100%);
   animation: rays 8s linear infinite;
@@ -1544,4 +1606,239 @@ details summary {
   .stinger {
     display: none;
   }
+}
+
+/* ---- show night ----------------------------------------------------------------------------- */
+.seg-jackpot {
+  --accent: #a3195b;
+  --accent-ink: #fff;
+  --accent-soft: #fbe0ec;
+}
+.price-tag.big {
+  font-size: clamp(2.2rem, 11vw, 3.6rem);
+}
+input[type="range"] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+h4 {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+.builder-games {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.builder-games .order {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--bulb);
+  color: var(--plum);
+  font-size: 0.85rem;
+}
+
+.show-strip ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 2px 2px 6px;
+  list-style: none;
+}
+.show-strip li {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 2.5px solid var(--plum);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--plum);
+  white-space: nowrap;
+}
+.show-strip li.done {
+  background: var(--teal-light);
+}
+.show-strip li.done::after {
+  content: " ✓";
+}
+.show-strip li.now {
+  background: var(--bulb);
+  box-shadow: var(--lift-sm);
+}
+
+.host-line .lead {
+  font-style: italic;
+}
+.highlight-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.highlight-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--cream);
+  border: 2.5px solid var(--plum);
+  border-radius: var(--radius-sm);
+}
+.highlight-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+/* ---- the crowd ------------------------------------------------------------------------------ */
+.audience-badge {
+  margin: 0;
+}
+.crowd-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crowd-list .away {
+  opacity: 0.75;
+}
+.crowd-list .kick {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -8px -10px -8px 2px;
+  color: #fff;
+  background: var(--cherry);
+  border: 3px solid var(--plum);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* ---- live reactions ------------------------------------------------------------------------- */
+.react-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.react-btn {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  font-size: 1.6rem;
+  background: var(--paper);
+  border: var(--line);
+  border-radius: 50%;
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+  transition: transform 0.08s ease;
+  touch-action: manipulation;
+}
+.react-btn:active:not(:disabled) {
+  transform: translateY(3px) scale(0.94);
+  box-shadow: 0 1px 0 var(--plum);
+}
+.react-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.react-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+}
+.floater {
+  position: absolute;
+  bottom: -60px;
+  display: grid;
+  justify-items: center;
+  animation: float-up 2.5s ease-out forwards;
+}
+.floater-emoji {
+  font-size: 2.4rem;
+  filter: drop-shadow(0 3px 0 rgba(43, 27, 51, 0.35));
+}
+.floater-name {
+  padding: 0 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--bulb);
+  background: var(--plum);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.lane-0 {
+  left: 6%;
+}
+.lane-1 {
+  left: 18%;
+}
+.lane-2 {
+  left: 30%;
+}
+.lane-3 {
+  left: 42%;
+}
+.lane-4 {
+  left: 54%;
+}
+.lane-5 {
+  left: 66%;
+}
+.lane-6 {
+  left: 78%;
+}
+.lane-7 {
+  left: 88%;
+}
+@keyframes float-up {
+  /* Scale and travel only, never fade: the name tags keep full contrast the whole way up. */
+  0% {
+    transform: translateY(0) scale(0.2);
+  }
+  12% {
+    transform: translateY(-12vh) scale(1.1);
+  }
+  100% {
+    transform: translateY(-110vh) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No flying: reactions just sit along the bottom edge until they are removed. */
+  .floater {
+    bottom: 12px;
+    animation: none !important;
+  }
+}
+
+/* On the dark stage a plum "pressed" button would vanish: light it up gold instead. */
+.card.stage .btn[aria-pressed="true"] {
+  --bg: var(--mustard);
+  --fg: var(--plum);
+}
+.card.stage .btn[aria-pressed="true"] .order {
+  background: var(--plum);
+  color: var(--bulb);
+}
+
+.finale .trophy {
+  font-size: clamp(2.6rem, 10vw, 4rem);
+  line-height: 1;
 }

@@ -104,18 +104,24 @@ def awards(show: Show, totals: dict[str, int], names: dict[str, str]) -> list[di
     out: list[dict[str, str]] = []
     if not totals:
         return out
-    champ = max(totals, key=lambda p: totals[p])
+    ranked = sorted(totals, key=lambda p: -totals[p])
+    champ = ranked[0]
+    joint = [p for p in ranked if totals[p] == totals[champ]]
     out.append(
         {
             "icon": "👑",
-            "title": "Show champion",
-            "text": f"{names.get(champ, '?')} with {totals[champ]} points",
+            "title": "Show champion" if len(joint) == 1 else "Joint champions",
+            "text": f"{' & '.join(names.get(p, '?') for p in joint)} with {totals[champ]} points",
         }
     )
+    # Only games that actually separated people count: a 0-0 draw crowns nobody.
+    decided = [
+        g
+        for g in show.games
+        if g["game"] != "jackpot" and g["scores"] and max(g["scores"].values()) > min(g["scores"].values())
+    ]
     wins: dict[str, int] = {}
-    for g in show.games:
-        if g["game"] == "jackpot" or not g["scores"]:
-            continue
+    for g in decided:
         top = max(g["scores"].values())
         for pid, pts in g["scores"].items():
             if pts == top:
@@ -132,21 +138,25 @@ def awards(show: Show, totals: dict[str, int], names: dict[str, str]) -> list[di
             )
     # Most consistent: best average finishing position across the games they played.
     places: dict[str, list[int]] = {}
-    for g in show.games:
-        if g["game"] == "jackpot" or len(g["scores"]) < 3:
+    for g in decided:
+        if len(g["scores"]) < 3:
             continue
         ordered = sorted(g["scores"].values(), reverse=True)
         for pid, pts in g["scores"].items():
             places.setdefault(pid, []).append(ordered.index(pts) + 1)
-    steady = {p: sum(v) / len(v) for p, v in places.items() if len(v) >= 2}
+    # The champion already has a crown; this goes to someone else who stayed near the top all night.
+    steady = {
+        p: sum(v) / len(v)
+        for p, v in places.items()
+        if len(v) >= 2 and p not in joint and p in totals and ranked.index(p) < len(ranked) / 2
+    }
     if steady:
         best = min(steady, key=lambda p: steady[p])
-        if best != champ:
-            out.append(
-                {
-                    "icon": "🧘",
-                    "title": "Steady hand",
-                    "text": f"{names.get(best, '?')} never strayed far from the top",
-                }
-            )
+        out.append(
+            {
+                "icon": "🧘",
+                "title": "Steady hand",
+                "text": f"{names.get(best, '?')} never strayed far from the top",
+            }
+        )
     return out

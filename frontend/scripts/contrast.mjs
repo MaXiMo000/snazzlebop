@@ -65,6 +65,12 @@ const pairs = [
   ["plum", "#dbe8fb", "Crossword soft cards"],
   ["plum-soft", "#dbe8fb", "muted in Crossword soft"],
   ["cherry", "#ffffff", "red playing cards"],
+  ["#ffffff", "#a3195b", "Jackpot segment"],
+  ["plum", "#fbe0ec", "Jackpot soft cards"],
+  ["plum-soft", "#fbe0ec", "muted in Jackpot soft"],
+  ["bulb", "plum", "reaction name tags"],
+  ["plum", "teal-light", "done show segments"],
+  ["plum", "cream", "highlight items"],
 ];
 
 let bad = 0;

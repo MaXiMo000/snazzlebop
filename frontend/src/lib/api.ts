@@ -79,6 +79,17 @@ export async function joinRoom(code: string, name: string): Promise<Session> {
   return session;
 }
 
+/** A named seat in the crowd: react and predict winners, no game seat. Works when the room is full. */
+export async function audienceSeat(code: string, name: string): Promise<Session> {
+  const r = await request<JoinResponse>(`/api/rooms/${encodeURIComponent(code)}/audience`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  const session = { token: r.token, playerId: r.player_id };
+  saveSession(r.code, session);
+  return session;
+}
+
 /** A read-only big-screen seat (TV mode). Stored per tab, like a player seat. */
 export async function tvSeat(code: string): Promise<Session> {
   const saved = loadSession(`tv:${code}`);

@@ -1,11 +1,23 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from "@playwright/test";
 
 // One room per viewport, four players in separate contexts (a seat lives in sessionStorage).
 // The host's screens are screenshotted at each step for visual QA: e2e/screenshots/<project>/.
 
 const shots = (page: Page, project: string) => async (name: string) =>
   page.screenshot({ path: `e2e/screenshots/${project}/${name}.png`, fullPage: true });
+
+// Extra players' contexts: closed after every test, or their sockets pile up against the server's
+// per-IP socket cap (which is right to refuse them).
+const opened: BrowserContext[] = [];
+async function context(browser: Browser, options: BrowserContextOptions): Promise<BrowserContext> {
+  const ctx = await browser.newContext(options);
+  opened.push(ctx);
+  return ctx;
+}
+test.afterEach(async () => {
+  await Promise.all(opened.splice(0).map((c) => c.close()));
+});
 
 function watchConsole(page: Page, problems: string[]) {
   page.on("console", (m) => {
@@ -15,7 +27,7 @@ function watchConsole(page: Page, problems: string[]) {
 }
 
 async function newPlayer(browser: Browser, baseURL: string, problems: string[]): Promise<Page> {
-  const page = await (await browser.newContext({ baseURL })).newPage();
+  const page = await (await context(browser, { baseURL })).newPage();
   watchConsole(page, problems);
   return page;
 }
@@ -56,7 +68,7 @@ async function skipToResults(host: Page, a11y?: () => Promise<void>) {
   await expect(again).toBeVisible();
   await a11y?.();
   await again.click();
-  await expect(host.getByRole("heading", { name: "Pick a game" })).toBeVisible();
+  await expect(host.getByRole("heading", { name: "Or play a single game" })).toBeVisible();
 }
 
 test("home, create, join, lobby and every game's first screen", async ({ page: host, browser, baseURL }, info) => {
@@ -96,7 +108,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
     await expect(p.getByRole("heading", { name: `Join room ${code}` })).toBeVisible();
     if (name === "Cy") await p.screenshot({ path: `e2e/screenshots/${info.project.name}/02-join-gate.png`, fullPage: true });
     await p.getByLabel("Your name").fill(name);
-    await p.getByRole("button", { name: "Join", exact: true }).click();
+    await p.getByRole("button", { name: "Join as a contestant" }).click();
     others.push(p);
   }
 
@@ -187,10 +199,10 @@ test("keyboard only: skip link, create a room, start a game, guess", async ({ pa
   await expect(page).toHaveURL(/\/r\/[A-Z]{5}$/);
   const code = page.url().split("/").pop()!;
 
-  const guest = await (await browser.newContext({ baseURL })).newPage();
+  const guest = await (await context(browser, { baseURL })).newPage();
   await guest.goto(`/r/${code}`);
   await guest.getByLabel("Your name").fill("Lou");
-  await guest.getByRole("button", { name: "Join", exact: true }).click();
+  await guest.getByRole("button", { name: "Join as a contestant" }).click();
   await expect(page.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
 
   // Tab to Price Is Weird's start button and press Enter.
@@ -216,12 +228,12 @@ test("TV mode: read-only big screen of the public state", async ({ page: host, b
   await host.getByRole("button", { name: "Create room" }).click();
   await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
   const code = host.url().split("/").pop()!;
-  const guest = await (await browser.newContext({ baseURL })).newPage();
+  const guest = await (await context(browser, { baseURL })).newPage();
   await guest.goto(`/r/${code}`);
   await guest.getByLabel("Your name").fill("Guest");
-  await guest.getByRole("button", { name: "Join", exact: true }).click();
+  await guest.getByRole("button", { name: "Join as a contestant" }).click();
 
-  const tv = await (await browser.newContext({ baseURL, viewport: { width: 1600, height: 900 } })).newPage();
+  const tv = await (await context(browser, { baseURL, viewport: { width: 1600, height: 900 } })).newPage();
   await tv.goto(`/r/${code}?tv=1`);
   await expect(tv.locator(".flap").first()).toContainText(`Room code ${code.split("").join(" ")}`);
   await expect(tv.getByRole("heading", { name: /Contestants \(2 online\)/ })).toBeVisible();
@@ -243,7 +255,7 @@ test("TV mode: read-only big screen of the public state", async ({ page: host, b
 
 test("reduced motion: the spin lands at once, no stingers or confetti; sound toggle persists", async ({ browser, baseURL }) => {
   const problems: string[] = [];
-  const ctx = await browser.newContext({ baseURL, reducedMotion: "reduce" });
+  const ctx = await context(browser, { baseURL, reducedMotion: "reduce" });
   const host = await ctx.newPage();
   watchConsole(host, problems);
   await host.goto("/");
@@ -260,10 +272,10 @@ test("reduced motion: the spin lands at once, no stingers or confetti; sound tog
   await host.getByRole("button", { name: "Create room" }).click();
   await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
   const code = host.url().split("/").pop()!;
-  const guest = await (await browser.newContext({ baseURL })).newPage();
+  const guest = await (await context(browser, { baseURL })).newPage();
   await guest.goto(`/r/${code}`);
   await guest.getByLabel("Your name").fill("Sol");
-  await guest.getByRole("button", { name: "Join", exact: true }).click();
+  await guest.getByRole("button", { name: "Join as a contestant" }).click();
   await host.locator("article.game-card.seg-price").getByRole("button", { name: /Start!/ }).click();
   for (const [p, amount] of [[host, "1"], [guest, "2"]] as const) {
     await p.getByLabel("Your price ($)").fill(amount);
@@ -292,11 +304,11 @@ test("Frenemy result card draws on the device and downloads as a PNG", async ({ 
   const code = host.url().split("/").pop()!;
   const players = [host];
   for (const name of ["Bo", "Cy"]) {
-    const p = await (await browser.newContext({ baseURL })).newPage();
+    const p = await (await context(browser, { baseURL })).newPage();
     watchConsole(p, problems);
     await p.goto(`/r/${code}`);
     await p.getByLabel("Your name").fill(name);
-    await p.getByRole("button", { name: "Join", exact: true }).click();
+    await p.getByRole("button", { name: "Join as a contestant" }).click();
     players.push(p);
   }
   await expect(host.getByRole("heading", { name: /In the room \(3 online\)/ })).toBeVisible();
@@ -330,10 +342,10 @@ test("host tools: rename the show, lock the room, remove a player", async ({ pag
   await host.getByRole("button", { name: "Create room" }).click();
   await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
   const code = host.url().split("/").pop()!;
-  const guest = await (await browser.newContext({ baseURL })).newPage();
+  const guest = await (await context(browser, { baseURL })).newPage();
   await guest.goto(`/r/${code}`);
   await guest.getByLabel("Your name").fill("Gil");
-  await guest.getByRole("button", { name: "Join", exact: true }).click();
+  await guest.getByRole("button", { name: "Join as a contestant" }).click();
   await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
 
   await host.getByLabel("Show title").fill("Friday Showdown");
@@ -343,10 +355,10 @@ test("host tools: rename the show, lock the room, remove a player", async ({ pag
   const lock = host.getByRole("button", { name: /Lock room/ });
   await lock.click();
   await expect(lock).toHaveAttribute("aria-pressed", "true");
-  const late = await (await browser.newContext({ baseURL })).newPage();
+  const late = await (await context(browser, { baseURL })).newPage();
   await late.goto(`/r/${code}`);
   await late.getByLabel("Your name").fill("Lou");
-  await late.getByRole("button", { name: "Join", exact: true }).click();
+  await late.getByRole("button", { name: "Join as a contestant" }).click();
   await expect(late.getByRole("alert")).toHaveText("The host has locked this room");
   await axe(host, "host tools", a11y);
 
@@ -362,7 +374,7 @@ test("reconnect: a dropped phone shows progress, then comes back on air in the s
   await host.getByRole("button", { name: "Create room" }).click();
   await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
   const code = host.url().split("/").pop()!;
-  const phone = await (await browser.newContext({ baseURL })).newPage();
+  const phone = await (await context(browser, { baseURL })).newPage();
   // Proxy the phone's game socket so the test can cut it and refuse reconnects, like a dead zone.
   let signal = true;
   const live: { close: (o?: { code?: number }) => Promise<void> }[] = [];
@@ -373,7 +385,7 @@ test("reconnect: a dropped phone shows progress, then comes back on air in the s
   });
   await phone.goto(`/r/${code}`);
   await phone.getByLabel("Your name").fill("Nia");
-  await phone.getByRole("button", { name: "Join", exact: true }).click();
+  await phone.getByRole("button", { name: "Join as a contestant" }).click();
   await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
 
   signal = false;
@@ -387,4 +399,97 @@ test("reconnect: a dropped phone shows progress, then comes back on air in the s
   await expect(phone.getByText("Back on air!")).toBeVisible();
   await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
   await expect(phone.getByText("Nia (you)")).toBeVisible(); // same seat, not a new player
+});
+
+/** Host presses Skip until `until` shows up (the next host button after a game ends). */
+async function skipUntil(host: Page, until: ReturnType<Page["getByRole"]>) {
+  const skip = host.getByRole("button", { name: /Skip wait/ });
+  for (let i = 0; i < 40; i++) {
+    await expect(skip.or(until).first()).toBeVisible();
+    if (await until.isVisible()) return;
+    await skip.click({ timeout: 2000 }).catch(() => undefined);
+    await host.waitForTimeout(250);
+  }
+  await expect(until).toBeVisible();
+}
+
+test("show night: playlist, audience predictions and reactions, jackpot, finale", async ({ page: host, browser, baseURL }, info) => {
+  const problems: string[] = [];
+  const a11y: string[] = [];
+  watchConsole(host, problems);
+  const shot = shots(host, info.project.name);
+  await host.goto("/");
+  await host.locator("#host-name").fill("Ana");
+  await host.getByRole("button", { name: "Create room" }).click();
+  await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
+  const code = host.url().split("/").pop()!;
+  for (const name of ["Bo", "Cy"]) {
+    const p = await newPlayer(browser, baseURL!, problems);
+    await p.goto(`/r/${code}`);
+    await p.getByLabel("Your name").fill(name);
+    await p.getByRole("button", { name: "Join as a contestant" }).click();
+    await expect(p.getByText(`${name} (you)`)).toBeVisible();
+  }
+  const fan = await newPlayer(browser, baseURL!, problems);
+  await fan.goto(`/r/${code}`);
+  await fan.getByLabel("Your name").fill("Fan");
+  await fan.getByRole("button", { name: "Join the audience" }).click();
+  await expect(fan.getByText("You’re in the audience")).toBeVisible();
+  await axe(fan, "audience lobby", a11y);
+
+  // Plan the show: Price then Telepathy, jackpot on, a show pack.
+  await expect(host.getByRole("heading", { name: "Audience" })).toBeVisible();
+  await expect(host.getByRole("button", { name: "Remove Fan from the audience" })).toBeVisible();
+  await host.getByLabel("Show pack").selectOption("food");
+  await expect(fan.getByText("Show pack: Food fight")).toBeVisible();
+  const games = host.getByRole("group", { name: "Games in this show, in order" });
+  await games.getByRole("button", { name: "Price Is Weird" }).click();
+  await games.getByRole("button", { name: "Telepathy Tax" }).click();
+  await expect(host.getByRole("button", { name: /Jackpot finale: on/ })).toHaveAttribute("aria-pressed", "true");
+  await shot("14-show-builder");
+  await axe(host, "show builder", a11y);
+  await targets(host, "show builder", a11y);
+  await host.getByRole("button", { name: "Start the show (2 games)" }).click();
+
+  // The audience backs a winner and reacts; everyone sees the show strip.
+  await expect(host.getByRole("navigation", { name: /Show progress/ })).toBeVisible();
+  const predict = fan.getByRole("group", { name: "Predict the winner" });
+  await predict.getByRole("button", { name: "Bo" }).click();
+  await expect(predict.getByRole("button", { name: "Bo" })).toHaveAttribute("aria-pressed", "true");
+  await expect(host.getByText(/Crowd favourite: Bo/)).toBeVisible();
+  await fan.getByRole("button", { name: "Applause" }).click();
+  await expect(host.locator(".react-overlay .floater")).toHaveCount(1);
+  await axe(fan, "audience in game", a11y);
+  await targets(fan, "audience in game", a11y);
+
+  await skipUntil(host, host.getByRole("button", { name: /Next: Telepathy Tax/ }));
+  await expect(host.getByText("The host says")).toBeVisible();
+  await host.getByRole("button", { name: /Next: Telepathy Tax/ }).click();
+  await skipUntil(host, host.getByRole("button", { name: /Next: Jackpot finale/ }));
+  await host.getByRole("button", { name: /Next: Jackpot finale/ }).click();
+
+  // Jackpot: a secret wager, then the reveal.
+  await expect(host.getByRole("heading", { name: "Jackpot Round" })).toBeVisible();
+  await host.getByRole("button", { name: "All in" }).click();
+  await host.getByRole("button", { name: "Higher" }).click();
+  await expect(host.getByText(/Locked: \d+ on higher/)).toBeVisible();
+  await expect(fan.getByText(/of 3 wagers locked in/)).toBeVisible(); // the crowd sees counts, not bets
+  await shot("15-jackpot");
+  await axe(host, "jackpot", a11y);
+  await targets(host, "jackpot", a11y);
+  await skipUntil(host, host.getByRole("button", { name: /Next: the grand finale/ }));
+  await expect(host.getByText("The real price", { exact: true })).toBeVisible();
+  await host.getByRole("button", { name: /Next: the grand finale/ }).click();
+
+  // The finale, on the host's phone and the audience's.
+  await expect(host.getByRole("heading", { name: "Final standings" })).toBeVisible();
+  await expect(host.getByRole("heading", { name: "Awards" })).toBeVisible();
+  await expect(fan.getByRole("heading", { name: "Final standings" })).toBeVisible();
+  await shot("16-finale");
+  await axe(host, "finale", a11y);
+  await targets(host, "finale", a11y);
+  await host.getByRole("button", { name: "Back to the lobby" }).click();
+  await expect(host.getByRole("heading", { name: "Plan a show night" })).toBeVisible();
+  expect(a11y).toEqual([]);
+  expect(problems).toEqual([]);
 });

@@ -218,12 +218,93 @@ export interface CrosswordView extends GameBase {
   locked_for: number;
 }
 
-export type GameView = FrenemyView | AlibiView | PriceView | TelepathyView | MuralView | BlackjackView | CrosswordView;
+export interface JackpotView {
+  game: "jackpot";
+  phase: "wager" | "final";
+  round: number;
+  rounds: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  item: { name: string; blurb: string; emoji: string };
+  tag: number;
+  stakes: Record<string, number>;
+  cap: number;
+  locked: string[];
+  you: { amount: number; call: "higher" | "lower" } | null;
+  result: {
+    price: number;
+    answer: "higher" | "lower";
+    wagers: Record<string, { amount: number; call: "higher" | "lower" }>;
+    deltas: Record<string, number>;
+  } | null;
+}
+
+export type GameView =
+  | FrenemyView
+  | AlibiView
+  | PriceView
+  | TelepathyView
+  | MuralView
+  | BlackjackView
+  | CrosswordView
+  | JackpotView;
+
+export interface Highlight {
+  icon: string;
+  title: string;
+  text: string;
+  /** the game it happened in (show reel only) */
+  game?: string;
+}
+
+export interface ShowState {
+  playlist: { id: GameCard["id"]; title: string }[];
+  jackpot: boolean;
+  started: number;
+  /** next segment to start: a game id, "jackpot", or null when the show is over */
+  next: GameCard["id"] | "jackpot" | null;
+  finished: boolean;
+  games: { game: string; title: string; scores: Record<string, number> }[];
+  reel: Highlight[];
+  awards: Highlight[];
+}
+
+export interface Reaction {
+  id: number;
+  e: string;
+  by: string;
+}
+
+export interface Crowd {
+  members: { id: string; name: string; points: number; connected: boolean }[];
+  /** the running game's contestants (who the crowd can back) */
+  contestants: { id: string; name: string }[];
+  /** how many of the crowd back each player this game (never who) */
+  picks: Record<string, number>;
+  open: boolean;
+  you_picked: string | null;
+}
+
+export type Role = "player" | "tv" | "audience";
 
 export interface RoomState {
   t: "state";
   you: string;
-  room: { code: string; phase: "lobby" | "game" | "results"; host: string; title: string; locked: boolean };
+  role: Role;
+  room: {
+    code: string;
+    phase: "lobby" | "game" | "results" | "finale";
+    host: string;
+    title: string;
+    locked: boolean;
+    theme: string;
+  };
+  themes: Record<string, string>;
+  show: ShowState | null;
+  highlights: Highlight[];
+  quip: string;
+  reactions: Reaction[];
+  crowd: Crowd;
   players: PlayerInfo[];
   games: GameCard[];
   game: GameView | null;

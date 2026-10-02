@@ -129,7 +129,7 @@ class ShowHubTests(HubHarness):
         state = conns[host].last
         self.assertTrue(state["show"]["finished"])
         self.assertEqual([g["game"] for g in state["show"]["games"]], ["price", "telepathy", "jackpot"])
-        self.assertEqual(state["show"]["awards"][0]["title"], "Show champion")
+        self.assertEqual(state["show"]["awards"][0]["icon"], "👑")  # champion(s) first
         self.assertTrue(state["quip"])
         await hub.handle_message(room, host, conns[host], {"t": "next"})  # nothing left
         self.assertIn("no_show", conns[host].errors())
@@ -247,6 +247,7 @@ class AudienceTests(HubHarness):
         await hub.handle_message(room, host, conns[host], {"t": "predict", "target": host})
         self.assertIn("audience_only", conns[host].errors())
         crowd = conns[guest].last["crowd"]
+        self.assertEqual({c["id"] for c in crowd["contestants"]}, set(room.game.player_ids))
         self.assertEqual(crowd["picks"], {host: 1, guest: 1})
         self.assertNotIn(w1.id, str(crowd["picks"]))
         self.assertIsNone(crowd["you_picked"])
@@ -311,3 +312,32 @@ class ReactionTests(HubHarness):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AwardTests(unittest.TestCase):
+    def test_draws_crown_nobody_and_steady_hand_means_near_the_top(self):
+        names = {"a": "Ana", "b": "Bo", "c": "Cy", "d": "Di"}
+        s = showlib.Show(playlist=["price", "telepathy"], jackpot=True)
+        s.games = [
+            {"game": "price", "title": "P", "scores": {"a": 0, "b": 0, "c": 0, "d": 0}},
+            {"game": "telepathy", "title": "T", "scores": {"a": 0, "b": 0, "c": 0, "d": 0}},
+            {"game": "jackpot", "title": "J", "scores": {"a": -200, "b": 0, "c": 0, "d": 0}},
+        ]
+        titles = [a["title"] for a in showlib.awards(s, {"a": -200, "b": 0, "c": 0, "d": 0}, names)]
+        self.assertEqual(titles, ["Joint champions"])
+
+    def test_segment_king_and_steady_hand(self):
+        names = {"a": "Ana", "b": "Bo", "c": "Cy", "d": "Di"}
+        s = showlib.Show(playlist=["price", "telepathy", "mural"], jackpot=False)
+        s.games = [
+            {"game": "price", "title": "P", "scores": {"a": 900, "b": 300, "c": 200, "d": 0}},
+            {"game": "telepathy", "title": "T", "scores": {"a": 500, "b": 400, "c": 0, "d": 100}},
+            {"game": "mural", "title": "M", "scores": {"a": 0, "b": 300, "c": 400, "d": 100}},
+        ]
+        awards = showlib.awards(s, {"a": 1400, "b": 1000, "c": 600, "d": 200}, names)
+        self.assertEqual(awards[0]["text"], "Ana with 1400 points")
+        self.assertEqual(
+            awards[1], {"icon": "🏆", "title": "Segment king", "text": "Ana won 2 games tonight"}
+        )
+        self.assertEqual(awards[2]["title"], "Steady hand")
+        self.assertIn("Bo", awards[2]["text"])

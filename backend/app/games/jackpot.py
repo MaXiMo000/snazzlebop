@@ -139,10 +139,11 @@ class Jackpot(Game):
                 }
             )
         if deltas[worst] < 0:
+            all_in = -deltas[worst] >= self.cap(worst)
             out.append(
                 {
                     "icon": "🎢",
-                    "title": "All in, all gone",
+                    "title": "All in, all gone" if all_in else "Ouch",
                     "text": f"{self.name_of(worst)} bet {-deltas[worst]} and lost it",
                 }
             )
