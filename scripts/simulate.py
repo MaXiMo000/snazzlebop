@@ -25,6 +25,7 @@ import hashlib
 import json
 import random
 import sys
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -33,7 +34,7 @@ import websockets
 
 TIMEOUT = 15.0
 # Errors a bot may legitimately trigger (racing for the same question, etc.). Anything else fails.
-EXPECTED_ERRORS = {"already_known", "no_asks"}
+EXPECTED_ERRORS = {"already_known", "no_asks", "wrong"}  # wrong: the deliberate crossword miss
 
 ALLOWED_KEYS = {
     ("frenemy", "rank"): {"game", "phase", "round", "rounds", "remaining", "prompt", "players", "submitted"}
@@ -71,6 +72,40 @@ ALLOWED_KEYS[("telepathy", "pick")] = {
     "locked",
     "you_locked",
     "your_pick",
+}
+for _phase in ("bet", "play"):
+    ALLOWED_KEYS[("blackjack", _phase)] = {
+        "game",
+        "phase",
+        "round",
+        "rounds",
+        "remaining",
+        "players",
+        "chips",
+    } | {
+        "bets",
+        "bet_sizes",
+        "hands",
+        "dealer",
+        "shoe_left",
+        "reshuffled",
+        "turn",
+        "you",
+    }
+ALLOWED_KEYS[("crossword", "solve")] = {
+    "game",
+    "phase",
+    "round",
+    "rounds",
+    "remaining",
+    "players",
+    "width",
+} | {
+    "height",
+    "cells",
+    "clues",
+    "hint_level",
+    "locked_for",
 }
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
@@ -243,6 +278,17 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
                         g["your_hint"] in (None, HINTS.get((b.pid, g["round"]))),
                         f"{b.name} was shown a hint that isn't theirs",
                     )
+            if game == "blackjack" and g["phase"] in ("bet", "play"):
+                check(len(g["dealer"]["cards"]) <= 1, f"{b.name} saw the dealer's hole card")
+                check("shoe" not in g and "deck" not in g, f"{b.name} saw the shoe")
+            if game == "crossword" and g["phase"] == "solve":
+                open_clues = [c for c in g["clues"] if not c["solved_by"]]
+                check(all("answer" not in c for c in open_clues), f"{b.name} saw an unsolved answer")
+                solved_cells = sum(c["len"] for c in g["clues"] if c["solved_by"])
+                lit = sum(1 for c in g["cells"] if c["letter"])
+                check(
+                    lit <= solved_cells + g["hint_level"] * len(g["clues"]), f"{b.name} saw letters too early"
+                )
     if game == "alibi":
         check(len(killers) == 1, f"expected exactly one bot told it is the killer, got {len(killers)}")
     if game == "mural":
@@ -254,6 +300,77 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
 # -- games --------------------------------------------------------------------------------------------
 PICKS: dict[tuple[str, int], int] = {}  # (pid, round) -> the option that bot picked
 HINTS: dict[tuple[str, int], int] = {}  # (pid, round) -> the tile that bot hinted
+
+
+async def play_blackjack(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    by_id = {b.pid: b for b in bots}
+    for rnd in range(1, 6):
+        await all_until(bots, game_is("blackjack", "bet", rnd), f"blackjack bet {rnd}")
+        before = dict(host.state["game"]["chips"])  # type: ignore[index]
+        for b in bots:
+            chips = host.state["game"]["chips"][b.pid]  # type: ignore[index]
+            if chips >= 50:
+                await b.send(t="act", a="bet", amount=100 if chips >= 100 else 50)
+        await all_until(bots, lambda s: (s.get("game") or {}).get("phase") in ("play", "settle"), "deal")
+        for _ in range(60):  # one action per loop; each waits for the table to move on
+            g = host.state["game"]  # type: ignore[index]
+            if g["phase"] != "play":
+                break
+            turn = g["turn"]
+            who = by_id[turn["player"]]
+            hand = g["hands"][who.pid][turn["hand"]]
+            stage = (turn["player"], turn["hand"], len(hand["cards"]))
+            await who.send(t="act", a="hit" if hand["value"] < 13 else "stand")
+
+            def moved(s: dict[str, Any], stage: tuple = stage) -> bool:
+                gg = s.get("game") or {}
+                t = gg.get("turn")
+                if gg.get("phase") != "play" or t is None:
+                    return True
+                return (t["player"], t["hand"], len(gg["hands"][t["player"]][t["hand"]]["cards"])) != stage
+
+            await host.until(moved, "blackjack turn")
+        await all_until(bots, game_is("blackjack", "settle", rnd), f"blackjack settle {rnd}")
+        g = host.state["game"]  # type: ignore[index]
+        for pid, net in g["result"]["net"].items():
+            check(
+                g["chips"][pid] - before[pid] == net,
+                f"blackjack: chips moved {g['chips'][pid] - before[pid]} != net {net}",
+            )
+        await skip(host)
+
+
+def crossword_oracle() -> dict[str, str]:
+    """Clue -> answer from the repo's seed pool. A test oracle: bots stand in for people who know words."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+    from app.games.content import CROSSWORD_ENTRIES
+
+    return {e["clue"]: e["word"] for e in CROSSWORD_ENTRIES}
+
+
+async def play_crossword(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    await all_until(bots, game_is("crossword", "solve"), "crossword solve")
+    oracle = crossword_oracle()
+    clues = host.state["game"]["clues"]  # type: ignore[index]
+    # One honest mistake first: the server must answer "wrong", then lock that bot out briefly.
+    await bots[1].send(t="act", a="guess", clue=clues[0]["id"], answer="Q" * clues[0]["len"])
+    await bots[1].until(lambda s: True, "wrong guess")
+    await asyncio.sleep(0.3)
+    check("wrong" in bots[1].errors, "a wrong crossword guess wasn't rejected")
+    solved = 0
+    solvers = [b for b in bots if b is not bots[1]]  # bots[1] is serving its 2 s lockout
+    for i, c in enumerate(clues):
+        word = oracle.get(c["clue"])
+        if word:  # generated clues aren't in the seed oracle: leave those to the timer
+            await solvers[i % len(solvers)].send(t="act", a="guess", clue=c["id"], answer=word)
+            solved += 1
+    check(solved > 0, "no crossword clue was solvable from the seed pool")
+    await asyncio.sleep(0.5)
+    if host.state["game"]["phase"] == "solve":  # type: ignore[index]
+        await skip(host)
+    await all_until(bots, game_is("crossword", "final"), "crossword final")
+    g = host.state["game"]  # type: ignore[index]
+    check(all("answer" in c for c in g["clues"]), "crossword answers weren't revealed at the end")
 
 
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -460,7 +577,7 @@ async def run(base: str, n_bots: int, seed: int) -> None:
         await all_until(
             bots, lambda s: sum(p["connected"] for p in s["players"]) == len(bots), "everyone online"
         )
-        for game in ("frenemy", "alibi", "price", "telepathy", "mural"):
+        for game in ("frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword"):
             before = totals(host)
             start = {b.pid: len(b.raw) for b in bots}
             planted: dict[str, set[int]] = {}
@@ -473,6 +590,10 @@ async def run(base: str, n_bots: int, seed: int) -> None:
                 await play_price(host, bots, planted)
             elif game == "telepathy":
                 await play_telepathy(host, bots, rng)
+            elif game == "blackjack":
+                await play_blackjack(host, bots, rng)
+            elif game == "crossword":
+                await play_crossword(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -483,6 +604,11 @@ async def run(base: str, n_bots: int, seed: int) -> None:
                 want = price_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
+            elif game == "blackjack":
+                # The house has an edge, so a table can lose overall: each score must be net chips.
+                chips = host.state["game"]["chips"]  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == {pid: chips[pid] - 1000 for pid in got}, f"blackjack: scores {got} != net chips")
             else:
                 check(sum(after.values()) > sum(before.values()), f"{game}: session scores did not go up")
             frames = check_frames(bots, game, start, planted)
@@ -492,7 +618,7 @@ async def run(base: str, n_bots: int, seed: int) -> None:
             gained = sum(after.values()) - sum(before.values())
             hidden = sum(len(v) for v in planted.values())
             note = f", {hidden} planted guesses never leaked" if hidden else ""
-            print(f"OK {game}: {frames} frames checked, +{gained} points{note}")
+            print(f"OK {game}: {frames} frames checked, {gained:+} points{note}")
             await host.send(t="lobby")
             await all_until(bots, lambda s: s["room"]["phase"] == "lobby", "lobby")
     except Check:

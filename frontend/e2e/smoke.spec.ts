@@ -151,6 +151,24 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await targets(host, "mural briefing", a11y);
   await skipToResults(host, () => axe(host, "mural final", a11y));
 
+  // Blackjack Showdown
+  await host.locator("article.game-card.blackjack").getByRole("button", { name: /Start!/ }).click();
+  await expect(host.getByRole("heading", { name: "Place your bet" })).toBeVisible();
+  await expect(bo.getByRole("group", { name: "Bet size" }).getByRole("button")).toHaveCount(4);
+  await shot("11-blackjack");
+  await axe(host, "blackjack bet", a11y);
+  await targets(host, "blackjack bet", a11y);
+  await skipToResults(host, () => axe(host, "blackjack final", a11y));
+
+  // Crossword Race
+  await host.locator("article.game-card.crossword").getByRole("button", { name: /Start!/ }).click();
+  await expect(host.getByLabel(/\d+ (Across|Down) \(\d+ letters\)/)).toBeVisible();
+  await expect(host.getByRole("heading", { name: "Across" })).toBeVisible();
+  await shot("12-crossword");
+  await axe(host, "crossword", a11y);
+  await targets(host, "crossword", a11y);
+  await skipToResults(host, () => axe(host, "crossword final", a11y));
+
   expect(problems, "console errors / CSP violations").toEqual([]);
   expect(a11y, "axe WCAG 2.1 A/AA violations").toEqual([]);
 });

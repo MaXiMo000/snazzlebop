@@ -337,7 +337,12 @@ class BlackjackShowdown(Game):
             "bet_sizes": list(BETS),
             "hands": {
                 p: [
-                    {"cards": list(h["cards"]), "bet": h["bet"], "value": hand_value(h["cards"])[0]}
+                    {
+                        "cards": list(h["cards"]),
+                        "bet": h["bet"],
+                        "value": hand_value(h["cards"])[0],
+                        "soft": hand_value(h["cards"])[1],
+                    }
                     for h in hands
                 ]
                 for p, hands in self.hands.items()

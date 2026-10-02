@@ -55,6 +55,16 @@ const pairs = [
   ["plum-soft", "#ffe1cf", "muted in Mural soft"],
   ["plum-soft", "paper", "mural tile tags"],
   ["plum", "tangerine", "selected mural tile (Mural accent)"],
+  ["#ffffff", "#11643f", "Blackjack segment / felt"],
+  ["bulb", "#11643f", "sign text on felt"],
+  ["cream", "#147043", "text on the felt's lightest point"],
+  ["bulb", "#147043", "sign on the felt's lightest point"],
+  ["plum", "#d6efe0", "Blackjack soft cards"],
+  ["plum-soft", "#d6efe0", "muted in Blackjack soft"],
+  ["#ffffff", "#1f5fae", "Crossword segment"],
+  ["plum", "#dbe8fb", "Crossword soft cards"],
+  ["plum-soft", "#dbe8fb", "muted in Crossword soft"],
+  ["cherry", "#ffffff", "red playing cards"],
 ];
 
 let bad = 0;

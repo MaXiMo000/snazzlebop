@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword";
   title: string;
   blurb: string;
   min_players: number;
@@ -167,7 +167,58 @@ export interface MuralView extends GameBase {
   };
 }
 
-export type GameView = FrenemyView | AlibiView | PriceView | TelepathyView | MuralView;
+export interface BlackjackHand {
+  cards: string[];
+  bet: number;
+  value: number;
+  /** an ace is still counting as 11 */
+  soft: boolean;
+}
+export interface BlackjackView extends GameBase {
+  game: "blackjack";
+  players: { id: string; name: string }[];
+  chips: Record<string, number>;
+  bets: Record<string, number>;
+  bet_sizes: number[];
+  hands: Record<string, BlackjackHand[]>;
+  dealer: { cards: string[]; hidden: boolean; value: number };
+  shoe_left: number;
+  reshuffled: boolean;
+  turn: { player: string; hand: number } | null;
+  you: { actions: ("hit" | "stand" | "double" | "split")[]; bet: number | null };
+  result?: {
+    dealer: string[];
+    dealer_value: number;
+    dealer_blackjack: boolean;
+    net: Record<string, number>;
+    outcomes: Record<string, ("bust" | "blackjack" | "lose" | "push" | "win")[]>;
+  };
+  history?: { hand: number; net: Record<string, number>; dealer_value: number }[];
+}
+
+export interface CrosswordClue {
+  id: number;
+  num: number;
+  dir: "across" | "down";
+  row: number;
+  col: number;
+  len: number;
+  clue: string;
+  solved_by: string | null;
+  answer?: string;
+}
+export interface CrosswordView extends GameBase {
+  game: "crossword";
+  players: { id: string; name: string }[];
+  width: number;
+  height: number;
+  cells: { row: number; col: number; num: number | null; letter: string | null }[];
+  clues: CrosswordClue[];
+  hint_level: number;
+  locked_for: number;
+}
+
+export type GameView = FrenemyView | AlibiView | PriceView | TelepathyView | MuralView | BlackjackView | CrosswordView;
 
 export interface RoomState {
   t: "state";
