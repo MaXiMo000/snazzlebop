@@ -4,8 +4,8 @@ Everything here is framework-light (raw ASGI) so it can be unit-tested without F
 
 Honest scope note: application-level limits stop abuse of *this app* (room spam,
 message floods, enumeration, slow clients). They cannot absorb a volumetric
-network DDoS; put Cloudflare (or similar) in front of Render for that, and set
-TRUSTED_PROXY_HOPS accordingly. See SECURITY.md.
+network DDoS; that is the CDN's job. Client IP resolution must match the proxy
+chain (CLIENT_IP_HEADER or TRUSTED_PROXY_HOPS). See SECURITY.md.
 """
 
 from __future__ import annotations
@@ -104,14 +104,18 @@ class RateLimiter:
 _IP_RE = re.compile(r"^[0-9a-fA-F:.]{2,45}$")
 
 
-def client_ip(scope: dict[str, Any], trusted_hops: int) -> str:
+def client_ip(scope: dict[str, Any], trusted_hops: int, ip_header: str = "") -> str:
     """Resolve the client IP without trusting forgeable header entries.
 
-    Each trusted proxy appends the address it saw to X-Forwarded-For, so with N
-    trusted proxies the real client is the Nth entry from the right. Anything the
-    client put further left is ignored.
+    With `ip_header` (e.g. cf-connecting-ip), a proxy that overwrites that header on every
+    request is the source of truth and X-Forwarded-For is ignored. Otherwise each trusted
+    proxy appends the address it saw to X-Forwarded-For, so with N trusted proxies the real
+    client is the Nth entry from the right; anything the client put further left is ignored.
     """
     peer = (scope.get("client") or ("unknown", 0))[0]
+    if ip_header:
+        value = (header(scope, ip_header.encode()) or "").strip()
+        return value if _IP_RE.match(value) else str(peer)
     if trusted_hops <= 0:
         return str(peer)
     for name, value in scope.get("headers", []):
@@ -292,10 +296,13 @@ class BodyLimit:
 class HttpRateLimit:
     """Per-IP token buckets, with tighter buckets for room creation and joining."""
 
-    def __init__(self, app: ASGIApp, limiters: dict[str, RateLimiter], trusted_hops: int) -> None:
+    def __init__(
+        self, app: ASGIApp, limiters: dict[str, RateLimiter], trusted_hops: int, ip_header: str = ""
+    ) -> None:
         self.app = app
         self.limiters = limiters
         self.hops = trusted_hops
+        self.ip_header = ip_header
 
     def bucket_for(self, scope: Scope) -> str:
         path, method = scope.get("path", ""), scope.get("method", "GET")
@@ -308,7 +315,7 @@ class HttpRateLimit:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or scope.get("path") == "/healthz":
             return await self.app(scope, receive, send)
-        ip = client_ip(scope, self.hops)
+        ip = client_ip(scope, self.hops, self.ip_header)
         name = self.bucket_for(scope)
         if not self.limiters[name].allow(ip):
             return await send_json(

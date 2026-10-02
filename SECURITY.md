@@ -11,8 +11,8 @@ No application is "fully" protected. What this repo does is layer defences and m
 explicit. In particular:
 
 - **Volumetric DDoS (network-level floods) cannot be stopped by application code.** Render provides
-  baseline platform protection, but for real protection put **Cloudflare** (free tier is fine) in front
-  of the Render service, proxy the domain through it, then set `TRUSTED_PROXY_HOPS=2`. See "Edge setup".
+  baseline platform protection (its edge is Cloudflare); for WAF and bot rules of your own, put your
+  own Cloudflare zone in front. See "Client IP and Cloudflare".
 - The app-level limits below stop *abuse of this app* (room spam, message floods, code guessing, slow
   or hostile clients, memory exhaustion), which is what a single machine can actually defend.
 - No independent security review has been done. Treat this as a strong baseline, not a certification.
@@ -57,40 +57,39 @@ explicit. In particular:
 4. **No account recovery** by design: lose your tab storage and you lose your seat (rooms are short-lived).
 5. `style-src 'self'` relies on React setting styles through the DOM API (allowed under CSP), not inline `<style>` tags. Do not add inline `<style>` or `style=""` in static HTML.
 
-## Edge setup (Cloudflare in front of Render)
+## Client IP and Cloudflare
 
-**Status: written from Cloudflare's and Render's documented behaviour, not yet run against a live
-deployment.** Step 7 is how to check it; tick it in the launch checklist only after you have.
+Rate limits are per client IP, so the app must find the real one and nothing a client can forge.
 
-Why the edge secret is not optional: Render has no inbound IP allowlist, so the origin stays
-reachable without Cloudflare (via `*.onrender.com`, or Render's edge with your domain as `Host`).
-With `TRUSTED_PROXY_HOPS=2` the app trusts the second-from-right `X-Forwarded-For` entry. Through
-Cloudflare that entry is the real client. A direct caller writes it themselves and so picks their own
-rate-limit identity. The app therefore refuses to start in production with hops >= 2 and no
-`EDGE_SECRET`, and with one set it answers 403 (or WebSocket close 1008) to any request missing it.
+**On Render (verified live, 2026-10-03):** Render's edge is Cloudflare. `X-Forwarded-For` arrives as
+`<anything the client sent>, <client>, <Cloudflare edge>`. With `TRUSTED_PROXY_HOPS=1` the app keyed
+limits on the Cloudflare edge address: shared by unrelated players and changing between requests, so a
+burst with a forged header was never limited. render.yaml therefore sets
+`CLIENT_IP_HEADER=cf-connecting-ip`. Cloudflare overwrites that header on every request, and when it is
+set the app ignores `X-Forwarded-For` entirely (missing or malformed falls back to the TCP peer).
 
-1. Add the domain to Cloudflare. Create a CNAME record for your hostname pointing at
-   `<service>.onrender.com`, **Proxied** (orange cloud). In Render → service → Settings → Custom
-   Domains, add the same hostname and wait for it to verify.
-2. SSL/TLS → Overview: **Full (strict)**. Edge Certificates: **Always Use HTTPS** on.
-3. Network: **WebSockets** on (the default).
-4. Generate a secret locally: `python -c "import secrets;print(secrets.token_urlsafe(48))"`.
-   Rules → Transform Rules → **Modify Request Header** → "All incoming requests" → **Set static**
-   header `X-Edge-Auth` to that value. (Cloudflare strips nothing from it; clients can't see it.)
-5. Render → Environment: `EDGE_SECRET=<same value>`, `TRUSTED_PROXY_HOPS=2`,
-   `ALLOWED_HOSTS=<your hostname>`, `ALLOWED_ORIGINS=https://<your hostname>`. Deploy.
-   Render's own health check calls `/healthz` directly, which is exempt and reveals nothing.
-6. Optional, extra: Security → Bots → Bot Fight Mode; Security → WAF → rate limiting rule on
-   `/api/rooms` (e.g. 20 requests / 10 min / IP). The app's own limits stay in force either way.
-7. Verify (record the output in docs/SECURITY-EVIDENCE.md):
-   - `curl -sI https://<your hostname>/` → 200 with CSP/HSTS headers.
-   - `curl -s -o /dev/null -w '%{http_code}' https://<service>.onrender.com/` → **403** (no secret).
-   - Proxy hops are right if *both* hold: a burst of `POST /api/rooms` with a different forged
-     `X-Forwarded-For` on every request still gets 429 after ~5 (forged entries ignored), and a
-     second network (e.g. a phone hotspot) can still create a room at that moment (the limit is
-     per client, not shared by everyone behind one Cloudflare edge IP).
+**Adding your own Cloudflare zone in front (custom domain):**
 
-Without Cloudflare, keep `TRUSTED_PROXY_HOPS=1` (Render's proxy only) and leave `EDGE_SECRET` unset.
+1. Add the domain to Cloudflare and create a **Proxied** CNAME to `<service>.onrender.com`. Add the
+   same hostname under Render → Settings → Custom Domains and wait for it to verify.
+2. SSL/TLS: **Full (strict)**, **Always Use HTTPS** on. Network: **WebSockets** on (the default).
+3. Render → Environment: `ALLOWED_HOSTS=<your hostname>`, `ALLOWED_ORIGINS=https://<your hostname>`.
+   Keep `CLIENT_IP_HEADER=cf-connecting-ip`; Cloudflare keeps the original visitor in it when one
+   Cloudflare zone proxies to another.
+4. Optional, to force all traffic through your zone's WAF and bot rules: generate a secret
+   (`python -c "import secrets;print(secrets.token_urlsafe(48))"`), add a Transform Rule → Modify
+   Request Header → Set static `X-Edge-Auth` to it, and set `EDGE_SECRET` to the same value on Render.
+   Requests without it then get 403 (WebSocket close 1008); `/healthz` stays open.
+5. Optional: Bot Fight Mode, and a WAF rate-limiting rule on `/api/rooms`.
+6. Verify (and record the output in docs/SECURITY-EVIDENCE.md): a burst of `POST /api/rooms` with a
+   different forged `X-Forwarded-For` **and** `CF-Connecting-IP` on every request still gets 429 after
+   about 5; `curl -I` shows the security headers on your hostname.
+
+Steps 1-5 are not yet run against a real custom domain.
+
+`TRUSTED_PROXY_HOPS` is only for hosts without such a header: set it to exactly the number of proxies
+that append to `X-Forwarded-For`. Production refuses `TRUSTED_PROXY_HOPS>=2` unless `EDGE_SECRET` or
+`CLIENT_IP_HEADER` is set.
 
 ## Reporting a vulnerability
 
@@ -103,6 +102,6 @@ Open a private GitHub security advisory ("Report a vulnerability" on the repo's 
 - [ ] `curl -I https://<host>/` shows CSP, HSTS, `nosniff`, `frame-ancestors 'none'`
 - [ ] WebSocket from a foreign origin is refused (see `tests/test_api.py::test_ws_origin_enforced_in_production`)
 - [ ] CI green: ruff, bandit, pip-audit, pytest, npm audit, Trivy, gitleaks, CodeQL
-- [ ] If Cloudflare is in front: `EDGE_SECRET` set on both sides, direct origin returns 403, and the
-      step-7 hop check passed. Otherwise `TRUSTED_PROXY_HOPS=1`
+- [ ] Client IP is right: a create burst with forged `X-Forwarded-For` / `CF-Connecting-IP` still
+      gets 429 (on Render: `CLIENT_IP_HEADER=cf-connecting-ip`)
 - [ ] Load test one room with 8 sockets, plus a flood from one IP, and confirm 429/1008 behaviour

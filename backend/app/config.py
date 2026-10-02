@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -43,6 +44,10 @@ class Settings:
     # Render alone = 1. Cloudflare in front of Render = 2. NEVER set higher than reality:
     # clients can then forge their IP and dodge the rate limits.
     trusted_proxy_hops: int = 1
+    # A header the proxy overwrites with the client's address on every request, so clients can't
+    # forge it (Render runs behind Cloudflare: cf-connecting-ip). When set, X-Forwarded-For and
+    # trusted_proxy_hops are ignored.
+    client_ip_header: str = ""
     # Shared secret a CDN adds as `X-Edge-Auth` on every request it forwards. When set, requests
     # without it are refused, so nobody can skip the CDN and feed the app a forged X-Forwarded-For.
     edge_secret: str = field(default="", repr=False)
@@ -121,7 +126,10 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     edge_secret = e.get("EDGE_SECRET", "").strip()
     if edge_secret and len(edge_secret) < 32:
         raise RuntimeError("EDGE_SECRET must be at least 32 characters")
-    if production and hops >= 2 and not edge_secret:
+    ip_header = e.get("CLIENT_IP_HEADER", "").strip().lower()
+    if ip_header and (not re.fullmatch(r"[a-z0-9-]{1,40}", ip_header) or ip_header == "x-forwarded-for"):
+        raise RuntimeError("CLIENT_IP_HEADER must be a single-value header such as cf-connecting-ip")
+    if production and hops >= 2 and not edge_secret and not ip_header:
         # Behind a CDN the origin is still reachable directly; without the edge secret a direct
         # caller controls the X-Forwarded-For entry we'd trust, and walks around every rate limit.
         raise RuntimeError("TRUSTED_PROXY_HOPS >= 2 needs EDGE_SECRET in production (see SECURITY.md)")
@@ -134,6 +142,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         allowed_origins=tuple(origins),
         trusted_proxy_hops=hops,
         edge_secret=edge_secret,
+        client_ip_header=ip_header,
         static_dir=e.get("STATIC_DIR", defaults.static_dir),
         max_rooms=int(num("MAX_ROOMS", defaults.max_rooms)),
         max_ws_per_ip=int(num("MAX_WS_PER_IP", defaults.max_ws_per_ip)),

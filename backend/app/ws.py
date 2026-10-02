@@ -86,7 +86,7 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
     settings = state.settings
     hub: Hub = state.hub
     counter: ConnectionCounter = state.ws_counter
-    ip = client_ip(ws.scope, settings.trusted_proxy_hops)
+    ip = client_ip(ws.scope, settings.trusted_proxy_hops, settings.client_ip_header)
 
     if not _origin_ok(ws, settings.allowed_origins, settings.is_production):
         await _close(ws, 1008)

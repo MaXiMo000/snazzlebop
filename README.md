@@ -67,14 +67,13 @@ Or the production image: `docker build -t snazzlebop .` then run it with `ENV=pr
 
 The free plan sleeps when idle and drops live rooms; use Starter for real game nights.
 
-### Cloudflare in front (optional)
+### Client IP, Cloudflare and custom domains
 
-Follow "Edge setup" in [SECURITY.md](SECURITY.md) exactly. In short: proxy the domain through
-Cloudflare, add a Transform Rule that sets a secret `X-Edge-Auth` header, then set `EDGE_SECRET` to
-the same value and `TRUSTED_PROXY_HOPS=2` on Render. The secret matters because Render can't block
-direct traffic: without it, anyone hitting the origin directly could forge the `X-Forwarded-For`
-entry the app trusts and dodge the rate limits. So the app refuses to start with 2 hops and no
-secret. Without Cloudflare, leave `TRUSTED_PROXY_HOPS=1`.
+Render already sits behind Cloudflare, so render.yaml sets `CLIENT_IP_HEADER=cf-connecting-ip`.
+Without it the app rate-limited on a shared Cloudflare edge address that clients could steer with a
+forged `X-Forwarded-For`. That was found on the live deploy and fixed (see
+[docs/SECURITY-EVIDENCE.md](docs/SECURITY-EVIDENCE.md)). For your own Cloudflare zone and custom
+domain, follow "Client IP and Cloudflare" in [SECURITY.md](SECURITY.md).
 
 ## What is verified, and what isn't
 

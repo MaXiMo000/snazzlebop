@@ -107,7 +107,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Middleware: the LAST one added is the OUTERMOST. Order at runtime:
     # HostGuard -> SecurityHeaders -> BodyLimit -> HttpRateLimit -> app
-    app.add_middleware(HttpRateLimit, limiters=limiters, trusted_hops=settings.trusted_proxy_hops)
+    app.add_middleware(
+        HttpRateLimit,
+        limiters=limiters,
+        trusted_hops=settings.trusted_proxy_hops,
+        ip_header=settings.client_ip_header,
+    )
     app.add_middleware(BodyLimit, max_bytes=settings.max_body_bytes)
     app.add_middleware(SecurityHeaders, ws_hosts=settings.ws_hosts, production=settings.is_production)
     app.add_middleware(HostGuard, allowed_hosts=settings.allowed_hosts, edge_secret=settings.edge_secret)
@@ -151,7 +156,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except HubError as exc:
             if exc.code == "room_not_found":
                 # Guessing room codes is the main enumeration vector: make it expensive.
-                limiters["join"].penalize(client_ip(request.scope, settings.trusted_proxy_hops), 4)
+                limiters["join"].penalize(
+                    client_ip(request.scope, settings.trusted_proxy_hops, settings.client_ip_header), 4
+                )
             raise
         return {"code": room.code, "player_id": player.id, "token": token}
 
@@ -162,7 +169,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             room, token = hub.issue_tv(code)
         except HubError as exc:
             if exc.code == "room_not_found":
-                limiters["join"].penalize(client_ip(request.scope, settings.trusted_proxy_hops), 4)
+                limiters["join"].penalize(
+                    client_ip(request.scope, settings.trusted_proxy_hops, settings.client_ip_header), 4
+                )
             raise
         return {"code": room.code, "token": token}
 

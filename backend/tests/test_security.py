@@ -90,6 +90,20 @@ class ClientIpTests(unittest.TestCase):
     def test_garbage_entry_falls_back(self):
         self.assertEqual(client_ip(self.scope("<script>"), 1), "10.0.0.1")
 
+    def test_ip_header_beats_forged_forwarded_for(self):
+        # What Render (behind Cloudflare) sends: XFF = <forged>, <client>, <Cloudflare edge>. One
+        # trusted hop would key on the shared, rotating edge; cf-connecting-ip is the real client.
+        scope = self.scope("9.9.9.9, 203.0.113.9, 162.158.1.1")
+        scope["headers"].append((b"cf-connecting-ip", b"203.0.113.9"))
+        self.assertEqual(client_ip(scope, 1, "cf-connecting-ip"), "203.0.113.9")
+        self.assertEqual(client_ip(scope, 1), "162.158.1.1")  # the bug this setting fixes
+
+    def test_ip_header_missing_or_garbage_uses_peer_never_forwarded_for(self):
+        self.assertEqual(client_ip(self.scope("203.0.113.9"), 1, "cf-connecting-ip"), "10.0.0.1")
+        scope = self.scope("203.0.113.9")
+        scope["headers"].append((b"cf-connecting-ip", b"1.2.3.4, 5.6.7.8"))
+        self.assertEqual(client_ip(scope, 1, "cf-connecting-ip"), "10.0.0.1")
+
 
 async def run_asgi(app, scope, body=b"", headers=None):
     sent = []
@@ -212,6 +226,14 @@ class MiddlewareTests(unittest.IsolatedAsyncioTestCase):
 
 
 class ConfigTests(unittest.TestCase):
+    def test_client_ip_header_setting(self):
+        base = {"ENV": "production", "ALLOWED_HOSTS": "a.com", "SECRET_KEY": "k" * 40}
+        s = load_settings({**base, "CLIENT_IP_HEADER": "CF-Connecting-IP", "TRUSTED_PROXY_HOPS": "2"})
+        self.assertEqual(s.client_ip_header, "cf-connecting-ip")  # no edge secret needed with it
+        for bad in ("x-forwarded-for", "a b", "x" * 41):
+            with self.assertRaises(RuntimeError):
+                load_settings({**base, "CLIENT_IP_HEADER": bad})
+
     def test_cdn_hops_need_edge_secret_in_production(self):
         base = {"ENV": "production", "ALLOWED_HOSTS": "a.com", "SECRET_KEY": "k" * 40}
         with self.assertRaises(RuntimeError):  # forgeable X-Forwarded-For without the secret

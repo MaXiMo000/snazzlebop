@@ -77,7 +77,7 @@ bash scripts/loadtest/run.sh                   # abuse suite (see docs/SECURITY-
 2. Render dashboard → **New → Blueprint** → select the repo. `SECRET_KEY` is generated, the database is
    wired in, the host/origin allowlists come from `RENDER_EXTERNAL_HOSTNAME`.
 3. Open the service URL. Health check: `/healthz`.
-4. Custom domain / Cloudflare: see "Edge setup" in [SECURITY.md](SECURITY.md).
+4. Custom domain / Cloudflare: see "Client IP and Cloudflare" in [SECURITY.md](SECURITY.md).
 
 Free web instances sleep when idle and drop live rooms; use the Starter plan for real play nights.
 
