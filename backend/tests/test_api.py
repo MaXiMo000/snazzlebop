@@ -70,7 +70,15 @@ def test_bad_host_rejected(tmp_path):
 
 def test_games_catalog(client):
     games = client.get("/api/games").json()
-    assert {g["id"] for g in games} == {"frenemy", "alibi", "price", "telepathy", "mural"}
+    assert {g["id"] for g in games} == {
+        "frenemy",
+        "alibi",
+        "price",
+        "telepathy",
+        "mural",
+        "blackjack",
+        "crossword",
+    }
 
 
 def test_create_room_validation_and_no_echo(client):
