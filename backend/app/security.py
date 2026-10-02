@@ -166,10 +166,12 @@ def _error(code: str, message: str) -> dict[str, Any]:
 
 
 class HostGuard:
-    """Reject requests whose Host header is not ours (Host-header attacks, DNS rebinding)."""
+    """Reject requests whose Host header is not ours (Host-header attacks, DNS rebinding), and, when
+    an edge secret is configured, requests that didn't come through the CDN."""
 
-    def __init__(self, app: ASGIApp, allowed_hosts: tuple[str, ...]) -> None:
+    def __init__(self, app: ASGIApp, allowed_hosts: tuple[str, ...], edge_secret: str | None = None) -> None:
         self.app = app
+        self.edge_secret = (edge_secret or "").encode()
         self.exact = {h.lower() for h in allowed_hosts if not h.startswith("*.")}
         self.suffixes = tuple(h[1:].lower() for h in allowed_hosts if h.startswith("*."))
 
@@ -193,6 +195,12 @@ class HostGuard:
             if not self.ok(header(scope, b"host")):
                 if scope["type"] == "http":
                     return await send_json(send, 400, _error("bad_host", "Invalid host"))
+                return await send({"type": "websocket.close", "code": 1008})
+            if self.edge_secret and not hmac.compare_digest(
+                (header(scope, b"x-edge-auth") or "").encode("latin-1"), self.edge_secret
+            ):
+                if scope["type"] == "http":
+                    return await send_json(send, 403, _error("forbidden", "Forbidden"))
                 return await send({"type": "websocket.close", "code": 1008})
         await self.app(scope, receive, send)
 

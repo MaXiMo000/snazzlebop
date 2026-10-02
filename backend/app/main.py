@@ -110,7 +110,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(HttpRateLimit, limiters=limiters, trusted_hops=settings.trusted_proxy_hops)
     app.add_middleware(BodyLimit, max_bytes=settings.max_body_bytes)
     app.add_middleware(SecurityHeaders, ws_hosts=settings.ws_hosts, production=settings.is_production)
-    app.add_middleware(HostGuard, allowed_hosts=settings.allowed_hosts)
+    app.add_middleware(HostGuard, allowed_hosts=settings.allowed_hosts, edge_secret=settings.edge_secret)
 
     # -- error handling: never leak internals or echo input -----------------
     @app.exception_handler(HubError)

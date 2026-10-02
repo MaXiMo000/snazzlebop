@@ -140,6 +140,18 @@ class MiddlewareTests(unittest.IsolatedAsyncioTestCase):
         s, _, _ = await run_asgi(app, {"path": "/healthz"}, headers=[(b"host", b"10.1.2.3:10000")])
         self.assertEqual(s, 200)
 
+    async def test_edge_secret_blocks_requests_that_skip_the_cdn(self):
+        secret = "e" * 40
+        app = HostGuard(ok_app, ("example.com",), edge_secret=secret)
+        host = (b"host", b"example.com")
+        s, _, _ = await run_asgi(app, {}, headers=[host, (b"x-edge-auth", secret.encode())])
+        self.assertEqual(s, 200)
+        for bad in ([host], [host, (b"x-edge-auth", b"e" * 39)], [host, (b"x-edge-auth", b"")]):
+            s, _, _ = await run_asgi(app, {}, headers=bad)
+            self.assertEqual(s, 403)
+        s, _, _ = await run_asgi(app, {"path": "/healthz"}, headers=[host])  # platform health check
+        self.assertEqual(s, 200)
+
     async def test_security_headers(self):
         app = SecurityHeaders(ok_app, ("example.com",), production=True)
         s, h, _ = await run_asgi(app, {"path": "/api/x"})
@@ -200,6 +212,16 @@ class MiddlewareTests(unittest.IsolatedAsyncioTestCase):
 
 
 class ConfigTests(unittest.TestCase):
+    def test_cdn_hops_need_edge_secret_in_production(self):
+        base = {"ENV": "production", "ALLOWED_HOSTS": "a.com", "SECRET_KEY": "k" * 40}
+        with self.assertRaises(RuntimeError):  # forgeable X-Forwarded-For without the secret
+            load_settings({**base, "TRUSTED_PROXY_HOPS": "2"})
+        with self.assertRaises(RuntimeError):
+            load_settings({**base, "TRUSTED_PROXY_HOPS": "2", "EDGE_SECRET": "short"})
+        s = load_settings({**base, "TRUSTED_PROXY_HOPS": "2", "EDGE_SECRET": "e" * 40})
+        self.assertEqual((s.trusted_proxy_hops, s.edge_secret), (2, "e" * 40))
+        self.assertNotIn("e" * 40, repr(s))
+
     def test_production_requires_strong_secret_and_hosts(self):
         with self.assertRaises(RuntimeError):
             load_settings({"ENV": "production", "ALLOWED_HOSTS": "a.com", "SECRET_KEY": "short"})

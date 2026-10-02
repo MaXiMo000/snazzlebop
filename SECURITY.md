@@ -57,14 +57,40 @@ explicit. In particular:
 4. **No account recovery** by design: lose your tab storage and you lose your seat (rooms are short-lived).
 5. `style-src 'self'` relies on React setting styles through the DOM API (allowed under CSP), not inline `<style>` tags. Do not add inline `<style>` or `style=""` in static HTML.
 
-## Edge setup (recommended for any public launch)
+## Edge setup (Cloudflare in front of Render)
 
-1. Add the domain to Cloudflare, proxy (orange cloud) the record to your Render service.
-2. SSL/TLS mode **Full (strict)**. Enable "Always use HTTPS".
-3. Security → Bots: enable Bot Fight Mode. WAF: add a rate-limiting rule for `POST /api/rooms*`
-   (e.g. 20 requests / 10 min / IP) and keep WebSockets enabled.
-4. In Render, set `TRUSTED_PROXY_HOPS=2`, and add the domain to `ALLOWED_HOSTS` and `ALLOWED_ORIGINS`.
-5. Optionally restrict the origin to Cloudflare IP ranges so the `onrender.com` URL can't be hit directly.
+**Status: written from Cloudflare's and Render's documented behaviour, not yet run against a live
+deployment.** Step 7 is how to check it; tick it in the launch checklist only after you have.
+
+Why the edge secret is not optional: Render has no inbound IP allowlist, so the origin stays
+reachable without Cloudflare (via `*.onrender.com`, or Render's edge with your domain as `Host`).
+With `TRUSTED_PROXY_HOPS=2` the app trusts the second-from-right `X-Forwarded-For` entry. Through
+Cloudflare that entry is the real client. A direct caller writes it themselves and so picks their own
+rate-limit identity. The app therefore refuses to start in production with hops >= 2 and no
+`EDGE_SECRET`, and with one set it answers 403 (or WebSocket close 1008) to any request missing it.
+
+1. Add the domain to Cloudflare. Create a CNAME record for your hostname pointing at
+   `<service>.onrender.com`, **Proxied** (orange cloud). In Render → service → Settings → Custom
+   Domains, add the same hostname and wait for it to verify.
+2. SSL/TLS → Overview: **Full (strict)**. Edge Certificates: **Always Use HTTPS** on.
+3. Network: **WebSockets** on (the default).
+4. Generate a secret locally: `python -c "import secrets;print(secrets.token_urlsafe(48))"`.
+   Rules → Transform Rules → **Modify Request Header** → "All incoming requests" → **Set static**
+   header `X-Edge-Auth` to that value. (Cloudflare strips nothing from it; clients can't see it.)
+5. Render → Environment: `EDGE_SECRET=<same value>`, `TRUSTED_PROXY_HOPS=2`,
+   `ALLOWED_HOSTS=<your hostname>`, `ALLOWED_ORIGINS=https://<your hostname>`. Deploy.
+   Render's own health check calls `/healthz` directly, which is exempt and reveals nothing.
+6. Optional, extra: Security → Bots → Bot Fight Mode; Security → WAF → rate limiting rule on
+   `/api/rooms` (e.g. 20 requests / 10 min / IP). The app's own limits stay in force either way.
+7. Verify (record the output in docs/SECURITY-EVIDENCE.md):
+   - `curl -sI https://<your hostname>/` → 200 with CSP/HSTS headers.
+   - `curl -s -o /dev/null -w '%{http_code}' https://<service>.onrender.com/` → **403** (no secret).
+   - Proxy hops are right if *both* hold: a burst of `POST /api/rooms` with a different forged
+     `X-Forwarded-For` on every request still gets 429 after ~5 (forged entries ignored), and a
+     second network (e.g. a phone hotspot) can still create a room at that moment (the limit is
+     per client, not shared by everyone behind one Cloudflare edge IP).
+
+Without Cloudflare, keep `TRUSTED_PROXY_HOPS=1` (Render's proxy only) and leave `EDGE_SECRET` unset.
 
 ## Reporting a vulnerability
 
@@ -77,5 +103,6 @@ Open a private GitHub security advisory ("Report a vulnerability" on the repo's 
 - [ ] `curl -I https://<host>/` shows CSP, HSTS, `nosniff`, `frame-ancestors 'none'`
 - [ ] WebSocket from a foreign origin is refused (see `tests/test_api.py::test_ws_origin_enforced_in_production`)
 - [ ] CI green: ruff, bandit, pip-audit, pytest, npm audit, Trivy, gitleaks, CodeQL
-- [ ] Cloudflare in front, `TRUSTED_PROXY_HOPS` matches reality
+- [ ] If Cloudflare is in front: `EDGE_SECRET` set on both sides, direct origin returns 403, and the
+      step-7 hop check passed. Otherwise `TRUSTED_PROXY_HOPS=1`
 - [ ] Load test one room with 8 sockets, plus a flood from one IP, and confirm 429/1008 behaviour

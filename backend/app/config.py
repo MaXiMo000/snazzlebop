@@ -43,6 +43,9 @@ class Settings:
     # Render alone = 1. Cloudflare in front of Render = 2. NEVER set higher than reality:
     # clients can then forge their IP and dodge the rate limits.
     trusted_proxy_hops: int = 1
+    # Shared secret a CDN adds as `X-Edge-Auth` on every request it forwards. When set, requests
+    # without it are refused, so nobody can skip the CDN and feed the app a forged X-Forwarded-For.
+    edge_secret: str = field(default="", repr=False)
     static_dir: str = "static"
 
     # Capacity limits (memory-exhaustion defences)
@@ -114,13 +117,23 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         raw = e.get(name)
         return float(raw) if raw not in (None, "") else default
 
+    hops = int(num("TRUSTED_PROXY_HOPS", defaults.trusted_proxy_hops))
+    edge_secret = e.get("EDGE_SECRET", "").strip()
+    if edge_secret and len(edge_secret) < 32:
+        raise RuntimeError("EDGE_SECRET must be at least 32 characters")
+    if production and hops >= 2 and not edge_secret:
+        # Behind a CDN the origin is still reachable directly; without the edge secret a direct
+        # caller controls the X-Forwarded-For entry we'd trust, and walks around every rate limit.
+        raise RuntimeError("TRUSTED_PROXY_HOPS >= 2 needs EDGE_SECRET in production (see SECURITY.md)")
+
     return Settings(
         env=env,
         secret_key=secret,
         database_url=normalize_database_url(e.get("DATABASE_URL", defaults.database_url)),
         allowed_hosts=tuple(hosts),
         allowed_origins=tuple(origins),
-        trusted_proxy_hops=int(num("TRUSTED_PROXY_HOPS", defaults.trusted_proxy_hops)),
+        trusted_proxy_hops=hops,
+        edge_secret=edge_secret,
         static_dir=e.get("STATIC_DIR", defaults.static_dir),
         max_rooms=int(num("MAX_ROOMS", defaults.max_rooms)),
         max_ws_per_ip=int(num("MAX_WS_PER_IP", defaults.max_ws_per_ip)),
