@@ -26,6 +26,22 @@ async function axe(page: Page, where: string, found: string[]) {
   for (const v of violations) found.push(`${where}: ${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
 }
 
+/** Every visible control must be at least 44x44 CSS px (WCAG 2.5.5 / our convention). */
+async function targets(page: Page, where: string, found: string[]) {
+  const small = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>("button, a[href], input, select, summary, [role=tab], [tabindex='0']")]
+      .filter((el) => el.offsetParent !== null && !el.classList.contains("sr-only") && !el.closest(".skip-link"))
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        // checkboxes count their whole label (the tap target), not the box alone
+        const t = el.matches("input[type=checkbox]") ? el.closest("label")!.getBoundingClientRect() : r;
+        return t.width < 44 || t.height < 44;
+      })
+      .map((el) => `${el.tagName.toLowerCase()} "${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 30)}"`),
+  );
+  for (const s of small) found.push(`${where}: ${s}`);
+}
+
 async function skipToResults(host: Page, a11y?: () => Promise<void>) {
   const again = host.getByRole("button", { name: "Play another game" });
   for (let i = 0; i < 20 && !(await again.isVisible()); i++) {
@@ -49,6 +65,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await expect(host.getByRole("heading", { level: 1 })).toContainText("Snazzlebop");
   await shot("01-home");
   await axe(host, "home", a11y);
+  await targets(host, "home", a11y);
 
   // Create
   await host.locator("#host-name").fill("Ana");
@@ -82,6 +99,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await expect(host.getByRole("heading", { name: /In the room \(4 online\)/ })).toBeVisible();
   await shot("03-lobby");
   await axe(host, "lobby", a11y);
+  await targets(host, "lobby", a11y);
 
   // Frenemy Radar
   await host.locator("article.game-card.frenemy").getByRole("button", { name: "Start!" }).click();
@@ -89,6 +107,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await expect(bo.getByRole("button", { name: "Lock it in!" })).toBeVisible();
   await shot("04-frenemy");
   await axe(host, "frenemy rank", a11y);
+  await targets(host, "frenemy rank", a11y);
   await skipToResults(host, () => axe(host, "frenemy final", a11y));
 
   // Alibi
@@ -97,6 +116,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await expect(others[0]!.getByRole("heading", { name: "Your alibi" })).toBeVisible();
   await shot("05-alibi");
   await axe(host, "alibi briefing", a11y);
+  await targets(host, "alibi briefing", a11y);
   await skipToResults(host, () => axe(host, "alibi result", a11y));
 
   // Price Is Weird
@@ -105,6 +125,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await expect(others[1]!.getByLabel("Your price ($)")).toBeVisible();
   await shot("06-price");
   await axe(host, "price guess", a11y);
+  await targets(host, "price guess", a11y);
   await skipToResults(host, () => axe(host, "price final", a11y));
 
   expect(problems, "console errors / CSP violations").toEqual([]);
@@ -177,4 +198,45 @@ test("TV mode: read-only big screen of the public state", async ({ page: host, b
   await tv.screenshot({ path: `e2e/screenshots/${info.project.name}/07-tv.png`, fullPage: true });
   await axe(tv, "tv price", a11y);
   expect(a11y, "axe WCAG 2.1 A/AA violations").toEqual([]);
+});
+
+test("reduced motion: the spin lands at once, no stingers or confetti; sound toggle persists", async ({ browser, baseURL }) => {
+  const problems: string[] = [];
+  const ctx = await browser.newContext({ baseURL, reducedMotion: "reduce" });
+  const host = await ctx.newPage();
+  watchConsole(host, problems);
+  await host.goto("/");
+
+  // Sound: off by default, toggles, remembered across a reload (it's a per-device preference).
+  const sound = host.getByRole("button", { name: "Sound" });
+  await expect(sound).toHaveAttribute("aria-pressed", "false");
+  await sound.click();
+  await expect(sound).toHaveAttribute("aria-pressed", "true");
+  await host.reload();
+  await expect(host.getByRole("button", { name: "Sound" })).toHaveAttribute("aria-pressed", "true");
+
+  await host.locator("#host-name").fill("Rae");
+  await host.getByRole("button", { name: "Create room" }).click();
+  await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
+  const code = host.url().split("/").pop()!;
+  const guest = await (await browser.newContext({ baseURL })).newPage();
+  await guest.goto(`/r/${code}`);
+  await guest.getByLabel("Your name").fill("Sol");
+  await guest.getByRole("button", { name: "Join", exact: true }).click();
+  await host.locator("article.game-card.price").getByRole("button", { name: /Start!/ }).click();
+  for (const [p, amount] of [[host, "1"], [guest, "2"]] as const) {
+    await p.getByLabel("Your price ($)").fill(amount);
+    await p.getByRole("button", { name: "Lock it in!" }).click();
+  }
+  // No 2.3 s spin: the real price and the results table are there immediately.
+  await expect(host.getByRole("region", { name: "Guesses" })).toBeVisible({ timeout: 1500 });
+  // The reel's animation is effectively instant, and the price is final (no count-up ticking).
+  const spin = await host.locator(".reel").evaluate((el) => parseFloat(getComputedStyle(el).animationDuration));
+  expect(spin).toBeLessThan(0.01);
+  const shown = await host.locator(".price-tag").textContent();
+  await host.waitForTimeout(500);
+  await expect(host.locator(".price-tag")).toHaveText(shown!);
+  await expect(host.locator(".stinger")).toBeHidden();
+  await expect(host.locator(".confetti")).toBeHidden();
+  expect(problems).toEqual([]);
 });
