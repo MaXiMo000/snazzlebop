@@ -88,11 +88,7 @@ class FrenemyRadar(Game):
         for p in self.players:
             own = self.rankings[r].get(p.id)
             self_rank = (own.index(p.id) + 1) if own else None
-            others = [
-                order.index(p.id) + 1
-                for ranker, order in self.rankings[r].items()
-                if ranker != p.id
-            ]
+            others = [order.index(p.id) + 1 for ranker, order in self.rankings[r].items() if ranker != p.id]
             others_avg = sum(others) / len(others) if others else None
             if self_rank is None or others_avg is None:
                 # Didn't play (or nobody else did): no signal, neutral score.
@@ -178,9 +174,7 @@ class FrenemyRadar(Game):
 
     # -- views --------------------------------------------------------------
     def view_for(self, pid: str) -> dict[str, Any]:
-        submitted = [
-            p.id for p in self.players if p.id in self.rankings[self.round]
-        ]
+        submitted = [p.id for p in self.players if p.id in self.rankings[self.round]]
         view: dict[str, Any] = {
             "game": self.game_id,
             "phase": self.phase,
@@ -197,8 +191,7 @@ class FrenemyRadar(Game):
         if self.phase == "final" and self.final is not None:
             view["final"] = self.final
             view["history"] = [
-                {"prompt": self.prompts[i], "result": res}
-                for i, res in enumerate(self.results)
+                {"prompt": self.prompts[i], "result": res} for i, res in enumerate(self.results)
             ]
         return view
 

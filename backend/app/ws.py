@@ -51,9 +51,9 @@ def _origin_ok(ws: WebSocket, allowed: tuple[str, ...], production: bool) -> boo
     return origin in allowed
 
 
-async def _authenticate(ws: WebSocket, hub: Hub, room: Room, timeout: float, max_bytes: int) -> str | None:
+async def _authenticate(ws: WebSocket, hub: Hub, room: Room, deadline: float, max_bytes: int) -> str | None:
     try:
-        raw = await asyncio.wait_for(ws.receive_text(), timeout)
+        raw = await asyncio.wait_for(ws.receive_text(), deadline)
         if len(raw.encode()) > max_bytes:
             return None
         msg = json.loads(raw)

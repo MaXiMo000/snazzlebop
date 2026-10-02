@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import unittest
 
@@ -102,10 +101,21 @@ async def run_asgi(app, scope, body=b"", headers=None):
     async def send(message):
         sent.append(message)
 
-    scope = {"type": "http", "method": "GET", "path": "/", "headers": headers or [], "client": ("1.1.1.1", 1), **scope}
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "headers": headers or [],
+        "client": ("1.1.1.1", 1),
+        **scope,
+    }
     await app(scope, receive, send)
     start = next(m for m in sent if m["type"] == "http.response.start")
-    return start["status"], dict(start["headers"]), b"".join(m.get("body", b"") for m in sent if m["type"] == "http.response.body")
+    return (
+        start["status"],
+        dict(start["headers"]),
+        b"".join(m.get("body", b"") for m in sent if m["type"] == "http.response.body"),
+    )
 
 
 async def ok_app(scope, receive, send):
@@ -153,7 +163,9 @@ class MiddlewareTests(unittest.IsolatedAsyncioTestCase):
         app = BodyLimit(ok_app, 10)
         s, _, _ = await run_asgi(app, {"method": "POST"}, body=b"x" * 5, headers=[(b"content-length", b"5")])
         self.assertEqual(s, 200)
-        s, _, _ = await run_asgi(app, {"method": "POST"}, body=b"x" * 50, headers=[(b"content-length", b"50")])
+        s, _, _ = await run_asgi(
+            app, {"method": "POST"}, body=b"x" * 50, headers=[(b"content-length", b"50")]
+        )
         self.assertEqual(s, 413)
         s, _, _ = await run_asgi(app, {"method": "POST"}, headers=[(b"content-length", b"abc")])
         self.assertEqual(s, 400)
@@ -198,7 +210,9 @@ class ConfigTests(unittest.TestCase):
         self.assertNotIn("localhost", s.allowed_hosts)
 
     def test_render_defaults(self):
-        s = load_settings({"RENDER": "true", "SECRET_KEY": "k" * 40, "RENDER_EXTERNAL_HOSTNAME": "snazzlebop.onrender.com"})
+        s = load_settings(
+            {"RENDER": "true", "SECRET_KEY": "k" * 40, "RENDER_EXTERNAL_HOSTNAME": "snazzlebop.onrender.com"}
+        )
         self.assertTrue(s.is_production)
         self.assertEqual(s.allowed_hosts, ("snazzlebop.onrender.com",))
         self.assertEqual(s.allowed_origins, ("https://snazzlebop.onrender.com",))

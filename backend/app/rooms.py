@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import random
 import re
@@ -148,10 +149,8 @@ class Hub:
             room.players[pid].connected = True
             room.last_active = self.clock()
         if previous is not None:
-            try:
+            with contextlib.suppress(Exception):  # already gone
                 await previous.close(1000)
-            except Exception:  # already gone
-                pass
         await self.broadcast(room)
 
     async def disconnect(self, room: Room, pid: str, conn: Connection) -> None:
@@ -198,25 +197,20 @@ class Hub:
         except Exception:
             # Slow or dead client: drop it rather than let it stall the room.
             log.info("dropping unresponsive connection")
-            try:
+            with contextlib.suppress(Exception):
                 await conn.close(1011)
-            except Exception:
-                pass
             await self.disconnect(room, pid, conn)
 
     async def broadcast(self, room: Room) -> None:
         sends = [
-            self._send(room, pid, conn, self.view_for(room, pid))
-            for pid, conn in list(room.conns.items())
+            self._send(room, pid, conn, self.view_for(room, pid)) for pid, conn in list(room.conns.items())
         ]
         if sends:
             await asyncio.gather(*sends)
 
     async def send_error(self, conn: Connection, code: str, message: str) -> None:
-        try:
+        with contextlib.suppress(Exception):
             await asyncio.wait_for(conn.send_json({"t": "error", "code": code, "message": message}), 5)
-        except Exception:
-            pass
 
     # -- message routing ----------------------------------------------------
     async def handle_message(self, room: Room, pid: str, conn: Connection, msg: Any) -> None:

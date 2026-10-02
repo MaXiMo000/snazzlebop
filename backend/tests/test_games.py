@@ -43,7 +43,7 @@ class FrenemyTests(unittest.TestCase):
     def test_full_game_and_blind_spot(self):
         game, clock, players = make(FrenemyRadar, 4)
         ids = [p.id for p in players]
-        for rnd in range(FrenemyRadar.ROUNDS):
+        for _rnd in range(FrenemyRadar.ROUNDS):
             self.assertEqual(game.phase, "rank")
             for pid in ids:
                 # Everyone ranks p0 first, p1 second...; p0 ranks themselves last.
@@ -242,9 +242,7 @@ class AlibiTests(unittest.TestCase):
         self._to_interrogation()
         g = self.game
         w, killer = g.witness_slot, g.killer
-        witness = next(
-            i for i in g.player_ids if i != killer and g.truth[i][w] == g.truth[killer][w]
-        )
+        witness = next(i for i in g.player_ids if i != killer and g.truth[i][w] == g.truth[killer][w])
         g.handle(killer, {"a": "reveal", "slot": w})
         g.handle(witness, {"a": "reveal", "slot": w})
         flags = [f for f in g.view_for(witness)["flags"] if f["kind"] == "mismatch"]

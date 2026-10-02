@@ -17,7 +17,7 @@ def normalize_database_url(url: str) -> str:
     url = url.strip()
     for prefix in ("postgres://", "postgresql://"):
         if url.startswith(prefix):
-            url = "postgresql+asyncpg://" + url[len(prefix):]
+            url = "postgresql+asyncpg://" + url[len(prefix) :]
             break
     if url.startswith("postgresql+asyncpg://") and "?" in url:
         # asyncpg rejects libpq-style params such as sslmode; Render's internal URL needs no TLS.

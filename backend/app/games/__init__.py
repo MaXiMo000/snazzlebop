@@ -5,9 +5,7 @@ from .base import Game, GameError, Player
 from .frenemy import FrenemyRadar
 from .price import PriceIsWeird
 
-REGISTRY: dict[str, type[Game]] = {
-    cls.game_id: cls for cls in (FrenemyRadar, Alibi, PriceIsWeird)
-}
+REGISTRY: dict[str, type[Game]] = {cls.game_id: cls for cls in (FrenemyRadar, Alibi, PriceIsWeird)}
 
 
 def catalog() -> list[dict[str, object]]:

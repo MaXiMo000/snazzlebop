@@ -16,8 +16,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /app
 
-COPY backend/requirements.txt ./requirements.txt
-RUN pip install -r requirements.txt
+# Hash-locked for linux/py3.13 (regenerate: see backend/requirements.lock header). --no-deps means
+# nothing outside the lock can sneak in.
+COPY backend/requirements.lock ./requirements.lock
+RUN pip install --require-hashes --no-deps -r requirements.lock
 
 COPY backend/app ./app
 COPY --from=web /web/dist ./static

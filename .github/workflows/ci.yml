@@ -32,7 +32,7 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: bandit -q -r app -c pyproject.toml
-      - run: pip-audit -r requirements.txt
+      - run: pip-audit --require-hashes --disable-pip -r requirements.lock
       - run: pytest
 
   frontend:

@@ -76,7 +76,12 @@ def test_create_room_validation_and_no_echo(client):
     r = client.post("/api/rooms", json={"name": "ok", "admin": True})
     assert r.status_code == 422
     assert "admin" not in r.text  # validation errors must not echo input
-    assert client.post("/api/rooms", content=b"not json", headers={"content-type": "application/json"}).status_code == 422
+    assert (
+        client.post(
+            "/api/rooms", content=b"not json", headers={"content-type": "application/json"}
+        ).status_code
+        == 422
+    )
 
 
 def test_body_too_large(client):
@@ -118,18 +123,18 @@ def test_spa_fallback_and_no_path_traversal(tmp_path):
 
 def test_ws_requires_valid_auth(client):
     room = make_room(client)
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect(f"/ws/{room['code']}") as ws:
-            ws.send_json({"t": "auth", "token": "garbage"})
-            ws.receive_json()
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect(f"/ws/{room['code']}") as ws:
+        ws.send_json({"t": "auth", "token": "garbage"})
+        ws.receive_json()
     other = make_room(client, "Other")
-    with pytest.raises(WebSocketDisconnect):  # token for a different room
-        with client.websocket_connect(f"/ws/{room['code']}") as ws:
-            ws.send_json({"t": "auth", "token": other["token"]})
-            ws.receive_json()
-    with pytest.raises(WebSocketDisconnect):  # unknown room
-        with client.websocket_connect("/ws/ZZZZZ"):
-            pass
+    with (
+        pytest.raises(WebSocketDisconnect),
+        client.websocket_connect(f"/ws/{room['code']}") as ws,
+    ):  # token for a different room
+        ws.send_json({"t": "auth", "token": other["token"]})
+        ws.receive_json()
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/ZZZZZ"):  # unknown room
+        pass
 
 
 def test_ws_origin_enforced_in_production(tmp_path):
@@ -138,12 +143,16 @@ def test_ws_origin_enforced_in_production(tmp_path):
     )
     with TestClient(create_app(s)) as c:
         room = c.post("/api/rooms", json={"name": "Host"}, headers={"origin": "https://testserver"}).json()
-        with pytest.raises(WebSocketDisconnect):
-            with c.websocket_connect(f"/ws/{room['code']}", headers={"origin": "https://evil.example"}):
-                pass
-        with pytest.raises(WebSocketDisconnect):  # no Origin at all is refused in production
-            with c.websocket_connect(f"/ws/{room['code']}"):
-                pass
+        with (
+            pytest.raises(WebSocketDisconnect),
+            c.websocket_connect(f"/ws/{room['code']}", headers={"origin": "https://evil.example"}),
+        ):
+            pass
+        with (
+            pytest.raises(WebSocketDisconnect),
+            c.websocket_connect(f"/ws/{room['code']}"),
+        ):  # no Origin at all is refused in production
+            pass
         with c.websocket_connect(f"/ws/{room['code']}", headers={"origin": "https://testserver"}) as ws:
             assert auth(ws, room["token"])["t"] == "state"
 
@@ -171,18 +180,23 @@ def test_ws_per_ip_cap(tmp_path):
     with TestClient(create_app(s)) as c:
         room = make_room(c)
         a = join(c, room["code"], "A")
-        with c.websocket_connect(f"/ws/{room['code']}") as w1, c.websocket_connect(f"/ws/{room['code']}") as w2:
+        with (
+            c.websocket_connect(f"/ws/{room['code']}") as w1,
+            c.websocket_connect(f"/ws/{room['code']}") as w2,
+        ):
             auth(w1, room["token"])
             auth(w2, a["token"])
-            with pytest.raises(WebSocketDisconnect):
-                with c.websocket_connect(f"/ws/{room['code']}"):
-                    pass
+            with pytest.raises(WebSocketDisconnect), c.websocket_connect(f"/ws/{room['code']}"):
+                pass
 
 
 def test_full_price_game_over_websockets(client):
     host = make_room(client)
     guest = join(client, host["code"], "Guest")
-    with client.websocket_connect(f"/ws/{host['code']}") as wh, client.websocket_connect(f"/ws/{host['code']}") as wg:
+    with (
+        client.websocket_connect(f"/ws/{host['code']}") as wh,
+        client.websocket_connect(f"/ws/{host['code']}") as wg,
+    ):
         sh = auth(wh, host["token"])
         assert sh["room"]["phase"] == "lobby" and sh["you"] == host["player_id"]
         auth(wg, guest["token"])

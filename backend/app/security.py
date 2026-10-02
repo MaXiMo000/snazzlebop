@@ -142,7 +142,9 @@ def header(scope: Scope, name: bytes) -> str | None:
     return None
 
 
-async def send_json(send: Send, status: int, body: dict[str, Any], extra: Iterable[tuple[bytes, bytes]] = ()) -> None:
+async def send_json(
+    send: Send, status: int, body: dict[str, Any], extra: Iterable[tuple[bytes, bytes]] = ()
+) -> None:
     raw = json.dumps(body).encode()
     await send(
         {

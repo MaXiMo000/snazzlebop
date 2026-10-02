@@ -269,8 +269,7 @@ class Alibi(Game):
                 {
                     "kind": "ask",
                     "text": (
-                        f"{self.name_of(pid)} grilled {self.name_of(target)} about "
-                        f"{SLOT_LABELS[slot]}."
+                        f"{self.name_of(pid)} grilled {self.name_of(target)} about {SLOT_LABELS[slot]}."
                     ),
                 }
             )
@@ -344,9 +343,7 @@ class Alibi(Game):
                 "fake_slots": sorted(self.fake) if is_killer else None,
                 "asks_left": max(0, ASKS_PER_ROUND - self.asks_used.get(pid, 0)),
             },
-            "claims": [
-                {**c} for c in sorted(self.claims.values(), key=lambda c: (c["slot"], c["speaker"]))
-            ],
+            "claims": [{**c} for c in sorted(self.claims.values(), key=lambda c: (c["slot"], c["speaker"]))],
             "flags": self.flags(),
             "clues": self.clues,
             "log": self.log[-30:],

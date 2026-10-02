@@ -158,4 +158,3 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return _error(404, "not_found", "Not found")
 
     return app
-
