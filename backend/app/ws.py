@@ -59,24 +59,26 @@ def _origin_ok(ws: WebSocket, allowed: tuple[str, ...], production: bool) -> boo
 
 
 async def _authenticate(
-    ws: WebSocket, hub: Hub, room: Room | None, deadline: float, max_bytes: int
-) -> str | None:
+    ws: WebSocket, hub: Hub, code: str, room: Room | None, deadline: float, max_bytes: int
+) -> tuple[str | None, bool]:
+    """Return (player_id or None, suspicious). Suspicious = a token that isn't genuinely for this
+    code, i.e. what a code guesser sends. A real token for a room that has since ended is not."""
     try:
         raw = await asyncio.wait_for(ws.receive_text(), deadline)
-        if len(raw.encode()) > max_bytes:
-            return None
-        msg = json.loads(raw)
-    except Exception:
-        return None
-    if room is None or not isinstance(msg, dict) or msg.get("t") != "auth":
-        return None
-    verified = verify_token(hub.settings.secret_key, msg.get("token", ""))
-    if verified is None:
-        return None
-    pid, code = verified
-    if code != room.code or pid not in room.players:
-        return None
-    return pid
+    except Exception:  # timeout or the client left without saying anything
+        return None, False
+    try:
+        msg = json.loads(raw) if len(raw.encode()) <= max_bytes else None
+    except (ValueError, RecursionError):
+        msg = None
+    token = msg.get("token", "") if isinstance(msg, dict) and msg.get("t") == "auth" else ""
+    verified = verify_token(hub.settings.secret_key, token)
+    if verified is None or verified[1] != code:
+        return None, True
+    pid = verified[0]
+    if room is None or pid not in room.players:
+        return None, False
+    return pid, False
 
 
 async def serve_socket(ws: WebSocket, code: str) -> None:
@@ -107,9 +109,12 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
     pid: str | None = None
     try:
         await ws.accept()
-        pid = await _authenticate(ws, hub, room, settings.ws_auth_timeout, settings.ws_max_message_bytes)
+        pid, suspicious = await _authenticate(
+            ws, hub, code, room, settings.ws_auth_timeout, settings.ws_max_message_bytes
+        )
         if pid is None or room is None:
-            join_bucket.penalize(ip, 4)  # same price as a wrong code on HTTP join
+            if suspicious:
+                join_bucket.penalize(ip, 4)  # same price as a wrong code on HTTP join
             await _close(ws, 1008)
             return
         await hub.connect(room, pid, conn)

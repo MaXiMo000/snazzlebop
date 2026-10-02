@@ -244,3 +244,17 @@ def test_ws_room_guessing_is_indistinguishable_and_penalised(tmp_path):
         assert c.post(f"/api/rooms/{room['code']}/join", json={"name": "X"}).status_code == 429
         with pytest.raises(WebSocketDisconnect), c.websocket_connect(f"/ws/{room['code']}") as ws:
             auth(ws, room["token"])
+
+
+def test_ws_stale_but_genuine_token_is_not_penalised(tmp_path):
+    # After a restart/expiry every tab reconnects with a real token for a dead room. A party on one
+    # NAT must not lock itself out of creating the next room.
+    s = settings(tmp_path, rate_join_burst=12, rate_join_per_min=0.001)
+    app = create_app(s)
+    with TestClient(app) as c:
+        room = make_room(c)
+        app.state.hub.rooms.clear()
+        for _ in range(6):
+            assert close_code(c, room["code"], room["token"]) == 1008
+        fresh = make_room(c)
+        assert c.post(f"/api/rooms/{fresh['code']}/join", json={"name": "X"}).status_code == 200
