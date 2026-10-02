@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { Btn, Panel, Timer, money, nameOf } from "../components/ui";
+import { useEffect, useState } from "react";
+import { Btn, Card, ShowHead, money, nameOf } from "../components/ui";
+import { useCountUp, useOnChange, useReducedMotion, useShow } from "../components/fx";
+import { sfx } from "../lib/sfx";
 import type { PriceResult, PriceView } from "../types";
 
 interface Props {
@@ -10,37 +12,45 @@ interface Props {
   send: (msg: Record<string, unknown>) => void;
 }
 
-export function Price({ view, you, players, receivedAt, send }: Props) {
-  return (
-    <div className="theme-price">
-      <Panel themed className="halftone">
-        <div className="row between">
-          <div>
-            <span className="tag pink">
-              Item {Math.min(view.round, view.rounds)}/{view.rounds}
-            </span>
-            <h2>Price Is Weird</h2>
-          </div>
-          <div className="row">
-            {view.rollover > 0 && <span className="tag lime">Pot rolls over +{view.rollover}</span>}
-            <Timer remaining={view.remaining} receivedAt={receivedAt} />
-          </div>
-        </div>
-      </Panel>
+type Show = ReturnType<typeof useShow>;
 
-      {view.phase === "final" ? (
-        <FinalBoard view={view} players={players} />
-      ) : (
-        <Panel className="item-card halftone">
-          <div className="emoji" aria-hidden="true">
-            {view.item.emoji}
-          </div>
-          <h2>{view.item.name}</h2>
-          <p>{view.item.blurb}</p>
-          {view.phase === "guess" && <GuessForm key={view.round} view={view} send={send} />}
-          {view.phase === "reveal" && view.result && <Reveal result={view.result} players={players} you={you} />}
-        </Panel>
-      )}
+export function Price({ view, you, players, receivedAt, send }: Props) {
+  const show = useShow();
+  useOnChange(view.phase, (_, phase) => {
+    if (phase === "final") {
+      sfx.fanfare();
+      show.stinger("THAT’S A WRAP!");
+      show.celebrate();
+    }
+  });
+  const sign =
+    view.phase === "final"
+      ? "Final scores"
+      : `Item ${Math.min(view.round, view.rounds)} of ${view.rounds} · ${view.phase === "guess" ? "Guess" : "Chaos spin"}`;
+  return (
+    <div className="seg-price stack">
+      {show.node}
+      <ShowHead sign={sign} title="Price Is Weird" remaining={view.remaining} receivedAt={receivedAt}>
+        {view.rollover > 0 && view.phase !== "final" && <span className="chip plum">Jackpot rollover +{view.rollover}</span>}
+      </ShowHead>
+
+      <div key={`${view.phase}-${view.round}`} className="stack enter">
+        {view.phase === "final" ? (
+          <FinalBoard view={view} players={players} you={you} />
+        ) : (
+          <>
+            <Card tone="stage" className="prize">
+              <span className="emoji" aria-hidden="true">
+                {view.item.emoji}
+              </span>
+              <h3>{view.item.name}</h3>
+              <p>{view.item.blurb}</p>
+            </Card>
+            {view.phase === "guess" && <GuessForm view={view} send={send} />}
+            {view.phase === "reveal" && view.result && <Reveal result={view.result} players={players} you={you} show={show} />}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -58,137 +68,229 @@ function GuessForm({ view, send }: Pick<Props, "view" | "send">) {
   const [hedge, setHedge] = useState(false);
   if (view.you_locked) {
     return (
-      <div className="stack">
-        <h3>Locked in 🔒 {view.your_guesses?.map(money).join(" / ")}</h3>
-        <p className="muted">
+      <Card tone="soft" className="center">
+        <h3>Locked in 🔒</h3>
+        <p className="lead">{view.your_guesses?.map(money).join(" / ")}</p>
+        <p className="muted" aria-live="polite">
           {view.locked.length} guess{view.locked.length === 1 ? "" : "es"} in. The chaos spin is sealed.
         </p>
-        <p className="mono muted">
-          Seal (sha256 of modifier:nonce): {view.commit.slice(0, 16)}…
-        </p>
-      </div>
+      </Card>
     );
   }
   const first = toInt(a);
   const second = hedge ? toInt(b) : null;
   const valid = first !== null && (!hedge || second !== null);
   return (
-    <form
-      className="stack"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!valid || first === null) return;
-        send({ t: "act", a: "guess", amount: first, ...(hedge && second !== null ? { amount2: second } : {}) });
-      }}
-    >
-      <p className="mono muted">Sealed chaos spin: {view.commit.slice(0, 16)}… (revealed after guessing)</p>
-      <div>
-        <label className="field" htmlFor="g1">
-          Your price ($)
-        </label>
-        <input id="g1" type="text" inputMode="numeric" autoComplete="off" value={a} onChange={(e) => setA(e.target.value)} placeholder="e.g. 25000" />
-      </div>
-      {view.chips > 0 && (
-        <label className="row">
-          <input type="checkbox" checked={hedge} onChange={(e) => setHedge(e.target.checked)} style={{ width: 28, height: 28 }} />
-          <span>
-            Spend a hedge chip for a second guess ({view.chips} left). The best valid one counts.
-          </span>
-        </label>
-      )}
-      {hedge && (
+    <Card>
+      <form
+        className="stack-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!valid || first === null) return;
+          sfx.pop();
+          send({ t: "act", a: "guess", amount: first, ...(hedge && second !== null ? { amount2: second } : {}) });
+        }}
+      >
+        <p className="muted">
+          Closest <b>without going over</b> wins. Then the sealed chaos spin may halve or double the real price.
+        </p>
         <div>
-          <label className="field" htmlFor="g2">
-            Second price ($)
+          <label className="field" htmlFor="g1">
+            Your price ($)
           </label>
-          <input id="g2" type="text" inputMode="numeric" autoComplete="off" value={b} onChange={(e) => setB(e.target.value)} />
+          <input
+            id="g1"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            value={a}
+            onChange={(e) => setA(e.target.value)}
+            placeholder="e.g. 25,000"
+          />
         </div>
-      )}
-      <Btn color="lime" size="big" type="submit" disabled={!valid}>
-        Lock it in!
-      </Btn>
-    </form>
+        {view.chips > 0 && (
+          <label className="check">
+            <input type="checkbox" checked={hedge} onChange={(e) => setHedge(e.target.checked)} />
+            <span>
+              Spend a hedge chip on a second guess ({view.chips} left). The best valid one counts.
+            </span>
+          </label>
+        )}
+        {hedge && (
+          <div>
+            <label className="field" htmlFor="g2">
+              Second price ($)
+            </label>
+            <input id="g2" type="text" inputMode="numeric" autoComplete="off" value={b} onChange={(e) => setB(e.target.value)} />
+          </div>
+        )}
+        <Btn variant="accent" size="big" block type="submit" disabled={!valid}>
+          Lock it in!
+        </Btn>
+        <p className="muted">
+          Sealed spin: <span className="seal mono">{view.commit.slice(0, 16)}…</span>
+        </p>
+      </form>
+    </Card>
   );
 }
 
-function Reveal({ result, players, you }: { result: PriceResult; players: { id: string; name: string }[]; you: string }) {
-  const label = result.modifier === 2 ? "×2 !!" : result.modifier === 0.5 ? "×½ !!" : "×1 (phew)";
-  const cls = result.modifier === 2 ? "x2" : result.modifier === 0.5 ? "half" : "";
+const MULT: Record<string, { label: string; cls: string; say: string }> = {
+  "0.5": { label: "×½", cls: "half", say: "times one half" },
+  "1": { label: "×1", cls: "one", say: "times one" },
+  "2": { label: "×2", cls: "two", say: "times two" },
+};
+const mult = (m: number) => MULT[String(m)] ?? { label: `×${m}`, cls: "one", say: `times ${m}` };
+const CYCLE = [0.5, 1, 2];
+
+function Reel({ modifier }: { modifier: number }) {
+  // 17 decoy cells, then the sealed result: the strip always lands on its last cell.
+  const cells = [...Array.from({ length: 17 }, (_, i) => CYCLE[i % 3]!), modifier];
   return (
-    <div className="stack">
-      <div className={`spin ${cls}`} role="status">
-        {label}
-      </div>
-      <p>
-        Listed at <b>{money(result.base_price)}</b>, so the real price is <b>{money(result.true_price)}</b>.
-      </p>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Player</th>
-            <th>Guess</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {players.map((p) => {
-            const gs = result.guesses[p.id];
-            return (
-              <tr key={p.id} className={result.winner === p.id ? "winner" : ""}>
-                <td>
-                  {p.name}
-                  {p.id === you ? " (you)" : ""}
-                </td>
-                <td>
-                  {gs
-                    ? gs.map((g) => (
-                        <span key={g} style={{ marginRight: 8, textDecoration: g > result.true_price ? "line-through" : "none" }}>
-                          {money(g)}
-                        </span>
-                      ))
-                    : "—"}
-                </td>
-                <td>{result.winner === p.id ? `🏆 +${result.pot}` : ""}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {!result.winner && (
-        <p>
-          {Object.keys(result.guesses).length ? "💥 Everyone went over!" : "🦗 Nobody guessed."} The pot rolls into the next
-          round.
-        </p>
-      )}
-      <p className="mono muted">
-        Proof: sha256("{pyFloat(result.modifier)}:{result.nonce.slice(0, 12)}…") = {result.commit.slice(0, 16)}…
-      </p>
+    <div className="reel-window" aria-hidden="true">
+      <ul className="reel">
+        {cells.map((m, i) => (
+          <li key={i} className={mult(m).cls}>
+            {mult(m).label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-function FinalBoard({ view, players }: { view: PriceView; players: { id: string; name: string }[] }) {
+function Reveal({ result, players, you, show }: { result: PriceResult; players: Props["players"]; you: string; show: Show }) {
+  const reduced = useReducedMotion();
+  const [landed, setLanded] = useState(reduced);
+  useEffect(() => {
+    if (reduced) return;
+    sfx.spin();
+    const id = window.setTimeout(() => setLanded(true), 2300);
+    return () => window.clearTimeout(id);
+  }, [reduced]);
+  const { stinger, celebrate } = show;
+  useEffect(() => {
+    if (!landed) return;
+    if (result.winner === you) {
+      sfx.fanfare();
+      stinger("DING DING!");
+      celebrate();
+    } else if (result.winner) {
+      sfx.ding();
+      stinger("SOLD!");
+    } else {
+      sfx.buzz();
+      stinger("BZZZT!", "bad");
+    }
+  }, [landed, result.winner, you, stinger, celebrate]);
+  const price = useCountUp(landed ? result.true_price : result.base_price, 1100);
+  const m = mult(result.modifier);
+
+  return (
+    <Card className="center">
+      <h3>The chaos spin</h3>
+      <Reel modifier={result.modifier} />
+      <p className="space-top" role="status">
+        {landed ? (
+          <>
+            <span className="sr-only">
+              The spin landed on {m.say}.{" "}
+            </span>
+            Listed at <b>{money(result.base_price)}</b>, so the real price is…
+          </>
+        ) : (
+          "Spinning…"
+        )}
+      </p>
+      <p className="burst">
+        <span className="price-tag">{money(price)}</span>
+      </p>
+
+      {landed && (
+        <div className="stack enter">
+          <div className="table-scroll" role="region" aria-label="Guesses" tabIndex={0}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Player</th>
+                  <th scope="col">Guess</th>
+                  <th scope="col">Won</th>
+                </tr>
+              </thead>
+              <tbody>
+                {players.map((p) => {
+                  const gs = result.guesses[p.id];
+                  return (
+                    <tr key={p.id} className={result.winner === p.id ? "winner-row" : ""}>
+                      <th scope="row">
+                        {p.name}
+                        {p.id === you ? " (you)" : ""}
+                      </th>
+                      <td>
+                        {gs
+                          ? gs.map((g, i) => (
+                              <span key={g} className={g > result.true_price ? "over" : ""}>
+                                {i > 0 ? " / " : ""}
+                                {money(g)}
+                                {g > result.true_price ? <span className="sr-only"> (over)</span> : null}
+                              </span>
+                            ))
+                          : "—"}
+                      </td>
+                      <td>{result.winner === p.id ? `🏆 +${result.pot}` : ""}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {!result.winner && (
+            <p>
+              {Object.keys(result.guesses).length ? "💥 Everyone went over!" : "🦗 Nobody guessed."} The pot rolls into the next item.
+            </p>
+          )}
+          <details className="muted">
+            <summary>Check the spin wasn’t rigged</summary>
+            <p className="mono">
+              sha256("{pyFloat(result.modifier)}:{result.nonce}") = {result.commit}
+            </p>
+          </details>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function FinalBoard({ view, players, you }: { view: PriceView; players: Props["players"]; you: string }) {
   const wins: Record<string, number> = {};
   for (const r of view.history ?? []) if (r.winner) wins[r.winner] = (wins[r.winner] ?? 0) + 1;
   const best = Object.entries(wins).sort((a, b) => b[1] - a[1])[0];
   return (
-    <Panel className="halftone">
-      <h2>That's a wrap!</h2>
-      {best ? (
-        <p>
-          <b>{nameOf(players, best[0])}</b> won {best[1]} round{best[1] === 1 ? "" : "s"}.
-        </p>
-      ) : (
-        <p>Nobody won a round. Impressive chaos.</p>
-      )}
-      <ol>
-        {(view.history ?? []).map((r) => (
-          <li key={r.item}>
-            {r.item}: {money(r.true_price)} (×{r.modifier}) {r.winner ? `→ ${nameOf(players, r.winner)}` : "→ nobody"}
-          </li>
-        ))}
-      </ol>
-    </Panel>
+    <>
+      <Card tone="stage" className="center">
+        <p className="sign">That’s a wrap!</p>
+        {best ? (
+          <p className="lead space-top">
+            <span className="burst">
+              <b>{nameOf(players, best[0])}</b>
+            </span>
+            {best[0] === you ? " (you!)" : ""} won {best[1]} item{best[1] === 1 ? "" : "s"}.
+          </p>
+        ) : (
+          <p className="lead space-top">Nobody won an item. Impressive chaos.</p>
+        )}
+      </Card>
+      <Card>
+        <h3>The price list</h3>
+        <ol className="evidence">
+          {(view.history ?? []).map((r) => (
+            <li key={r.item}>
+              <b>{r.item}</b>: {money(r.true_price)} ({mult(r.modifier).label}) → {r.winner ? nameOf(players, r.winner) : "nobody"}
+            </li>
+          ))}
+        </ol>
+      </Card>
+    </>
   );
 }
 

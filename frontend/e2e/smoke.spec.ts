@@ -45,7 +45,8 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await host.getByRole("button", { name: "Create room" }).click();
   await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
   const code = host.url().split("/").pop()!;
-  await expect(host.getByText(code, { exact: true })).toBeVisible();
+  // Split-flap board: one tile per letter, plus the code spelled out for screen readers.
+  await expect(host.locator(".flap").first()).toContainText(`Room code ${code.split("").join(" ")}`);
 
   // Join from the home page form
   const bo = await newPlayer(browser, baseURL!, problems);

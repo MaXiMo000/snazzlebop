@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { Btn, Panel, Timer, nameOf } from "../components/ui";
+import { Btn, Card, ShowHead, nameOf } from "../components/ui";
+import { useOnChange, useShow } from "../components/fx";
+import { sfx } from "../lib/sfx";
 import type { FrenemyView } from "../types";
 
 interface Props {
@@ -10,22 +12,28 @@ interface Props {
 }
 
 export function Frenemy({ view, you, receivedAt, send }: Props) {
+  const show = useShow();
+  useOnChange(view.phase, (_, phase) => {
+    if (phase === "reveal") {
+      sfx.ding();
+      show.stinger("THE RESULTS!");
+    } else if (phase === "final") {
+      sfx.fanfare();
+      show.stinger("AWARDS TIME!");
+      show.celebrate();
+    }
+  });
+  const sign =
+    view.phase === "final" ? "Final reveal" : `Round ${view.round} of ${view.rounds} · ${view.phase === "rank" ? "Rank 'em" : "Reveal"}`;
   return (
-    <div className="theme-frenemy">
-      <Panel themed className="halftone">
-        <div className="row between">
-          <div>
-            <span className="tag yellow">
-              Round {view.round}/{view.rounds}
-            </span>
-            <h2>Frenemy Radar</h2>
-          </div>
-          <Timer remaining={view.remaining} receivedAt={receivedAt} />
-        </div>
-      </Panel>
-      {view.phase === "rank" && <Rank key={view.round} view={view} you={you} send={send} />}
-      {view.phase === "reveal" && view.result && <Reveal view={view} you={you} />}
-      {view.phase === "final" && view.final && <Final view={view} you={you} />}
+    <div className="seg-frenemy stack">
+      {show.node}
+      <ShowHead sign={sign} title="Frenemy Radar" remaining={view.remaining} receivedAt={receivedAt} />
+      <div key={`${view.phase}-${view.round}`} className="stack enter">
+        {view.phase === "rank" && <Rank view={view} you={you} send={send} />}
+        {view.phase === "reveal" && view.result && <Reveal view={view} you={you} />}
+        {view.phase === "final" && view.final && <Final view={view} you={you} />}
+      </div>
     </div>
   );
 }
@@ -40,72 +48,83 @@ function Rank({ view, you, send }: Pick<Props, "view" | "you" | "send">) {
       [next[i], next[j]] = [next[j]!, next[i]!];
       return next;
     });
+  const waitingOn = view.players.filter((p) => !view.submitted.includes(p.id));
 
   if (view.you_submitted) {
     return (
-      <Panel>
+      <Card tone="soft" className="center">
         <h3>Locked in! 🔒</h3>
-        <p>
-          Waiting for {view.players.length - view.submitted.length} more…{" "}
-          {view.players
-            .filter((p) => !view.submitted.includes(p.id))
-            .map((p) => p.name)
-            .join(", ")}
+        <p aria-live="polite">
+          Waiting for {waitingOn.length} more: {waitingOn.map((p) => p.name).join(", ")}
         </p>
-      </Panel>
+      </Card>
     );
   }
   return (
     <>
-      <div className="bubble" role="heading" aria-level={2}>
-        {view.prompt}
-      </div>
-      <Panel className="halftone" style={{ marginTop: 36 }}>
+      <Card tone="stage">
+        <p className="sign">Tonight’s question</p>
+        <h3 className="prompt space-top">{view.prompt}</h3>
+      </Card>
+      <Card>
         <p>
-          Rank <b>everyone</b>, including yourself. #1 = most like this.
+          Rank <b>everyone</b>, yourself included. <b>#1</b> = most like this.
         </p>
-        <ol className="rank-list">
-          {order.map((id, i) => (
-            <li key={id} className={`rank-item ${id === you ? "me" : ""}`}>
-              <span className="num">{i + 1}</span>
-              <span className="name">
-                {nameOf(view.players, id)}
-                {id === you ? " (you)" : ""}
-              </span>
-              <span className="arrows">
-                <button
-                  className="arrow"
-                  disabled={i === 0}
-                  onClick={() => move(i, -1)}
-                  aria-label={`Move ${nameOf(view.players, id)} up`}
-                >
-                  ▲
-                </button>
-                <button
-                  className="arrow"
-                  disabled={i === order.length - 1}
-                  onClick={() => move(i, 1)}
-                  aria-label={`Move ${nameOf(view.players, id)} down`}
-                >
-                  ▼
-                </button>
-              </span>
-            </li>
-          ))}
+        <ol className="rank-list" aria-label="Your ranking">
+          {order.map((id, i) => {
+            const name = nameOf(view.players, id);
+            return (
+              <li key={id} className={`rank-item ${id === you ? "me" : ""}`}>
+                <span className="num" aria-hidden="true">
+                  {i + 1}
+                </span>
+                <span className="name">
+                  {name}
+                  {id === you ? " (you)" : ""}
+                </span>
+                <span className="arrows">
+                  <button className="arrow" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Move ${name} up`}>
+                    ▲
+                  </button>
+                  <button className="arrow" disabled={i === order.length - 1} onClick={() => move(i, 1)} aria-label={`Move ${name} down`}>
+                    ▼
+                  </button>
+                </span>
+              </li>
+            );
+          })}
         </ol>
-        <p style={{ marginTop: 16 }}>
-          <Btn color="lime" size="big" onClick={() => send({ t: "act", a: "rank", order })}>
+        <div className="space-top">
+          <Btn
+            variant="accent"
+            size="big"
+            block
+            onClick={() => {
+              sfx.pop();
+              send({ t: "act", a: "rank", order });
+            }}
+          >
             Lock it in!
           </Btn>
-        </p>
-      </Panel>
+        </div>
+      </Card>
     </>
   );
 }
 
 function verdict(gap: number): string {
   if (Math.abs(gap) < 0.5) return "Spot on 🎯";
-  return gap > 0 ? "Thinks they're higher than the room does 😏" : "The room rates them higher than they do 🥹";
+  return gap > 0 ? "Rates themselves higher than the room does 😏" : "The room rates them higher than they do 🥹";
+}
+
+function Gauge({ pct }: { pct: number }) {
+  const w = Math.max(4, Math.min(100, pct));
+  return (
+    <svg className="gauge" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
+      <rect className="track" x="0" y="0" width="100" height="10" rx="5" vectorEffect="non-scaling-stroke" />
+      <rect className={`fill ${pct < 25 ? "good" : ""}`} x="0" y="0" width={w} height="10" rx="5" />
+    </svg>
+  );
 }
 
 function Reveal({ view, you }: { view: FrenemyView; you: string }) {
@@ -117,60 +136,76 @@ function Reveal({ view, you }: { view: FrenemyView; you: string }) {
     [view],
   );
   return (
-    <Panel>
-      <div className="bubble">{view.prompt}</div>
-      <div className="stack" style={{ marginTop: 36 }}>
-        {rows.map(({ p, r }) => (
-          <div key={p.id} className="reveal-card">
+    <>
+      <Card tone="stage">
+        <p className="sign">The room has spoken</p>
+        <h3 className="prompt space-top">{view.prompt}</h3>
+      </Card>
+      <div className="stack-sm">
+        {rows.map(({ p, r }, i) => (
+          <div key={p.id} className={`verdict ${i === 0 && r.played ? "top" : ""}`}>
             <div className="row between">
               <b>
                 {p.name}
                 {p.id === you ? " (you)" : ""}
               </b>
-              {r.played ? <span className="tag pink">Blind spot {r.blind_pct}%</span> : null}
+              {r.played ? <span className="chip cherry">Blind spot {r.blind_pct}%</span> : null}
             </div>
             {r.played ? (
               <>
                 <p className="muted">
-                  They ranked themselves #{r.self_rank}. Everyone else said #{r.others_avg}. {verdict(r.gap)}
+                  Ranked themselves #{r.self_rank}. Everyone else said #{r.others_avg}. {verdict(r.gap)}
                 </p>
-                <div className="meter" role="img" aria-label={`Blind spot ${r.blind_pct} percent`}>
-                  <i className={r.blind_pct < 25 ? "good" : ""} style={{ width: `${Math.max(4, r.blind_pct)}%` }} />
-                </div>
+                <Gauge pct={r.blind_pct} />
               </>
             ) : (
-              <p className="muted">Didn't rank in time. No score.</p>
+              <p className="muted">Didn’t rank in time. No score.</p>
             )}
           </div>
         ))}
       </div>
-    </Panel>
+    </>
   );
 }
+
+const CUPS: Record<string, string> = {
+  "Delusional Optimist": "🌈",
+  "Secretly Loved": "💖",
+  "Unknown to Self": "🕵️",
+  "Crystal Clear": "🔮",
+};
 
 function Final({ view, you }: { view: FrenemyView; you: string }) {
   const fin = view.final!;
   const mine = fin.per_player[you];
   return (
     <>
-      <Panel themed className="halftone">
-        <h2>Final reveal</h2>
-        {!mine && <p>You sat this one out, so no blind-spot score.</p>}
-        {mine && (
-          <p>
-            Your blind-spot score: <b>{mine.blind_spot}%</b> ({mine.avg_gap > 0.4 ? "a touch of optimism" : mine.avg_gap < -0.4 ? "secretly adored" : "pretty self-aware"})
-          </p>
+      <Card tone="stage" className="center">
+        <p className="sign">Final reveal</p>
+        {mine ? (
+          <>
+            <p className="space-top">Your blind-spot score</p>
+            <p className="burst">
+              <span className="price-tag">{mine.blind_spot}%</span>
+            </p>
+            <p>{mine.avg_gap > 0.4 ? "A touch of optimism." : mine.avg_gap < -0.4 ? "Secretly adored." : "Pretty self-aware."}</p>
+          </>
+        ) : (
+          <p className="space-top">You sat this one out, so no blind-spot score.</p>
         )}
-      </Panel>
+      </Card>
       <div className="grid">
         {fin.awards.map((a) => (
-          <Panel key={a.award} className="tilt-l">
-            <span className="tag purple">Award</span>
+          <Card key={a.award} className="trophy">
+            <div className="cup" aria-hidden="true">
+              {CUPS[a.award] ?? "🏆"}
+            </div>
             <h3>{a.award}</h3>
             <p>
-              <b>{nameOf(view.players, a.player)}</b> ({fin.per_player[a.player]?.blind_spot}% blind spot)
+              <b>{nameOf(view.players, a.player)}</b>
+              {a.player === you ? " (you!)" : ""} · {fin.per_player[a.player]?.blind_spot}% blind spot
             </p>
-          </Panel>
+          </Card>
         ))}
       </div>
     </>

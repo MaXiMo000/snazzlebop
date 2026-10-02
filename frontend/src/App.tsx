@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { SoundToggle } from "./components/ui";
 import { Home } from "./pages/Home";
 import { Room } from "./pages/Room";
 
@@ -27,21 +28,27 @@ export function App() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <div className="app">
-        <div className="topbar">
-          <a
-            className="logo"
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              go("/");
-            }}
-          >
-            SNAZZLEBOP!
-          </a>
-        </div>
-        <main id="main">{match ? <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} /> : <Home go={go} />}</main>
-      </div>
+      <header className="topbar">
+        <a
+          className="logo"
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            go("/");
+          }}
+        >
+          <span className="badge" aria-hidden="true">
+            ★
+          </span>
+          <span>
+            Snazzlebop<span className="bang">!</span>
+          </span>
+        </a>
+        <SoundToggle />
+      </header>
+      <main id="main" className="app">
+        {match ? <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} /> : <Home go={go} />}
+      </main>
     </>
   );
 }

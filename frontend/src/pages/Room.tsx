@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { ApiError, clearSession, joinRoom, loadSession } from "../lib/api";
 import { useRoom } from "../lib/useRoom";
-import { Btn, CopyButton, ErrorBanner, Panel, Scoreboard } from "../components/ui";
+import { Btn, Card, Contestants, CopyButton, ErrorBanner, FlapCode } from "../components/ui";
 import { Alibi } from "../games/Alibi";
 import { Frenemy } from "../games/Frenemy";
 import { Price } from "../games/Price";
-import type { RoomState, Session } from "../types";
+import type { GameCard, RoomState, Session } from "../types";
 
 export function Room({ code, go }: { code: string; go: (path: string) => void }) {
   const [session, setSession] = useState<Session | null>(() => loadSession(code));
@@ -17,45 +17,62 @@ function JoinGate({ code, onJoined, go }: { code: string; onJoined: (s: Session)
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    document.title = `Join ${code} · Snazzlebop`;
+  }, [code]);
   return (
-    <Panel className="tilt-r">
-      <h2>Join room {code}</h2>
-      <form
-        className="stack"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          setError(null);
-          try {
-            onJoined(await joinRoom(code, name.trim()));
-          } catch (err) {
-            setError(err instanceof ApiError ? err.message : "Something went wrong");
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <div>
-          <label className="field" htmlFor="join-name">
-            Your name
-          </label>
-          <input id="join-name" type="text" maxLength={16} value={name} onChange={(e) => setName(e.target.value)} autoComplete="nickname" />
-        </div>
-        {error && (
-          <div className="error" role="alert">
-            {error}
+    <div className="stack enter">
+      <Card tone="stage" className="center">
+        <p className="sign">You’re invited</p>
+        <h2 className="space-top">Join room {code}</h2>
+        <FlapCode code={code} />
+      </Card>
+      <Card>
+        <form
+          className="stack-sm"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError(null);
+            try {
+              onJoined(await joinRoom(code, name.trim()));
+            } catch (err) {
+              setError(err instanceof ApiError ? err.message : "Something went wrong");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <div>
+            <label className="field" htmlFor="join-name">
+              Your name
+            </label>
+            <input
+              id="join-name"
+              type="text"
+              maxLength={16}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="nickname"
+              placeholder="Up to 16 characters"
+            />
           </div>
-        )}
-        <div className="row">
-          <Btn type="submit" color="lime" size="big" disabled={busy || !name.trim()}>
-            Join
-          </Btn>
-          <Btn color="ghost" onClick={() => go("/")}>
-            Back
-          </Btn>
-        </div>
-      </form>
-    </Panel>
+          {error && (
+            <p className="alert" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="row">
+            <Btn type="submit" variant="go" size="big" disabled={busy || !name.trim()}>
+              Join
+            </Btn>
+            <Btn variant="ghost" onClick={() => go("/")}>
+              Back
+            </Btn>
+          </div>
+        </form>
+      </Card>
+    </div>
   );
 }
 
@@ -68,63 +85,66 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
 
   if (status === "closed") {
     return (
-      <Panel>
-        <h2>Can't get in</h2>
-        <p>That room has ended, or your seat expired.</p>
+      <Card tone="stage" className="center enter">
+        <h2>That’s a wrap</h2>
+        <p>This room has ended, or your seat expired.</p>
         <Btn
+          variant="gold"
           onClick={() => {
             clearSession(code);
             onLeave();
             go("/");
           }}
         >
-          Back home
+          Back to the lobby
         </Btn>
-      </Panel>
+      </Card>
     );
   }
   if (!state) {
     return (
-      <Panel>
-        <h2>Connecting…</h2>
-        <p className="muted">Hang tight, grabbing your seat.</p>
-      </Panel>
+      <Card tone="stage" className="center">
+        <h2>Warming up the studio…</h2>
+        <p className="muted">Grabbing your seat.</p>
+      </Card>
     );
   }
 
   const isHost = state.room.host === state.you;
   return (
-    <>
+    <div className="stack">
       {status !== "open" && (
-        <div className="error" role="status" style={{ marginBottom: 16 }}>
-          Connection lost. Reconnecting…
-        </div>
+        <p className="alert calm" role="status">
+          Signal lost. Reconnecting…
+        </p>
       )}
       <ErrorBanner message={error} onClose={clearError} />
       {state.room.phase === "lobby" && <Lobby state={state} isHost={isHost} send={send} />}
       {state.room.phase !== "lobby" && state.game && (
         <>
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
-          <Scoreboard players={state.players} you={state.you} title="Session scores" />
-          {isHost && (
-            <Panel>
-              <div className="row">
+          <Contestants players={state.players} you={state.you} title="Scoreboard" />
+          {isHost ? (
+            <Card tone="soft">
+              <div className="row between">
+                <p className="muted">You’re the host.</p>
                 {state.room.phase === "game" ? (
-                  <Btn color="ghost" onClick={() => send({ t: "skip", stage: state.stage })}>
-                    Skip wait ⏭
+                  <Btn variant="ghost" onClick={() => send({ t: "skip", stage: state.stage })}>
+                    Skip wait <span aria-hidden="true">⏭</span>
                   </Btn>
                 ) : (
-                  <Btn color="lime" size="big" onClick={() => send({ t: "lobby" })}>
+                  <Btn variant="go" size="big" onClick={() => send({ t: "lobby" })}>
                     Play another game
                   </Btn>
                 )}
               </div>
-            </Panel>
+            </Card>
+          ) : (
+            state.room.phase === "results" && <p className="muted center">The host is picking the next segment…</p>
           )}
-          {!isHost && state.room.phase === "results" && <p className="muted">Waiting for the host to pick the next game…</p>}
         </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -141,40 +161,49 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
   }
 }
 
+const SEGMENT_ICON: Record<GameCard["id"], string> = { frenemy: "📡", alibi: "🔎", price: "💰" };
+
 function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; send: (m: Record<string, unknown>) => void }) {
   const online = state.players.filter((p) => p.connected).length;
   const link = `${window.location.origin}/r/${state.room.code}`;
   return (
-    <div className="stack">
-      <Panel themed className="halftone tilt-l">
-        <p>Room code. Friends type this in, or open the link:</p>
-        <div className="row">
-          <span className="code" aria-label={`Room code ${state.room.code.split("").join(" ")}`}>
-            {state.room.code}
-          </span>
-          <CopyButton text={link} label="Copy invite link" />
+    <div className="stack enter">
+      <Card tone="stage" className="center">
+        <p className="sign">Now seating contestants</p>
+        <div className="space-top">
+          <FlapCode code={state.room.code} />
         </div>
-      </Panel>
+        <p className="space-top">Friends type this code on the home page, or open the invite link.</p>
+        <CopyButton text={link} label="Copy invite link" />
+      </Card>
 
-      <Scoreboard players={state.players} you={state.you} title={`In the room (${online} online)`} />
+      <Contestants players={state.players} you={state.you} title={`In the room (${online} online)`} />
 
       <h2>{isHost ? "Pick a game" : "Waiting for the host to pick a game…"}</h2>
       <div className="grid">
         {state.games.map((g) => {
           const enough = online >= g.min_players && online <= g.max_players;
           return (
-            <article key={g.id} className={`game-card ${g.id}`}>
-              <h3>{g.title}</h3>
-              <p>{g.blurb}</p>
-              <span className="tag">
-                {g.min_players}-{g.max_players} players
-              </span>
-              {isHost ? (
-                <Btn color="lime" disabled={!enough} onClick={() => send({ t: "start", game: g.id })}>
-                  {enough ? "Start!" : `Need ${g.min_players}+ online`}
-                </Btn>
-              ) : null}
-            </article>
+            <Card as="article" key={g.id} className={`segment-card seg-${g.id} game-card ${g.id}`} aria-labelledby={`seg-${g.id}`}>
+              <div className="band">
+                <span className="chip plum">
+                  {g.min_players}-{g.max_players} players
+                </span>
+                <h3 id={`seg-${g.id}`}>
+                  <span aria-hidden="true">{SEGMENT_ICON[g.id]} </span>
+                  {g.title}
+                </h3>
+              </div>
+              <div className="body">
+                <p>{g.blurb}</p>
+                {isHost && (
+                  <Btn variant="accent" block disabled={!enough} onClick={() => send({ t: "start", game: g.id })}>
+                    {enough ? "Start!" : `Need ${g.min_players}+ online`}
+                    <span className="sr-only"> {g.title}</span>
+                  </Btn>
+                )}
+              </div>
+            </Card>
           );
         })}
       </div>
