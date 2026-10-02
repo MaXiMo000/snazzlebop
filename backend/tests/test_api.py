@@ -58,7 +58,9 @@ def test_health_and_security_headers(client):
     assert "default-src 'none'" in h["content-security-policy"]
     assert h["x-content-type-options"] == "nosniff"
     assert h["x-frame-options"] == "DENY"
+    assert h["cross-origin-embedder-policy"] == "require-corp"  # ZAP 90004
     assert "server" not in {k.lower() for k in h}
+    assert client.get("/robots.txt").headers["cache-control"] == "no-store"  # ZAP 10049 on 404s
 
 
 def test_bad_host_rejected(tmp_path):

@@ -236,6 +236,7 @@ class SecurityHeaders:
                     b"permissions-policy": b"camera=(), microphone=(), geolocation=(), payment=(), usb=()",
                     b"cross-origin-opener-policy": b"same-origin",
                     b"cross-origin-resource-policy": b"same-origin",
+                    b"cross-origin-embedder-policy": b"require-corp",  # everything is same-origin
                 }
                 if self.production:
                     add[b"strict-transport-security"] = b"max-age=63072000; includeSubDomains; preload"

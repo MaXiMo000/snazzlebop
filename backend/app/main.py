@@ -41,7 +41,11 @@ class NameBody(BaseModel):
 
 
 def _error(status: int, code: str, message: str) -> JSONResponse:
-    return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
+    return JSONResponse(
+        {"error": {"code": code, "message": message}},
+        status_code=status,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
