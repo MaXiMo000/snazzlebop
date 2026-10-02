@@ -34,7 +34,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Three games. One room code. Zero sign-ups.</p>
+        <p className="lead">Seven games. One room code. Zero sign-ups.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -130,7 +130,19 @@ export function Home({ go }: { go: (path: string) => void }) {
             <b>Alibi</b>: one of you is the killer with a fake story. Grill each other, catch the contradiction.
           </li>
           <li>
-            <b>Price Is Weird</b>: guess what absurd things cost. Then the chaos spin doubles or halves it.
+            <b>Price Is Weird</b>: guess what absurd things cost, sabotage a rival, survive the rigged round.
+          </li>
+          <li>
+            <b>Telepathy Tax</b>: match some minds, but if the majority thinks alike, everyone pays the tax.
+          </li>
+          <li>
+            <b>Mole in the Mural</b>: everyone knows the secret tile except the Mole. Hint carefully, then unmask them.
+          </li>
+          <li>
+            <b>Blackjack Showdown</b>: the whole room against the dealer. Five hands, biggest stack wins.
+          </li>
+          <li>
+            <b>Crossword Race</b>: a fresh grid every game. First to solve a clue takes the points.
           </li>
         </ul>
       </Card>

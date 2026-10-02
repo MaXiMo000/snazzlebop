@@ -352,7 +352,7 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
         {state.games.map((g) => {
           const enough = online >= g.min_players && online <= g.max_players;
           return (
-            <Card as="article" key={g.id} className={`segment-card seg-${g.id} game-card ${g.id}`} aria-labelledby={`seg-${g.id}`}>
+            <Card as="article" key={g.id} className={`segment-card seg-${g.id} game-card`} aria-labelledby={`seg-${g.id}`}>
               <div className="band">
                 <span className="chip plum">
                   {g.min_players}-{g.max_players} players
