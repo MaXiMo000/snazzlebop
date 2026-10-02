@@ -110,7 +110,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
             <Panel>
               <div className="row">
                 {state.room.phase === "game" ? (
-                  <Btn color="ghost" onClick={() => send({ t: "skip" })}>
+                  <Btn color="ghost" onClick={() => send({ t: "skip", stage: state.stage })}>
                     Skip wait ⏭
                   </Btn>
                 ) : (

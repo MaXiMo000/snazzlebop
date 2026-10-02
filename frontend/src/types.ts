@@ -115,6 +115,7 @@ export interface RoomState {
   players: PlayerInfo[];
   games: GameCard[];
   game: GameView | null;
+  stage: string | null;
 }
 
 export interface Session {

@@ -12,7 +12,9 @@ interface Props {
 type Tab = "card" | "board" | "vote";
 
 export function Alibi({ view, you, receivedAt, send }: Props) {
-  const [tab, setTab] = useState<Tab | null>(null);
+  // A tab picked during one phase doesn't carry over: when voting opens, show the vote.
+  const [picked, setPicked] = useState<{ phase: string; tab: Tab } | null>(null);
+  const tab = picked?.phase === view.phase ? picked.tab : null;
   const me = view.you;
   const tabs: [Tab, string][] = [
     ["card", "My card"],
@@ -46,7 +48,7 @@ export function Alibi({ view, you, receivedAt, send }: Props) {
       {view.phase !== "final" && view.phase !== "briefing" && (
         <div className="tabs" role="tablist">
           {tabs.map(([id, label]) => (
-            <button key={id} role="tab" className="tab" aria-selected={activeTab === id} onClick={() => setTab(id)}>
+            <button key={id} role="tab" className="tab" aria-selected={activeTab === id} onClick={() => setPicked({ phase: view.phase, tab: id })}>
               {label}
             </button>
           ))}
@@ -115,7 +117,10 @@ function Card({ view, send, interactive }: { view: AlibiView; send: Props["send"
               {lies.has(e.slot) && <span style={{ marginLeft: 8 }} title="This part of your story is a lie">🤥 lie</span>}
             </span>
             {interactive && (
-              <Btn size="small" color={e.shared ? "ghost" : "cyan"} disabled={e.shared} onClick={() => send({ t: "act", a: "reveal", slot: e.slot })}>
+              <Btn size="small" color={e.shared ? "ghost" : "cyan"} disabled={e.shared}
+                aria-label={e.shared ? `${e.label} already shared` : `Share your ${e.label} alibi`}
+                onClick={() => send({ t: "act", a: "reveal", slot: e.slot })}
+              >
                 {e.shared ? "Shared" : "Share"}
               </Btn>
             )}

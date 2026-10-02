@@ -189,6 +189,7 @@ class Hub:
             ],
             "games": catalog() if room.phase in ("lobby", "results") else [],
             "game": game_view,
+            "stage": room.game.stage if room.game is not None else None,
         }
 
     async def _send(self, room: Room, pid: str, conn: Connection, data: dict[str, Any]) -> None:
@@ -260,6 +261,12 @@ class Hub:
                 raise HubError("not_host", "Only the host can skip", 403)
             if room.game is None or room.phase != "game":
                 raise HubError("no_game", "No game is running")
+            seen = msg.get("stage")
+            if seen is not None:
+                if not isinstance(seen, str) or len(seen) > 32:
+                    raise HubError("bad_message", "Unknown message")
+                if seen != room.game.stage:
+                    return False  # the wait the host meant to skip already ended on its own
             room.game.advance()
             self._maybe_finish(room)
             return True

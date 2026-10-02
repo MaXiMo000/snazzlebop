@@ -154,7 +154,12 @@ function Reveal({ result, players, you }: { result: PriceResult; players: { id: 
           })}
         </tbody>
       </table>
-      {!result.winner && <p>💥 Everyone went over! The pot rolls into the next round.</p>}
+      {!result.winner && (
+        <p>
+          {Object.keys(result.guesses).length ? "💥 Everyone went over!" : "🦗 Nobody guessed."} The pot rolls into the next
+          round.
+        </p>
+      )}
       <p className="mono muted">
         Proof: sha256("{result.modifier}:{result.nonce.slice(0, 12)}…") = {result.commit.slice(0, 16)}…
       </p>

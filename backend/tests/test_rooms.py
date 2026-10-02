@@ -172,6 +172,24 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         await hub.handle_message(room, host, conns[host], {"t": "lobby"})
         self.assertEqual(room.phase, "lobby")
 
+    async def test_stale_skip_does_not_skip_the_next_phase(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 3)
+        other = next(p for p in conns if p != host)
+        await hub.handle_message(room, host, conns[host], {"t": "start", "game": "price"})
+        seen = conns[host].last["stage"]  # host is looking at the guess phase...
+        await hub.handle_message(room, other, conns[other], {"t": "act", "a": "guess", "amount": 5})
+        self.assertEqual(conns[host].last["stage"], seen)  # others acting doesn't move the stage
+        self.clock.t += 6
+        await hub.tick()  # ...which times out into the reveal before the tap arrives
+        self.assertEqual(room.game.phase, "reveal")
+        await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": seen})
+        self.assertEqual(room.game.phase, "reveal")  # stale tap ignored
+        await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": conns[host].last["stage"]})
+        self.assertEqual(room.game.phase, "guess")
+        await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": 7})
+        self.assertIn("bad_message", conns[host].errors())
+
     async def test_timer_tick_drives_game(self):
         hub = self.make_hub()
         room, host, conns = await self.party(hub, 2)

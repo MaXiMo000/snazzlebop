@@ -67,6 +67,7 @@ class Game(ABC):
         self.timings = {**self.default_timings(), **(timings or {})}
         self.version = 0
         self.phase = "init"
+        self.round = 0
         self.deadline: float | None = None
         self.finished = False
         self.round_scores: dict[str, int] = {p.id: 0 for p in players}
@@ -89,6 +90,11 @@ class Game(ABC):
     def require_player(self, pid: str) -> None:
         if pid not in self.round_scores:
             raise GameError("not_in_game", "You are not part of this game")
+
+    @property
+    def stage(self) -> str:
+        """Identifies the current wait. Unlike `version` it doesn't change when someone acts."""
+        return f"{self.phase}:{self.round}"
 
     def bump(self) -> None:
         self.version += 1
