@@ -65,7 +65,8 @@ class FrenemyRadar(Game):
         result = self._score_round(self.round)
         self.results.append(result)
         for pid, row in result.items():
-            self.add_points(pid, int(round(100 - row["blind_pct"])))
+            if row["played"]:
+                self.add_points(pid, int(round(100 - row["blind_pct"])))
         self.phase = "reveal"
         self.set_deadline(self.timings["reveal"])
         self.bump()

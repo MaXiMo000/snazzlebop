@@ -75,6 +75,7 @@ class FrenemyTests(unittest.TestCase):
         final = game.view_for("p0")["final"]
         self.assertNotIn("p3", {a["player"] for a in final["awards"]})
         self.assertNotIn("p3", final["per_player"])
+        self.assertEqual(game.scores()["p3"], 0)  # sitting out earns nothing
 
     def test_rankings_are_secret_until_reveal(self):
         game, _, players = make(FrenemyRadar, 3)
