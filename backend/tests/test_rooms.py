@@ -241,6 +241,37 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(room.players[victim].connected)
         self.assertEqual(conns[victim].closed, 1011)
 
+    async def test_stuck_reader_never_stalls_the_room(self):
+        # A client that stops reading: its sends block forever once the buffers fill.
+        import asyncio
+        import time
+
+        hub = self.make_hub()
+        hub.send_timeout = 0.3
+        room, host, conns = await self.party(hub, 3)
+        stuck = next(i for i in conns if i != host)
+        closes = []
+
+        async def hang(data):
+            await asyncio.Event().wait()
+
+        async def close(code=1000):
+            closes.append(code)
+
+        conns[stuck].send_json = hang  # type: ignore[method-assign]
+        conns[stuck].close = close  # type: ignore[method-assign]
+        before = len(conns[host].sent)
+        t0 = time.perf_counter()
+        for _ in range(10):
+            await hub.handle_message(room, host, conns[host], {"t": "start", "game": "price"})
+            await hub.handle_message(room, host, conns[host], {"t": "lobby"})
+        self.assertLess(time.perf_counter() - t0, 1.0)  # 20 broadcasts, no 5 s waits per stuck send
+        # Healthy players got a frame for every message (+1 when the drop itself is broadcast).
+        self.assertGreaterEqual(len(conns[host].sent) - before, 20)
+        await asyncio.sleep(0.5)
+        self.assertFalse(room.players[stuck].connected)
+        self.assertEqual(closes, [1011])  # dropped once, not once per queued frame
+
 
 if __name__ == "__main__":
     unittest.main()

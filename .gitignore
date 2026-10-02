@@ -14,3 +14,6 @@ frontend/dist/
 .DS_Store
 coverage/
 *.log
+
+# abuse-suite output
+scripts/loadtest/out/

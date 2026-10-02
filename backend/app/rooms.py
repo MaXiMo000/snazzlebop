@@ -86,6 +86,9 @@ class Hub:
         self.rooms: dict[str, Room] = {}
         self.on_game_finished = on_game_finished
         self.timings = timings or {}
+        self.send_timeout = 5.0  # a socket that can't take a frame this long is dropped
+        self._mail: dict[Connection, dict[str, Any]] = {}
+        self._tasks: set[asyncio.Task[None]] = set()
 
     # -- rooms --------------------------------------------------------------
     def _new_code(self) -> str:
@@ -192,22 +195,52 @@ class Hub:
             "stage": room.game.stage if room.game is not None else None,
         }
 
-    async def _send(self, room: Room, pid: str, conn: Connection, data: dict[str, Any]) -> None:
+    # -- outbound: one mailbox per connection, latest state wins ---------------------------------
+    # Every frame is a full snapshot, so a connection only ever needs the newest one. If a send is
+    # already in flight (slow or non-reading client), the next state just replaces the pending one
+    # and the broadcaster moves on: a stuck socket can never stall the players who are acting.
+    def _post(
+        self, room: Room, pid: str, conn: Connection, data: dict[str, Any]
+    ) -> asyncio.Task[None] | None:
+        box = self._mail.get(conn)
+        if box is not None:
+            box["pending"] = data
+            return None
+        self._mail[conn] = {"pending": data}
+        task = asyncio.get_running_loop().create_task(self._drain(room, pid, conn))
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
+
+    async def _drain(self, room: Room, pid: str, conn: Connection) -> None:
+        box = self._mail[conn]
         try:
-            await asyncio.wait_for(conn.send_json(data), timeout=5)
+            while box["pending"] is not None:
+                data, box["pending"] = box["pending"], None
+                await asyncio.wait_for(conn.send_json(data), timeout=self.send_timeout)
         except Exception:
-            # Slow or dead client: drop it rather than let it stall the room.
+            # Slow or dead client: drop it (once) rather than queue frames for it.
+            self._mail.pop(conn, None)
             log.info("dropping unresponsive connection")
             with contextlib.suppress(Exception):
                 await conn.close(1011)
             await self.disconnect(room, pid, conn)
+            return
+        self._mail.pop(conn, None)
 
     async def broadcast(self, room: Room) -> None:
-        sends = [
-            self._send(room, pid, conn, self.view_for(room, pid)) for pid, conn in list(room.conns.items())
+        tasks = [
+            task
+            for pid, conn in list(room.conns.items())
+            if (task := self._post(room, pid, conn, self.view_for(room, pid))) is not None
         ]
-        if sends:
-            await asyncio.gather(*sends)
+        if tasks:
+            # Healthy sockets finish almost at once; anything slower keeps going in the background.
+            await asyncio.wait(tasks, timeout=0.25)
+        else:
+            # Every recipient already has a send in flight: yield so those drains can run even if
+            # our caller never awaits anything else.
+            await asyncio.sleep(0)
 
     async def send_error(self, conn: Connection, code: str, message: str) -> None:
         with contextlib.suppress(Exception):
