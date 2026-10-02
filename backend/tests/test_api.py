@@ -98,12 +98,19 @@ def test_room_code_guessing_gets_rate_limited(tmp_path):
 
 
 def test_production_hides_docs(tmp_path):
+    # With a built SPA present, like the real image: the catch-all must not answer for these.
+    (tmp_path / "static").mkdir()
+    (tmp_path / "static" / "index.html").write_text("<html>app</html>")
     s = settings(
         tmp_path, env="production", allowed_hosts=("testserver",), allowed_origins=("https://testserver",)
     )
     with TestClient(create_app(s)) as c:
-        assert c.get("/docs").status_code == 404
-        assert c.get("/openapi.json").status_code == 404
+        for path in ("/docs", "/openapi.json", "/redoc", "/admin", "/r/ABCDE/extra"):
+            assert c.get(path).status_code == 404, path
+        assert c.get("/").status_code == 200
+        assert c.get("/r/ABCDE").status_code == 200
+        head = c.head("/")
+        assert head.status_code == 200 and "frame-ancestors 'none'" in head.headers["content-security-policy"]
         assert "strict-transport-security" in c.get("/healthz").headers
 
 

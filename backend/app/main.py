@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,8 @@ from .security import (
 from .ws import ConnectionCounter, serve_socket
 
 log = logging.getLogger("snazzlebop")
+
+SPA_ROUTE = re.compile(r"(r/[A-Za-z]{3,8}/?)?")  # "/" and "/r/<CODE>", mirrors App.tsx
 
 
 class NameBody(BaseModel):
@@ -143,7 +146,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # -- static SPA (same origin => no CORS, strict CSP) ----------------------
     static_root = Path(settings.static_dir).resolve()
 
-    @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False, response_model=None)
     async def spa(full_path: str) -> FileResponse | JSONResponse:
         if full_path.startswith(("api/", "ws/")) or not static_root.is_dir():
             return _error(404, "not_found", "Not found")
@@ -153,7 +156,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             cache = "public, max-age=31536000, immutable" if immutable else "no-cache"
             return FileResponse(candidate, headers={"Cache-Control": cache})
         index = static_root / "index.html"
-        if index.is_file():
+        # Only the SPA's own routes get index.html; anything else (/docs, /admin, typos) is a real 404.
+        if index.is_file() and SPA_ROUTE.fullmatch(full_path):
             return FileResponse(index, headers={"Cache-Control": "no-cache"})
         return _error(404, "not_found", "Not found")
 
