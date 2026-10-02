@@ -66,7 +66,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
     document.title = `Room ${code} · Snazzlebop`;
   }, [code]);
 
-  if (status === "closed" && !state) {
+  if (status === "closed") {
     return (
       <Panel>
         <h2>Can't get in</h2>

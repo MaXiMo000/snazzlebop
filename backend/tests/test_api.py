@@ -133,8 +133,9 @@ def test_ws_requires_valid_auth(client):
     ):  # token for a different room
         ws.send_json({"t": "auth", "token": other["token"]})
         ws.receive_json()
-    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/ZZZZZ"):  # unknown room
-        pass
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/ZZZZZ") as ws:  # unknown room
+        ws.send_json({"t": "auth", "token": room["token"]})
+        ws.receive_json()
 
 
 def test_ws_origin_enforced_in_production(tmp_path):
@@ -221,3 +222,25 @@ def test_full_price_game_over_websockets(client):
 
 def test_stats_endpoint(client):
     assert isinstance(client.get("/api/stats").json(), dict)
+
+
+def close_code(c, code, token):
+    with pytest.raises(WebSocketDisconnect) as exc, c.websocket_connect(f"/ws/{code}") as ws:
+        ws.send_json({"t": "auth", "token": token})
+        ws.receive_json()
+    return exc.value.code
+
+
+def test_ws_room_guessing_is_indistinguishable_and_penalised(tmp_path):
+    s = settings(tmp_path, rate_join_burst=12, rate_join_per_min=0.001)
+    with TestClient(create_app(s)) as c:
+        room = make_room(c)
+        # A wrong code must look exactly like a wrong token, or sockets become a free code oracle.
+        assert close_code(c, "ZZZZZ", room["token"]) == 1008
+        assert close_code(c, room["code"], "garbage") == 1008
+        for _ in range(3):
+            close_code(c, "ZZZZZ", room["token"])
+        # The guesser is now in the penalty box on both channels, even with a valid token.
+        assert c.post(f"/api/rooms/{room['code']}/join", json={"name": "X"}).status_code == 429
+        with pytest.raises(WebSocketDisconnect), c.websocket_connect(f"/ws/{room['code']}") as ws:
+            auth(ws, room["token"])

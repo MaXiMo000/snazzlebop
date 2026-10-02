@@ -58,7 +58,9 @@ def _origin_ok(ws: WebSocket, allowed: tuple[str, ...], production: bool) -> boo
     return origin in allowed
 
 
-async def _authenticate(ws: WebSocket, hub: Hub, room: Room, deadline: float, max_bytes: int) -> str | None:
+async def _authenticate(
+    ws: WebSocket, hub: Hub, room: Room | None, deadline: float, max_bytes: int
+) -> str | None:
     try:
         raw = await asyncio.wait_for(ws.receive_text(), deadline)
         if len(raw.encode()) > max_bytes:
@@ -66,7 +68,7 @@ async def _authenticate(ws: WebSocket, hub: Hub, room: Room, deadline: float, ma
         msg = json.loads(raw)
     except Exception:
         return None
-    if not isinstance(msg, dict) or msg.get("t") != "auth":
+    if room is None or not isinstance(msg, dict) or msg.get("t") != "auth":
         return None
     verified = verify_token(hub.settings.secret_key, msg.get("token", ""))
     if verified is None:
@@ -87,10 +89,15 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
     if not _origin_ok(ws, settings.allowed_origins, settings.is_production):
         await _close(ws, 1008)
         return
-    room = hub.get(code)
-    if room is None:
-        await _close(ws, 1008)
+    join_bucket: RateLimiter = state.limiters["join"]
+    # Handshakes are rate limited like HTTP requests, and an IP that has been guessing codes
+    # (join bucket in debt) gets no sockets at all until it cools down.
+    if not state.limiters["default"].allow(ip) or not join_bucket.allow(ip, cost=0):
+        await _close(ws, 1013)
         return
+    # An unknown room is NOT refused here: it fails at auth exactly like a bad token, so the
+    # socket can't be used to test which codes exist.
+    room = hub.get(code)
     if counter.total >= settings.max_ws_total or counter.per_ip.get(ip, 0) >= settings.max_ws_per_ip:
         await _close(ws, 1013)
         return
@@ -101,7 +108,8 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
     try:
         await ws.accept()
         pid = await _authenticate(ws, hub, room, settings.ws_auth_timeout, settings.ws_max_message_bytes)
-        if pid is None:
+        if pid is None or room is None:
+            join_bucket.penalize(ip, 4)  # same price as a wrong code on HTTP join
             await _close(ws, 1008)
             return
         await hub.connect(room, pid, conn)
@@ -129,5 +137,5 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
             await hub.handle_message(room, pid, conn, msg)
     finally:
         counter.remove(ip)
-        if pid is not None:
+        if pid is not None and room is not None:
             await hub.disconnect(room, pid, conn)
