@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural";
   title: string;
   blurb: string;
   min_players: number;
@@ -120,7 +120,54 @@ export interface PriceView extends GameBase {
   history?: PriceResult[];
 }
 
-export type GameView = FrenemyView | AlibiView | PriceView;
+export interface TelepathyResult {
+  category: { title: string; options: string[] };
+  picks: Record<string, number>;
+  points: Record<string, number>;
+  taxed: number[];
+}
+export interface TelepathyView extends GameBase {
+  game: "telepathy";
+  players: { id: string; name: string }[];
+  category: { title: string; options: string[] };
+  locked: string[];
+  you_locked: boolean;
+  your_pick: number | null;
+  result?: TelepathyResult;
+  final?: { history: TelepathyResult[]; mind_meld: { players: [string, string]; matches: number } | null };
+}
+
+export interface MuralTile {
+  emoji: string;
+  name: string;
+  color: string;
+  kind: string;
+}
+export interface MuralView extends GameBase {
+  game: "mural";
+  players: { id: string; name: string }[];
+  mural: MuralTile[];
+  /** target is the painting's index: only for innocent players, never the Mole or a TV */
+  you: { is_mole: boolean; target: number | null };
+  hinted: string[];
+  your_hint: number | null;
+  /** one map per revealed hint round: player id -> tile index */
+  hints: Record<string, number>[];
+  votes_in: number;
+  you_voted: string | null;
+  caught: string | null;
+  result?: {
+    mole: string;
+    target: number;
+    caught: boolean;
+    guess: number | null;
+    stole: boolean;
+    tally: Record<string, number>;
+    votes: Record<string, string>;
+  };
+}
+
+export type GameView = FrenemyView | AlibiView | PriceView | TelepathyView | MuralView;
 
 export interface RoomState {
   t: "state";

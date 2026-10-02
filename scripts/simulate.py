@@ -59,6 +59,37 @@ ALLOWED_KEYS = {
 }
 ALLOWED_KEYS[("alibi", "interrogate")] = ALLOWED_KEYS[("alibi", "briefing")]
 ALLOWED_KEYS[("alibi", "vote")] = ALLOWED_KEYS[("alibi", "briefing")]
+ALLOWED_KEYS[("telepathy", "pick")] = {
+    "game",
+    "phase",
+    "round",
+    "rounds",
+    "remaining",
+    "players",
+    "category",
+} | {
+    "locked",
+    "you_locked",
+    "your_pick",
+}
+for _phase in ("briefing", "hint", "vote", "mole_guess"):
+    ALLOWED_KEYS[("mural", _phase)] = {
+        "game",
+        "phase",
+        "round",
+        "rounds",
+        "remaining",
+        "players",
+        "mural",
+        "you",
+    } | {
+        "hinted",
+        "your_hint",
+        "hints",
+        "votes_in",
+        "you_voted",
+        "caught",
+    }
 
 
 class Check(AssertionError):
@@ -160,6 +191,8 @@ def values(obj: Any) -> Any:
 def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dict[str, set[int]]) -> int:
     """planted: pid -> every amount that player guessed (only they may see them before a reveal)."""
     killers = set()
+    moles = set()
+    paintings = set()
     checked = 0
     for b in bots:
         for raw in b.raw[start[b.pid] :]:
@@ -192,12 +225,105 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
                     check(you["fake_slots"] is None, f"{b.name} (innocent) was shown fake slots")
                 if g["phase"] != "final":
                     check("result" not in g and '"truth"' not in raw, f"{b.name} saw the solution early")
+            if game == "telepathy" and g["phase"] == "pick":
+                check("result" not in g, f"{b.name} saw picks before the reveal")
+                mine = PICKS.get((b.pid, g["round"]))
+                check(g["your_pick"] in (None, mine), f"{b.name} was shown a pick that isn't theirs")
+            if game == "mural" and g["phase"] != "final":
+                you = g["you"]
+                check("result" not in g, f"{b.name} saw the mural solution early")
+                if you["is_mole"]:
+                    moles.add(b.pid)
+                    check(you["target"] is None, f"{b.name} is the Mole but was shown the painting")
+                else:
+                    check(you["target"] is not None, f"{b.name} (innocent) wasn't shown the painting")
+                    paintings.add(you["target"])
+                if g["phase"] == "hint":
+                    check(
+                        g["your_hint"] in (None, HINTS.get((b.pid, g["round"]))),
+                        f"{b.name} was shown a hint that isn't theirs",
+                    )
     if game == "alibi":
         check(len(killers) == 1, f"expected exactly one bot told it is the killer, got {len(killers)}")
+    if game == "mural":
+        check(len(moles) == 1, f"expected exactly one bot told it is the Mole, got {len(moles)}")
+        check(len(paintings) == 1, "innocents were shown different paintings")
     return checked
 
 
 # -- games --------------------------------------------------------------------------------------------
+PICKS: dict[tuple[str, int], int] = {}  # (pid, round) -> the option that bot picked
+HINTS: dict[tuple[str, int], int] = {}  # (pid, round) -> the tile that bot hinted
+
+
+async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    PICKS.clear()
+    n = len(bots)
+    for rnd in range(1, 7):
+        await all_until(bots, game_is("telepathy", "pick", rnd), f"telepathy pick {rnd}")
+        for i, b in enumerate(bots):
+            opt = (i + rnd) % 3  # small clusters, sometimes a majority
+            PICKS[(b.pid, rnd)] = opt
+            await b.send(t="act", a="pick", option=opt)
+        await all_until(bots, game_is("telepathy", "reveal", rnd), f"telepathy reveal {rnd}")
+        r = host.state["game"]["result"]  # type: ignore[index]
+        check(
+            r["picks"] == {b.pid: PICKS[(b.pid, rnd)] for b in bots},
+            "revealed picks don't match what was sent",
+        )
+        counts = {o: list(r["picks"].values()).count(o) for o in set(r["picks"].values())}
+        for pid, opt in r["picks"].items():
+            want = 0 if counts[opt] > n / 2 else 100 * (counts[opt] - 1)
+            check(r["points"][pid] == want, f"telepathy scoring is off for option {opt}")
+        await skip(host)
+
+
+async def play_mural(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    HINTS.clear()
+    await all_until(bots, game_is("mural", "briefing"), "mural briefing")
+    mole = next(b for b in bots if b.state["game"]["you"]["is_mole"])  # type: ignore[index]
+    target = next(b for b in bots if b is not mole).state["game"]["you"]["target"]  # type: ignore[index]
+    tiles = host.state["game"]["mural"]  # type: ignore[index]
+
+    def related(i: int) -> bool:
+        a, t = tiles[i], tiles[target]
+        return i != target and (a["color"] == t["color"] or a["kind"] == t["kind"])
+
+    await skip(host)
+    for rnd in (1, 2):
+        await all_until(bots, game_is("mural", "hint", rnd), f"mural hint {rnd}")
+        for b in bots:
+            used = {HINTS.get((b.pid, r)) for r in (1, 2)}
+            choices = [i for i in range(16) if i not in used and (b is mole or related(i))]
+            tile = rng.choice(choices)
+            HINTS[(b.pid, rnd)] = tile
+            await b.send(t="act", a="hint", tile=tile)
+    await all_until(bots, game_is("mural", "vote"), "mural vote")
+    for b in bots:
+        # Innocents vote for whoever dropped the most unrelated hints; the Mole deflects.
+        others = [o for o in bots if o is not b]
+        if b is mole:
+            pick = rng.choice(others)
+        else:
+            pick = max(
+                others, key=lambda o: (sum(not related(HINTS[(o.pid, r)]) for r in (1, 2)), rng.random())
+            )
+        await b.send(t="act", a="vote", target=pick.pid)
+    await all_until(
+        bots, lambda s: (s.get("game") or {}).get("phase") in ("mole_guess", "final"), "mural vote close"
+    )
+    if host.state["game"]["phase"] == "mole_guess":  # type: ignore[index]
+        await all_until([mole], game_is("mural", "mole_guess"), "mole guess")
+        await mole.send(t="act", a="guess", tile=rng.randrange(16))
+    await all_until(bots, game_is("mural", "final"), "mural final")
+    r = host.state["game"]["result"]  # type: ignore[index]
+    check(
+        r["mole"] == mole.pid and r["target"] == target, "mural result doesn't match what the bots were told"
+    )
+    outcome = "stole the win" if r["stole"] else "caught" if r["caught"] else "escaped"
+    print(f"  mural: the Mole {outcome}")
+
+
 async def play_frenemy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     ids = [b.pid for b in bots]
     for rnd in (1, 2, 3):
@@ -287,6 +413,24 @@ async def play_price(host: Bot, bots: list[Bot], planted: dict[str, set[int]]) -
         await skip(host)
 
 
+def price_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    """Recompute Price Is Weird scoring from what was revealed: pots, sabotage steals, doubles/wipes."""
+    pts = dict.fromkeys(ids, 0)
+    for r in history:
+        w = r["winner"]
+        if w:
+            pts[w] += r["pot"]
+            thieves = [s for s, t in r["sabotage"].items() if t == w]
+            if thieves:
+                share = (r["pot"] // 2) // len(thieves)
+                pts[w] -= share * len(thieves)
+                for s in thieves:
+                    pts[s] += share
+        for pid, outcome in r["double"].items():
+            pts[pid] = pts[pid] * 2 if outcome == "doubled" else 0
+    return pts
+
+
 # -- driver -------------------------------------------------------------------------------------------
 async def run(base: str, n_bots: int, seed: int) -> None:
     rng = random.Random(seed)
@@ -316,7 +460,7 @@ async def run(base: str, n_bots: int, seed: int) -> None:
         await all_until(
             bots, lambda s: sum(p["connected"] for p in s["players"]) == len(bots), "everyone online"
         )
-        for game in ("frenemy", "alibi", "price"):
+        for game in ("frenemy", "alibi", "price", "telepathy", "mural"):
             before = totals(host)
             start = {b.pid: len(b.raw) for b in bots}
             planted: dict[str, set[int]] = {}
@@ -325,11 +469,22 @@ async def run(base: str, n_bots: int, seed: int) -> None:
                 await play_frenemy(host, bots, rng)
             elif game == "alibi":
                 await play_alibi(host, bots, rng)
-            else:
+            elif game == "price":
                 await play_price(host, bots, planted)
+            elif game == "telepathy":
+                await play_telepathy(host, bots, rng)
+            else:
+                await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
             after = totals(host)
-            check(sum(after.values()) > sum(before.values()), f"{game}: session scores did not go up")
+            if game == "price":
+                # Double or Nothing can wipe scores, so "went up" isn't a rule here. Instead every
+                # player's points must be exactly what the revealed history says they earned.
+                want = price_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
+            else:
+                check(sum(after.values()) > sum(before.values()), f"{game}: session scores did not go up")
             frames = check_frames(bots, game, start, planted)
             for b in bots:
                 bad = [e for e in b.errors if e not in EXPECTED_ERRORS]

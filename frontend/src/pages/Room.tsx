@@ -4,7 +4,9 @@ import { useRoom } from "../lib/useRoom";
 import { Btn, Card, Contestants, CopyButton, ErrorBanner, FlapCode } from "../components/ui";
 import { Alibi } from "../games/Alibi";
 import { Frenemy } from "../games/Frenemy";
+import { Mural } from "../games/Mural";
 import { Price } from "../games/Price";
+import { Telepathy } from "../games/Telepathy";
 import type { GameCard, RoomState, Session } from "../types";
 
 export function Room({ code, go, tv = false }: { code: string; go: (path: string) => void; tv?: boolean }) {
@@ -188,6 +190,10 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Alibi view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "price":
       return <Price view={g} you={state.you} players={players} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "telepathy":
+      return <Telepathy view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "mural":
+      return <Mural view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
 }
 
@@ -262,7 +268,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
   );
 }
 
-const SEGMENT_ICON: Record<GameCard["id"], string> = { frenemy: "📡", alibi: "🔎", price: "💰" };
+const SEGMENT_ICON: Record<GameCard["id"], string> = { frenemy: "📡", alibi: "🔎", price: "💰", telepathy: "🧠", mural: "🖼️" };
 
 function HostTools({ state, send }: { state: RoomState; send: (m: Record<string, unknown>) => void }) {
   const [title, setTitle] = useState(state.room.title);

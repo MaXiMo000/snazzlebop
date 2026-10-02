@@ -44,8 +44,13 @@ async function targets(page: Page, where: string, found: string[]) {
 
 async function skipToResults(host: Page, a11y?: () => Promise<void>) {
   const again = host.getByRole("button", { name: "Play another game" });
-  for (let i = 0; i < 20 && !(await again.isVisible()); i++) {
-    await host.getByRole("button", { name: /Skip wait/ }).click();
+  const skip = host.getByRole("button", { name: /Skip wait/ });
+  for (let i = 0; i < 30; i++) {
+    await expect(skip.or(again).first()).toBeVisible();
+    if (await again.isVisible()) break;
+    // The Skip button turns into "Play another game" the moment the game ends, so it can vanish
+    // between the check above and this click: don't wait for it forever, just look again.
+    await skip.click({ timeout: 2000 }).catch(() => undefined);
     await host.waitForTimeout(250);
   }
   await expect(again).toBeVisible();
@@ -127,6 +132,24 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await axe(host, "price guess", a11y);
   await targets(host, "price guess", a11y);
   await skipToResults(host, () => axe(host, "price final", a11y));
+
+  // Telepathy Tax
+  await host.locator("article.game-card.telepathy").getByRole("button", { name: /Start!/ }).click();
+  await expect(host.getByRole("group", { name: /Answers for/ })).toBeVisible();
+  await expect(bo.getByRole("group", { name: /Answers for/ }).getByRole("button")).toHaveCount(6);
+  await shot("09-telepathy");
+  await axe(host, "telepathy pick", a11y);
+  await targets(host, "telepathy pick", a11y);
+  await skipToResults(host, () => axe(host, "telepathy final", a11y));
+
+  // Mole in the Mural
+  await host.locator("article.game-card.mural").getByRole("button", { name: /Start!/ }).click();
+  await expect(host.getByRole("group", { name: "The mural, 16 tiles" }).getByRole("button")).toHaveCount(16);
+  await expect(host.getByRole("heading", { name: "How it works" })).toBeVisible();
+  await shot("10-mural");
+  await axe(host, "mural briefing", a11y);
+  await targets(host, "mural briefing", a11y);
+  await skipToResults(host, () => axe(host, "mural final", a11y));
 
   expect(problems, "console errors / CSP violations").toEqual([]);
   expect(a11y, "axe WCAG 2.1 A/AA violations").toEqual([]);

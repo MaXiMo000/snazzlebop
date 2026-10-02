@@ -48,6 +48,13 @@ const pairs = [
   ["teal", "#ffffff", "reel x1/2 (large)"],
   ["cherry", "#ffffff", "reel x2 (large)"],
   ["cherry", "cream", "logo bang"],
+  ["#ffffff", "#5b2f9e", "Telepathy segment / accent buttons"],
+  ["plum", "#e9defa", "Telepathy soft cards"],
+  ["plum-soft", "#e9defa", "muted in Telepathy soft"],
+  ["plum", "#ffe1cf", "Mural soft cards"],
+  ["plum-soft", "#ffe1cf", "muted in Mural soft"],
+  ["plum-soft", "paper", "mural tile tags"],
+  ["plum", "tangerine", "selected mural tile (Mural accent)"],
 ];
 
 let bad = 0;

@@ -54,6 +54,16 @@
   --accent-ink: var(--plum);
   --accent-soft: #fff0b8;
 }
+.seg-telepathy {
+  --accent: #5b2f9e;
+  --accent-ink: #fff;
+  --accent-soft: #e9defa;
+}
+.seg-mural {
+  --accent: var(--tangerine);
+  --accent-ink: var(--plum);
+  --accent-soft: #ffe1cf;
+}
 
 *,
 *::before,
@@ -1041,6 +1051,103 @@ details summary {
 .winner-row td {
   background: var(--bulb);
   font-weight: 700;
+}
+
+/* ---- telepathy ---------------------------------------------------------------------------- */
+.option-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+.option-grid .btn {
+  font-size: 1.05rem;
+}
+.option-grid .btn.btn:disabled[aria-pressed="false"] {
+  --bg: var(--paper);
+  --fg: var(--plum-soft);
+}
+.answer.taxed {
+  background: var(--cherry-light);
+}
+.answer h3 {
+  margin: 0;
+}
+.answer .contestants {
+  margin-top: 10px;
+}
+
+/* ---- mural ------------------------------------------------------------------------------ */
+.mural {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 96px;
+  padding: 8px 4px;
+  font: inherit;
+  color: var(--plum);
+  text-align: center;
+  background: var(--paper);
+  border: var(--line);
+  border-radius: 16px;
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+}
+.tile:disabled {
+  cursor: default;
+}
+.tile .emoji {
+  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  line-height: 1.1;
+}
+.tile-name {
+  font-weight: 700;
+  font-size: clamp(0.72rem, 3vw, 0.9rem);
+  line-height: 1.1;
+  hyphens: auto; /* "Skate-board", not "Skateboa / rd" (needs lang="en", which index.html sets) */
+  overflow-wrap: break-word;
+}
+.tile-tags {
+  font-size: 0.75rem;
+  color: var(--plum-soft);
+}
+.tile-hints {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 4px;
+}
+.tile-hints .chip {
+  padding: 0 6px;
+  font-size: 0.7rem;
+}
+.tile.target {
+  background: var(--bulb);
+  box-shadow:
+    0 0 0 4px var(--mustard),
+    var(--lift-sm);
+}
+.tile.mine {
+  background: var(--teal-light);
+}
+.tile[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.tile[aria-pressed="true"] .tile-tags {
+  color: inherit;
+}
+.tile.guessed {
+  outline: 4px dashed var(--cherry);
+  outline-offset: 2px;
 }
 
 /* ---- fx --------------------------------------------------------------------------------- */
