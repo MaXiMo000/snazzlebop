@@ -14,8 +14,8 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# TODO(claude-code): pin every `uses:` below to a full commit SHA (keep the tag as a comment),
-# the same way the portfolio repo does.
+# Every `uses:` is pinned to a full commit SHA (tag in the comment); Dependabot bumps them.
+# Docker images are pinned by digest.
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -23,8 +23,10 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: "3.13"
           cache: pip
@@ -42,8 +44,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 22
           cache: npm
@@ -58,15 +62,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
       - run: docker build -t snazzlebop:ci .
       - name: Scan image
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: snazzlebop:ci
-          severity: CRITICAL,HIGH
-          exit-code: "1"
-          ignore-unfixed: true
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock             aquasec/trivy@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa             image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 snazzlebop:ci # v0.75.0
       - name: Smoke test
         run: |
           # No proxy in front of the CI container, so trust no X-Forwarded-For hops.
@@ -77,14 +79,14 @@ jobs:
           for i in $(seq 1 20); do curl -fsS http://localhost:10000/healthz && break || sleep 1; done
           curl -fsSI http://localhost:10000/ | grep -i "content-security-policy"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/docs)" = 404
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: "3.13"
       - name: Simulate full games against the container (scores move, secrets never leak)
         run: |
           pip install "httpx==0.28.1" "websockets==17.1"
           python scripts/simulate.py --base http://localhost:10000 --bots 5
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 22
           cache: npm
@@ -97,7 +99,7 @@ jobs:
           npx playwright test
       - name: Screenshots for visual QA
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: playwright-screenshots
           path: |
@@ -121,17 +123,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
       - name: Abuse suite (Locust) on a private Docker network
         run: bash scripts/loadtest/run.sh
 
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -144,8 +149,10 @@ jobs:
       matrix:
         language: [python, javascript-typescript]
     steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@1190a975f95ce23525efb6a3fc21ea29567c1b52  # v3
         with:
           languages: ${{ matrix.language }}
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@1190a975f95ce23525efb6a3fc21ea29567c1b52  # v3

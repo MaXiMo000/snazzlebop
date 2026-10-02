@@ -19,7 +19,9 @@ WORKDIR /app
 # Hash-locked for linux/py3.13 (regenerate: see backend/requirements.lock header). --no-deps means
 # nothing outside the lock can sneak in.
 COPY backend/requirements.lock ./requirements.lock
-RUN pip install --require-hashes --no-deps -r requirements.lock
+# Then take Debian security fixes and remove pip/setuptools/wheel: nothing installs at runtime, and
+# their vendored copies (urllib3, msgpack, ...) are the image's only scanner findings otherwise.
+RUN pip install --require-hashes --no-deps -r requirements.lock     && apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*     && python -m pip uninstall -y pip setuptools wheel
 
 COPY backend/app ./app
 COPY --from=web /web/dist ./static

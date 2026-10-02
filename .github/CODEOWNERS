@@ -1,0 +1,10 @@
+# Everything needs the owner's review; the security-sensitive paths are listed so that stays true
+# even if a broader rule is added above later.
+*                       @MaXiMo000
+/.github/               @MaXiMo000
+/Dockerfile             @MaXiMo000
+/render.yaml            @MaXiMo000
+/backend/app/security.py @MaXiMo000
+/backend/app/ws.py      @MaXiMo000
+/backend/requirements.lock @MaXiMo000
+/SECURITY.md            @MaXiMo000
