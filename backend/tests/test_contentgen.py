@@ -60,6 +60,11 @@ class ValidationTests(unittest.TestCase):
 
 
 class AddItemsTests(PoolSnapshot):
+    async def test_prompt_lists_every_taken_short_key(self):
+        gen = ContentGenerator(None)
+        prompt = gen.prompt("crossword")
+        self.assertTrue(all(e["word"] in prompt for e in KINDS["crossword"].pool))
+
     async def test_dedupes_against_pool_and_batch(self):
         pool = KINDS["frenemy"].pool
         before = len(pool)

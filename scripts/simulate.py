@@ -341,11 +341,12 @@ async def play_blackjack(host: Bot, bots: list[Bot], rng: random.Random) -> None
 
 
 def crossword_oracle() -> dict[str, str]:
-    """Clue -> answer from the repo's seed pool. A test oracle: bots stand in for people who know words."""
+    """Clue -> answer from the repo's pools (seed + committed extras). A test oracle: bots stand in
+    for people who know words."""
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
-    from app.games.content import CROSSWORD_ENTRIES
+    from app.contentgen import KINDS
 
-    return {e["clue"]: e["word"] for e in CROSSWORD_ENTRIES}
+    return {e["clue"]: e["word"] for e in KINDS["crossword"].pool}
 
 
 async def play_crossword(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -354,18 +355,25 @@ async def play_crossword(host: Bot, bots: list[Bot], rng: random.Random) -> None
     clues = host.state["game"]["clues"]  # type: ignore[index]
     # One honest mistake first: the server must answer "wrong", then lock that bot out briefly.
     await bots[1].send(t="act", a="guess", clue=clues[0]["id"], answer="Q" * clues[0]["len"])
-    await bots[1].until(lambda s: True, "wrong guess")
-    await asyncio.sleep(0.3)
-    check("wrong" in bots[1].errors, "a wrong crossword guess wasn't rejected")
-    solved = 0
+    try:
+        await bots[1].until(lambda s: "wrong" in bots[1].errors, "wrong guess rejected")
+    except Check:
+        check(False, "a wrong crossword guess wasn't rejected")
+    solved, mine = 0, set()
     solvers = [b for b in bots if b is not bots[1]]  # bots[1] is serving its 2 s lockout
     for i, c in enumerate(clues):
         word = oracle.get(c["clue"])
         if word:  # generated clues aren't in the seed oracle: leave those to the timer
             await solvers[i % len(solvers)].send(t="act", a="guess", clue=c["id"], answer=word)
             solved += 1
-    check(solved > 0, "no crossword clue was solvable from the seed pool")
-    await asyncio.sleep(0.5)
+            mine.add(c["id"])
+    check(solved > 0, "no crossword clue was solvable from the pools")
+
+    def settled(s: dict[str, Any]) -> bool:  # every guess sent has landed (or the timer ended it)
+        g = s.get("game") or {}
+        return g.get("phase") != "solve" or all(c["solved_by"] for c in g["clues"] if c["id"] in mine)
+
+    await host.until(settled, "crossword guesses applied")
     if host.state["game"]["phase"] == "solve":  # type: ignore[index]
         await skip(host)
     await all_until(bots, game_is("crossword", "final"), "crossword final")
@@ -463,11 +471,27 @@ async def play_alibi(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     await skip(host)
     for rnd in (1, 2, 3):
         await all_until(bots, game_is("alibi", "interrogate", rnd), f"alibi round {rnd}")
+        # Each act waits until the server applied (or refused) it before the next, and the host only
+        # skips after all of them: over a real network a fixed sleep let the skip overtake the last
+        # bot's ask ("wrong_phase").
         for b in bots:
-            await b.send(t="act", a="reveal", slot=rng.randrange(6))
+            slot = rng.randrange(6)
+            errors = len(b.errors)
+            await b.send(t="act", a="reveal", slot=slot)
+
+            def revealed(s: dict[str, Any], b: Bot = b, slot: int = slot, errors: int = errors) -> bool:
+                mine = any(c["speaker"] == b.pid and c["slot"] == slot for c in s["game"]["claims"])
+                return mine or len(b.errors) > errors
+
+            await b.until(revealed, "alibi reveal applied")
+            errors, asks = len(b.errors), b.state["game"]["you"]["asks_left"]  # type: ignore[index]
             target = rng.choice([o for o in bots if o is not b])
             await b.send(t="act", a="ask", target=target.pid, slot=rng.randrange(6))
-        await asyncio.sleep(0.2)
+
+            def asked(s: dict[str, Any], b: Bot = b, asks: int = asks, errors: int = errors) -> bool:
+                return s["game"]["you"]["asks_left"] < asks or len(b.errors) > errors
+
+            await b.until(asked, "alibi ask applied")
         await skip(host)
     await all_until(bots, game_is("alibi", "vote"), "alibi vote")
     flagged: dict[str, int] = {}

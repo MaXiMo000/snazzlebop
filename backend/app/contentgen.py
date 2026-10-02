@@ -33,6 +33,7 @@ log = logging.getLogger("snazzlebop.contentgen")
 MODEL = "claude-opus-5-5"
 BATCH = 15  # items asked for per call
 POOL_CAP = 20_000  # per kind, so a runaway can't eat memory
+TAKEN_CHARS = 12_000  # the "every key taken" list stays under ~3k prompt tokens
 
 # Words that have no place in a friendly party game. Generation is told to stay kind; this is the
 # belt to those braces.
@@ -356,7 +357,16 @@ class ContentGenerator:
             + "\n".join(f"- {spec.sample(x)}" for x in examples)
             + "\n\nAlready used (do not repeat these or near-duplicates):\n"
             + "\n".join(f"- {spec.sample(x)}" for x in used)
+            + self.taken(kind)
         )
+
+    @staticmethod
+    def taken(kind: str) -> str:
+        """Every key already in the pool, compactly, when that fits: short keys (crossword words,
+        mural tiles) collide a lot, and a 60-item sample let most of a batch come back as repeats."""
+        spec = KINDS[kind]
+        text = ", ".join(sorted({spec.key(x) for x in spec.pool}))
+        return f"\n\nAlso taken (exact keys, avoid all of them): {text}" if len(text) <= TAKEN_CHARS else ""
 
     async def generate(self, kind: str) -> list[Any]:
         """One batch: ask, validate, de-duplicate, add, persist. Raises on API/format trouble."""

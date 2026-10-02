@@ -183,6 +183,38 @@ around the table.
 - **GitHub Actions:** first run on `97fb8de` (run 37071029873) passed every job: backend, frontend,
   docker (Trivy, simulator, Playwright, Lighthouse, ZAP), abuse, secrets, CodeQL x2.
 
+## 7. Live on Render: https://snazzlebop.onrender.com (2026-10-03)
+
+Render Blueprint, free web instance and free Postgres, deployed from `main`. Checked from one home
+connection:
+
+- **Headers** (`curl -I /`): CSP `default-src 'none'` with `connect-src 'self' wss://snazzlebop.onrender.com`,
+  HSTS 2 years + preload, `nosniff`, `X-Frame-Options: DENY`, `frame-ancestors 'none'`, COEP/COOP/CORP,
+  `Referrer-Policy: no-referrer`, Permissions-Policy. `Server: cloudflare`: Render's edge is Cloudflare.
+- `/docs`, `/redoc`, `/openapi.json`, `/.env`, `/api/nope` → 404. Foreign `Host` → 403 at the edge.
+- **WebSocket from a foreign origin** (`Origin: https://evil.com`) → refused, HTTP 403. No `Origin` → 403.
+- **Client IP: a real bug, found here and fixed.**
+  - Before the fix (`TRUSTED_PROXY_HOPS=1`):
+    - 12 room creations with no forged header: 201 ×9, then 429.
+    - The same 12 with `X-Forwarded-For: 9.9.9.9` on every request: **201 ×12, never limited**.
+  - Cause: Render's `X-Forwarded-For` ends in a Cloudflare edge address. That address is shared by
+    unrelated players and changes between requests, so the app was keying its limits on it.
+  - Fix (`ee624ee`): `CLIENT_IP_HEADER=cf-connecting-ip`.
+  - After the fix:
+    - The same forged burst: 201 ×5, then 429 ×10.
+    - A different forged `X-Forwarded-For` on each request: 201 ×5, then 429 ×7.
+    - Any request that brings its own `CF-Connecting-IP` is refused by Cloudflare itself (403), so
+      that header can't be forged from outside.
+- **Simulator over the internet**, 3 bots: all seven games pass, including every secrecy check. The first
+  live run failed Alibi with `wrong_phase`. It was a harness race, not a server bug: the host's skip
+  overtook a bot's last ask, which the server rightly refused. The harness now waits for each act to
+  be applied instead of sleeping.
+- **8 players in one room** (host + 7 bots, 8 sockets from one IP): all seven games pass, 1,768 frames
+  checked for leaks, 42 planted Price guesses never seen by anyone else.
+- Not run live: the Locust abuse suite (floods, socket caps, slow reader); those ran against the same
+  image locally (section 6). Not checked: a second network sharing the limit, a custom domain, your
+  own Cloudflare zone.
+
 ## What is not covered (be honest)
 
 - **Single instance, in-memory limits.** Rate limits and rooms reset on restart and are per process.
