@@ -1,0 +1,29 @@
+[project]
+name = "snazzlebop-backend"
+version = "0.1.0"
+description = "Snazzlebop: party games server (FastAPI + WebSockets)"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "ASYNC", "SIM"]
+ignore = [
+  "S101",  # assert is fine in tests
+  "S311",  # random is used for game shuffling, not security
+  "B008",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "B011", "E501"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B311"]  # random.* used for game logic only; secrets/SystemRandom for anything sensitive

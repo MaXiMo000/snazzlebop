@@ -1,0 +1,34 @@
+# Render Blueprint: one Docker web service (API + WebSockets + built SPA, same origin)
+# plus a private Postgres for anonymous game stats.
+#
+# Deploy: Render dashboard -> New -> Blueprint -> pick this repo. SECRET_KEY is generated for you.
+databases:
+  - name: snazzlebop-db
+    plan: free # NOTE: Render's free Postgres expires after a while; the game keeps working without it.
+    databaseName: snazzlebop
+    user: snazzlebop
+    ipAllowList: [] # private network only: no public access to the database
+
+services:
+  - type: web
+    name: snazzlebop
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free # Free instances sleep when idle and drop live rooms. Use "starter" for real use.
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: snazzlebop-db
+          property: connectionString
+      # Render is the only proxy in front of the app. If you add Cloudflare, set this to 2.
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+      # RENDER_EXTERNAL_HOSTNAME is provided by Render and is added to the host/origin allowlists.
+      # For a custom domain also set ALLOWED_HOSTS and ALLOWED_ORIGINS (comma separated).

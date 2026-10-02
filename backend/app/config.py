@@ -1,0 +1,123 @@
+"""Runtime configuration. Plain dataclass + os.environ: no extra dependency, easy to test."""
+
+from __future__ import annotations
+
+import os
+import secrets
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+
+
+def _csv(value: str | None) -> tuple[str, ...]:
+    return tuple(x.strip() for x in (value or "").split(",") if x.strip())
+
+
+def normalize_database_url(url: str) -> str:
+    """Render hands out postgres:// or postgresql:// URLs; SQLAlchemy async needs a driver."""
+    url = url.strip()
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            url = "postgresql+asyncpg://" + url[len(prefix):]
+            break
+    if url.startswith("postgresql+asyncpg://") and "?" in url:
+        # asyncpg rejects libpq-style params such as sslmode; Render's internal URL needs no TLS.
+        base, query = url.split("?", 1)
+        kept = [q for q in query.split("&") if q.split("=")[0] not in ("sslmode", "channel_binding")]
+        url = base + ("?" + "&".join(kept) if kept else "")
+    return url
+
+
+@dataclass(frozen=True)
+class Settings:
+    env: str = "development"
+    secret_key: str = ""
+    database_url: str = "sqlite+aiosqlite:///./snazzlebop.db"
+    allowed_hosts: tuple[str, ...] = ("localhost", "127.0.0.1", "testserver")
+    allowed_origins: tuple[str, ...] = (
+        "http://localhost:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    )
+    # How many reverse proxies sit in front of the app and append to X-Forwarded-For.
+    # Render alone = 1. Cloudflare in front of Render = 2. NEVER set higher than reality:
+    # clients can then forge their IP and dodge the rate limits.
+    trusted_proxy_hops: int = 1
+    static_dir: str = "static"
+
+    # Capacity limits (memory-exhaustion defences)
+    max_rooms: int = 300
+    max_players_per_room: int = 8
+    room_code_length: int = 5
+    room_idle_seconds: float = 600.0
+    room_max_age_seconds: float = 6 * 3600.0
+    token_ttl_seconds: float = 12 * 3600.0
+
+    # Per-IP limits
+    max_ws_per_ip: int = 12
+    max_ws_total: int = 1500
+    ws_msgs_per_second: float = 8.0
+    ws_msg_burst: float = 16.0
+    ws_max_message_bytes: int = 2048
+    ws_auth_timeout: float = 5.0
+    ws_idle_timeout: float = 90.0
+    max_body_bytes: int = 4096
+    rate_default_per_min: float = 180.0
+    rate_default_burst: float = 80.0
+    rate_create_per_min: float = 10.0
+    rate_create_burst: float = 5.0
+    rate_join_per_min: float = 40.0
+    rate_join_burst: float = 12.0
+
+    extra: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def is_production(self) -> bool:
+        return self.env == "production"
+
+    @property
+    def ws_hosts(self) -> tuple[str, ...]:
+        return tuple(h for h in self.allowed_hosts if "*" not in h)
+
+
+def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
+    e = os.environ if environ is None else environ
+    on_render = e.get("RENDER", "").lower() == "true"
+    env = e.get("ENV") or ("production" if on_render else "development")
+    production = env == "production"
+
+    secret = e.get("SECRET_KEY", "")
+    if production and len(secret) < 32:
+        raise RuntimeError("SECRET_KEY must be set to at least 32 characters in production")
+    if not secret:
+        secret = secrets.token_urlsafe(48)  # dev only: sessions reset on every restart
+
+    hosts = list(_csv(e.get("ALLOWED_HOSTS")))
+    origins = list(_csv(e.get("ALLOWED_ORIGINS")))
+    render_host = e.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    if render_host:
+        hosts.append(render_host)
+        origins.append(f"https://{render_host}")
+    defaults = Settings()
+    if not production:
+        hosts = list(dict.fromkeys([*hosts, *defaults.allowed_hosts]))
+        origins = list(dict.fromkeys([*origins, *defaults.allowed_origins]))
+    if production and not hosts:
+        raise RuntimeError("ALLOWED_HOSTS (or RENDER_EXTERNAL_HOSTNAME) must be set in production")
+
+    def num(name: str, default: float) -> float:
+        raw = e.get(name)
+        return float(raw) if raw not in (None, "") else default
+
+    return Settings(
+        env=env,
+        secret_key=secret,
+        database_url=normalize_database_url(e.get("DATABASE_URL", defaults.database_url)),
+        allowed_hosts=tuple(hosts),
+        allowed_origins=tuple(origins),
+        trusted_proxy_hops=int(num("TRUSTED_PROXY_HOPS", defaults.trusted_proxy_hops)),
+        static_dir=e.get("STATIC_DIR", defaults.static_dir),
+        max_rooms=int(num("MAX_ROOMS", defaults.max_rooms)),
+        max_ws_per_ip=int(num("MAX_WS_PER_IP", defaults.max_ws_per_ip)),
+        max_ws_total=int(num("MAX_WS_TOTAL", defaults.max_ws_total)),
+    )
