@@ -3,9 +3,13 @@ from __future__ import annotations
 from .alibi import Alibi
 from .base import Game, GameError, Player
 from .frenemy import FrenemyRadar
+from .mural import MoleInTheMural
 from .price import PriceIsWeird
+from .telepathy import TelepathyTax
 
-REGISTRY: dict[str, type[Game]] = {cls.game_id: cls for cls in (FrenemyRadar, Alibi, PriceIsWeird)}
+REGISTRY: dict[str, type[Game]] = {
+    cls.game_id: cls for cls in (FrenemyRadar, Alibi, PriceIsWeird, TelepathyTax, MoleInTheMural)
+}
 
 
 def catalog() -> list[dict[str, object]]:
