@@ -23,7 +23,8 @@ log = logging.getLogger("snazzlebop.rooms")
 
 ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: avoids lookalikes
 ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
-ALLOWED_MESSAGE_TYPES = {"ping", "start", "act", "skip", "lobby", "leave"}
+ALLOWED_MESSAGE_TYPES = {"ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"}
+KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
 MAX_TV_PER_ROOM = 2  # big-screen viewers; issuing a third evicts the oldest
 
 
@@ -38,16 +39,16 @@ class Connection(Protocol):
     async def close(self, code: int = 1000) -> None: ...
 
 
-def clean_name(raw: object) -> str:
-    """Normalise and validate a display name. Raises HubError if unacceptable."""
+def clean_name(raw: object, max_len: int = 16) -> str:
+    """Normalise and validate a display name (or room title). Raises HubError if unacceptable."""
     if not isinstance(raw, str):
-        raise HubError("bad_name", "Pick a name between 1 and 16 characters")
+        raise HubError("bad_name", f"Pick a name between 1 and {max_len} characters")
     if any(unicodedata.category(ch) in ("Cc", "Cf", "Co", "Cs") for ch in raw):
         raise HubError("bad_name", "That name has characters we can't use")
     name = unicodedata.normalize("NFKC", raw)
     name = re.sub(r"\s+", " ", name).strip()
-    if not 1 <= len(name) <= 16:
-        raise HubError("bad_name", "Pick a name between 1 and 16 characters")
+    if not 1 <= len(name) <= max_len:
+        raise HubError("bad_name", f"Pick a name between 1 and {max_len} characters")
     for ch in name:
         cat = unicodedata.category(ch)
         # letters, numbers, space, dash/underscore punctuation, apostrophe, dot, and emoji symbols
@@ -68,6 +69,8 @@ class Room:
     # No-repeat content decks, shared by every game played in this room.
     decks: dict[str, Deck] = field(default_factory=dict)
     phase: str = "lobby"  # lobby | game | results
+    title: str = ""  # host-chosen show title
+    locked: bool = False  # host stopped new players joining
     game: Game | None = None
     total_scores: dict[str, int] = field(default_factory=dict)
     last_active: float = 0.0
@@ -130,6 +133,8 @@ class Hub:
         if room is None:
             raise HubError("room_not_found", "No room with that code", 404)
         name = clean_name(name)
+        if room.locked:
+            raise HubError("room_locked", "The host has locked this room", 409)
         if room.phase == "game":
             raise HubError("in_progress", "That game has already started", 409)
         if len(room.players) >= self.settings.max_players_per_room:
@@ -218,7 +223,13 @@ class Hub:
             "t": "state",
             "you": pid,
             "tv": pid in room.viewers,
-            "room": {"code": room.code, "phase": room.phase, "host": room.host_id},
+            "room": {
+                "code": room.code,
+                "phase": room.phase,
+                "host": room.host_id,
+                "title": room.title,
+                "locked": room.locked,
+            },
             "players": [
                 {
                     "id": p.id,
@@ -354,6 +365,10 @@ class Hub:
                 raise HubError("not_host", "Only the host can do that", 403)
             room.game, room.phase = None, "lobby"
             return True
+        if kind in ("kick", "lock", "title"):
+            if not is_host:
+                raise HubError("not_host", "Only the host can do that", 403)
+            return self._host_tool(room, pid, kind, msg)
         if kind == "leave":
             player = room.players.get(pid)
             if player and room.phase == "lobby" and pid != room.host_id:
@@ -364,6 +379,28 @@ class Hub:
                     asyncio.get_running_loop().create_task(conn.close(1000))
             return True
         return False
+
+    def _host_tool(self, room: Room, pid: str, kind: str, msg: dict[str, Any]) -> bool:
+        if kind == "title":
+            raw = msg.get("title")
+            room.title = "" if raw == "" else clean_name(raw, max_len=32)
+            return True
+        if kind == "lock":
+            if not isinstance(msg.get("locked"), bool):
+                raise HubError("bad_message", "Unknown message")
+            room.locked = msg["locked"]
+            return True
+        target = msg.get("target")
+        if not isinstance(target, str) or target not in room.players or target == pid:
+            raise HubError("bad_target", "Pick another player")
+        if room.phase == "game":
+            raise HubError("in_progress", "Remove players between games")
+        del room.players[target]
+        room.total_scores.pop(target, None)
+        conn = room.conns.pop(target, None)
+        if conn is not None:
+            asyncio.get_running_loop().create_task(conn.close(KICKED))
+        return True
 
     def _maybe_finish(self, room: Room) -> None:
         game = room.game

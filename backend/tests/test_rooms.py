@@ -274,6 +274,50 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HubError):
             hub.issue_tv("ZZZZZ")
 
+    async def test_host_tools_kick_lock_rename(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 3)
+        guest = next(p for p in conns if p != host)
+        # Only the host.
+        for msg in (
+            {"t": "kick", "target": host},
+            {"t": "lock", "locked": True},
+            {"t": "title", "title": "Hi"},
+        ):
+            await hub.handle_message(room, guest, conns[guest], msg)
+        self.assertEqual(conns[guest].errors().count("not_host"), 3)
+        # Rename: validated like names, shown to everyone.
+        await hub.handle_message(room, host, conns[host], {"t": "title", "title": "  Friday   Night  🎉 "})
+        self.assertEqual(conns[guest].last["room"]["title"], "Friday Night 🎉")
+        for bad in ("x" * 33, "a‮b", 7):
+            await hub.handle_message(room, host, conns[host], {"t": "title", "title": bad})
+        self.assertEqual(room.title, "Friday Night 🎉")
+        # Lock: no new players (a TV may still watch); unlock lets them in again.
+        await hub.handle_message(room, host, conns[host], {"t": "lock", "locked": True})
+        self.assertTrue(conns[guest].last["room"]["locked"])
+        with self.assertRaises(HubError) as err:
+            hub.join_room(room.code, "Latecomer")
+        self.assertEqual(err.exception.code, "room_locked")
+        hub.issue_tv(room.code)
+        await hub.handle_message(room, host, conns[host], {"t": "lock", "locked": "yes"})
+        self.assertIn("bad_message", conns[host].errors())
+        await hub.handle_message(room, host, conns[host], {"t": "lock", "locked": False})
+        hub.join_room(room.code, "Latecomer")
+        # Kick: never yourself, never mid-game; the kicked seat is gone and its socket told why.
+        await hub.handle_message(room, host, conns[host], {"t": "kick", "target": host})
+        self.assertIn(host, room.players)
+        await hub.handle_message(room, host, conns[host], {"t": "start", "game": "frenemy"})
+        await hub.handle_message(room, host, conns[host], {"t": "kick", "target": guest})
+        self.assertIn(guest, room.players)
+        self.assertIn("in_progress", conns[host].errors())
+        await hub.handle_message(room, host, conns[host], {"t": "lobby"})
+        await hub.handle_message(room, host, conns[host], {"t": "kick", "target": guest})
+        await asyncio.sleep(0)
+        self.assertNotIn(guest, room.players)
+        self.assertFalse(hub.is_member(room, guest))
+        self.assertEqual(conns[guest].closed, 4001)
+        self.assertNotIn(guest, [p["id"] for p in conns[host].last["players"]])
+
     async def test_stuck_reader_never_stalls_the_room(self):
         # A client that stops reading: its sends block forever once the buffers fill.
         import asyncio

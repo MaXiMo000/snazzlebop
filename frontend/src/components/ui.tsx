@@ -101,7 +101,7 @@ export function ErrorBanner({ message, onClose }: { message: string | null; onCl
   );
 }
 
-function Contestant({ p, you, leader }: { p: PlayerInfo; you: boolean; leader: boolean }) {
+function Contestant({ p, you, leader, onKick }: { p: PlayerInfo; you: boolean; leader: boolean; onKick?: () => void }) {
   const pts = useCountUp(p.total);
   return (
     <li className={`contestant ${you ? "you" : ""} ${p.connected ? "" : "away"}`}>
@@ -120,11 +120,34 @@ function Contestant({ p, you, leader }: { p: PlayerInfo; you: boolean; leader: b
         <span aria-hidden="true">{pts}</span>
         <span className="sr-only">{p.total} points</span>
       </span>
+      {onKick && (
+        <button
+          type="button"
+          className="kick"
+          aria-label={`Remove ${p.name} from the room`}
+          onClick={() => {
+            if (window.confirm(`Remove ${p.name} from the room?`)) onKick();
+          }}
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
+      )}
     </li>
   );
 }
 
-export function Contestants({ players, you, title }: { players: PlayerInfo[]; you: string; title: string }) {
+export function Contestants({
+  players,
+  you,
+  title,
+  onKick,
+}: {
+  players: PlayerInfo[];
+  you: string;
+  title: string;
+  /** host only, between games: remove a player */
+  onKick?: (id: string) => void;
+}) {
   const sorted = [...players].sort((a, b) => b.total - a.total);
   const top = sorted[0];
   return (
@@ -132,7 +155,13 @@ export function Contestants({ players, you, title }: { players: PlayerInfo[]; yo
       <h3>{title}</h3>
       <ul className="contestants">
         {sorted.map((p) => (
-          <Contestant key={p.id} p={p} you={p.id === you} leader={!!top && top.total > 0 && p.id === top.id} />
+          <Contestant
+            key={p.id}
+            p={p}
+            you={p.id === you}
+            leader={!!top && top.total > 0 && p.id === top.id}
+            onKick={onKick && p.id !== you ? () => onKick(p.id) : undefined}
+          />
         ))}
       </ul>
     </Card>

@@ -82,17 +82,33 @@ function JoinGate({ code, onJoined, go }: { code: string; onJoined: (s: Session)
 }
 
 function Live({ code, session, go, onLeave }: { code: string; session: Session; go: (p: string) => void; onLeave: () => void }) {
-  const { state, receivedAt, status, error, send, clearError } = useRoom(code, session.token);
+  const { state, receivedAt, status, attempt, recovered, error, send, retry, clearError } = useRoom(code, session.token);
 
   useEffect(() => {
     document.title = `Room ${code} · Snazzlebop`;
   }, [code]);
 
-  if (status === "closed") {
+  if (status === "lost") {
     return (
       <Card tone="stage" className="center enter">
-        <h2>That’s a wrap</h2>
-        <p>This room has ended, or your seat expired.</p>
+        <h2>Signal lost</h2>
+        <p>We couldn’t reconnect. Your seat is still saved on this device.</p>
+        <div className="row center">
+          <Btn variant="gold" onClick={retry}>
+            Try again
+          </Btn>
+          <Btn variant="ghost" onClick={() => go("/")}>
+            Home
+          </Btn>
+        </div>
+      </Card>
+    );
+  }
+  if (status === "closed" || status === "kicked") {
+    return (
+      <Card tone="stage" className="center enter">
+        <h2>{status === "kicked" ? "You’ve been removed" : "That’s a wrap"}</h2>
+        <p>{status === "kicked" ? "The host removed you from this room." : "This room has ended, or your seat expired."}</p>
         <Btn
           variant="gold"
           onClick={() => {
@@ -118,9 +134,17 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
   const isHost = state.room.host === state.you;
   return (
     <div className="stack">
-      {status !== "open" && (
+      {status === "reconnecting" && (
+        <div className="alert calm row between" role="status">
+          <span>Signal lost. Reconnecting{attempt > 1 ? ` (try ${attempt})` : ""}…</span>
+          <Btn size="small" variant="ghost" onClick={retry}>
+            Try now
+          </Btn>
+        </div>
+      )}
+      {recovered && (
         <p className="alert calm" role="status">
-          Signal lost. Reconnecting…
+          Back on air! 📺
         </p>
       )}
       <ErrorBanner message={error} onClose={clearError} />
@@ -180,7 +204,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
   const { state, receivedAt, status } = useRoom(code, session?.token ?? null);
   const noop = () => undefined;
 
-  if (error || status === "closed") {
+  if (error || status === "closed" || status === "lost" || status === "kicked") {
     return (
       <Card tone="stage" className="center enter">
         <h2>Off air</h2>
@@ -216,7 +240,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
       {state.room.phase === "lobby" || !state.game ? (
         <div className="tv-split">
           <Card tone="stage" className="center">
-            <p className="sign">Now seating contestants</p>
+            <p className="sign">{state.room.title ? `Tonight: ${state.room.title}` : "Now seating contestants"}</p>
             <p className="lead space-top">
               Join at <b>{window.location.host}</b> with code
             </p>
@@ -240,13 +264,57 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
 
 const SEGMENT_ICON: Record<GameCard["id"], string> = { frenemy: "📡", alibi: "🔎", price: "💰" };
 
+function HostTools({ state, send }: { state: RoomState; send: (m: Record<string, unknown>) => void }) {
+  const [title, setTitle] = useState(state.room.title);
+  return (
+    <Card tone="soft" aria-labelledby="host-tools-h">
+      <h3 id="host-tools-h">Host tools</h3>
+      <form
+        className="ask-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send({ t: "title", title: title.trim() });
+        }}
+      >
+        <div>
+          <label className="field" htmlFor="show-title">
+            Show title
+          </label>
+          <input
+            id="show-title"
+            type="text"
+            maxLength={32}
+            value={title}
+            placeholder="e.g. Friday Night Showdown"
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <Btn type="submit" variant="ghost">
+          Rename
+        </Btn>
+        <Btn
+          variant={state.room.locked ? "danger" : "ghost"}
+          aria-pressed={state.room.locked}
+          onClick={() => send({ t: "lock", locked: !state.room.locked })}
+        >
+          <span aria-hidden="true">{state.room.locked ? "🔒 " : "🔓 "}</span>Lock room
+        </Btn>
+      </form>
+      <p className="muted space-top">
+        {state.room.locked ? "Locked: nobody new can join." : "Open: anyone with the code can join."} Tap ✕ on a
+        contestant to remove them.
+      </p>
+    </Card>
+  );
+}
+
 function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; send: (m: Record<string, unknown>) => void }) {
   const online = state.players.filter((p) => p.connected).length;
   const link = `${window.location.origin}/r/${state.room.code}`;
   return (
     <div className="stack enter">
       <Card tone="stage" className="center">
-        <p className="sign">Now seating contestants</p>
+        <p className="sign">{state.room.title ? `Tonight: ${state.room.title}` : "Now seating contestants"}</p>
         <div className="space-top">
           <FlapCode code={state.room.code} />
         </div>
@@ -259,7 +327,13 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
         </div>
       </Card>
 
-      <Contestants players={state.players} you={state.you} title={`In the room (${online} online)`} />
+      <Contestants
+        players={state.players}
+        you={state.you}
+        title={`In the room (${online} online)`}
+        onKick={isHost ? (id) => send({ t: "kick", target: id }) : undefined}
+      />
+      {isHost && <HostTools state={state} send={send} />}
 
       <h2>{isHost ? "Pick a game" : "Waiting for the host to pick a game…"}</h2>
       <div className="grid">

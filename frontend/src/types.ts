@@ -125,7 +125,7 @@ export type GameView = FrenemyView | AlibiView | PriceView;
 export interface RoomState {
   t: "state";
   you: string;
-  room: { code: string; phase: "lobby" | "game" | "results"; host: string };
+  room: { code: string; phase: "lobby" | "game" | "results"; host: string; title: string; locked: boolean };
   players: PlayerInfo[];
   games: GameCard[];
   game: GameView | null;

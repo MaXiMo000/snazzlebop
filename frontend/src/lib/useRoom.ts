@@ -1,26 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RoomState } from "../types";
 
-export type Status = "connecting" | "open" | "reconnecting" | "closed";
+/**
+ * connecting -> open, then on a drop: reconnecting (with backoff) -> open again,
+ * or "lost" after MAX_RETRIES (the player can retry). "closed" = the room or seat is gone (1008),
+ * "kicked" = the host removed this player (4001). Those two are final.
+ */
+export type Status = "connecting" | "open" | "reconnecting" | "lost" | "closed" | "kicked";
 
 export interface RoomConnection {
   state: RoomState | null;
   receivedAt: number;
   status: Status;
+  attempt: number;
+  /** true for a few seconds after a dropped connection comes back */
+  recovered: boolean;
   error: string | null;
   send: (msg: Record<string, unknown>) => void;
+  retry: () => void;
   clearError: () => void;
 }
 
 const MAX_RETRIES = 8;
+const KICKED = 4001;
 
 /** One WebSocket per room. The token is sent as the first message, never in the URL. */
 export function useRoom(code: string, token: string | null): RoomConnection {
   const [state, setState] = useState<RoomState | null>(null);
   const [receivedAt, setReceivedAt] = useState(0);
   const [status, setStatus] = useState<Status>("connecting");
+  const [attempt, setAttempt] = useState(0);
+  const [recovered, setRecovered] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generation, setGeneration] = useState(0); // bump to start over after "lost"
   const wsRef = useRef<WebSocket | null>(null);
+  // Survives a manual retry (which restarts the effect), so the comeback is still recognised.
+  const dropped = useRef(false);
 
   useEffect(() => {
     if (!token) return;
@@ -28,12 +43,13 @@ export function useRoom(code: string, token: string | null): RoomConnection {
     let retries = 0;
     let pingTimer: number | undefined;
     let retryTimer: number | undefined;
+    let recoveredTimer: number | undefined;
 
     const connect = () => {
       const scheme = window.location.protocol === "https:" ? "wss" : "ws";
       const ws = new WebSocket(`${scheme}://${window.location.host}/ws/${encodeURIComponent(code)}`);
       wsRef.current = ws;
-      setStatus(retries === 0 ? "connecting" : "reconnecting");
+      setStatus(retries === 0 && !dropped.current ? "connecting" : "reconnecting");
 
       ws.onopen = () => {
         ws.send(JSON.stringify({ t: "auth", token }));
@@ -45,7 +61,14 @@ export function useRoom(code: string, token: string | null): RoomConnection {
         try {
           const msg = JSON.parse(String(ev.data)) as { t: string; message?: string };
           if (msg.t === "state") {
+            if (dropped.current) {
+              dropped.current = false;
+              setRecovered(true);
+              window.clearTimeout(recoveredTimer);
+              recoveredTimer = window.setTimeout(() => setRecovered(false), 3000);
+            }
             retries = 0;
+            setAttempt(0);
             setStatus("open");
             setState(msg as unknown as RoomState);
             setReceivedAt(performance.now());
@@ -59,12 +82,13 @@ export function useRoom(code: string, token: string | null): RoomConnection {
       ws.onclose = (ev) => {
         window.clearInterval(pingTimer);
         if (stopped) return;
-        // 1008 = policy violation: bad/expired token, unknown room, rate limit. Retrying won't help.
-        if (ev.code === 1008 || retries >= MAX_RETRIES) {
-          setStatus("closed");
-          return;
-        }
+        // Retrying won't help: the room/seat is gone (1008) or the host removed us (4001).
+        if (ev.code === KICKED) return setStatus("kicked");
+        if (ev.code === 1008) return setStatus("closed");
+        if (retries >= MAX_RETRIES) return setStatus("lost");
+        dropped.current = true;
         retries += 1;
+        setAttempt(retries);
         setStatus("reconnecting");
         const delay = Math.min(8000, 400 * 2 ** retries) + Math.random() * 300;
         retryTimer = window.setTimeout(connect, delay);
@@ -76,17 +100,18 @@ export function useRoom(code: string, token: string | null): RoomConnection {
       stopped = true;
       window.clearInterval(pingTimer);
       window.clearTimeout(retryTimer);
+      window.clearTimeout(recoveredTimer);
       wsRef.current?.close(1000);
     };
-  }, [code, token]);
+  }, [code, token, generation]);
 
   const send = useCallback((msg: Record<string, unknown>) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }, []);
-
+  const retry = useCallback(() => setGeneration((g) => g + 1), []);
   const clearError = useCallback(() => setError(null), []);
-  return { state, receivedAt, status, error, send, clearError };
+  return { state, receivedAt, status, attempt, recovered, error, send, retry, clearError };
 }
 
 /** Seconds left, counted down locally from the server's relative `remaining`. */

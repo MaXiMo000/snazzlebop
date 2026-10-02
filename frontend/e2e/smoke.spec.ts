@@ -280,3 +280,70 @@ test("Frenemy result card draws on the device and downloads as a PNG", async ({ 
   await card.screenshot({ path: `e2e/screenshots/${info.project.name}/08-share-card.png` });
   expect(problems, "console errors / CSP violations").toEqual([]);
 });
+
+test("host tools: rename the show, lock the room, remove a player", async ({ page: host, browser, baseURL }) => {
+  const a11y: string[] = [];
+  host.on("dialog", (d) => void d.accept()); // the kick confirmation
+  await host.goto("/");
+  await host.locator("#host-name").fill("Hal");
+  await host.getByRole("button", { name: "Create room" }).click();
+  await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
+  const code = host.url().split("/").pop()!;
+  const guest = await (await browser.newContext({ baseURL })).newPage();
+  await guest.goto(`/r/${code}`);
+  await guest.getByLabel("Your name").fill("Gil");
+  await guest.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
+
+  await host.getByLabel("Show title").fill("Friday Showdown");
+  await host.getByRole("button", { name: "Rename" }).click();
+  await expect(guest.getByText("Tonight: Friday Showdown")).toBeVisible();
+
+  const lock = host.getByRole("button", { name: /Lock room/ });
+  await lock.click();
+  await expect(lock).toHaveAttribute("aria-pressed", "true");
+  const late = await (await browser.newContext({ baseURL })).newPage();
+  await late.goto(`/r/${code}`);
+  await late.getByLabel("Your name").fill("Lou");
+  await late.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(late.getByRole("alert")).toHaveText("The host has locked this room");
+  await axe(host, "host tools", a11y);
+
+  await host.getByRole("button", { name: "Remove Gil from the room" }).click();
+  await expect(guest.getByRole("heading", { name: "You’ve been removed" })).toBeVisible();
+  await expect(host.getByRole("heading", { name: /In the room \(1 online\)/ })).toBeVisible();
+  expect(a11y).toEqual([]);
+});
+
+test("reconnect: a dropped phone shows progress, then comes back on air in the same seat", async ({ page: host, browser, baseURL }) => {
+  await host.goto("/");
+  await host.locator("#host-name").fill("Max");
+  await host.getByRole("button", { name: "Create room" }).click();
+  await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
+  const code = host.url().split("/").pop()!;
+  const phone = await (await browser.newContext({ baseURL })).newPage();
+  // Proxy the phone's game socket so the test can cut it and refuse reconnects, like a dead zone.
+  let signal = true;
+  const live: { close: (o?: { code?: number }) => Promise<void> }[] = [];
+  await phone.routeWebSocket(/\/ws\//, (ws) => {
+    if (!signal) return void ws.close({ code: 4000 });
+    ws.connectToServer();
+    live.push(ws);
+  });
+  await phone.goto(`/r/${code}`);
+  await phone.getByLabel("Your name").fill("Nia");
+  await phone.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
+
+  signal = false;
+  await Promise.all(live.map((ws) => ws.close({ code: 4000 })));
+  await expect(phone.getByText(/Signal lost\. Reconnecting/)).toBeVisible();
+  await expect(phone.getByRole("button", { name: "Try now" })).toBeVisible();
+  await expect(host.getByRole("heading", { name: /In the room \(1 online\)/ })).toBeVisible();
+
+  signal = true;
+  await phone.getByRole("button", { name: "Try now" }).click();
+  await expect(phone.getByText("Back on air!")).toBeVisible();
+  await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
+  await expect(phone.getByText("Nia (you)")).toBeVisible(); // same seat, not a new player
+});

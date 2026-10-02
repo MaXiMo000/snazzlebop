@@ -582,6 +582,19 @@ button.alert {
 .contestant.away {
   opacity: 0.75;
 }
+.contestant .kick {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px -4px -6px 0;
+  font-weight: 700;
+  color: #fff;
+  background: var(--cherry);
+  border: 3px solid var(--plum);
+  border-radius: 50%;
+  cursor: pointer;
+}
 .contestant .pts {
   min-width: 46px;
   padding: 2px 10px;
