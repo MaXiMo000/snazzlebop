@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
+import { drawCard, shareCanvas, type CardData } from "../lib/shareCard";
 import type { FrenemyView } from "../types";
 
 interface Props {
@@ -223,6 +224,7 @@ function Final({ view, you, tv }: { view: FrenemyView; you: string; tv: boolean 
           <p className="space-top">You sat this one out, so no blind-spot score.</p>
         )}
       </Card>
+      {!tv && mine && <ShareCard view={view} you={you} />}
       <div className="grid">
         {fin.awards.map((a) => (
           <Card key={a.award} className="trophy">
@@ -238,5 +240,60 @@ function Final({ view, you, tv }: { view: FrenemyView; you: string; tv: boolean 
         ))}
       </div>
     </>
+  );
+}
+
+function moodOf(gap: number): string {
+  return gap > 0.4 ? "A touch of optimism." : gap < -0.4 ? "Secretly adored." : "Pretty self-aware.";
+}
+
+/** Your result as a shareable image, drawn on the device. Only your own numbers go on it. */
+function ShareCard({ view, you }: { view: FrenemyView; you: string }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [status, setStatus] = useState("");
+  const fin = view.final!;
+  const mine = fin.per_player[you]!;
+  const data: CardData = {
+    name: nameOf(view.players, you),
+    blindSpot: mine.blind_spot,
+    verdict: moodOf(mine.avg_gap),
+    awards: fin.awards.filter((a) => a.player === you).map((a) => a.award),
+    rounds: (view.history ?? [])
+      .filter((h) => h.result[you]?.played)
+      .map((h) => ({ prompt: h.prompt, self: h.result[you]!.self_rank, room: h.result[you]!.others_avg })),
+  };
+  const key = JSON.stringify(data);
+  useEffect(() => {
+    if (canvas.current) void drawCard(canvas.current, JSON.parse(key) as CardData);
+  }, [key]);
+  return (
+    <Card tone="soft" className="center">
+      <h3>Your result card</h3>
+      <canvas
+        ref={canvas}
+        className="share-canvas"
+        role="img"
+        aria-label={`Result card: ${data.name}, ${Math.round(data.blindSpot)}% blind spot. ${data.verdict}`}
+      />
+      <div className="row center space-top">
+        <Btn
+          variant="gold"
+          onClick={async () => {
+            if (!canvas.current) return;
+            try {
+              const how = await shareCanvas(canvas.current, "snazzlebop-frenemy.png");
+              setStatus(how === "shared" ? "Shared!" : "Saved as an image.");
+            } catch {
+              setStatus("Couldn't make the image on this device.");
+            }
+          }}
+        >
+          Share my card
+        </Btn>
+      </div>
+      <p className="muted" aria-live="polite">
+        {status || "Made on your device. Only your own result is on it."}
+      </p>
+    </Card>
   );
 }

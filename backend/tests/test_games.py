@@ -530,3 +530,17 @@ class AlibiRecapTests(unittest.TestCase):
             if game.hazy:
                 self.assertIn(game.name_of(game.hazy[0]), text)
             self.assertLessEqual(len(recap), 8)
+
+
+class FrenemyAwardTests(unittest.TestCase):
+    def test_no_contradictory_awards_when_everyone_ties(self):
+        game, _, players = make(FrenemyRadar, 3)
+        ids = [p.id for p in players]
+        for _ in range(FrenemyRadar.ROUNDS):
+            for pid in ids:
+                game.handle(pid, {"a": "rank", "order": list(ids)})  # everyone agrees: 0% blind spots
+            game.advance()
+        awards = game.view_for("p0")["final"]["awards"]
+        names = [a["award"] for a in awards]
+        self.assertNotIn("Unknown to Self", names)  # nobody has a blind spot to speak of
+        self.assertEqual(len({a["player"] for a in awards}), len(awards))  # one award each at most here

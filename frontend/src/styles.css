@@ -779,6 +779,16 @@ button.alert {
   fill: var(--teal);
 }
 
+.share-canvas {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  margin: 12px auto 0;
+  border: var(--line);
+  border-radius: 18px;
+  box-shadow: var(--lift);
+}
+
 .trophy {
   text-align: center;
 }

@@ -298,7 +298,9 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         for _ in range(10):
             await hub.handle_message(room, host, conns[host], {"t": "start", "game": "price"})
             await hub.handle_message(room, host, conns[host], {"t": "lobby"})
-        self.assertLess(time.perf_counter() - t0, 1.0)  # 20 broadcasts, no 5 s waits per stuck send
+        # A stalling broadcast waits send_timeout (0.3 s) each time: >= 6 s for 20 (5.5 s measured before
+        # the fix). Without stalls it's ~0.3 s; 2 s leaves headroom for a slow, debug-mode CI loop.
+        self.assertLess(time.perf_counter() - t0, 2.0)
         # Healthy players got a frame for every message (+1 when the drop itself is broadcast).
         self.assertGreaterEqual(len(conns[host].sent) - before, 20)
         await asyncio.sleep(0.5)

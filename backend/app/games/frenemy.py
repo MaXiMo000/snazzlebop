@@ -111,7 +111,9 @@ class FrenemyRadar(Game):
                 awards.append({"award": "Delusional Optimist", "player": optimist})
             if per_player[loved]["avg_gap"] < 0:
                 awards.append({"award": "Secretly Loved", "player": loved})
-            awards.append({"award": "Unknown to Self", "player": unknown})
+            # Only a real blind spot earns "Unknown to Self" (never the same person as "Crystal Clear").
+            if per_player[unknown]["blind_spot"] > per_player[clear]["blind_spot"]:
+                awards.append({"award": "Unknown to Self", "player": unknown})
             awards.append({"award": "Crystal Clear", "player": clear})
         return {"per_player": per_player, "awards": awards}
 

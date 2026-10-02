@@ -240,3 +240,43 @@ test("reduced motion: the spin lands at once, no stingers or confetti; sound tog
   await expect(host.locator(".confetti")).toBeHidden();
   expect(problems).toEqual([]);
 });
+
+test("Frenemy result card draws on the device and downloads as a PNG", async ({ page: host, browser, baseURL }, info) => {
+  const problems: string[] = [];
+  watchConsole(host, problems);
+  await host.goto("/");
+  await host.locator("#host-name").fill("Ana");
+  await host.getByRole("button", { name: "Create room" }).click();
+  await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
+  const code = host.url().split("/").pop()!;
+  const players = [host];
+  for (const name of ["Bo", "Cy"]) {
+    const p = await (await browser.newContext({ baseURL })).newPage();
+    watchConsole(p, problems);
+    await p.goto(`/r/${code}`);
+    await p.getByLabel("Your name").fill(name);
+    await p.getByRole("button", { name: "Join", exact: true }).click();
+    players.push(p);
+  }
+  await expect(host.getByRole("heading", { name: /In the room \(3 online\)/ })).toBeVisible();
+  await host.locator("article.game-card.frenemy").getByRole("button", { name: /Start!/ }).click();
+  for (let round = 0; round < 3; round++) {
+    for (const p of players) await p.getByRole("button", { name: "Lock it in!" }).click();
+    await expect(host.getByText("The room has spoken")).toBeVisible();
+    await host.getByRole("button", { name: /Skip wait/ }).click();
+  }
+  const card = host.getByRole("img", { name: /Result card: Ana, \d+% blind spot/ });
+  await expect(card).toBeVisible();
+  // The canvas really has pixels on it (not a blank box).
+  const inked = await host.locator("canvas.share-canvas").evaluate((c: HTMLCanvasElement) => {
+    const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+    let lit = 0;
+    for (let i = 0; i < d.length; i += 4 * 97) if (d[i]! > 200) lit++;
+    return lit;
+  });
+  expect(inked).toBeGreaterThan(50);
+  const [download] = await Promise.all([host.waitForEvent("download"), host.getByRole("button", { name: "Share my card" }).click()]);
+  expect(download.suggestedFilename()).toBe("snazzlebop-frenemy.png");
+  await card.screenshot({ path: `e2e/screenshots/${info.project.name}/08-share-card.png` });
+  expect(problems, "console errors / CSP violations").toEqual([]);
+});
