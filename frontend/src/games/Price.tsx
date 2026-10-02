@@ -161,7 +161,7 @@ function Reveal({ result, players, you }: { result: PriceResult; players: { id: 
         </p>
       )}
       <p className="mono muted">
-        Proof: sha256("{result.modifier}:{result.nonce.slice(0, 12)}…") = {result.commit.slice(0, 16)}…
+        Proof: sha256("{pyFloat(result.modifier)}:{result.nonce.slice(0, 12)}…") = {result.commit.slice(0, 16)}…
       </p>
     </div>
   );
@@ -190,4 +190,9 @@ function FinalBoard({ view, players }: { view: PriceView; players: { id: string;
       </ol>
     </Panel>
   );
+}
+
+/** The seal is sha256 of Python's float text ("1.0", not JS's "1"), so show exactly what was hashed. */
+function pyFloat(n: number): string {
+  return Number.isInteger(n) ? n.toFixed(1) : String(n);
 }

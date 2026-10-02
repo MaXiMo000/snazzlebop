@@ -31,6 +31,7 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: ruff check .
       - run: ruff format --check .
+      - run: ruff check --config pyproject.toml ../scripts && ruff format --check --config pyproject.toml ../scripts
       - run: bandit -q -r app -c pyproject.toml
       - run: pip-audit --require-hashes --disable-pip -r requirements.lock
       - run: pytest
@@ -67,11 +68,24 @@ jobs:
           ignore-unfixed: true
       - name: Smoke test
         run: |
+          # No proxy in front of the CI container, so trust no X-Forwarded-For hops.
           docker run -d --name snazzlebop -p 10000:10000 \
             -e ENV=production -e SECRET_KEY=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))") \
-            -e ALLOWED_HOSTS=localhost -e DATABASE_URL=sqlite+aiosqlite:///./ci.db snazzlebop:ci
+            -e ALLOWED_HOSTS=localhost -e ALLOWED_ORIGINS=http://localhost:10000 -e TRUSTED_PROXY_HOPS=0 \
+            -e DATABASE_URL=sqlite+aiosqlite:///./ci.db snazzlebop:ci
           for i in $(seq 1 20); do curl -fsS http://localhost:10000/healthz && break || sleep 1; done
-          curl -fsSI -H "Host: localhost" http://localhost:10000/ | grep -i "content-security-policy"
+          curl -fsSI http://localhost:10000/ | grep -i "content-security-policy"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/docs)" = 404
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Simulate full games against the container (scores move, secrets never leak)
+        run: |
+          pip install "httpx==0.28.1" "websockets==17.1"
+          python scripts/simulate.py --base http://localhost:10000 --bots 5
+      - name: Container logs (should hold no names, tokens or room codes)
+        if: always()
+        run: docker logs snazzlebop
 
   secrets:
     runs-on: ubuntu-latest
