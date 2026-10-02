@@ -180,6 +180,9 @@ around the table.
   slow reader dropped after 15 s while the room played on, create flood 429 from #6, code guessing 429
   from #4).
 
+- **GitHub Actions:** first run on `97fb8de` (run 37071029873) passed every job: backend, frontend,
+  docker (Trivy, simulator, Playwright, Lighthouse, ZAP), abuse, secrets, CodeQL x2.
+
 ## What is not covered (be honest)
 
 - **Single instance, in-memory limits.** Rate limits and rooms reset on restart and are per process.
@@ -189,6 +192,5 @@ around the table.
 - **No volumetric DDoS testing**, and none would be meaningful against a laptop.
 - **Not run against Render or Cloudflare.** `TRUSTED_PROXY_HOPS=1` (Render) and `2` (Cloudflare +
   `EDGE_SECRET`) are untested against the real proxies. SECURITY.md "Edge setup" step 7 is the check.
-- **CI has not run on GitHub Actions yet**; every job's commands were run locally.
 - **No external review or penetration test.** Treat this as a strong, evidenced baseline, not a
   certification.

@@ -89,7 +89,8 @@ Run locally on Windows 11 + Docker Desktop against the production image (details
 - Locust abuse suite (rate limits, socket caps, oversize/flood closes, slow reader), OWASP ZAP
   baseline, Lighthouse (home 100 a11y/best practices/SEO), colour contrast for every pair.
 - Image: Trivy CRITICAL/HIGH (fixable) clean, gitleaks over full history clean.
-- CI: every action pinned to a commit SHA, read-only default token.
+- CI on GitHub Actions green (backend, frontend, docker incl. Trivy/simulator/Playwright/Lighthouse/ZAP,
+  abuse, gitleaks, CodeQL); every action pinned to a commit SHA, read-only default token.
 
 **Not verified yet:**
 
@@ -98,7 +99,6 @@ Run locally on Windows 11 + Docker Desktop against the production image (details
   locally, but the hop count has not been checked through a real Cloudflare → Render chain.
 - Claude content generation against the real API. It's unit-tested with a stubbed client; no key has
   been used yet.
-- CI on GitHub (every job has been run locally, not yet on Actions runners).
 
 **Limits by design:** one instance with in-memory rooms and rate limits (a restart ends live games),
 anonymous play (many IPs can make many players), and no external security review or pen test. This is
