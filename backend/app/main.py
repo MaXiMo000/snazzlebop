@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from .config import Settings, load_settings
-from .contentgen import KINDS, ContentGenerator, add_items, claude_caller
+from .contentgen import ContentGenerator, add_items, claude_caller, known, split_kind
 from .db import Database
 from .games import catalog
 from .logging_setup import setup_logging
@@ -73,7 +73,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await db.init()
         saved = await db.load_content()  # generated content from earlier runs
-        loaded = sum(len(add_items(kind, [payload])) for kind, payload in saved if kind in KINDS)
+        loaded = 0
+        for name, payload in saved:
+            if known(name):
+                kind, theme = split_kind(name)
+                loaded += len(add_items(kind, [payload], theme))
         log.info("content: %d saved items loaded; generator %s", loaded, "on" if generator.enabled else "off")
         ticker = asyncio.create_task(hub.run_ticker())
         try:

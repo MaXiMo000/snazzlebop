@@ -36,7 +36,8 @@ class TelepathyTax(Game):
 
     def start(self) -> None:
         self.categories = [
-            TELEPATHY_CATEGORIES[i] for i in self.deal("categories", len(TELEPATHY_CATEGORIES), self.ROUNDS)
+            TELEPATHY_CATEGORIES[i]
+            for i in self.deal("categories", len(TELEPATHY_CATEGORIES), self.ROUNDS, kind="telepathy")
         ]
         self.round = 0
         self.results: list[dict[str, Any]] = []

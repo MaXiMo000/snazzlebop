@@ -15,6 +15,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
+from .content import THEMED
+
 
 class GameError(Exception):
     """A player did something invalid. The message is safe to show to them."""
@@ -66,18 +68,31 @@ class Deck:
         self._stack.extend(fresh)  # pop() takes from the end: new cards come out next
         self.size = size
 
-    def draw(self, n: int) -> list[int]:
+    def _refill(self, n: int, out: list[int]) -> None:
+        avoid = set(out) | set(self._recent[-min(n, self.size // 2) :])
+        fresh = [i for i in range(self.size) if i not in avoid]
+        self.rng.shuffle(fresh)
+        held = [i for i in self._recent if i in avoid and i not in out]
+        # pop() takes from the end: recent cards go to the bottom of the new pass.
+        self._stack = held + fresh
+
+    def draw(self, n: int, prefer: frozenset[int] | set[int] = frozenset()) -> list[int]:
+        """n distinct cards. `prefer` (e.g. a theme's items) comes first while this pass still holds
+        any of them; the rest of the pass is untouched, so nothing repeats either way."""
         if n > self.size:
             raise ValueError("pool smaller than the draw")
         out: list[int] = []
+        if prefer:
+            if not self._stack:
+                self._refill(n, out)
+            picks = [c for c in reversed(self._stack) if c in prefer][:n]
+            if picks:
+                chosen = set(picks)
+                self._stack = [c for c in self._stack if c not in chosen]
+                out.extend(picks)
         while len(out) < n:
             if not self._stack:
-                avoid = set(out) | set(self._recent[-min(n, self.size // 2) :])
-                fresh = [i for i in range(self.size) if i not in avoid]
-                self.rng.shuffle(fresh)
-                held = [i for i in self._recent if i in avoid and i not in out]
-                # pop() takes from the end: recent cards go to the bottom of the new pass.
-                self._stack = held + fresh
+                self._refill(n, out)
             card = self._stack.pop()
             if card not in out:
                 out.append(card)
@@ -99,6 +114,7 @@ class Game(ABC):
         clock: Callable[[], float] = time.monotonic,
         timings: dict[str, float] | None = None,
         decks: dict[str, Deck] | None = None,
+        theme: str = "",
     ) -> None:
         if not self.min_players <= len(players) <= self.max_players:
             raise GameError(
@@ -110,6 +126,7 @@ class Game(ABC):
         self.clock = clock
         self.timings = {**self.default_timings(), **(timings or {})}
         self.decks = decks if decks is not None else {}
+        self.theme = theme  # a show pack (content.THEMES); "" = everything
         self.version = 0
         self.phase = "init"
         self.round = 0
@@ -141,14 +158,18 @@ class Game(ABC):
         """Identifies the current wait. Unlike `version` it doesn't change when someone acts."""
         return f"{self.phase}:{self.round}"
 
-    def deal(self, pool: str, size: int, n: int) -> list[int]:
-        """n distinct indices into a content pool, never repeating within this room's decks."""
-        key = f"{self.game_id}:{pool}"
-        deck = self.decks.get(key)
-        if deck is None or deck.size > size:
-            deck = self.decks[key] = Deck(size, self.rng)
-        deck.grow(size)  # pools only grow at runtime; keep what this room has already seen
-        return deck.draw(n)
+    def deal(self, pool: str, size: int, n: int, *, kind: str = "", deck: str = "") -> list[int]:
+        """n distinct indices into a content pool, never repeating within this room's decks.
+
+        `kind` names the content kind so a themed room gets that theme's items first; `deck` shares a
+        deck with another game that deals from the same pool (e.g. the jackpot uses Price items)."""
+        key = deck or f"{self.game_id}:{pool}"
+        d = self.decks.get(key)
+        if d is None or d.size > size:
+            d = self.decks[key] = Deck(size, self.rng)
+        d.grow(size)  # pools only grow at runtime; keep what this room has already seen
+        prefer = THEMED.get(kind, {}).get(self.theme, set()) if kind and self.theme else set()
+        return d.draw(n, prefer)
 
     def bump(self) -> None:
         self.version += 1
@@ -187,6 +208,12 @@ class Game(ABC):
 
     @abstractmethod
     def view_for(self, pid: str) -> dict[str, Any]: ...
+
+    def highlights(self) -> list[dict[str, str]]:
+        """Moments worth a line in the show's highlight reel, once the game is over:
+        [{"icon": "🎯", "title": "Sharpshooter", "text": "Bo guessed within $3"}]. Names are fine here
+        (they only go to this room's screens)."""
+        return []
 
     def summary(self) -> dict[str, Any]:
         """Anonymous, PII-free record stored when a game ends."""

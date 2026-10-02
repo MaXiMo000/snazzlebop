@@ -27,7 +27,7 @@ class FrenemyRadar(Game):
         return {"rank": 60.0, "reveal": 20.0}
 
     def start(self) -> None:
-        self.prompts = [PROMPTS[i] for i in self.deal("prompts", len(PROMPTS), self.ROUNDS)]
+        self.prompts = [PROMPTS[i] for i in self.deal("prompts", len(PROMPTS), self.ROUNDS, kind="frenemy")]
         self.round = 0
         # rankings[round][ranker_id] = ordered list of player ids, index 0 = "most"
         self.rankings: list[dict[str, list[str]]] = [{} for _ in range(self.ROUNDS)]

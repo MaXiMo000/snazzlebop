@@ -33,6 +33,7 @@ log = logging.getLogger("snazzlebop.contentgen")
 MODEL = "claude-opus-5-5"
 BATCH = 15  # items asked for per call
 POOL_CAP = 20_000  # per kind, so a runaway can't eat memory
+QUIP_EVERY = 7  # every 7th game-start request tops up the host's one-liners instead
 TAKEN_CHARS = 12_000  # the "every key taken" list stays under ~3k prompt tokens
 
 # Words that have no place in a friendly party game. Generation is told to stay kind; this is the
@@ -154,6 +155,29 @@ def v_crossword(raw: Any) -> dict[str, str] | None:
     return {"word": word, "clue": clue}
 
 
+_PLACEHOLDER = re.compile(r"\{([a-z]+)\}")
+
+
+def v_quip(raw: Any) -> dict[str, str] | None:
+    """A host one-liner template. Only the known placeholders, each filled by plain replacement."""
+    if not isinstance(raw, dict) or raw.get("mood") not in C.QUIP_MOODS:
+        return None
+    if not isinstance(raw.get("text"), str):
+        return None
+    text = raw["text"]
+    names = _PLACEHOLDER.findall(text)
+    if "winner" not in names or any(n not in C.QUIP_FIELDS for n in names):
+        return None
+    if raw["mood"] in ("close", "tie") and "runner" not in names:
+        return None
+    # Validate what remains once placeholders are swapped for a plain word (braces are banned there).
+    plain = _PLACEHOLDER.sub("Sam", text)
+    clean = _text(plain, 20, 140)
+    if clean is None or clean != plain:
+        return None
+    return {"mood": raw["mood"], "text": text}
+
+
 def _obj(props: dict[str, Any]) -> dict[str, Any]:
     return {"type": "object", "properties": props, "required": list(props), "additionalProperties": False}
 
@@ -217,7 +241,9 @@ KINDS: dict[str, Kind] = {
     ),
     "mural": Kind(
         C.MURAL_TILES,
-        lambda x: _key(x["name"]),
+        # Keyed by the picture, not the name: the board shows emoji, and once the obvious ones are taken
+        # a model will happily relabel a used emoji ("cheese" called "Croissant").
+        lambda x: "".join(ch for ch in x["emoji"] if ch not in "️‍"),
         v_mural,
         _obj(
             {
@@ -227,8 +253,9 @@ KINDS: dict[str, Kind] = {
                 "kind": {"type": "string", "enum": sorted(ShowKind)},
             }
         ),
-        "Mole in the Mural tiles: one standard emoji each, a 2-18 letter name for it, its main colour and "
-        "its kind. Use widely supported emoji only.",
+        "Mole in the Mural tiles: one standard emoji each, a 2-18 letter name that says exactly what that "
+        "emoji shows, its main colour and its kind. Every tile needs an emoji not already taken (see the "
+        "list); widely supported emoji only. Fewer, correct tiles beat a full batch.",
         lambda x: f"{x['emoji']} {x['name']} ({x['color']}, {x['kind']})",
     ),
     "crossword": Kind(
@@ -242,6 +269,20 @@ KINDS: dict[str, Kind] = {
         lambda x: f"{x['word']}: {x['clue']}",
     ),
 }
+
+KINDS["quip"] = Kind(
+    C.QUIPS,
+    lambda x: _key(x["text"]),
+    v_quip,
+    _obj({"mood": {"type": "string", "enum": list(C.QUIP_MOODS)}, "text": _S}),
+    "one-liners for the game-show host to say after a game, as templates. Placeholders (exact, in curly "
+    "braces): {winner} (required), {runner} (second place), {last} (last place), {game} (the game's "
+    "name), {margin} (winning margin in points). Moods: win (clear win), close (won by a hair; must use "
+    "{runner}), blowout (won by miles), tie (shared first place; must use {runner}), jackpot (after the "
+    "final wager), show (crowning the night's champion). Warm and teasing, never mean, especially about "
+    "{last}. 20-140 characters. Spread the batch across all moods.",
+    lambda x: f"[{x['mood']}] {x['text']}",
+)
 
 GAME_KINDS = {
     "frenemy": "frenemy",
@@ -262,22 +303,43 @@ SYSTEM = (
 Caller = Callable[[str, dict[str, Any], str], Awaitable[Any]]
 
 
-def add_items(kind: str, items: list[Any]) -> list[Any]:
-    """Validate and de-duplicate items into the live pool. Returns the ones actually added."""
+def add_items(kind: str, items: list[Any], theme: str = "") -> list[Any]:
+    """Validate and de-duplicate items into the live pool. Returns the ones actually added.
+
+    With a theme, every valid item (new, or already in the pool) is tagged for that show pack."""
     spec = KINDS[kind]
-    seen = {spec.key(x) for x in spec.pool}
+    if theme and theme not in C.THEMES:
+        raise ValueError("unknown theme")
+    index = {spec.key(x): i for i, x in enumerate(spec.pool)}
+    tags = C.THEMED.setdefault(kind, {}).setdefault(theme, set()) if theme else None
     added: list[Any] = []
     for raw in items:
         item = spec.validate(raw)
-        if item is None or len(spec.pool) >= POOL_CAP:
+        if item is None:
             continue
         k = spec.key(item)
-        if not k or k in seen:
+        if not k:
             continue
-        seen.add(k)
-        spec.pool.append(item)
-        added.append(item)
+        if k not in index:
+            if len(spec.pool) >= POOL_CAP:
+                continue
+            index[k] = len(spec.pool)
+            spec.pool.append(item)
+            added.append(item)
+        if tags is not None:
+            tags.add(index[k])
     return added
+
+
+def split_kind(name: str) -> tuple[str, str]:
+    """ "frenemy#movies" -> ("frenemy", "movies"); "frenemy" -> ("frenemy", "")."""
+    kind, _, theme = name.partition("#")
+    return kind, theme
+
+
+def known(name: str) -> bool:
+    kind, theme = split_kind(name)
+    return kind in KINDS and (theme == "" or theme in C.THEMES)
 
 
 # Reviewed, committed output of scripts/grow_pools.py: loaded through the same validator at import.
@@ -292,11 +354,15 @@ def load_extra(path: Path = EXTRA_FILE) -> int:
     except (OSError, ValueError):
         log.warning("content_extra.json unreadable; using the built-in pools")
         return 0
-    return sum(
-        len(add_items(kind, items))
-        for kind, items in data.items()
-        if kind in KINDS and isinstance(items, list)
-    )
+    if not isinstance(data, dict):
+        return 0
+    # Untagged pools first, then theme packs (which tag items and add any that are new).
+    names = sorted((n for n in data if known(n) and isinstance(data[n], list)), key=lambda n: "#" in n)
+    total = 0
+    for name in names:
+        kind, theme = split_kind(name)
+        total += len(add_items(kind, data[name], theme))
+    return total
 
 
 class ContentGenerator:
@@ -318,6 +384,7 @@ class ContentGenerator:
         self.cooldown_until = 0.0
         self.failures = 0
         self.busy: set[str] = set()
+        self.requests = 0
         self.tasks: set[asyncio.Task[None]] = set()
         self.stats = {"calls": 0, "added": 0, "failed": 0, "rejected": 0}
 
@@ -325,35 +392,46 @@ class ContentGenerator:
     def enabled(self) -> bool:
         return self.call is not None
 
-    def allowed(self, kind: str) -> bool:
+    def allowed(self, kind: str, theme: str = "") -> bool:
         now = self.clock()
         self.recent_calls = [t for t in self.recent_calls if now - t < 3600]
         return (
             self.enabled
             and kind in KINDS
+            and (theme == "" or theme in C.THEMES)
             and kind not in self.busy
             and now >= self.cooldown_until
             and len(self.recent_calls) < self.calls_per_hour
             and len(KINDS[kind].pool) < POOL_CAP
         )
 
-    def request(self, game_id: str) -> None:
-        """Called when a game starts. Never blocks; quietly does nothing when not allowed."""
+    def request(self, game_id: str, theme: str = "") -> None:
+        """Called when a game starts (with the room's show pack, if any). Never blocks; quietly does
+        nothing when not allowed. Every so often it tops up the host's one-liners instead."""
         kind = GAME_KINDS.get(game_id)
-        if kind is None or not self.allowed(kind):
+        self.requests += 1
+        if kind is not None and self.requests % QUIP_EVERY == 0:
+            kind, theme = "quip", ""
+        if kind is None or not self.allowed(kind, theme):
             return
         self.busy.add(kind)
         self.recent_calls.append(self.clock())
-        task = asyncio.get_running_loop().create_task(self._run(kind))
+        task = asyncio.get_running_loop().create_task(self._run(kind, theme))
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
 
-    def prompt(self, kind: str) -> str:
+    def prompt(self, kind: str, theme: str = "") -> str:
         spec = KINDS[kind]
         examples = self.rng.sample(spec.pool, min(6, len(spec.pool)))
         used = self.rng.sample(spec.pool, min(60, len(spec.pool)))
+        pack = (
+            f"\n\nTheme for this whole batch: {C.THEMES[theme]}. Every item must clearly fit it and still "
+            "follow all the rules above."
+            if theme
+            else ""
+        )
         return (
-            f"Write {BATCH} new {spec.brief}\n\nGood examples of the style:\n"
+            f"Write {BATCH} new {spec.brief}{pack}\n\nGood examples of the style:\n"
             + "\n".join(f"- {spec.sample(x)}" for x in examples)
             + "\n\nAlready used (do not repeat these or near-duplicates):\n"
             + "\n".join(f"- {spec.sample(x)}" for x in used)
@@ -368,26 +446,30 @@ class ContentGenerator:
         text = ", ".join(sorted({spec.key(x) for x in spec.pool}))
         return f"\n\nAlso taken (exact keys, avoid all of them): {text}" if len(text) <= TAKEN_CHARS else ""
 
-    async def generate(self, kind: str) -> list[Any]:
-        """One batch: ask, validate, de-duplicate, add, persist. Raises on API/format trouble."""
+    async def generate(self, kind: str, theme: str = "") -> list[Any]:
+        """One batch: ask, validate, de-duplicate, add, persist. Raises on API/format trouble.
+
+        Themed batches are saved under "kind#theme" so the tags survive a restart."""
         if self.call is None:
             raise RuntimeError("content generation is off (no API key)")
         spec = KINDS[kind]
         schema = _obj({"items": {"type": "array", "items": spec.item_schema}})
-        data = await self.call(SYSTEM, schema, self.prompt(kind))
+        data = await self.call(SYSTEM, schema, self.prompt(kind, theme))
         if not isinstance(data, dict) or not isinstance(data.get("items"), list):
             raise ValueError("unexpected output shape")
         raw = data["items"][: BATCH * 2]
-        added = add_items(kind, raw)
+        valid = [v for v in (spec.validate(x) for x in raw) if v is not None]
+        added = add_items(kind, valid, theme)
         self.stats["rejected"] += len(raw) - len(added)
-        if added and self.save is not None:
-            await self.save(kind, [(spec.key(x), x) for x in added])
+        keep = valid if theme else added  # a theme also tags items the pool already had
+        if keep and self.save is not None:
+            await self.save(f"{kind}#{theme}" if theme else kind, [(spec.key(x), x) for x in keep])
         return added
 
-    async def _run(self, kind: str) -> None:
+    async def _run(self, kind: str, theme: str = "") -> None:
         self.stats["calls"] += 1
         try:
-            added = await self.generate(kind)
+            added = await self.generate(kind, theme)
             self.stats["added"] += len(added)
             self.failures = 0
             log.info("content: +%d %s items (pool %d)", len(added), kind, len(KINDS[kind].pool))

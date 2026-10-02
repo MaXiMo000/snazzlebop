@@ -117,7 +117,10 @@ class CrosswordRace(Game):
     def start(self) -> None:
         placed: list[dict[str, Any]] = []
         for _ in range(5):  # a handful of tries for a roomy grid
-            entries = [CROSSWORD_ENTRIES[i] for i in self.deal("entries", len(CROSSWORD_ENTRIES), 40)]
+            entries = [
+                CROSSWORD_ENTRIES[i]
+                for i in self.deal("entries", len(CROSSWORD_ENTRIES), 40, kind="crossword")
+            ]
             attempt = build_grid(entries, self.rng)
             if len(attempt) > len(placed):
                 placed = attempt

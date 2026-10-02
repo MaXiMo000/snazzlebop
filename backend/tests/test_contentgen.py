@@ -93,8 +93,8 @@ class GeneratorTests(PoolSnapshot):
             self.assertEqual(schema["required"], ["items"])
             return {
                 "items": [
-                    {"word": "WALRUS", "clue": "Tusked sea mammal"},
-                    {"word": "WALRUS", "clue": "Duplicate in the same batch"},
+                    {"word": "QUOKKA", "clue": "Smiley wallaby relative"},
+                    {"word": "QUOKKA", "clue": "Duplicate in the same batch"},
                     {"word": "X1", "clue": "Rejected"},
                 ]
             }
@@ -105,9 +105,9 @@ class GeneratorTests(PoolSnapshot):
         gen = ContentGenerator(call, save=save)
         gen.request("crossword")
         await asyncio.gather(*gen.tasks)
-        self.assertIn({"word": "WALRUS", "clue": "Tusked sea mammal"}, KINDS["crossword"].pool)
+        self.assertIn({"word": "QUOKKA", "clue": "Smiley wallaby relative"}, KINDS["crossword"].pool)
         self.assertEqual(
-            saved, [("crossword", [("WALRUS", {"word": "WALRUS", "clue": "Tusked sea mammal"})])]
+            saved, [("crossword", [("QUOKKA", {"word": "QUOKKA", "clue": "Smiley wallaby relative"})])]
         )
         self.assertEqual(gen.stats["added"], 1)
 

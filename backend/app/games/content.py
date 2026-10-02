@@ -1005,3 +1005,100 @@ CROSSWORD_ENTRIES: list[dict[str, str]] = [
         ("FARM", "Place with barns and tractors"),
     ]
 ]
+
+
+# ---------------------------------------------------------------------------------------------------
+# Themed show packs. Items are tagged by index into their pool (pools only ever grow, so indices are
+# stable); a room with a theme is dealt tagged items first and tops up from the whole pool.
+# ---------------------------------------------------------------------------------------------------
+THEMES: dict[str, str] = {
+    "family": "Family night",
+    "office": "Office party",
+    "movies": "Movie night",
+    "food": "Food fight",
+    "spooky": "Spooky season",
+    "sports": "Game day",
+}
+# kind -> theme -> indices into that kind's pool. Filled by contentgen (generated, tagged batches).
+THEMED: dict[str, dict[str, set[int]]] = {}
+
+
+# ---------------------------------------------------------------------------------------------------
+# The host's one-liners after each game. Templates only: the server fills the placeholders itself
+# (plain replacement, never str.format), so player names are never sent anywhere.
+#   {winner} {runner} {last} {game} {margin}
+# moods: win (clear win), close (won by a hair), blowout (miles ahead), tie (shared top spot),
+#        jackpot (after the final wager), show (crowning the show champion)
+# ---------------------------------------------------------------------------------------------------
+QUIP_MOODS = ("win", "close", "blowout", "tie", "jackpot", "show")
+QUIP_FIELDS = ("winner", "runner", "last", "game", "margin")
+QUIPS: list[dict[str, str]] = [
+    {"mood": "win", "text": "{winner} takes {game}! Somebody get them a tiny trophy."},
+    {"mood": "win", "text": "And the {game} crown goes to... {winner}! Please clap."},
+    {"mood": "win", "text": "{winner} came, saw, and won {game}. Classic {winner}."},
+    {"mood": "win", "text": "Write it in the history books: {winner}, champion of {game}."},
+    {"mood": "win", "text": "{winner} wins {game}. The studio audience is losing it."},
+    {"mood": "win", "text": "Ladies, gentlemen and everyone else: {winner} has won {game}!"},
+    {"mood": "win", "text": "{winner} just won {game} and is pretending to be humble about it."},
+    {"mood": "win", "text": "That's a wrap on {game}, and {winner} is taking the spotlight home."},
+    {"mood": "win", "text": "{winner} wins {game}! {runner}, you were so close to fame."},
+    {"mood": "win", "text": "Quick, someone check {winner} for a secret strategy guide. {game} is theirs."},
+    {"mood": "win", "text": "{game} goes to {winner}. The confetti budget has been well spent."},
+    {"mood": "win", "text": "Breaking news: {winner} wins {game}. More at eleven."},
+    {"mood": "win", "text": "{winner} owns {game} now. That's how it works, I checked."},
+    {"mood": "win", "text": "Roll the victory music! {winner} has conquered {game}."},
+    {"mood": "win", "text": "{winner} wins {game}, and {runner} is already plotting revenge."},
+    {"mood": "close", "text": "{winner} edges out {runner} by just {margin}. My heart can't take this."},
+    {"mood": "close", "text": "Photo finish! {winner} beats {runner} by a measly {margin} points."},
+    {"mood": "close", "text": "{margin} points between {winner} and {runner}. That's basically a hair."},
+    {"mood": "close", "text": "{runner} lost {game} to {winner} by {margin}. Somewhere, a violin plays."},
+    {"mood": "close", "text": "Nail-biter! {winner} squeaks past {runner} in {game}."},
+    {"mood": "close", "text": "{winner} wins by {margin}. {runner} demands a recount. Denied!"},
+    {
+        "mood": "close",
+        "text": "Too close to call, so we called it anyway: {winner} beats {runner} by {margin}!",
+    },
+    {"mood": "close", "text": "{winner} and {runner} went toe to toe; {winner} had longer toes."},
+    {"mood": "close", "text": "That one came down to the wire. {winner} wins, {runner} sighs dramatically."},
+    {"mood": "close", "text": "{margin} points behind {winner}! {runner}, that's one good guess away."},
+    {"mood": "blowout", "text": "{winner} won {game} by {margin}. That wasn't a game, that was a parade."},
+    {"mood": "blowout", "text": "{winner} lapped the field. Everyone else, please wave politely."},
+    {"mood": "blowout", "text": "A {margin}-point lead? {winner} is playing a different game entirely."},
+    {"mood": "blowout", "text": "{winner} didn't just win {game}, they rewrote the rulebook."},
+    {"mood": "blowout", "text": "Someone tell {winner} it's supposed to be a competition."},
+    {"mood": "blowout", "text": "{winner} by {margin}. The rest of you are now officially fans."},
+    {"mood": "blowout", "text": "Dominant! {winner} cruises through {game} without breaking a sweat."},
+    {"mood": "blowout", "text": "{winner} won {game} so hard the scoreboard needs a lie-down."},
+    {"mood": "blowout", "text": "{margin} points clear. {winner}, save some glory for the rest of us."},
+    {"mood": "blowout", "text": "That was a masterclass from {winner}. Take notes, everyone."},
+    {"mood": "tie", "text": "A tie at the top! {winner} and {runner} will have to share the glory."},
+    {"mood": "tie", "text": "{winner} and {runner} tied {game}. Rematch, anyone?"},
+    {"mood": "tie", "text": "Neck and neck! {winner} and {runner} are equally magnificent."},
+    {"mood": "tie", "text": "We have co-champions: {winner} and {runner}. How very diplomatic."},
+    {"mood": "tie", "text": "{winner} and {runner} couldn't be separated. Not even by science."},
+    {"mood": "tie", "text": "Tied! {winner} and {runner}, please shake hands. Firmly."},
+    {"mood": "tie", "text": "Same score for {winner} and {runner}. The universe loves a draw."},
+    {"mood": "tie", "text": "Two winners for the price of one: {winner} and {runner}!"},
+    {"mood": "jackpot", "text": "The jackpot has spoken! {winner} walks away the big winner."},
+    {"mood": "jackpot", "text": "{winner} bet big and it paid off. Fortune favours the bold!"},
+    {"mood": "jackpot", "text": "What a final wager! {winner} turned nerves into points."},
+    {"mood": "jackpot", "text": "The jackpot goes to {winner}. {last}, your brave bet counts in my heart."},
+    {"mood": "jackpot", "text": "Bets placed, prices revealed, and {winner} cashes in. Sensational!"},
+    {"mood": "jackpot", "text": "{winner} read that final item like a book. A very lucrative book."},
+    {"mood": "jackpot", "text": "Higher? Lower? {winner} knew. The rest of us just guessed."},
+    {"mood": "jackpot", "text": "{winner} wins the jackpot round. Somebody check their pockets."},
+    {"mood": "jackpot", "text": "The final wager is settled and {winner} is grinning ear to ear."},
+    {"mood": "jackpot", "text": "Jackpot! {winner} hit it. {runner} came close, but close isn't cash."},
+    {"mood": "show", "text": "Tonight's grand champion is {winner}! Long may they reign."},
+    {"mood": "show", "text": "That's the show! {winner} takes the crown, {runner} takes the silver."},
+    {"mood": "show", "text": "{winner} wins the whole show! Speech! Speech! (Keep it short.)"},
+    {"mood": "show", "text": "Champion of the night: {winner}. Everyone else: champions of our hearts."},
+    {"mood": "show", "text": "And your Snazzlebop champion is... {winner}! Goodnight, everybody!"},
+    {"mood": "show", "text": "{winner} wins the show by {margin}. {runner}, there's always next week."},
+    {"mood": "show", "text": "Crown polished, confetti loaded: {winner} is tonight's champion."},
+    {"mood": "show", "text": "{winner} conquered the show. The rest of you had fun, which counts. Mostly."},
+    {"mood": "show", "text": "Game over, show over, {winner} wins! Thank you for playing Snazzlebop."},
+    {"mood": "show", "text": "From the first segment to the last, {winner} was unstoppable. Champion!"},
+    {"mood": "show", "text": "{winner} is the champion! {last}, you were a fantastic contestant. Truly."},
+    {"mood": "show", "text": "What a night! {winner} wins it all, with {runner} hot on their heels."},
+]

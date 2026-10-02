@@ -45,7 +45,7 @@ class PriceIsWeird(Game):
         return {"guess": 25.0, "reveal": 10.0}
 
     def start(self) -> None:
-        self.items = [ITEMS[i] for i in self.deal("items", len(ITEMS), self.ROUNDS)]
+        self.items = [ITEMS[i] for i in self.deal("items", len(ITEMS), self.ROUNDS, kind="price")]
         self.round = 0
         self.chips = {p.id: CHIPS_PER_GAME for p in self.players}
         self.rollover = 0

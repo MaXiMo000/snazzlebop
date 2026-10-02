@@ -44,7 +44,7 @@ class MoleInTheMural(Game):
     # -- setup --------------------------------------------------------------
     def start(self) -> None:
         rng = self.rng
-        painting = MURAL_TILES[self.deal("paintings", len(MURAL_TILES), 1)[0]]
+        painting = MURAL_TILES[self.deal("paintings", len(MURAL_TILES), 1, kind="mural")[0]]
         others = [t for t in MURAL_TILES if t is not painting]
         related = [t for t in others if _related(t, painting)]
         unrelated = [t for t in others if not _related(t, painting)]

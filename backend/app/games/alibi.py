@@ -51,7 +51,7 @@ class Alibi(Game):
     # -- setup --------------------------------------------------------------
     def start(self) -> None:
         rng = self.rng
-        setting = ALIBI_SETTINGS[self.deal("settings", len(ALIBI_SETTINGS), 1)[0]]
+        setting = ALIBI_SETTINGS[self.deal("settings", len(ALIBI_SETTINGS), 1, kind="alibi")[0]]
         self.setting: str = setting["title"]
         self.victim: str = setting["victim"]
         self.locations: list[str] = list(setting["locations"])
