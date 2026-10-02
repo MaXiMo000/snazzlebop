@@ -205,6 +205,7 @@ function Board({ view, you, send, readOnly = false }: { view: AlibiView; you: st
         {view.claims.length === 0 ? (
           <p className="muted">Nothing shared yet.</p>
         ) : (
+          <div className="table-scroll" role="region" aria-label="The board" tabIndex={0}>
           <table className="table">
             <thead>
               <tr>
@@ -226,6 +227,7 @@ function Board({ view, you, send, readOnly = false }: { view: AlibiView; you: st
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Panel>
 
@@ -278,6 +280,7 @@ function Result({ view, you }: { view: AlibiView; you: string }) {
       </Panel>
       <Panel>
         <h3>The truth</h3>
+        <div className="table-scroll" role="region" aria-label="The truth" tabIndex={0}>
         <table className="table">
           <thead>
             <tr>
@@ -303,6 +306,7 @@ function Result({ view, you }: { view: AlibiView; you: string }) {
             ))}
           </tbody>
         </table>
+        </div>
         <p className="muted">Red cells are slots where the killer's card told a different story.</p>
       </Panel>
       <Panel>

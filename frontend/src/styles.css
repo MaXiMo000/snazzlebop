@@ -625,6 +625,13 @@ label.field {
   outline: 4px solid var(--ink);
 }
 
+/* Wide tables (Alibi's 7-column truth table) scroll inside their panel instead of overflowing it
+   on phones. Focusable so keyboard users can scroll it too. */
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

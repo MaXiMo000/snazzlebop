@@ -17,3 +17,8 @@ coverage/
 
 # abuse-suite output
 scripts/loadtest/out/
+
+# playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/e2e/screenshots/
