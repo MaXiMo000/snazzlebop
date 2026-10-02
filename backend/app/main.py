@@ -143,6 +143,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         return {"code": room.code, "player_id": player.id, "token": token}
 
+    @app.post("/api/rooms/{code}/tv")
+    async def tv_seat(code: str, request: Request) -> dict[str, str]:
+        """Read-only big-screen view (TV mode). Rate limited and penalised exactly like join."""
+        try:
+            room, token = hub.issue_tv(code)
+        except HubError as exc:
+            if exc.code == "room_not_found":
+                limiters["join"].penalize(client_ip(request.scope, settings.trusted_proxy_hops), 4)
+            raise
+        return {"code": room.code, "token": token}
+
     @app.websocket("/ws/{code}")
     async def ws_route(websocket: WebSocket, code: str) -> None:
         await serve_socket(websocket, code)

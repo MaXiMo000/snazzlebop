@@ -1,6 +1,6 @@
 # Snazzlebop
 
-Party games for 3-8 friends in a browser. One room code, no signup. Comic-book UI, server-authoritative
+Party games for 3-8 friends in a browser. One room code, no signup. Retro TV game-show UI, server-authoritative
 games, security-first FastAPI backend, one Docker service on Render.
 
 Games: **Frenemy Radar** (rank friends, see your blind spot), **Alibi** (murder-mystery deduction),
@@ -19,10 +19,13 @@ backend/            FastAPI app (Python 3.13)
     db.py           optional anonymous stats (SQLAlchemy async; SQLite local, Postgres on Render)
     games/          base.py contract + frenemy.py, alibi.py, price.py  (pure Python)
   tests/            test_games / test_rooms / test_security (no deps) + test_api (FastAPI)
-frontend/           Vite + React + TypeScript, hand-written CSS (comic style), no UI library
-  src/pages         Home, Room (join gate, lobby, game router)
+frontend/           Vite + React + TypeScript, hand-written CSS (game-show style), no UI library
+  src/pages         Home, Room (join gate, lobby, game router, TV mode)
   src/games         Frenemy, Alibi, Price screens
-  src/lib           api (fetch + session), useRoom (WebSocket hook + countdown)
+  src/lib           api (fetch + session), useRoom (WebSocket hook + countdown), sfx (WebAudio)
+  src/components    ui (cards, buttons, clock, scoreboard), fx (count-up, stingers, confetti)
+  e2e/              Playwright smoke + axe + keyboard + TV tests (mobile 390px + desktop)
+  scripts/          contrast.mjs, lighthouse.sh (Docker), icons.mjs
 Dockerfile          builds frontend, serves it from FastAPI (same origin)
 render.yaml         Render Blueprint: web service + private Postgres
 SECURITY.md         threat model, controls, limits, launch checklist
@@ -53,7 +56,11 @@ is stored per tab in `sessionStorage`).
 cd backend && pytest                 # everything (needs fastapi + httpx)
 cd backend && python -m unittest tests.test_games tests.test_rooms tests.test_security   # no deps
 cd backend && ruff check . && ruff format --check . && bandit -q -r app -c pyproject.toml
-cd frontend && npm run typecheck && npm run build
+cd frontend && npm run typecheck && npm run build && npm run contrast
+cd frontend && npm run e2e                     # against a container on :10000
+cd frontend && bash scripts/lighthouse.sh      # a11y/best-practices/SEO >= 95
+python scripts/simulate.py                     # full games + secrecy checks over WS
+bash scripts/loadtest/run.sh                   # abuse suite (see docs/SECURITY-EVIDENCE.md)
 ```
 
 ## Deploy on Render
@@ -80,11 +87,16 @@ Free web instances sleep when idle and drop live rooms; use the Starter plan for
 6. **One worker.** Room state is in memory. Anything that needs scale-out goes behind `Hub`
    (Redis) first.
 7. Adding a game: subclass `Game`, register in `games/__init__.py`, add a React screen + type,
-   write `view_for` secrecy tests, add it to the lobby catalog (automatic via `catalog()`).
+   write `view_for` secrecy tests (players AND a TV spectator id), give it a TV (read-only) screen,
+   add it to the lobby catalog (automatic via `catalog()`).
 
 ## Conventions
 
 - Python: typed, ruff-clean, `from __future__ import annotations`, small functions.
-- TypeScript: `strict`, no `any`, comic styling via the CSS variables in `styles.css`.
-- UI: thick ink borders, hard offset shadows, halftone dots, Bangers for display + Nunito for body,
-  `prefers-reduced-motion` respected, 44px minimum touch targets, every control labelled.
+- TypeScript: `strict`, no `any`, styling only via classes + the CSS variables in `styles.css` (no `style=` props).
+- UI: retro TV game show, NOT comic-book (no Bangers/halftone/KAPOW: that is the AniNest look). Bungee
+  display + Fredoka body; cream/plum/tangerine/mustard/teal/cherry; marquee bulbs, sunburst, podium
+  buttons, split-flap codes. Each game is a segment (`.seg-<id>` sets `--accent`). Effects respect
+  `prefers-reduced-motion`; sounds are generated (`lib/sfx.ts`), off by default. 44px targets, visible
+  focus, every control labelled, contrast >= 4.5:1 (`npm run contrast`).
+- Content: big pools, no repeats within a room until a pool is exhausted (fun long-term).

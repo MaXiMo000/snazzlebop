@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import random
 import unittest
 from typing import Any
@@ -240,6 +241,38 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         await hub.broadcast(room)
         self.assertFalse(room.players[victim].connected)
         self.assertEqual(conns[victim].closed, 1011)
+
+    async def test_tv_viewer_is_read_only_capped_and_secret_safe(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 4)
+        _, tv1 = hub.issue_tv(room.code)
+        vid1 = next(iter(room.viewers))
+        self.assertTrue(vid1.startswith("tv:") and hub.is_member(room, vid1))
+        screen = FakeConn()
+        await hub.connect(room, vid1, screen)
+        await hub.handle_message(room, host, conns[host], {"t": "start", "game": "alibi"})
+        view = screen.last
+        self.assertTrue(view["tv"])
+        self.assertEqual(view["game"]["you"]["card"], [])  # the TV holds no one's card
+        self.assertNotIn(vid1, [p["id"] for p in view["players"]])  # not a contestant
+        for msg in ({"t": "act", "a": "vote", "target": host}, {"t": "skip"}, {"t": "lobby"}, {"t": "leave"}):
+            await hub.handle_message(room, vid1, screen, msg)
+        self.assertEqual(screen.errors().count("read_only"), 4)
+        self.assertEqual(room.phase, "game")
+        # A TV never keeps a room alive on its own.
+        before = room.last_active
+        self.clock.t += 50
+        await hub.handle_message(room, vid1, screen, {"t": "ping"})
+        self.assertEqual(room.last_active, before)
+        # At most two screens: a third evicts the oldest, whose token then stops working.
+        hub.issue_tv(room.code)
+        hub.issue_tv(room.code)
+        self.assertEqual(len(room.viewers), 2)
+        self.assertFalse(hub.is_member(room, vid1))
+        await asyncio.sleep(0)  # the evicted screen is closed by a task
+        self.assertEqual(screen.closed, 1008)
+        with self.assertRaises(HubError):
+            hub.issue_tv("ZZZZZ")
 
     async def test_stuck_reader_never_stalls_the_room(self):
         # A client that stops reading: its sends block forever once the buffers fill.

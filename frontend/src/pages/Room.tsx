@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError, clearSession, joinRoom, loadSession } from "../lib/api";
+import { ApiError, clearSession, joinRoom, loadSession, tvSeat } from "../lib/api";
 import { useRoom } from "../lib/useRoom";
 import { Btn, Card, Contestants, CopyButton, ErrorBanner, FlapCode } from "../components/ui";
 import { Alibi } from "../games/Alibi";
@@ -7,7 +7,12 @@ import { Frenemy } from "../games/Frenemy";
 import { Price } from "../games/Price";
 import type { GameCard, RoomState, Session } from "../types";
 
-export function Room({ code, go }: { code: string; go: (path: string) => void }) {
+export function Room({ code, go, tv = false }: { code: string; go: (path: string) => void; tv?: boolean }) {
+  if (tv) return <TvRoom code={code} go={go} />;
+  return <PlayerRoom code={code} go={go} />;
+}
+
+function PlayerRoom({ code, go }: { code: string; go: (path: string) => void }) {
   const [session, setSession] = useState<Session | null>(() => loadSession(code));
   if (!session) return <JoinGate code={code} onJoined={setSession} go={go} />;
   return <Live code={code} session={session} go={go} onLeave={() => setSession(null)} />;
@@ -151,14 +156,86 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
 function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt: number; send: (m: Record<string, unknown>) => void }) {
   const g = state.game!;
   const players = state.players.map((p) => ({ id: p.id, name: p.name }));
+  const tv = state.tv;
   switch (g.game) {
     case "frenemy":
-      return <Frenemy view={g} you={state.you} receivedAt={receivedAt} send={send} />;
+      return <Frenemy view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "alibi":
-      return <Alibi view={g} you={state.you} receivedAt={receivedAt} send={send} />;
+      return <Alibi view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "price":
-      return <Price view={g} you={state.you} players={players} receivedAt={receivedAt} send={send} />;
+      return <Price view={g} you={state.you} players={players} receivedAt={receivedAt} send={send} tv={tv} />;
   }
+}
+
+/** TV mode: a read-only big-screen view of the public state, for the living-room telly. */
+function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    document.title = `TV · Room ${code} · Snazzlebop`;
+    tvSeat(code)
+      .then(setSession)
+      .catch((e: unknown) => setError(e instanceof ApiError ? e.message : "Something went wrong"));
+  }, [code]);
+  const { state, receivedAt, status } = useRoom(code, session?.token ?? null);
+  const noop = () => undefined;
+
+  if (error || status === "closed") {
+    return (
+      <Card tone="stage" className="center enter">
+        <h2>Off air</h2>
+        <p>{error ?? "This room has ended, or a newer TV took over this screen."}</p>
+        <Btn
+          variant="gold"
+          onClick={() => {
+            clearSession(`tv:${code}`);
+            go("/");
+          }}
+        >
+          Back to the lobby
+        </Btn>
+      </Card>
+    );
+  }
+  if (!state) {
+    return (
+      <Card tone="stage" className="center">
+        <h2>Tuning in…</h2>
+      </Card>
+    );
+  }
+  const online = state.players.filter((p) => p.connected).length;
+  return (
+    <div className="tv stack">
+      <h1 className="sr-only">Snazzlebop TV, room {code}</h1>
+      {status !== "open" && (
+        <p className="alert calm" role="status">
+          Signal lost. Reconnecting…
+        </p>
+      )}
+      {state.room.phase === "lobby" || !state.game ? (
+        <div className="tv-split">
+          <Card tone="stage" className="center">
+            <p className="sign">Now seating contestants</p>
+            <p className="lead space-top">
+              Join at <b>{window.location.host}</b> with code
+            </p>
+            <FlapCode code={state.room.code} />
+            <p className="space-top">{online < 3 ? "Grab a few more friends: most games need 3 or more." : "The host picks the first game…"}</p>
+          </Card>
+          <Contestants players={state.players} you="" title={`Contestants (${online} online)`} />
+        </div>
+      ) : (
+        <div className="tv-split">
+          <GameRouter state={state} receivedAt={receivedAt} send={noop} />
+          <Contestants players={state.players} you="" title="Scoreboard" />
+        </div>
+      )}
+      <p className="muted center">
+        TV mode is read-only. Room <b>{state.room.code}</b>
+      </p>
+    </div>
+  );
 }
 
 const SEGMENT_ICON: Record<GameCard["id"], string> = { frenemy: "📡", alibi: "🔎", price: "💰" };
@@ -174,7 +251,12 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
           <FlapCode code={state.room.code} />
         </div>
         <p className="space-top">Friends type this code on the home page, or open the invite link.</p>
-        <CopyButton text={link} label="Copy invite link" />
+        <div className="row center">
+          <CopyButton text={link} label="Copy invite link" />
+          <a className="btn small ghost" href={`/r/${state.room.code}?tv=1`} target="_blank" rel="noopener noreferrer">
+            Open TV mode<span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </div>
       </Card>
 
       <Contestants players={state.players} you={state.you} title={`In the room (${online} online)`} />

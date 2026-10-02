@@ -79,4 +79,14 @@ export async function joinRoom(code: string, name: string): Promise<Session> {
   return session;
 }
 
+/** A read-only big-screen seat (TV mode). Stored per tab, like a player seat. */
+export async function tvSeat(code: string): Promise<Session> {
+  const saved = loadSession(`tv:${code}`);
+  if (saved) return saved;
+  const r = await request<{ code: string; token: string }>(`/api/rooms/${encodeURIComponent(code)}/tv`, { method: "POST" });
+  const session = { token: r.token, playerId: "" };
+  saveSession(`tv:${r.code}`, session);
+  return session;
+}
+
 export const fetchGames = () => request<GameCard[]>("/api/games");

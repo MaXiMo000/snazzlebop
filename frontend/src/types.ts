@@ -116,6 +116,8 @@ export interface RoomState {
   games: GameCard[];
   game: GameView | null;
   stage: string | null;
+  /** true on a TV-mode (read-only big screen) connection */
+  tv: boolean;
 }
 
 export interface Session {

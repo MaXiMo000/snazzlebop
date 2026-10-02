@@ -10,11 +10,13 @@ interface Props {
   players: { id: string; name: string }[];
   receivedAt: number;
   send: (msg: Record<string, unknown>) => void;
+  /** read-only big screen */
+  tv?: boolean;
 }
 
 type Show = ReturnType<typeof useShow>;
 
-export function Price({ view, you, players, receivedAt, send }: Props) {
+export function Price({ view, you, players, receivedAt, send, tv = false }: Props) {
   const show = useShow();
   useOnChange(view.phase, (_, phase) => {
     if (phase === "final") {
@@ -46,7 +48,17 @@ export function Price({ view, you, players, receivedAt, send }: Props) {
               <h3>{view.item.name}</h3>
               <p>{view.item.blurb}</p>
             </Card>
-            {view.phase === "guess" && <GuessForm view={view} send={send} />}
+            {view.phase === "guess" &&
+              (tv ? (
+                <Card tone="soft" className="center">
+                  <p className="lead" aria-live="polite">
+                    {view.locked.length} of {players.length} guesses locked in
+                  </p>
+                  <p className="muted">Closest without going over wins. Then the chaos spin…</p>
+                </Card>
+              ) : (
+                <GuessForm view={view} send={send} />
+              ))}
             {view.phase === "reveal" && view.result && <Reveal result={view.result} players={players} you={you} show={show} />}
           </>
         )}

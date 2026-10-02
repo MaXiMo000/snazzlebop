@@ -9,12 +9,14 @@ interface Props {
   you: string;
   receivedAt: number;
   send: (msg: Record<string, unknown>) => void;
+  /** read-only big screen */
+  tv?: boolean;
 }
 
 type Tab = "card" | "board" | "vote";
 const TABS: Tab[] = ["card", "board", "vote"];
 
-export function Alibi({ view, you, receivedAt, send }: Props) {
+export function Alibi({ view, you, receivedAt, send, tv = false }: Props) {
   // A tab picked in one phase doesn't carry over: when voting opens, show the vote.
   const [picked, setPicked] = useState<{ phase: string; tab: Tab } | null>(null);
   const activeTab: Tab = (picked?.phase === view.phase ? picked.tab : null) ?? (view.phase === "vote" ? "vote" : "card");
@@ -34,7 +36,7 @@ export function Alibi({ view, you, receivedAt, send }: Props) {
   });
   useOnChange(view.phase, (_, phase) => {
     if (phase === "final" && view.result) {
-      const iWon = view.result.caught ? view.result.killer !== you : view.result.killer === you;
+      const iWon = tv ? view.result.caught : view.result.caught ? view.result.killer !== you : view.result.killer === you;
       show.stinger(view.result.caught ? "CAUGHT!" : "THEY GOT AWAY!", view.result.caught ? "good" : "bad");
       if (iWon) {
         sfx.fanfare();
@@ -82,14 +84,15 @@ export function Alibi({ view, you, receivedAt, send }: Props) {
       )}
 
       <div key={view.phase} className="stack enter">
-        {view.phase === "briefing" && (
+        {tv && view.phase !== "final" && <TvCase view={view} fresh={Date.now() - shaking < 1500} />}
+        {!tv && view.phase === "briefing" && (
           <>
             <Briefing view={view} />
             <AlibiCard view={view} send={send} interactive={false} />
           </>
         )}
 
-        {(view.phase === "interrogate" || view.phase === "vote") && (
+        {!tv && (view.phase === "interrogate" || view.phase === "vote") && (
           <>
             <div className="tabs" role="tablist" aria-label="Case file" onKeyDown={onTabKey}>
               {TABS.map((id) => (
@@ -127,9 +130,33 @@ export function Alibi({ view, you, receivedAt, send }: Props) {
           </>
         )}
 
-        {view.phase === "final" && view.result && <Result view={view} you={you} />}
+        {view.phase === "final" && view.result && <Result view={view} you={you} tv={tv} />}
       </div>
     </div>
+  );
+}
+
+function TvCase({ view, fresh }: { view: AlibiView; fresh: boolean }) {
+  if (view.phase === "briefing") {
+    return (
+      <Card tone="soft" className="center">
+        <h3>Contestants are studying their alibi cards…</h3>
+        <p>One of them is lying. Everyone’s story for {view.murder_label} goes on the board next.</p>
+      </Card>
+    );
+  }
+  return (
+    <>
+      {view.phase === "vote" && (
+        <Card tone="soft" className="center">
+          <h3>The vote is open</h3>
+          <p className="lead" aria-live="polite">
+            {view.votes_in} of {view.players.length} votes in
+          </p>
+        </Card>
+      )}
+      <Board view={view} you="" send={() => undefined} readOnly fresh={fresh} />
+    </>
   );
 }
 
@@ -362,17 +389,18 @@ function Vote({ view, you, send }: { view: AlibiView; you: string; send: Props["
   );
 }
 
-function Result({ view, you }: { view: AlibiView; you: string }) {
+function Result({ view, you, tv }: { view: AlibiView; you: string; tv: boolean }) {
   const r = view.result!;
   const killerName = nameOf(view.players, r.killer);
   const iWon = r.caught ? r.killer !== you : r.killer === you;
+  const personal = tv ? "" : iWon ? "🎉 You win this one." : "Better luck next time.";
   return (
     <>
       <Card tone="stage" className="center">
         <p className="sign">{r.caught ? "Caught!" : "They got away!"}</p>
         <h3 className="prompt space-top">The killer was {killerName}</h3>
         <p>
-          {r.caught ? "The room got it right." : "The room was fooled."} {iWon ? "🎉 You win this one." : "Better luck next time."}
+          {r.caught ? "The room got it right." : "The room was fooled."} {personal}
         </p>
       </Card>
       <Card>

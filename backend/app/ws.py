@@ -76,7 +76,7 @@ async def _authenticate(
     if verified is None or verified[1] != code:
         return None, True
     pid = verified[0]
-    if room is None or pid not in room.players:
+    if room is None or not hub.is_member(room, pid):
         return None, False
     return pid, False
 

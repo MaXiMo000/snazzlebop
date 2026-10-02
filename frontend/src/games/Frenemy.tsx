@@ -9,9 +9,11 @@ interface Props {
   you: string;
   receivedAt: number;
   send: (msg: Record<string, unknown>) => void;
+  /** read-only big screen */
+  tv?: boolean;
 }
 
-export function Frenemy({ view, you, receivedAt, send }: Props) {
+export function Frenemy({ view, you, receivedAt, send, tv = false }: Props) {
   const show = useShow();
   useOnChange(view.phase, (_, phase) => {
     if (phase === "reveal") {
@@ -30,11 +32,36 @@ export function Frenemy({ view, you, receivedAt, send }: Props) {
       {show.node}
       <ShowHead sign={sign} title="Frenemy Radar" remaining={view.remaining} receivedAt={receivedAt} />
       <div key={`${view.phase}-${view.round}`} className="stack enter">
-        {view.phase === "rank" && <Rank view={view} you={you} send={send} />}
+        {view.phase === "rank" && (tv ? <TvRank view={view} /> : <Rank view={view} you={you} send={send} />)}
         {view.phase === "reveal" && view.result && <Reveal view={view} you={you} />}
-        {view.phase === "final" && view.final && <Final view={view} you={you} />}
+        {view.phase === "final" && view.final && <Final view={view} you={you} tv={tv} />}
       </div>
     </div>
+  );
+}
+
+function TvRank({ view }: { view: FrenemyView }) {
+  return (
+    <>
+      <Card tone="stage">
+        <p className="sign">Tonight’s question</p>
+        <h3 className="prompt space-top">{view.prompt}</h3>
+      </Card>
+      <Card className="center">
+        <p className="lead" aria-live="polite">
+          {view.submitted.length} of {view.players.length} rankings locked in
+        </p>
+        <ul className="contestants row center">
+          {view.players.map((p) => (
+            <li key={p.id} className={`contestant ${view.submitted.includes(p.id) ? "" : "away"}`}>
+              <span className="lamp" aria-hidden="true" />
+              {p.name}
+              <span className="sr-only">{view.submitted.includes(p.id) ? " locked in" : " still ranking"}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </>
   );
 }
 
@@ -175,14 +202,16 @@ const CUPS: Record<string, string> = {
   "Crystal Clear": "🔮",
 };
 
-function Final({ view, you }: { view: FrenemyView; you: string }) {
+function Final({ view, you, tv }: { view: FrenemyView; you: string; tv: boolean }) {
   const fin = view.final!;
   const mine = fin.per_player[you];
   return (
     <>
       <Card tone="stage" className="center">
         <p className="sign">Final reveal</p>
-        {mine ? (
+        {tv ? (
+          <p className="lead space-top">And the awards go to…</p>
+        ) : mine ? (
           <>
             <p className="space-top">Your blind-spot score</p>
             <p className="burst">

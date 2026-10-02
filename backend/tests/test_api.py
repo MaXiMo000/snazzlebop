@@ -267,3 +267,21 @@ def test_ws_stale_but_genuine_token_is_not_penalised(tmp_path):
             assert close_code(c, room["code"], room["token"]) == 1008
         fresh = make_room(c)
         assert c.post(f"/api/rooms/{fresh['code']}/join", json={"name": "X"}).status_code == 200
+
+
+def test_tv_mode_endpoint_and_socket(tmp_path):
+    s = settings(tmp_path, rate_join_burst=12, rate_join_per_min=0.001)
+    with TestClient(create_app(s)) as c:
+        room = make_room(c)
+        r = c.post(f"/api/rooms/{room['code'].lower()}/tv")
+        assert r.status_code == 200 and set(r.json()) == {"code", "token"}
+        with c.websocket_connect(f"/ws/{room['code']}") as ws:
+            state = auth(ws, r.json()["token"])
+            assert state["tv"] is True and state["you"].startswith("tv:")
+            assert room["player_id"] in [p["id"] for p in state["players"]]
+            ws.send_json({"t": "start", "game": "price"})
+            assert ws.receive_json() == {"t": "error", "code": "read_only", "message": "TV mode is read-only"}
+        # Guessing codes through the TV endpoint costs the same as through join.
+        assert c.post("/api/rooms/ZZZZZ/tv").status_code == 404
+        statuses = [c.post("/api/rooms/ZZZZZ/tv").status_code for _ in range(3)]
+        assert 429 in statuses

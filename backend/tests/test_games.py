@@ -335,3 +335,39 @@ class AlibiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SpectatorTests(unittest.TestCase):
+    """TV mode shows view_for(<non-player id>): it must carry no one's private state."""
+
+    TV = "tv:screen"
+
+    def test_frenemy_spectator_never_sees_rankings_before_reveal(self):
+        game, _, players = make(FrenemyRadar, 4)
+        ids = [p.id for p in players]
+        for pid in ids[:3]:
+            game.handle(pid, {"a": "rank", "order": list(reversed(ids))})
+        view = game.view_for(self.TV)
+        self.assertNotIn("result", view)
+        self.assertFalse(view["you_submitted"])
+        self.assertEqual(sorted(view["submitted"]), sorted(ids[:3]))  # who, never what
+
+    def test_price_spectator_sees_no_guesses_or_modifier_before_reveal(self):
+        game, _, players = make(PriceIsWeird, 3)
+        game.handle("p0", {"a": "guess", "amount": 4321, "amount2": 8765})
+        view = game.view_for(self.TV)
+        dump = str(view)
+        for secret in ("4321", "8765", "true_price", "modifier", "nonce", "base_price"):
+            self.assertNotIn(secret, dump)
+        self.assertNotIn("your_guesses", view)
+        self.assertEqual(view["chips"], 0)
+
+    def test_alibi_spectator_gets_no_card_and_no_killer(self):
+        for seed in range(20):
+            game, clock, players = make(Alibi, 5, seed=seed)
+            game.advance()  # into interrogation
+            view = game.view_for(self.TV)
+            self.assertEqual(view["you"]["card"], [])
+            self.assertFalse(view["you"]["is_killer"])
+            self.assertIsNone(view["you"]["fake_slots"])
+            self.assertNotIn("result", view)

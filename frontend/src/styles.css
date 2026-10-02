@@ -1172,6 +1172,32 @@ details summary {
   }
 }
 
+/* ---- TV mode: the living-room screen -------------------------------------------- */
+.tv {
+  font-size: clamp(1.05rem, 1.6vw, 1.6rem);
+}
+.tv .prompt {
+  font-size: clamp(1.6rem, 3.6vw, 3.2rem);
+}
+.tv-split > * + * {
+  margin-top: 18px;
+}
+@media (min-width: 1100px) {
+  body:has(.tv) .topbar,
+  .app:has(.tv) {
+    max-width: 1500px;
+  }
+  .tv-split {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .tv-split > * + * {
+    margin-top: 0;
+  }
+}
+
 /* ---- responsive ---------------------------------------------------------------- */
 @media (max-width: 480px) {
   :root {

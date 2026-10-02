@@ -47,7 +47,11 @@ export function App() {
         <SoundToggle />
       </header>
       <main id="main" className="app">
-        {match ? <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} /> : <Home go={go} />}
+        {match ? (
+          <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} tv={new URLSearchParams(window.location.search).get("tv") === "1"} />
+        ) : (
+          <Home go={go} />
+        )}
       </main>
     </>
   );

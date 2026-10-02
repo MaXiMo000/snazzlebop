@@ -146,3 +146,35 @@ test("keyboard only: skip link, create a room, start a game, guess", async ({ pa
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: /Locked in/ })).toBeVisible();
 });
+
+test("TV mode: read-only big screen of the public state", async ({ page: host, browser, baseURL }, info) => {
+  const a11y: string[] = [];
+  await host.goto("/");
+  await host.locator("#host-name").fill("Host");
+  await host.getByRole("button", { name: "Create room" }).click();
+  await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
+  const code = host.url().split("/").pop()!;
+  const guest = await (await browser.newContext({ baseURL })).newPage();
+  await guest.goto(`/r/${code}`);
+  await guest.getByLabel("Your name").fill("Guest");
+  await guest.getByRole("button", { name: "Join", exact: true }).click();
+
+  const tv = await (await browser.newContext({ baseURL, viewport: { width: 1600, height: 900 } })).newPage();
+  await tv.goto(`/r/${code}?tv=1`);
+  await expect(tv.locator(".flap").first()).toContainText(`Room code ${code.split("").join(" ")}`);
+  await expect(tv.getByRole("heading", { name: /Contestants \(2 online\)/ })).toBeVisible();
+  await axe(tv, "tv lobby", a11y);
+  // The TV is not a contestant: the host still sees exactly two players.
+  await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
+
+  await host.locator("article.game-card.price").getByRole("button", { name: /Start!/ }).click();
+  await expect(tv.getByText(/0 of 2 guesses locked in/)).toBeVisible();
+  await expect(tv.getByLabel("Your price ($)")).toHaveCount(0); // nothing to type into on the TV
+  await guest.getByLabel("Your price ($)").fill("100");
+  await guest.getByRole("button", { name: "Lock it in!" }).click();
+  await expect(tv.getByText(/1 of 2 guesses locked in/)).toBeVisible();
+  await expect(tv.getByText("$100")).toHaveCount(0); // a guess is never shown before the reveal
+  await tv.screenshot({ path: `e2e/screenshots/${info.project.name}/07-tv.png`, fullPage: true });
+  await axe(tv, "tv price", a11y);
+  expect(a11y, "axe WCAG 2.1 A/AA violations").toEqual([]);
+});

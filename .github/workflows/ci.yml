@@ -50,6 +50,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
+      - run: npm run contrast # every text/background pair >= 4.5:1
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high
 
@@ -102,7 +103,11 @@ jobs:
           path: |
             frontend/e2e/screenshots/
             frontend/test-results/
+            frontend/lighthouse/
           if-no-files-found: ignore
+      - name: Lighthouse gate (a11y / best practices / SEO >= 95, mobile + desktop)
+        working-directory: frontend
+        run: bash scripts/lighthouse.sh snazzlebop
       - name: OWASP ZAP baseline (fails on any FAIL; informational warnings documented in SECURITY-EVIDENCE.md)
         run: |
           docker run --rm --network host \

@@ -23,6 +23,7 @@ log = logging.getLogger("snazzlebop.rooms")
 ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: avoids lookalikes
 ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {"ping", "start", "act", "skip", "lobby", "leave"}
+MAX_TV_PER_ROOM = 2  # big-screen viewers; issuing a third evicts the oldest
 
 
 class HubError(Exception):
@@ -61,6 +62,8 @@ class Room:
     host_id: str = ""
     players: dict[str, Player] = field(default_factory=dict)
     conns: dict[str, Connection] = field(default_factory=dict)
+    # TV (spectator) ids -> live connection or None. Not players: no seat, no score, read-only.
+    viewers: dict[str, Connection | None] = field(default_factory=dict)
     phase: str = "lobby"  # lobby | game | results
     game: Game | None = None
     total_scores: dict[str, int] = field(default_factory=dict)
@@ -136,6 +139,24 @@ class Hub:
         room.last_active = self.clock()
         return room, player, self._issue(room, player)
 
+    def issue_tv(self, code: str) -> tuple[Room, str]:
+        """A read-only big-screen seat. Same trust as joining: anyone holding the room code."""
+        room = self.get(code.upper() if isinstance(code, str) else code)
+        if room is None:
+            raise HubError("room_not_found", "No room with that code", 404)
+        vid = "tv:" + secrets.token_urlsafe(6)
+        room.viewers[vid] = None
+        while len(room.viewers) > MAX_TV_PER_ROOM:
+            oldest = next(iter(room.viewers))
+            conn = room.viewers.pop(oldest)
+            if conn is not None:
+                asyncio.get_running_loop().create_task(conn.close(1008))
+        token = sign_token(self.settings.secret_key, vid, room.code, self.settings.token_ttl_seconds)
+        return room, token
+
+    def is_member(self, room: Room, pid: str) -> bool:
+        return pid in room.players or pid in room.viewers
+
     def cleanup(self) -> None:
         now = self.clock()
         for code, room in list(self.rooms.items()):
@@ -146,6 +167,16 @@ class Hub:
 
     # -- connections --------------------------------------------------------
     async def connect(self, room: Room, pid: str, conn: Connection) -> None:
+        if pid in room.viewers:
+            previous = room.viewers[pid]
+            room.viewers[pid] = conn
+            if previous is not None:
+                with contextlib.suppress(Exception):
+                    await previous.close(1000)
+            task = self._post(room, pid, conn, self.view_for(room, pid))  # only the screen needs a frame
+            if task is not None:
+                await asyncio.wait([task], timeout=0.25)
+            return
         async with room.lock:
             previous = room.conns.get(pid)
             room.conns[pid] = conn
@@ -157,6 +188,10 @@ class Hub:
         await self.broadcast(room)
 
     async def disconnect(self, room: Room, pid: str, conn: Connection) -> None:
+        if pid in room.viewers or pid.startswith("tv:"):
+            if room.viewers.get(pid) is conn:
+                room.viewers[pid] = None
+            return
         async with room.lock:
             if room.conns.get(pid) is not conn:
                 return  # superseded by a newer connection
@@ -179,6 +214,7 @@ class Hub:
         return {
             "t": "state",
             "you": pid,
+            "tv": pid in room.viewers,
             "room": {"code": room.code, "phase": room.phase, "host": room.host_id},
             "players": [
                 {
@@ -229,9 +265,10 @@ class Hub:
         self._mail.pop(conn, None)
 
     async def broadcast(self, room: Room) -> None:
+        targets = [*room.conns.items(), *((v, c) for v, c in room.viewers.items() if c is not None)]
         tasks = [
             task
-            for pid, conn in list(room.conns.items())
+            for pid, conn in targets
             if (task := self._post(room, pid, conn, self.view_for(room, pid))) is not None
         ]
         if tasks:
@@ -251,6 +288,11 @@ class Hub:
         if not isinstance(msg, dict) or msg.get("t") not in ALLOWED_MESSAGE_TYPES:
             return await self.send_error(conn, "bad_message", "Unknown message")
         kind = msg["t"]
+        if pid in room.viewers:
+            # TV screens only watch: no actions, and their keep-alive pings don't keep a room alive.
+            if kind != "ping":
+                await self.send_error(conn, "read_only", "TV mode is read-only")
+            return
         room.last_active = self.clock()
         if kind == "ping":
             return
