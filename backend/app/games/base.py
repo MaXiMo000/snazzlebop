@@ -57,6 +57,15 @@ class Deck:
         self._stack: list[int] = []
         self._recent: list[int] = []
 
+    def grow(self, size: int) -> None:
+        """The pool gained items (e.g. freshly generated content): deal those first, keep memory."""
+        if size <= self.size:
+            return
+        fresh = list(range(self.size, size))
+        self.rng.shuffle(fresh)
+        self._stack.extend(fresh)  # pop() takes from the end: new cards come out next
+        self.size = size
+
     def draw(self, n: int) -> list[int]:
         if n > self.size:
             raise ValueError("pool smaller than the draw")
@@ -136,8 +145,9 @@ class Game(ABC):
         """n distinct indices into a content pool, never repeating within this room's decks."""
         key = f"{self.game_id}:{pool}"
         deck = self.decks.get(key)
-        if deck is None or deck.size != size:
+        if deck is None or deck.size > size:
             deck = self.decks[key] = Deck(size, self.rng)
+        deck.grow(size)  # pools only grow at runtime; keep what this room has already seen
         return deck.draw(n)
 
     def bump(self) -> None:

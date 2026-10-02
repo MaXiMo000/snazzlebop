@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from .config import Settings, load_settings
+from .contentgen import KINDS, ContentGenerator, add_items, claude_caller
 from .db import Database
 from .games import catalog
 from .logging_setup import setup_logging
@@ -59,11 +60,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         background.add(task)
         task.add_done_callback(background.discard)
 
-    hub = Hub(settings, on_game_finished=record_result)
+    generator = ContentGenerator(
+        claude_caller(settings.anthropic_api_key, settings.content_model)
+        if settings.anthropic_api_key
+        else None,
+        save=db.save_content,
+        calls_per_hour=settings.content_calls_per_hour,
+    )
+    hub = Hub(settings, on_game_finished=record_result, on_game_started=generator.request)
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await db.init()
+        saved = await db.load_content()  # generated content from earlier runs
+        loaded = sum(len(add_items(kind, [payload])) for kind, payload in saved if kind in KINDS)
+        log.info("content: %d saved items loaded; generator %s", loaded, "on" if generator.enabled else "off")
         ticker = asyncio.create_task(hub.run_ticker())
         try:
             yield
@@ -84,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.hub = hub
     app.state.db = db
+    app.state.content = generator
     app.state.ws_counter = ConnectionCounter()
 
     limiters = {

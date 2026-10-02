@@ -30,5 +30,8 @@ services:
       # Render is the only proxy in front of the app. If you add Cloudflare, set this to 2.
       - key: TRUSTED_PROXY_HOPS
         value: "1"
+      # Optional fresh content from Claude. Set the value in the Render dashboard; never in git.
+      - key: ANTHROPIC_API_KEY
+        sync: false
       # RENDER_EXTERNAL_HOSTNAME is provided by Render and is added to the host/origin allowlists.
       # For a custom domain also set ALLOWED_HOSTS and ALLOWED_ORIGINS (comma separated).

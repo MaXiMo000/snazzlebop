@@ -318,6 +318,14 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(conns[guest].closed, 4001)
         self.assertNotIn(guest, [p["id"] for p in conns[host].last["players"]])
 
+    async def test_starting_a_game_asks_for_more_of_its_content(self):
+        started = []
+        hub = self.make_hub()
+        hub.on_game_started = started.append
+        room, host, conns = await self.party(hub, 3)
+        await hub.handle_message(room, host, conns[host], {"t": "start", "game": "frenemy"})
+        self.assertEqual(started, ["frenemy"])
+
     async def test_stuck_reader_never_stalls_the_room(self):
         # A client that stops reading: its sends block forever once the buffers fill.
         import asyncio

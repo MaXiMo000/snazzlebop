@@ -87,6 +87,7 @@ class Hub:
         clock: Callable[[], float] = time.monotonic,
         rng: random.Random | None = None,
         on_game_finished: Callable[[str, dict[str, Any]], None] | None = None,
+        on_game_started: Callable[[str], None] | None = None,
         timings: dict[str, dict[str, float]] | None = None,
     ) -> None:
         self.settings = settings
@@ -94,6 +95,7 @@ class Hub:
         self.rng = rng or random.SystemRandom()
         self.rooms: dict[str, Room] = {}
         self.on_game_finished = on_game_finished
+        self.on_game_started = on_game_started
         self.timings = timings or {}
         self.send_timeout = 5.0  # a socket that can't take a frame this long is dropped
         self._mail: dict[Connection, dict[str, Any]] = {}
@@ -338,6 +340,11 @@ class Hub:
             )
             game.start()
             room.game, room.phase = game, "game"
+            if self.on_game_started:  # e.g. top up this game's content pool in the background
+                try:
+                    self.on_game_started(cls.game_id)
+                except Exception:
+                    log.exception("on_game_started failed")
             return True
         if kind == "act":
             if room.game is None or room.phase != "game":

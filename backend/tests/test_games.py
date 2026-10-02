@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 import unittest
 
-from app.games import REGISTRY, GameError, Player
+from app.games import REGISTRY, Game, GameError, Player
 from app.games.alibi import ASKS_PER_ROUND, INTERROGATION_ROUNDS, SLOT_LABELS, Alibi
 from app.games.frenemy import FrenemyRadar
 from app.games.price import ITEMS, PriceIsWeird, commitment
@@ -544,3 +544,34 @@ class FrenemyAwardTests(unittest.TestCase):
         names = [a["award"] for a in awards]
         self.assertNotIn("Unknown to Self", names)  # nobody has a blind spot to speak of
         self.assertEqual(len({a["player"] for a in awards}), len(awards))  # one award each at most here
+
+
+class DeckGrowthTests(unittest.TestCase):
+    def test_growing_pool_keeps_memory_and_deals_new_cards_first(self):
+        from app.games.base import Deck
+
+        deck = Deck(10, random.Random(1))
+        seen = deck.draw(6)
+        deck.grow(14)  # four freshly generated items arrive
+        nxt = deck.draw(4)
+        self.assertEqual(sorted(nxt), [10, 11, 12, 13])  # fresh content first
+        rest = deck.draw(4)
+        self.assertTrue(set(rest).isdisjoint(seen))  # still no repeats of the 6 already seen
+        self.assertEqual(sorted(seen + nxt + rest), list(range(14)))
+
+    def test_game_deal_picks_up_new_pool_items_without_forgetting(self):
+        pool = [f"p{i}" for i in range(6)]
+        decks: dict = {}
+
+        class G:
+            game_id = "x"
+            rng = random.Random(2)
+            deal = Game.deal
+
+        g = G()
+        g.decks = decks
+        first = g.deal("prompts", len(pool), 3)
+        pool += ["new1", "new2"]
+        second = g.deal("prompts", len(pool), 3)
+        self.assertEqual(sorted(second[:2]), [6, 7])
+        self.assertTrue(set(first).isdisjoint(second))

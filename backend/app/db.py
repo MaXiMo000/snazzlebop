@@ -9,7 +9,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Integer, String, func, select
+from sqlalchemy import JSON, DateTime, Integer, String, UniqueConstraint, func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
@@ -28,6 +28,19 @@ class GameResult(Base):
     game_id: Mapped[str] = mapped_column(String(32), index=True)
     played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     summary: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class ContentItem(Base):
+    """Generated game content (prompts, items, clues...). Never anything about players."""
+
+    __tablename__ = "content_items"
+    __table_args__ = (UniqueConstraint("kind", "key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(32), index=True)
+    key: Mapped[str] = mapped_column(String(200))
+    payload: Mapped[Any] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 def make_engine(url: str) -> AsyncEngine:
@@ -75,6 +88,30 @@ class Database:
         except Exception:
             log.exception("could not read stats")
             return {}
+
+    async def save_content(self, kind: str, items: list[tuple[str, Any]]) -> None:
+        if not self.ready:
+            return
+        for key, payload in items:  # one by one: a duplicate (unique kind+key) only skips itself
+            try:
+                async with self.sessions() as session:
+                    session.add(ContentItem(kind=kind, key=key[:200], payload=payload))
+                    await session.commit()
+            except Exception:
+                log.info("content item skipped (duplicate or db error)")
+
+    async def load_content(self) -> list[tuple[str, Any]]:
+        if not self.ready:
+            return []
+        try:
+            async with self.sessions() as session:
+                rows = await session.execute(
+                    select(ContentItem.kind, ContentItem.payload).order_by(ContentItem.id)
+                )
+                return [(k, p) for k, p in rows.all()]
+        except Exception:
+            log.exception("could not load generated content")
+            return []
 
     async def close(self) -> None:
         await self.engine.dispose()

@@ -30,7 +30,7 @@ def normalize_database_url(url: str) -> str:
 @dataclass(frozen=True)
 class Settings:
     env: str = "development"
-    secret_key: str = ""
+    secret_key: str = field(default="", repr=False)
     database_url: str = "sqlite+aiosqlite:///./snazzlebop.db"
     allowed_hosts: tuple[str, ...] = ("localhost", "127.0.0.1", "testserver")
     allowed_origins: tuple[str, ...] = (
@@ -68,6 +68,11 @@ class Settings:
     rate_create_burst: float = 5.0
     rate_join_per_min: float = 40.0
     rate_join_burst: float = 12.0
+
+    # Optional: fresh game content from Claude. Unset = built-in pools only.
+    anthropic_api_key: str = field(default="", repr=False)
+    content_model: str = "claude-opus-5-5"
+    content_calls_per_hour: int = 20
 
     extra: dict[str, str] = field(default_factory=dict)
 
@@ -120,4 +125,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         max_rooms=int(num("MAX_ROOMS", defaults.max_rooms)),
         max_ws_per_ip=int(num("MAX_WS_PER_IP", defaults.max_ws_per_ip)),
         max_ws_total=int(num("MAX_WS_TOTAL", defaults.max_ws_total)),
+        anthropic_api_key=e.get("ANTHROPIC_API_KEY", "").strip(),
+        content_model=e.get("CONTENT_MODEL", "").strip() or defaults.content_model,
+        content_calls_per_hour=int(num("CONTENT_CALLS_PER_HOUR", defaults.content_calls_per_hour)),
     )
