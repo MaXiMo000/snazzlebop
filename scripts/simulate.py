@@ -241,7 +241,10 @@ async def play_alibi(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     for b in bots:
         for entry in cards[b.pid]:
             truthful = result["truth"][b.pid][entry["slot"]] == entry["location"]
-            lie = b is killer and entry["slot"] in result["fake_slots"]
+            hazy = result["hazy"] or {}
+            lie = (b is killer and entry["slot"] in result["fake_slots"]) or (
+                hazy.get("player") == b.pid and hazy.get("slot") == entry["slot"]  # an honest mistake
+            )
             check(
                 truthful != lie, f"{b.name}'s card disagrees with the revealed truth at slot {entry['slot']}"
             )

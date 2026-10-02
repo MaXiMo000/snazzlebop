@@ -27,6 +27,11 @@ from .content import ALIBI_SETTINGS
 SLOT_LABELS = ALIBI_SETTINGS[0]["slots"]  # shape reference: all settings have this many slots
 INTERROGATION_ROUNDS = 3
 ASKS_PER_ROUND = 2
+# Red herring: in most games one innocent's memory is hazy. Their card has one honest mistake
+# (they don't know which), so contradictions alone don't point straight at the killer.
+# Tuned with scripts/tune_alibi.py (5,000 games per size): the killer escapes 37-43% at 4-8
+# players (38% at 5). Without it the killer escaped only 12% at 5 players.
+HAZY_CHANCE = 0.9
 
 
 class Alibi(Game):
@@ -90,6 +95,15 @@ class Alibi(Game):
         self.truth = truth
         self.fake = fake
 
+        # The hazy innocent misremembers one ordinary slot (never the murder or witness slot).
+        self.hazy: tuple[str, int] | None = None
+        if rng.random() < HAZY_CHANCE:
+            normal = [s for s in range(n_slots) if s not in fake]
+            who, when = rng.choice(innocents), rng.choice(normal)
+            wrong = rng.choice([x for x in self.locations if x != truth[who][when]])
+            self.hazy = (who, when)
+            hazy_loc = wrong
+
         # Cards: what each player is supposed to say. Companions come from the truth.
         self.cards: dict[str, list[dict[str, Any]]] = {}
         for i in ids:
@@ -97,6 +111,10 @@ class Alibi(Game):
             for s in range(n_slots):
                 if i == self.killer and s in fake:
                     claimed, companions = fake[s], []
+                elif self.hazy == (i, s):
+                    # They "remember" being somewhere else, and whoever really was there.
+                    claimed = hazy_loc
+                    companions = [o for o in ids if o != i and truth[o][s] == claimed]
                 else:
                     claimed = truth[i][s]
                     companions = [o for o in ids if o != i and truth[o][s] == claimed]
@@ -130,6 +148,17 @@ class Alibi(Game):
         }
         return True
 
+    def _blurry(self, location: str, slot: int) -> dict[str, Any]:
+        """A grainy feed: you can count heads, not see faces."""
+        count = sum(1 for i in self.player_ids if self.truth[i][slot] == location)
+        return {
+            "kind": "headcount",
+            "location": location,
+            "slot": slot,
+            "label": self.slots[slot],
+            "count": count,
+        }
+
     def _camera(self, location: str, slot: int) -> dict[str, Any]:
         occupants = sorted(i for i in self.player_ids if self.truth[i][slot] == location)
         return {
@@ -150,8 +179,8 @@ class Alibi(Game):
                 self._publish(pid, self.murder_slot)
             self.log.append({"kind": "alibis", "text": "Everyone's alibi for the murder is on the board."})
         elif self.round == 1:
-            self.clues.append(self._camera(self.witness_true_location, self.witness_slot))
-            self.log.append({"kind": "clue", "text": "New clue: a camera feed was recovered."})
+            self.clues.append(self._blurry(self.witness_true_location, self.witness_slot))
+            self.log.append({"kind": "clue", "text": "New clue: a blurry camera feed was recovered."})
         elif self.round == 2:
             non_scene = [x for x in self.locations if x != self.scene]
             self.clues.append(self._camera(self.rng.choice(non_scene), self.murder_slot))
@@ -186,13 +215,65 @@ class Alibi(Game):
             "votes": dict(self.votes),
             "truth": {i: list(self.truth[i]) for i in self.player_ids},
             "fake_slots": sorted(self.fake),
+            "hazy": {"player": self.hazy[0], "slot": self.hazy[1]} if self.hazy else None,
+            "recap": self._recap(caught, tally),
         }
         self.phase = "final"
         self.deadline = None
         self.finished = True
         self.bump()
 
+    def _recap(self, caught: bool, tally: dict[str, int]) -> list[str]:
+        """The story of the case, told once it's closed (so it's safe for the TV and everyone)."""
+        k = self.name_of(self.killer)
+        lines = [f"{k} killed {self.victim} in the {self.scene} at {self.slots[self.murder_slot]}."]
+        for s in sorted(self.fake):
+            really = self.truth[self.killer][s]
+            lines.append(f"{k} claimed the {self.fake[s]} at {self.slots[s]} but was really in the {really}.")
+        if self.hazy:
+            who, s = self.hazy
+            lines.append(
+                f"{self.name_of(who)} wasn't lying, just hazy: they were in the {self.truth[who][s]} at "
+                f"{self.slots[s]}, not the {self.cards[who][s]['location']}."
+            )
+        about_killer = [f["text"] for f in self.flags() if self.killer in f["players"]]
+        if about_killer:
+            lines.append(f"The giveaway: {about_killer[0]}")
+        if tally:
+            top = sorted(tally.items(), key=lambda kv: -kv[1])
+            votes = ", ".join(f"{self.name_of(p)} {n}" for p, n in top[:3])
+            lines.append(f"Votes: {votes}. " + ("The room caught them!" if caught else f"{k} walked free."))
+        else:
+            lines.append(f"Nobody voted. {k} walked free.")
+        return lines
+
     # -- contradictions -----------------------------------------------------
+    def _headcount_flag(self, clue: dict[str, Any]) -> dict[str, Any] | None:
+        """Compare a blurry camera's headcount with who claims to have been there.
+
+        Too many claimants: one of them is lying (they're named). Too few: someone who was there
+        is hiding, but the feed can't say who; only judged once everyone's story for that slot is in.
+        """
+        slot, loc, count = clue["slot"], clue["location"], clue["count"]
+        claimers = sorted(sp for (sp, sl), c in self.claims.items() if sl == slot and c["location"] == loc)
+        everyone_in = all((i, slot) in self.claims for i in self.player_ids)
+        if len(claimers) > count:
+            players, tail = claimers, " One of them isn't telling the truth."
+        elif len(claimers) < count and everyone_in:
+            players, tail = [], " Someone who was there is hiding it."
+        else:
+            return None
+        people = "person" if count == 1 else "people"
+        say = "says" if len(claimers) == 1 else "say"
+        return {
+            "kind": "headcount",
+            "slot": slot,
+            "label": clue["label"],
+            "players": players,
+            "text": f"The {loc} camera at {clue['label']} saw {count} {people}, "
+            f"but {len(claimers)} {say} they were there.{tail}",
+        }
+
     def flags(self) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         seen: set[Any] = set()
@@ -218,6 +299,12 @@ class Alibi(Game):
                         }
                     )
         for clue in self.clues:
+            if clue["kind"] == "headcount":
+                flag = self._headcount_flag(clue)
+                if flag and (key := ("count", clue["slot"], flag["text"])) not in seen:
+                    seen.add(key)
+                    out.append(flag)
+                continue
             if clue["kind"] != "camera":
                 continue
             occ = set(clue["occupants"])

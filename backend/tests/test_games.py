@@ -221,10 +221,18 @@ class AlibiTests(unittest.TestCase):
             self.assertTrue(truth_companions)
             for pid in game.player_ids:
                 self.assertNotEqual(game.truth[pid][w], game.cards[killer][w]["location"])
-            # Innocents never lie.
-            for i in innocents:
-                for s in range(len(SLOT_LABELS)):
-                    self.assertEqual(game.cards[i][s]["location"], game.truth[i][s])
+            # Innocents never lie. At most one of them has ONE hazy (honest-mistake) slot, and never
+            # on the murder or witness slot, where the deduction has to stay solvable.
+            wrong = [
+                (i, s)
+                for i in innocents
+                for s in range(len(SLOT_LABELS))
+                if game.cards[i][s]["location"] != game.truth[i][s]
+            ]
+            self.assertEqual(wrong, [game.hazy] if game.hazy else [])
+            if game.hazy:
+                self.assertNotIn(game.hazy[1], (m, w))
+                self.assertNotEqual(game.hazy[0], killer)
 
     def _to_interrogation(self):
         self.game.advance()
@@ -500,3 +508,25 @@ class PriceShowFeatureTests(unittest.TestCase):
 
 
 MAX_PRICE = 10_000_000
+
+
+class AlibiRecapTests(unittest.TestCase):
+    def test_recap_only_at_the_end_and_tells_the_story(self):
+        for seed in range(15):
+            game, _, players = make(Alibi, 5, seed=seed)
+            ids = [p.id for p in players]
+            game.advance()
+            for viewer in [*ids, "tv:screen"]:
+                self.assertNotIn("recap", str(game.view_for(viewer)))
+            while game.phase != "vote":
+                game.advance()
+            for pid in ids:
+                game.handle(pid, {"a": "vote", "target": next(o for o in ids if o != pid)})
+            recap = game.view_for("tv:screen")["result"]["recap"]
+            text = " ".join(recap)
+            self.assertIn(game.name_of(game.killer), text)
+            for s in game.fake:
+                self.assertIn(game.slots[s], text)  # every lie is explained
+            if game.hazy:
+                self.assertIn(game.name_of(game.hazy[0]), text)
+            self.assertLessEqual(len(recap), 8)

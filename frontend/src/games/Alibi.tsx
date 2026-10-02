@@ -174,7 +174,8 @@ function Briefing({ view }: { view: AlibiView }) {
         </p>
       ) : (
         <p>
-          <span className="chip teal">You are innocent</span> Your card is the truth. Someone else’s isn’t.
+          <span className="chip teal">You are innocent</span> Your card is the truth as you remember it. Careful: one
+          innocent’s memory is usually a little hazy, and it might be yours.
         </p>
       )}
     </Card>
@@ -305,7 +306,11 @@ function Board({
             {view.clues.map((c, i) => (
               <li key={i} className="clue">
                 📹 {c.location} at {c.label}:{" "}
-                {c.occupants.length ? c.occupants.map((id) => nameOf(view.players, id)).join(", ") : "nobody in frame"}
+                {c.kind === "headcount"
+                  ? `blurry feed, ${c.count} ${c.count === 1 ? "person" : "people"} in frame`
+                  : c.occupants?.length
+                    ? c.occupants.map((id) => nameOf(view.players, id)).join(", ")
+                    : "nobody in frame"}
               </li>
             ))}
           </ul>
@@ -435,6 +440,14 @@ function Result({ view, you, tv }: { view: AlibiView; you: string; tv: boolean }
           </table>
         </div>
         <p className="muted space-top">Highlighted cells: where the killer’s card told a different story.</p>
+      </Card>
+      <Card tone="soft">
+        <h3>How it happened</h3>
+        <ol className="evidence">
+          {r.recap.map((line, i) => (
+            <li key={i}>{line}</li>
+          ))}
+        </ol>
       </Card>
       <Card>
         <h3>Votes</h3>

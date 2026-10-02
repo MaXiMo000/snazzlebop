@@ -68,7 +68,8 @@ export interface AlibiView extends GameBase {
   };
   claims: AlibiClaim[];
   flags: { kind: string; slot: number; label: string; players: string[]; text: string }[];
-  clues: { kind: string; location: string; slot: number; label: string; occupants: string[] }[];
+  /** "camera" names who was there; "headcount" (blurry feed) only counts them */
+  clues: { kind: "camera" | "headcount"; location: string; slot: number; label: string; occupants?: string[]; count?: number }[];
   log: { kind: string; text: string }[];
   votes_in: number;
   you_voted: string | null;
@@ -79,6 +80,8 @@ export interface AlibiView extends GameBase {
     votes: Record<string, string>;
     truth: Record<string, string[]>;
     fake_slots: number[];
+    hazy: { player: string; slot: number } | null;
+    recap: string[];
   };
 }
 
