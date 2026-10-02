@@ -121,6 +121,25 @@ Result: 2/2 pass. The first run failed on mobile: the 7-column Alibi truth table
 at 390 px and covered the "Play another game" button. Fixed with a focusable, labelled scroll region
 around the table.
 
+## 5. Phase 4 additions (re-run after the new games, host tools and TV mode)
+
+- **Backend:** 106 tests pass, including `view_for` secrecy for every game against a TV spectator id,
+  Telepathy and Mural rules and secrecy, host tools, and the TV read-only/cap/eviction rules.
+- **Simulator:** now plays all five games. New checks:
+  - Telepathy picks only ever reach their owner, and points are recomputed from the rules.
+  - Mural: exactly one Mole, the Mole never receives the painting, every innocent gets the same one.
+  - Price: sabotage and double-or-nothing appear only in their owner's frames; each player's points
+    are recomputed from the revealed history and must match the scoreboard exactly.
+  - Passed for 3, 5 and 7 bots across several seeds.
+- **Abuse suite:** 7/7 pass again on the final image (slow reader dropped after 16 s while the room kept
+  playing).
+- **Lighthouse:** home is 100/100/100 (a11y/best practices/SEO); room pages are noindex by design.
+- **Playwright:** 14 tests across mobile and desktop. They add Telepathy and Mural, TV mode, host
+  tools (rename/lock/kick with axe), reconnect after a dropped socket, the share card, and reduced motion.
+- **Alibi balance** (`scripts/tune_alibi.py`, 5,000 games per size, simple human-like bots): the killer
+  escaped 12% at 5 players before the change and 37-43% at 4-8 players after it (37-38% at 5). Bots are
+  a model of play, not people: real tables will vary.
+
 ## What is not covered (be honest)
 
 - **Single instance, in-memory limits.** Rate limits and rooms reset on restart and are per process.
