@@ -41,8 +41,19 @@ ALLOWED_KEYS = {
     ("frenemy", "reveal"): {"game", "phase", "round", "rounds", "remaining", "prompt", "players", "submitted"}
     | {"you_submitted", "result"},
     ("price", "guess"): {"game", "phase", "round", "rounds", "remaining", "item", "commit", "chips", "locked"}
-    | {"you_locked", "rollover", "your_guesses"},
-    ("alibi", "briefing"): {"game", "phase", "round", "rounds", "remaining", "players", "victim", "scene"}
+    | {"you_locked", "rollover", "your_guesses", "rigged", "final_round", "sabotage_left", "your_sabotage"}
+    | {"your_double"},
+    ("alibi", "briefing"): {
+        "game",
+        "phase",
+        "round",
+        "rounds",
+        "remaining",
+        "players",
+        "setting",
+        "victim",
+        "scene",
+    }
     | {"murder_slot", "murder_label", "slots", "locations", "you", "claims", "flags", "clues", "log"}
     | {"votes_in", "you_voted"},
 }
@@ -168,6 +179,11 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
                         check(not (amounts & seen), f"{b.name} saw another player's guess before the reveal")
                 mine = set(g.get("your_guesses") or [])
                 check(mine <= planted.get(b.pid, set()), f"{b.name} was shown guesses that aren't theirs")
+                own = MOVES.get(b.pid, {})
+                check(
+                    g["your_sabotage"] in (None, own.get("sabotage")), f"{b.name} saw someone else's sabotage"
+                )
+                check(not g["your_double"] or own.get("double"), f"{b.name} saw someone else's double")
             if game == "alibi":
                 you = g["you"]
                 if you["is_killer"]:
@@ -232,10 +248,22 @@ async def play_alibi(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     print(f"  alibi: killer {'caught' if result['caught'] else 'escaped'}; flags: {sum(flagged.values())}")
 
 
+# Secret Price moves each bot made: only its owner may ever see them before the reveal.
+MOVES: dict[str, dict[str, Any]] = {}
+
+
 async def play_price(host: Bot, bots: list[Bot], planted: dict[str, set[int]]) -> None:
+    MOVES.clear()
     for rnd in range(1, 6):
         await all_until(bots, game_is("price", "guess", rnd), f"price guess {rnd}")
         commit = host.state["game"]["commit"]  # type: ignore[index]
+        if rnd == 1:  # bot 1 plants a sabotage on the host (who guesses low and usually wins)
+            MOVES[bots[1].pid] = {"sabotage": host.pid}
+            await bots[1].send(t="act", a="sabotage", target=host.pid)
+        if rnd == 5:  # final item: host and bot 2 go Double or Nothing
+            for b in (bots[0], bots[2]):
+                MOVES.setdefault(b.pid, {})["double"] = True
+                await b.send(t="act", a="double", on=True)
         for i, b in enumerate(bots):
             # Distinct per bot and round. Even bots stay under the cheapest possible price ($240 item
             # x0.5 = $120) so every round has a winner; odd bots overshoot the priciest ($2.6M x2).
@@ -249,6 +277,10 @@ async def play_price(host: Bot, bots: list[Bot], planted: dict[str, set[int]]) -
         proof = hashlib.sha256(f"{r['modifier']}:{r['nonce']}".encode()).hexdigest()
         check(proof == commit, "revealed modifier/nonce do not match the sealed commitment")
         check(r["true_price"] == round(r["base_price"] * r["modifier"]), "true price != base * modifier")
+        if rnd == 1:
+            check(r["sabotage"] == {bots[1].pid: host.pid}, "sabotage missing from the reveal")
+        if rnd == 5:
+            check(set(r["double"]) == {bots[0].pid, bots[2].pid}, "double-or-nothing missing from the reveal")
         await skip(host)
 
 

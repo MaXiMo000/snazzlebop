@@ -17,6 +17,8 @@ ITEMS = PRICE_ITEMS
 
 MODIFIERS = [0.5, 1.0, 2.0]
 MODIFIER_WEIGHTS = [0.35, 0.30, 0.35]
+# One mid-game round is openly "rigged": wilder multipliers (still sealed), double pot.
+RIGGED_MODIFIERS = [0.1, 3.0, 5.0]
 BASE_POT = 100
 MAX_GUESS = 10_000_000
 CHIPS_PER_GAME = 2
@@ -48,16 +50,33 @@ class PriceIsWeird(Game):
         self.chips = {p.id: CHIPS_PER_GAME for p in self.players}
         self.rollover = 0
         self.history: list[dict[str, Any]] = []
+        self.rigged_round = self.rng.randrange(1, self.ROUNDS - 1)  # never the opener or the final
+        self.sabotage_left = {p.id: 1 for p in self.players}
         self._begin_round()
+
+    @property
+    def is_rigged(self) -> bool:
+        return self.round == self.rigged_round
+
+    @property
+    def is_final(self) -> bool:
+        """The last item is Double or Nothing."""
+        return self.round == self.ROUNDS - 1
 
     # -- round lifecycle ----------------------------------------------------
     def _begin_round(self) -> None:
-        self.modifier = self.rng.choices(MODIFIERS, MODIFIER_WEIGHTS)[0]
+        self.modifier = (
+            self.rng.choice(RIGGED_MODIFIERS)
+            if self.is_rigged
+            else self.rng.choices(MODIFIERS, MODIFIER_WEIGHTS)[0]
+        )
         self.nonce = f"{self.rng.getrandbits(128):032x}"
         self.commit = commitment(self.modifier, self.nonce)
         self.guesses: dict[str, list[int]] = {}
         self.order: list[str] = []
         self.chip_used: set[str] = set()
+        self.sabotage: dict[str, str] = {}  # saboteur -> target, secret until the reveal
+        self.doubling: set[str] = set()  # Double or Nothing opt-ins, secret until the reveal
         self.last_result: dict[str, Any] | None = None
         self.phase = "guess"
         self.set_deadline(self.timings["guess"])
@@ -72,15 +91,28 @@ class PriceIsWeird(Game):
             if valid:
                 best[pid] = max(valid)
         winner: str | None = None
-        pot = BASE_POT + self.rollover
+        stake = BASE_POT * (2 if self.is_rigged else 1)
+        pot = stake + self.rollover
         if best:
             top = max(best.values())
             # Tie -> whoever locked in first.
             winner = next(pid for pid in self.order if best.get(pid) == top)
             self.add_points(winner, pot)
             self.rollover = 0
+            thieves = [s for s, t in self.sabotage.items() if t == winner]
+            if thieves:
+                share = (pot // 2) // len(thieves)
+                for s in thieves:
+                    self.add_points(s, share)
+                self.add_points(winner, -share * len(thieves))
         else:
-            self.rollover += BASE_POT
+            self.rollover += stake
+        double: dict[str, str] = {}
+        if self.is_final:
+            for pid in sorted(self.doubling):
+                won = pid == winner
+                self.round_scores[pid] = self.round_scores.get(pid, 0) * 2 if won else 0
+                double[pid] = "doubled" if won else "wiped"
         self.last_result = {
             "item": item["name"],
             "base_price": item["price"],
@@ -92,6 +124,9 @@ class PriceIsWeird(Game):
             "winner": winner,
             "pot": pot if winner else 0,
             "rollover": self.rollover,
+            "rigged": self.is_rigged,
+            "sabotage": dict(self.sabotage),
+            "double": double,
         }
         self.history.append(self.last_result)
         self.phase = "reveal"
@@ -111,10 +146,34 @@ class PriceIsWeird(Game):
     # -- actions ------------------------------------------------------------
     def handle(self, pid: str, action: dict[str, Any]) -> None:
         self.require_player(pid)
-        if action.get("a") != "guess":
+        kind = action.get("a")
+        if kind not in ("guess", "sabotage", "double"):
             raise GameError("bad_action", "Unknown action")
         if self.phase != "guess":
             raise GameError("wrong_phase", "Guessing is closed")
+        if kind == "sabotage":
+            target = action.get("target")
+            if not isinstance(target, str) or target not in self.round_scores or target == pid:
+                raise GameError("bad_input", "Pick another player to sabotage")
+            if self.sabotage_left.get(pid, 0) <= 0:
+                raise GameError("no_sabotage", "You've already used your sabotage token")
+            self.sabotage_left[pid] -= 1
+            self.sabotage[pid] = target
+            self.bump()
+            return
+        if kind == "double":
+            if not self.is_final:
+                raise GameError("wrong_phase", "Double or Nothing is only on the final item")
+            if pid in self.guesses:
+                raise GameError("already_locked", "Decide before you lock in your guess")
+            if action.get("on") is True:
+                self.doubling.add(pid)
+            elif action.get("on") is False:
+                self.doubling.discard(pid)
+            else:
+                raise GameError("bad_input", "Say yes or no")
+            self.bump()
+            return
         if pid in self.guesses:
             raise GameError("already_locked", "Your guess is already locked in")
         amount = as_int(action.get("amount"), lo=1, hi=MAX_GUESS, field="Guess")
@@ -162,6 +221,12 @@ class PriceIsWeird(Game):
             "locked": sorted(self.guesses),
             "you_locked": pid in self.guesses,
             "rollover": self.rollover,
+            "rigged": self.is_rigged,
+            "final_round": self.is_final,
+            # Only your own secret moves: nobody sees who sabotaged whom or who doubled until the reveal.
+            "sabotage_left": self.sabotage_left.get(pid, 0),
+            "your_sabotage": self.sabotage.get(pid) if self.phase == "guess" else None,
+            "your_double": pid in self.doubling if self.phase == "guess" else False,
         }
         # The base price and modifier stay hidden until the reveal.
         if self.phase in ("reveal", "final") and self.last_result:

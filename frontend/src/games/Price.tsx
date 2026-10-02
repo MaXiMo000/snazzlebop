@@ -18,6 +18,16 @@ type Show = ReturnType<typeof useShow>;
 
 export function Price({ view, you, players, receivedAt, send, tv = false }: Props) {
   const show = useShow();
+  useOnChange(`${view.phase}:${view.round}`, () => {
+    if (view.phase !== "guess") return;
+    if (view.rigged) {
+      sfx.buzz();
+      show.stinger("RIGGED ROUND!", "bad");
+    } else if (view.final_round) {
+      sfx.fanfare();
+      show.stinger("DOUBLE OR NOTHING!");
+    }
+  });
   useOnChange(view.phase, (_, phase) => {
     if (phase === "final") {
       sfx.fanfare();
@@ -28,12 +38,18 @@ export function Price({ view, you, players, receivedAt, send, tv = false }: Prop
   const sign =
     view.phase === "final"
       ? "Final scores"
-      : `Item ${Math.min(view.round, view.rounds)} of ${view.rounds} · ${view.phase === "guess" ? "Guess" : "Chaos spin"}`;
+      : `Item ${Math.min(view.round, view.rounds)} of ${view.rounds} · ${
+          view.rigged ? "Rigged round" : view.final_round ? "Double or Nothing" : view.phase === "guess" ? "Guess" : "Chaos spin"
+        }`;
   return (
     <div className="seg-price stack">
       {show.node}
       <ShowHead sign={sign} title="Price Is Weird" remaining={view.remaining} receivedAt={receivedAt}>
-        {view.rollover > 0 && view.phase !== "final" && <span className="chip plum">Jackpot rollover +{view.rollover}</span>}
+        <div className="row">
+          {view.rigged && view.phase !== "final" && <span className="chip cherry">Wild spin · double pot</span>}
+          {view.final_round && view.phase === "guess" && <span className="chip plum">Win it: score x2 · miss it: wiped</span>}
+          {view.rollover > 0 && view.phase !== "final" && <span className="chip plum">Jackpot rollover +{view.rollover}</span>}
+        </div>
       </ShowHead>
 
       <div key={`${view.phase}-${view.round}`} className="stack enter">
@@ -57,7 +73,10 @@ export function Price({ view, you, players, receivedAt, send, tv = false }: Prop
                   <p className="muted">Closest without going over wins. Then the chaos spin…</p>
                 </Card>
               ) : (
-                <GuessForm view={view} send={send} />
+                <>
+                  <Tricks view={view} players={players} you={you} send={send} />
+                  <GuessForm view={view} send={send} />
+                </>
               ))}
             {view.phase === "reveal" && view.result && <Reveal result={view.result} players={players} you={you} show={show} />}
           </>
@@ -147,17 +166,86 @@ function GuessForm({ view, send }: Pick<Props, "view" | "send">) {
   );
 }
 
+/** Secret moves for this item: the sabotage token and (final item only) Double or Nothing. */
+function Tricks({ view, players, you, send }: Pick<Props, "view" | "players" | "you" | "send">) {
+  const [target, setTarget] = useState("");
+  const others = players.filter((p) => p.id !== you);
+  const canSabotage = view.sabotage_left > 0 && !view.your_sabotage;
+  if (!canSabotage && !view.your_sabotage && !view.final_round) return null;
+  return (
+    <Card tone="soft">
+      <h3>Dirty tricks</h3>
+      {view.final_round && (
+        <label className="check space-top">
+          <input
+            type="checkbox"
+            checked={view.your_double}
+            disabled={view.you_locked}
+            onChange={(e) => {
+              sfx.pop();
+              send({ t: "act", a: "double", on: e.target.checked });
+            }}
+          />
+          <span>
+            <b>Double or Nothing.</b> Win this item and your score for this game doubles. Miss it and it’s wiped. Nobody
+            else knows until the reveal.
+          </span>
+        </label>
+      )}
+      {view.your_sabotage ? (
+        <p className="space-top">
+          💣 Sabotage set on <b>{nameOf(players, view.your_sabotage)}</b>. If they win this item, you steal half their pot.
+        </p>
+      ) : (
+        canSabotage && (
+          <div className="ask-form space-top">
+            <div>
+              <label className="field" htmlFor="sabotage-target">
+                Sabotage (1 per game)
+              </label>
+              <select id="sabotage-target" value={target} onChange={(e) => setTarget(e.target.value)}>
+                <option value="">Pick a rival…</option>
+                {others.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Btn
+              variant="danger"
+              disabled={!target}
+              onClick={() => {
+                sfx.pop();
+                send({ t: "act", a: "sabotage", target });
+              }}
+            >
+              Plant it
+            </Btn>
+            <p className="muted">If they win this item, you steal half their pot. Secret until the reveal.</p>
+          </div>
+        )
+      )}
+    </Card>
+  );
+}
+
 const MULT: Record<string, { label: string; cls: string; say: string }> = {
+  "0.1": { label: "×0.1", cls: "half", say: "times one tenth" },
   "0.5": { label: "×½", cls: "half", say: "times one half" },
   "1": { label: "×1", cls: "one", say: "times one" },
   "2": { label: "×2", cls: "two", say: "times two" },
+  "3": { label: "×3", cls: "two", say: "times three" },
+  "5": { label: "×5", cls: "two", say: "times five" },
 };
 const mult = (m: number) => MULT[String(m)] ?? { label: `×${m}`, cls: "one", say: `times ${m}` };
 const CYCLE = [0.5, 1, 2];
+const WILD = [0.1, 3, 5];
 
-function Reel({ modifier }: { modifier: number }) {
+function Reel({ modifier, rigged }: { modifier: number; rigged: boolean }) {
   // 17 decoy cells, then the sealed result: the strip always lands on its last cell.
-  const cells = [...Array.from({ length: 17 }, (_, i) => CYCLE[i % 3]!), modifier];
+  const decoys = rigged ? WILD : CYCLE;
+  const cells = [...Array.from({ length: 17 }, (_, i) => decoys[i % 3]!), modifier];
   return (
     <div className="reel-window" aria-hidden="true">
       <ul className="reel">
@@ -201,7 +289,7 @@ function Reveal({ result, players, you, show }: { result: PriceResult; players: 
   return (
     <Card className="center">
       <h3>The chaos spin</h3>
-      <Reel modifier={result.modifier} />
+      <Reel modifier={result.modifier} rigged={result.rigged} />
       <p className="space-top" role="status">
         {landed ? (
           <>
@@ -256,6 +344,21 @@ function Reveal({ result, players, you, show }: { result: PriceResult; players: 
               </tbody>
             </table>
           </div>
+          {(Object.keys(result.sabotage).length > 0 || Object.keys(result.double).length > 0) && (
+            <ul className="evidence">
+              {Object.entries(result.sabotage).map(([who, target]) => (
+                <li key={`s-${who}`} className={target === result.winner ? "flag" : ""}>
+                  💣 {nameOf(players, who)} sabotaged {nameOf(players, target)}
+                  {target === result.winner ? " and stole half the pot!" : ". It fizzled."}
+                </li>
+              ))}
+              {Object.entries(result.double).map(([who, outcome]) => (
+                <li key={`d-${who}`} className={outcome === "doubled" ? "clue" : "flag"}>
+                  🎲 {nameOf(players, who)} went Double or Nothing: {outcome === "doubled" ? "DOUBLED!" : "wiped out."}
+                </li>
+              ))}
+            </ul>
+          )}
           {!result.winner && (
             <p>
               {Object.keys(result.guesses).length ? "💥 Everyone went over!" : "🦗 Nobody guessed."} The pot rolls into the next item.

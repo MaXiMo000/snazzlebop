@@ -93,6 +93,11 @@ export interface PriceResult {
   winner: string | null;
   pot: number;
   rollover: number;
+  rigged: boolean;
+  /** saboteur -> target, revealed with the result */
+  sabotage: Record<string, string>;
+  /** Double or Nothing outcomes on the final item */
+  double: Record<string, "doubled" | "wiped">;
 }
 export interface PriceView extends GameBase {
   game: "price";
@@ -102,6 +107,11 @@ export interface PriceView extends GameBase {
   locked: string[];
   you_locked: boolean;
   rollover: number;
+  rigged: boolean;
+  final_round: boolean;
+  sabotage_left: number;
+  your_sabotage: string | null;
+  your_double: boolean;
   your_guesses?: number[];
   result?: PriceResult;
   history?: PriceResult[];

@@ -422,3 +422,81 @@ class ContentTests(unittest.TestCase):
             g.start()
             titles.append(g.view_for("p0")["setting"])
         self.assertEqual(len(set(titles)), 10)
+
+
+class PriceShowFeatureTests(unittest.TestCase):
+    def _to_round(self, game, r):
+        while game.round < r:
+            game.advance()
+
+    def test_exactly_one_rigged_round_with_wild_multiplier_and_double_pot(self):
+        from app.games.price import RIGGED_MODIFIERS, commitment
+
+        for seed in range(30):
+            game, _, players = make(PriceIsWeird, 3, seed=seed)
+            rigged = []
+            for r in range(PriceIsWeird.ROUNDS):
+                self._to_round(game, r)
+                view = game.view_for("p0")
+                if view["rigged"]:
+                    rigged.append(r)
+                    self.assertIn(game.modifier, RIGGED_MODIFIERS)
+                    self.assertEqual(game.commit, commitment(game.modifier, game.nonce))
+                    carried = game.rollover
+                    game.handle("p0", {"a": "guess", "amount": 1})
+                    game.advance()
+                    self.assertEqual(game.last_result["pot"], 200 + carried)  # double stake
+                    self.assertTrue(game.last_result["rigged"])
+                else:
+                    game.advance()
+                game.advance() if game.phase == "reveal" else None
+            self.assertEqual(len(rigged), 1)
+            self.assertIn(rigged[0], (1, 2, 3))  # never the opener or the double-or-nothing final
+
+    def test_sabotage_steals_half_and_stays_secret_until_reveal(self):
+        game, _, _ = make(PriceIsWeird, 3, seed=2)
+        game.handle("p1", {"a": "sabotage", "target": "p0"})
+        for viewer in ("p0", "p2", "tv:x"):
+            v = game.view_for(viewer)
+            self.assertIsNone(v["your_sabotage"])
+            # Nothing in anyone else's view links p1 to p0 (no player ids appear at all yet).
+            self.assertNotIn("'p0'", str(v))
+            self.assertNotIn("'p1'", str(v))
+        self.assertEqual(game.view_for("p1")["your_sabotage"], "p0")
+        self.assertEqual(game.view_for("p1")["sabotage_left"], 0)
+        with self.assertRaises(GameError):
+            game.handle("p1", {"a": "sabotage", "target": "p2"})  # one per game
+        with self.assertRaises(GameError):
+            game.handle("p2", {"a": "sabotage", "target": "p2"})  # not yourself
+        game.handle("p0", {"a": "guess", "amount": 1})  # p0 is the only valid guess: wins
+        game.handle("p1", {"a": "guess", "amount": MAX_PRICE})
+        game.handle("p2", {"a": "guess", "amount": MAX_PRICE})
+        r = game.last_result
+        self.assertEqual(r["winner"], "p0")
+        self.assertEqual(r["sabotage"], {"p1": "p0"})
+        self.assertEqual(game.scores()["p0"], 50)
+        self.assertEqual(game.scores()["p1"], 50)
+
+    def test_double_or_nothing_doubles_winner_wipes_others_and_is_secret(self):
+        game, _, _ = make(PriceIsWeird, 3, seed=4)
+        game.round_scores.update({"p0": 300, "p1": 200, "p2": 100})
+        with self.assertRaises(GameError):
+            game.handle("p0", {"a": "double", "on": True})  # only on the final item
+        self._to_round(game, PriceIsWeird.ROUNDS - 1)
+        self.assertTrue(game.view_for("p0")["final_round"])
+        game.handle("p0", {"a": "double", "on": True})
+        game.handle("p1", {"a": "double", "on": True})
+        self.assertTrue(game.view_for("p0")["your_double"])
+        self.assertFalse(game.view_for("p2")["your_double"])
+        self.assertNotIn("double", str(game.view_for("p2").get("result", "")))
+        game.handle("p0", {"a": "guess", "amount": 1})  # wins (only valid guess)
+        game.handle("p1", {"a": "guess", "amount": MAX_PRICE})
+        game.handle("p2", {"a": "guess", "amount": MAX_PRICE})
+        pot = game.last_result["pot"]
+        self.assertEqual(game.scores()["p0"], (300 + pot) * 2)
+        self.assertEqual(game.scores()["p1"], 0)  # missed: wiped
+        self.assertEqual(game.scores()["p2"], 100)  # didn't gamble: unchanged
+        self.assertEqual(game.last_result["double"], {"p0": "doubled", "p1": "wiped"})
+
+
+MAX_PRICE = 10_000_000
