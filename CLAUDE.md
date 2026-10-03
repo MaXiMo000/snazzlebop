@@ -107,7 +107,10 @@ Free web instances sleep when idle and drop live rooms; use the Starter plan for
 - TypeScript: `strict`, no `any`, styling only via classes + the CSS variables in `styles.css` (no `style=` props).
 - UI: retro TV game show, NOT comic-book (no Bangers/halftone/KAPOW: that is the AniNest look). Bungee
   display + Fredoka body; cream/plum/tangerine/mustard/teal/cherry; marquee bulbs, sunburst, podium
-  buttons, split-flap codes. Each game is a segment (`.seg-<id>` sets `--accent`). Effects respect
+  buttons, split-flap codes. Each game is a segment (`.seg-<id>` sets `--accent`). Dark theme is the
+  default (`:root`), light is `:root[data-theme="light"]`: use the role tokens (`--bg`, `--surface`,
+  `--ink`, `--muted`, `--edge`, `--shadow`, `--stage`, `--field`), not raw brand colours, for anything
+  that should follow the theme. Effects respect
   `prefers-reduced-motion`; sounds are generated (`lib/sfx.ts`), off by default. 44px targets, visible
   focus, every control labelled, contrast >= 4.5:1 (`npm run contrast`).
 - Content: big pools, no repeats within a room until a pool is exhausted (fun long-term). New content

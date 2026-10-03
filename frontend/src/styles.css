@@ -24,6 +24,23 @@
   --bulb: #ffe7a1;
   --bulb-off: #8a6a3d;
 
+  /* Theme roles. Dark is the default: a game show studio after hours. Light lives in
+     :root[data-theme="light"] below. Brand colours above never change. */
+  --bg: #140b1b;
+  --surface: #221530;
+  --surface-2: #2e1d3d;
+  --field: #1a1023;
+  --ink: #fff1dc;
+  --muted: #cdb6d6;
+  --placeholder: #a991b2;
+  --edge: #5e4070;
+  --shadow: #05020a;
+  --stage: #2b1239;
+  --disabled-bg: #3a2a44;
+  --disabled-fg: #b7a2bf;
+  --glow: 0 0 34px rgba(255, 107, 44, 0.22);
+  --rays: rgba(255, 107, 44, 0.1);
+
   --accent: var(--tangerine);
   --accent-ink: var(--plum);
 
@@ -32,11 +49,39 @@
     "Fredoka Variable", "Fredoka", ui-rounded, "Segoe UI", system-ui, sans-serif;
   --radius: 22px;
   --radius-sm: 14px;
-  --lift: 0 6px 0 var(--plum);
-  --lift-sm: 0 4px 0 var(--plum);
-  --line: 3px solid var(--plum);
+  --lift: 0 6px 0 var(--shadow);
+  --lift-sm: 0 4px 0 var(--shadow);
+  --line: 3px solid var(--edge);
   --gutter: 16px;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #fff1dc;
+  --surface: #fffaf1;
+  --surface-2: #ffe2b8;
+  --field: #ffffff;
+  --ink: #2b1b33;
+  --muted: #6b4f73;
+  --placeholder: #7d6683;
+  --edge: #2b1b33;
+  --shadow: #2b1b33;
+  --stage: #2b1b33;
+  --disabled-bg: #e9dccb;
+  --disabled-fg: #6b4f73;
+  --glow: 0 0 0 transparent;
+  --rays: rgba(255, 107, 44, 0.16);
   color-scheme: light;
+}
+
+/* Dark: pastel "soft" panels become deep tints of each segment's colour. */
+:root:not([data-theme="light"]) {
+  --teal-light: #134a52;
+  --cherry-light: #4f1b29;
+}
+:root:not([data-theme="light"]) .card.soft,
+:root:not([data-theme="light"]) [class*="seg-"] {
+  --accent-soft: color-mix(in srgb, var(--accent) 26%, #1b1024);
 }
 
 /* Segments. Accent backgrounds always carry --accent-ink text. */
@@ -93,18 +138,18 @@ body {
   font-weight: 500;
   font-size: 1.0625rem;
   line-height: 1.45;
-  color: var(--plum);
-  background-color: var(--cream);
+  color: var(--ink);
+  background-color: var(--bg);
   /* Sunburst rays fanning down from the top of the "studio". */
   background-image:
     radial-gradient(
       ellipse at 50% -10%,
-      rgba(255, 241, 220, 0) 0,
-      var(--cream) 70%
+      transparent 0,
+      var(--bg) 70%
     ),
     repeating-conic-gradient(
       from -90deg at 50% -8%,
-      rgba(255, 107, 44, 0.16) 0 7deg,
+      var(--rays) 0 7deg,
       transparent 7deg 14deg
     );
   background-attachment: fixed;
@@ -141,14 +186,14 @@ strong {
 }
 
 a {
-  color: var(--plum);
+  color: var(--ink);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
 
 /* Focus: chunky, high-contrast, never removed. */
 :focus-visible {
-  outline: 4px solid var(--plum);
+  outline: 4px solid var(--edge);
   outline-offset: 3px;
   box-shadow: 0 0 0 7px var(--bulb);
   border-radius: 10px;
@@ -172,7 +217,7 @@ a {
   top: -80px;
   z-index: 100;
   padding: 12px 18px;
-  background: var(--plum);
+  background: var(--stage);
   color: var(--cream);
   font-weight: 700;
   border-radius: 999px;
@@ -199,7 +244,7 @@ a {
   min-height: 44px;
   font-family: var(--display);
   font-size: clamp(1.15rem, 4.5vw, 1.6rem);
-  color: var(--plum);
+  color: var(--ink);
   text-decoration: none;
   letter-spacing: 0.02em;
 }
@@ -216,6 +261,9 @@ a {
   border: var(--line);
   box-shadow: var(--lift-sm);
   font-size: 1.1rem;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 
 .app {
@@ -258,7 +306,7 @@ a {
   text-align: center;
 }
 .muted {
-  color: var(--plum-soft);
+  color: var(--muted);
 }
 .mono {
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -276,7 +324,7 @@ a {
 /* ---- cards ----------------------------------------------------------------- */
 .card {
   position: relative;
-  background: var(--paper);
+  background: var(--surface);
   border: var(--line);
   border-radius: var(--radius);
   box-shadow: var(--lift);
@@ -287,14 +335,14 @@ a {
   color: var(--accent-ink);
 }
 .card.soft {
-  background: var(--accent-soft, var(--cream-2));
+  background: var(--accent-soft, var(--surface-2));
 }
 
 /* The stage: dark plum with a ring of marquee bulbs. */
 .card.stage {
-  background: var(--plum);
+  background: var(--stage);
   color: var(--cream);
-  border-color: var(--plum);
+  border-color: var(--edge);
   padding: clamp(30px, 7vw, 44px);
 }
 .card.stage::before {
@@ -363,11 +411,11 @@ a {
 .btn:hover:not(:disabled) {
   filter: brightness(1.06);
   transform: translateY(-1px);
-  box-shadow: 0 7px 0 var(--plum);
+  box-shadow: 0 7px 0 var(--shadow);
 }
 .btn:active:not(:disabled) {
   transform: translateY(5px);
-  box-shadow: 0 1px 0 var(--plum);
+  box-shadow: 0 1px 0 var(--shadow);
 }
 .btn.go {
   --bg: var(--teal);
@@ -381,7 +429,8 @@ a {
   --fg: #fff;
 }
 .btn.ghost {
-  --bg: var(--paper);
+  --bg: var(--surface);
+  --fg: var(--ink);
 }
 .btn.accent {
   --bg: var(--accent);
@@ -404,8 +453,8 @@ a {
 /* After the variants, and doubled up, so no variant colour can make a disabled button look live. */
 .btn.btn:disabled {
   cursor: not-allowed;
-  --bg: #e9dccb;
-  --fg: #6b4f73;
+  --bg: var(--disabled-bg);
+  --fg: var(--disabled-fg);
   box-shadow: var(--lift-sm);
 }
 .btn[aria-pressed="true"] {
@@ -421,11 +470,13 @@ a {
   padding: 3px 12px;
   font-weight: 700;
   font-size: 0.85rem;
-  border: 2.5px solid var(--plum);
+  border: 2.5px solid var(--edge);
   border-radius: 999px;
   background: var(--bulb);
   color: var(--plum);
   white-space: nowrap;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
 }
 .chip.cherry {
   background: var(--cherry);
@@ -436,11 +487,14 @@ a {
   color: var(--cream);
 }
 .chip.plum {
-  background: var(--plum);
+  background: var(--stage);
   color: var(--bulb);
 }
 .chip.paper {
-  background: var(--paper);
+  background: var(--surface);
+  --ink: inherit; /* back to the page's ink: .chip sets a dark one for its lit default */
+  --muted: inherit;
+  color: var(--ink);
 }
 .chip.wrap {
   white-space: normal;
@@ -458,6 +512,8 @@ a {
   border: var(--line);
   border-radius: 10px;
   box-shadow: 0 0 0 4px rgba(255, 231, 161, 0.35);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
 }
 
 /* ---- forms ------------------------------------------------------------------ */
@@ -474,14 +530,14 @@ select {
   font: inherit;
   font-weight: 600;
   font-size: 1.1rem;
-  color: var(--plum);
-  background: #fff;
+  color: var(--ink);
+  background: var(--field);
   border: var(--line);
   border-radius: var(--radius-sm);
   box-shadow: inset 0 3px 0 rgba(43, 27, 51, 0.12);
 }
 input::placeholder {
-  color: #7d6683;
+  color: var(--placeholder);
 }
 input[type="text"]:focus-visible,
 select:focus-visible {
@@ -519,6 +575,8 @@ select:focus-visible {
 .alert.calm {
   background: var(--bulb);
   color: var(--plum);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
 }
 button.alert {
   display: block;
@@ -537,10 +595,10 @@ button.alert {
 }
 .hero h1 {
   margin: 0;
-  color: var(--plum);
+  color: var(--ink);
   text-shadow:
     3px 3px 0 var(--tangerine),
-    6px 6px 0 var(--plum);
+    6px 6px 0 var(--shadow);
   transform: rotate(-2deg);
 }
 .hero .tagline {
@@ -549,7 +607,7 @@ button.alert {
   padding: 6px 18px;
   font-weight: 700;
   font-size: clamp(1rem, 3.6vw, 1.25rem);
-  background: var(--plum);
+  background: var(--stage);
   color: var(--bulb);
   border-radius: 999px;
 }
@@ -596,7 +654,7 @@ button.alert {
   min-height: 44px;
   padding: 6px 8px 6px 14px;
   font-weight: 700;
-  background: var(--paper);
+  background: var(--surface);
   border: var(--line);
   border-radius: 999px;
   box-shadow: var(--lift-sm);
@@ -608,7 +666,7 @@ button.alert {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid var(--plum);
+  border: 2px solid var(--edge);
   background: #6be07a;
   box-shadow: 0 0 0 3px rgba(107, 224, 122, 0.35);
 }
@@ -628,7 +686,7 @@ button.alert {
   font-weight: 700;
   color: #fff;
   background: var(--cherry);
-  border: 3px solid var(--plum);
+  border: 3px solid var(--edge);
   border-radius: 50%;
   cursor: pointer;
 }
@@ -637,7 +695,7 @@ button.alert {
   padding: 2px 10px;
   text-align: center;
   font-family: var(--display);
-  background: var(--plum);
+  background: var(--stage);
   color: var(--bulb);
   border-radius: 999px;
 }
@@ -691,11 +749,11 @@ button.alert {
   font-family: var(--display);
   font-size: 1.7rem;
   color: var(--bulb);
-  background: var(--plum);
+  background: var(--stage);
   border: 4px solid var(--bulb);
   border-radius: 50%;
   box-shadow:
-    0 0 0 3px var(--plum),
+    0 0 0 3px var(--shadow),
     var(--lift);
 }
 .timer.urgent {
@@ -707,7 +765,7 @@ button.alert {
   50% {
     transform: scale(1.12);
     box-shadow:
-      0 0 0 3px var(--plum),
+      0 0 0 3px var(--shadow),
       0 0 0 12px rgba(200, 32, 58, 0.3),
       var(--lift);
   }
@@ -725,15 +783,15 @@ button.alert {
   padding: 8px 18px;
   font: inherit;
   font-weight: 700;
-  color: var(--plum);
-  background: var(--paper);
+  color: var(--ink);
+  background: var(--surface);
   border: var(--line);
   border-radius: 999px;
   cursor: pointer;
   white-space: nowrap;
 }
 .tab[aria-selected="true"] {
-  background: var(--plum);
+  background: var(--stage);
   color: var(--bulb);
 }
 
@@ -756,7 +814,7 @@ button.alert {
   align-items: center;
   gap: 12px;
   padding: 8px 8px 8px 10px;
-  background: var(--paper);
+  background: var(--surface);
   border: var(--line);
   border-radius: 18px;
   box-shadow: var(--lift-sm);
@@ -796,6 +854,8 @@ button.alert {
   border: var(--line);
   border-radius: 12px;
   cursor: pointer;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
 }
 .arrow:disabled {
   opacity: 0.35;
@@ -804,7 +864,7 @@ button.alert {
 
 .verdict {
   padding: 14px 16px;
-  background: var(--paper);
+  background: var(--surface);
   border: var(--line);
   border-radius: 18px;
 }
@@ -818,8 +878,8 @@ button.alert {
   margin-top: 8px;
 }
 .gauge .track {
-  fill: #fff;
-  stroke: var(--plum);
+  fill: var(--field);
+  stroke: var(--edge);
   stroke-width: 3px;
 }
 .gauge .fill {
@@ -861,7 +921,7 @@ button.alert {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: var(--paper);
+  background: var(--surface);
   border: var(--line);
   border-radius: 16px;
 }
@@ -913,8 +973,8 @@ button.alert {
 }
 .evidence li {
   padding: 10px 14px;
-  background: var(--paper);
-  border: 2.5px solid var(--plum);
+  background: var(--surface);
+  border: 2.5px solid var(--edge);
   border-radius: 14px;
 }
 .evidence li.flag {
@@ -924,6 +984,9 @@ button.alert {
 }
 .evidence li.clue {
   background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 
 .vote-grid {
@@ -941,7 +1004,7 @@ button.alert {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  background: #fff;
+  background: var(--field);
   border: var(--line);
   border-radius: 14px;
   overflow: hidden;
@@ -960,15 +1023,15 @@ button.alert {
   font-family: var(--display);
   font-weight: 400;
   font-size: 0.85rem;
-  background: var(--plum);
+  background: var(--stage);
   color: var(--bulb);
 }
 .table tbody th {
   font-family: var(--body);
   font-weight: 700;
   font-size: 1rem;
-  background: var(--paper);
-  color: var(--plum);
+  background: var(--surface);
+  color: var(--ink);
 }
 .table td.lie {
   background: var(--cherry-light);
@@ -976,7 +1039,7 @@ button.alert {
 }
 .table .over {
   text-decoration: line-through;
-  color: var(--plum-soft);
+  color: var(--muted);
 }
 
 /* ---- price ----------------------------------------------------------------------------- */
@@ -996,7 +1059,7 @@ button.alert {
   display: inline-block;
   max-width: 100%;
   padding: 4px 12px;
-  background: var(--plum);
+  background: var(--stage);
   color: var(--bulb);
   border-radius: 10px;
 }
@@ -1009,8 +1072,8 @@ button.alert {
   height: var(--cell);
   margin: 0 auto;
   overflow: hidden;
-  background: #fff;
-  border: 4px solid var(--plum);
+  background: var(--field);
+  border: 4px solid var(--edge);
   border-radius: 18px;
   box-shadow:
     inset 0 14px 12px -10px rgba(43, 27, 51, 0.45),
@@ -1043,7 +1106,7 @@ button.alert {
   color: var(--teal);
 }
 .reel li.one {
-  color: var(--plum);
+  color: var(--ink);
 }
 .reel li.two {
   color: var(--cherry);
@@ -1067,6 +1130,8 @@ button.alert {
   border-radius: 14px;
   box-shadow: var(--lift);
   transform: rotate(-2deg);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
 }
 details summary {
   display: inline-flex;
@@ -1078,6 +1143,9 @@ details summary {
 .winner-row td {
   background: var(--bulb);
   font-weight: 700;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 
 /* ---- telepathy ---------------------------------------------------------------------------- */
@@ -1119,9 +1187,9 @@ details summary {
   min-height: 96px;
   padding: 8px 4px;
   font: inherit;
-  color: var(--plum);
+  color: var(--ink);
   text-align: center;
-  background: var(--paper);
+  background: var(--surface);
   border: var(--line);
   border-radius: 16px;
   box-shadow: var(--lift-sm);
@@ -1143,7 +1211,7 @@ details summary {
 }
 .tile-tags {
   font-size: 0.75rem;
-  color: var(--plum-soft);
+  color: var(--muted);
 }
 .tile-hints {
   display: flex;
@@ -1161,6 +1229,9 @@ details summary {
   box-shadow:
     0 0 0 4px var(--mustard),
     var(--lift-sm);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .tile.mine {
   background: var(--teal-light);
@@ -1206,7 +1277,7 @@ details summary {
   font-size: 1.25rem;
   line-height: 1;
   color: var(--plum);
-  background: #fff;
+  background: #fff; /* a real playing card: white in both themes */
   border: 3px solid var(--plum);
   border-radius: 10px;
   box-shadow: 0 4px 0 rgba(43, 27, 51, 0.6);
@@ -1305,8 +1376,8 @@ details summary {
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  background: #fff;
-  border: 2px solid var(--plum);
+  background: var(--field);
+  border: 2px solid var(--edge);
   border-radius: 4px;
   cursor: pointer;
 }
@@ -1317,6 +1388,9 @@ details summary {
 }
 .xw-cell.hl {
   background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .xw-cell.solved {
   background: var(--teal-light);
@@ -1346,14 +1420,17 @@ details summary {
   padding: 8px 12px;
   font: inherit;
   text-align: left;
-  color: var(--plum);
-  background: var(--paper);
-  border: 2.5px solid var(--plum);
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--edge);
   border-radius: 12px;
   cursor: pointer;
 }
 .xw-clue[aria-pressed="true"] {
   background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .xw-clue.done {
   background: var(--teal-light);
@@ -1411,13 +1488,15 @@ details summary {
   white-space: nowrap;
   color: var(--plum);
   background: var(--bulb);
-  border: 5px solid var(--plum);
+  border: 5px solid var(--edge);
   border-radius: 20px;
   box-shadow:
     0 0 0 8px var(--tangerine),
-    0 0 0 13px var(--plum),
+    0 0 0 13px var(--shadow),
     0 18px 0 6px rgba(43, 27, 51, 0.35);
   animation: stinger 1.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
 }
 .stinger.bad {
   background: var(--cherry);
@@ -1456,13 +1535,19 @@ details summary {
   top: -20px;
   width: 11px;
   height: 18px;
-  border: 2px solid var(--plum);
+  border: 2px solid var(--edge);
   border-radius: 3px;
   background: var(--tangerine);
   animation: fall 2.6s cubic-bezier(0.3, 0.1, 0.6, 1) forwards;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .confetti i:nth-child(4n + 1) {
   background: var(--mustard);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .confetti i:nth-child(4n + 2) {
   background: var(--teal);
@@ -1647,6 +1732,8 @@ h4 {
   background: var(--bulb);
   color: var(--plum);
   font-size: 0.85rem;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
 }
 
 .show-strip ol {
@@ -1662,10 +1749,10 @@ h4 {
   padding: 4px 12px;
   font-weight: 700;
   font-size: 0.85rem;
-  border: 2.5px solid var(--plum);
+  border: 2.5px solid var(--edge);
   border-radius: 999px;
-  background: var(--paper);
-  color: var(--plum);
+  background: var(--surface);
+  color: var(--ink);
   white-space: nowrap;
 }
 .show-strip li.done {
@@ -1677,6 +1764,9 @@ h4 {
 .show-strip li.now {
   background: var(--bulb);
   box-shadow: var(--lift-sm);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 
 .host-line .lead {
@@ -1694,8 +1784,8 @@ h4 {
   gap: 12px;
   align-items: flex-start;
   padding: 10px 12px;
-  background: var(--cream);
-  border: 2.5px solid var(--plum);
+  background: var(--bg);
+  border: 2.5px solid var(--edge);
   border-radius: var(--radius-sm);
 }
 .highlight-icon {
@@ -1726,7 +1816,7 @@ h4 {
   margin: -8px -10px -8px 2px;
   color: #fff;
   background: var(--cherry);
-  border: 3px solid var(--plum);
+  border: 3px solid var(--edge);
   border-radius: 50%;
   cursor: pointer;
 }
@@ -1744,7 +1834,7 @@ h4 {
   width: 52px;
   height: 52px;
   font-size: 1.6rem;
-  background: var(--paper);
+  background: var(--surface);
   border: var(--line);
   border-radius: 50%;
   box-shadow: var(--lift-sm);
@@ -1754,7 +1844,7 @@ h4 {
 }
 .react-btn:active:not(:disabled) {
   transform: translateY(3px) scale(0.94);
-  box-shadow: 0 1px 0 var(--plum);
+  box-shadow: 0 1px 0 var(--shadow);
 }
 .react-btn:disabled {
   cursor: default;
@@ -1783,7 +1873,7 @@ h4 {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--bulb);
-  background: var(--plum);
+  background: var(--stage);
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -1837,7 +1927,7 @@ h4 {
   --fg: var(--plum);
 }
 .card.stage .btn[aria-pressed="true"] .order {
-  background: var(--plum);
+  background: var(--stage);
   color: var(--bulb);
 }
 
@@ -1877,8 +1967,8 @@ h4 {
   padding: 18px 14px;
   font: inherit;
   text-align: center;
-  color: var(--plum);
-  background: var(--paper);
+  color: var(--ink);
+  background: var(--surface);
   border: var(--line);
   border-radius: var(--radius);
   box-shadow: var(--lift);
@@ -1929,14 +2019,17 @@ h4 {
   height: 48px;
   font-size: 2.6rem;
   line-height: 1;
-  color: var(--plum);
-  background: var(--paper);
+  color: var(--ink);
+  background: var(--surface);
   border: var(--line);
   border-radius: 12px;
   box-shadow: var(--lift-sm);
 }
 .die.wild {
   background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .die.hot {
   background: var(--accent);
@@ -1962,13 +2055,16 @@ h4 {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border: 2.5px solid var(--plum);
+  border: 2.5px solid var(--edge);
   border-radius: var(--radius-sm);
-  background: var(--cream);
+  background: var(--bg);
 }
 .dice-table li.turn {
   background: var(--bulb);
   box-shadow: var(--lift-sm);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .dice-table li.out {
   border-style: dashed;
@@ -1996,12 +2092,15 @@ h4 {
   gap: 10px;
   align-items: center;
   padding: 10px 12px;
-  border: 2.5px solid var(--plum);
+  border: 2.5px solid var(--edge);
   border-radius: var(--radius-sm);
-  background: var(--cream);
+  background: var(--bg);
 }
 .split-pairs li.mine {
   background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .split-player {
   display: inline-flex;
@@ -2048,8 +2147,8 @@ h4 {
   min-height: 44px;
   padding: 12px 8px;
   font: inherit;
-  color: var(--plum);
-  background: var(--paper);
+  color: var(--ink);
+  background: var(--surface);
   border: var(--line);
   border-radius: var(--radius-sm);
   box-shadow: var(--lift-sm);
@@ -2066,6 +2165,9 @@ h4 {
   background: var(--bulb);
   outline: 4px solid var(--accent);
   outline-offset: 2px;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .wits-value {
   font-family: var(--display);
@@ -2090,8 +2192,8 @@ h4 {
   width: 40px;
   height: 40px;
   font-size: 1.5rem;
-  background: var(--paper);
-  border: 2.5px solid var(--plum);
+  background: var(--surface);
+  border: 2.5px solid var(--edge);
   border-radius: 10px;
 }
 .code.composing .code-cell {
@@ -2141,7 +2243,7 @@ h4 {
   font-family: var(--display);
   font-size: 0.85rem;
   color: #fff;
-  border: 2px solid var(--plum);
+  border: 2px solid var(--edge);
   border-radius: 50%;
 }
 .pocket.red {
@@ -2180,9 +2282,9 @@ h4 {
   gap: 8px 12px;
   align-items: center;
   padding: 10px 12px;
-  border: 2.5px solid var(--plum);
+  border: 2.5px solid var(--edge);
   border-radius: var(--radius-sm);
-  background: var(--cream);
+  background: var(--bg);
 }
 .ticker-name {
   flex: 1 1 8rem;
@@ -2228,9 +2330,9 @@ h4 {
   gap: 10px;
   align-items: center;
   padding: 8px 12px;
-  border: 2.5px solid var(--plum);
+  border: 2.5px solid var(--edge);
   border-radius: var(--radius-sm);
-  background: var(--cream);
+  background: var(--bg);
 }
 .lonely-picks li.crowded {
   border-style: dashed;
@@ -2241,6 +2343,9 @@ h4 {
 .lonely-picks li.win {
   background: var(--bulb);
   box-shadow: var(--lift-sm);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .lonely-n {
   min-width: 2.2rem;
@@ -2273,14 +2378,17 @@ h4 {
   justify-items: center;
   gap: 2px;
   padding: 10px 6px;
-  border: 2.5px solid var(--plum);
+  border: 2.5px solid var(--edge);
   border-radius: var(--radius-sm);
-  background: var(--cream);
+  background: var(--bg);
   text-align: center;
 }
 .box.now {
   background: var(--bulb);
   box-shadow: var(--lift-sm);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
 }
 .box.bomb {
   border-style: dashed;
@@ -2293,4 +2401,60 @@ h4 {
 }
 .box-value {
   font-weight: 700;
+}
+
+/* ---- dark theme polish ----------------------------------------------------------------------- */
+/* Neon after hours: the stage glows, lit things glow, pressed buttons light up like bulbs. */
+:root:not([data-theme="light"]) .card.stage {
+  box-shadow: var(--lift), var(--glow);
+}
+:root:not([data-theme="light"]) .btn[aria-pressed="true"] {
+  --bg: var(--bulb);
+  --fg: var(--plum);
+}
+:root:not([data-theme="light"]) .sign,
+:root:not([data-theme="light"]) .price-tag {
+  box-shadow: var(--lift-sm), 0 0 22px rgba(255, 231, 161, 0.28);
+}
+:root:not([data-theme="light"]) .logo .badge {
+  box-shadow: 0 0 18px rgba(255, 107, 44, 0.55);
+}
+:root:not([data-theme="light"]) .hero h1 {
+  text-shadow:
+    3px 3px 0 var(--tangerine),
+    0 0 28px rgba(255, 107, 44, 0.45);
+}
+:root:not([data-theme="light"]) body {
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(124, 58, 160, 0.35), transparent 70%),
+    radial-gradient(ellipse at 50% -10%, transparent 0, var(--bg) 70%),
+    repeating-conic-gradient(from -90deg at 50% -8%, var(--rays) 0 7deg, transparent 7deg 14deg);
+}
+
+.theme-toggle .knob {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+.theme-toggle:hover .knob {
+  transform: rotate(-20deg);
+}
+.topbar .row {
+  gap: 8px;
+}
+.topbar .row {
+  flex-wrap: nowrap;
+}
+/* Phones: the top bar toggles go icon-only (the label stays for screen readers). */
+@media (max-width: 480px) {
+  .topbar .btn {
+    padding: 8px 12px;
+  }
+  .topbar .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }

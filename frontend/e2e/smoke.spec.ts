@@ -717,3 +717,21 @@ test("Friend Stock Exchange: trade before each game, prices move, books revealed
   expect(a11y).toEqual([]);
   expect(problems).toEqual([]);
 });
+
+test("theme: dark by default, light on request, remembered, and both pass axe", async ({ page }) => {
+  const a11y: string[] = [];
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#140b1b");
+  await axe(page, "home dark", a11y);
+  const toggle = page.getByRole("button", { name: "Light mode" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await toggle.click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.getByRole("button", { name: "Light mode" })).toHaveAttribute("aria-pressed", "true");
+  await axe(page, "home light", a11y);
+  await targets(page, "home light", a11y);
+  expect(a11y).toEqual([]);
+});

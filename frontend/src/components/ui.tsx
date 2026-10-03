@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore, type HTMLAttributes, type ReactNode } from "react";
 import { useCountdown } from "../lib/useRoom";
 import { sfx, sound } from "../lib/sfx";
+import { theme } from "../lib/theme";
 import { useCountUp, useOnChange } from "./fx";
 import type { PlayerInfo } from "../types";
 
@@ -208,7 +209,20 @@ export function SoundToggle() {
   const on = useSyncExternalStore(sound.subscribe, sound.get);
   return (
     <Btn size="small" variant="ghost" aria-pressed={on} onClick={() => sound.set(!on)}>
-      <span aria-hidden="true">{on ? "🔊" : "🔇"}</span> Sound
+      <span aria-hidden="true">{on ? "🔊" : "🔇"}</span> <span className="btn-label">Sound</span>
+    </Btn>
+  );
+}
+
+export function ThemeToggle() {
+  const now = useSyncExternalStore(theme.subscribe, theme.get);
+  const dark = now === "dark";
+  return (
+    <Btn size="small" variant="ghost" className="theme-toggle" aria-pressed={!dark} onClick={() => theme.set(dark ? "light" : "dark")}>
+      <span className="knob" aria-hidden="true">
+        {dark ? "🌙" : "☀️"}
+      </span>{" "}
+      <span className="btn-label">Light mode</span>
     </Btn>
   );
 }

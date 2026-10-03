@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { SoundToggle } from "./components/ui";
+import { SoundToggle, ThemeToggle } from "./components/ui";
 import { Home } from "./pages/Home";
 import { Room } from "./pages/Room";
 
@@ -44,7 +44,10 @@ export function App() {
             Snazzlebop<span className="bang">!</span>
           </span>
         </a>
-        <SoundToggle />
+        <div className="row">
+          <ThemeToggle />
+          <SoundToggle />
+        </div>
       </header>
       <main id="main" className="app">
         {match ? (

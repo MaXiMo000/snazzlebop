@@ -101,6 +101,35 @@ const pairs = [
   ["plum", "cream", "highlight items"],
 ];
 
+// Dark theme (the default): role tokens from :root, plus each segment's soft tint, which is
+// color-mix(in srgb, accent 26%, #1b1024) in the stylesheet.
+const mix = (a, b, t) => {
+  const [x, y] = [c(a), c(b)];
+  const ch = (h, i) => parseInt(h.slice(i, i + 2), 16);
+  return "#" + [1, 3, 5].map((i) => Math.round(ch(x, i) * t + ch(y, i) * (1 - t)).toString(16).padStart(2, "0")).join("");
+};
+const accents = ["cherry", "teal", "mustard", "tangerine", "#0b6e4f", "#0f5a73", "#11643f", "#14532d", "#1f5fae", "#3d4fa3", "#5b2f9e", "#5c4a1f", "#7a1f3d", "#8a3b12", "#8c2f39", "#a3195b", "#b34700"];
+pairs.push(
+  ["ink", "bg", "dark: body text"],
+  ["ink", "surface", "dark: cards"],
+  ["ink", "surface-2", "dark: soft cards (default)"],
+  ["ink", "field", "dark: inputs, tables"],
+  ["ink", "stage", "dark: stage text"],
+  ["bulb", "stage", "dark: lit text on the stage"],
+  ["muted", "bg", "dark: muted on page"],
+  ["muted", "surface", "dark: muted in cards"],
+  ["muted", "surface-2", "dark: muted in soft cards"],
+  ["muted", "field", "dark: muted in tables"],
+  ["placeholder", "field", "dark: input placeholder"],
+  ["disabled-fg", "disabled-bg", "dark: disabled buttons"],
+  ["ink", "#134a52", "dark: your row / done segments (teal-light)"],
+  ["ink", "#4f1b29", "dark: lie cells, frenemy soft (cherry-light)"],
+  ...accents.flatMap((a) => [
+    ["ink", mix(a, "#1b1024", 0.26), `dark: soft card tint of ${a}`],
+    ["muted", mix(a, "#1b1024", 0.26), `dark: muted in soft tint of ${a}`],
+  ]),
+);
+
 let bad = 0;
 for (const [fg, bg, where] of pairs) {
   const r = ratio(fg, bg);
