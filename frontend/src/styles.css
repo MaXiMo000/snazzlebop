@@ -2069,3 +2069,51 @@ h4 {
   font-size: 1.15rem;
   overflow-wrap: anywhere;
 }
+
+/* ---- code crackers -------------------------------------------------------------------------- */
+.seg-codes {
+  --accent: #5c4a1f;
+  --accent-ink: #fff;
+  --accent-soft: #f1e8d0;
+}
+.code {
+  display: inline-flex;
+  gap: 4px;
+  vertical-align: middle;
+}
+.code-cell {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  background: var(--paper);
+  border: 2.5px solid var(--plum);
+  border-radius: 10px;
+}
+.code.composing .code-cell {
+  width: 52px;
+  height: 52px;
+  font-size: 1.9rem;
+}
+.fruit {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.guess-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.guess-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.pegs {
+  font-size: 1.3rem;
+  letter-spacing: 2px;
+}

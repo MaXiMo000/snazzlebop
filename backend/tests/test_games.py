@@ -46,6 +46,7 @@ class RegistryTests(unittest.TestCase):
                 "split",
                 "chicken",
                 "wits",
+                "codes",
             },
         )
 

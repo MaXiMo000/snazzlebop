@@ -190,6 +190,22 @@ for _phase in ("answer", "bet"):
         "chip_value",
         "you",
     }
+for _phase in ("set", "crack"):
+    ALLOWED_KEYS[("codes", _phase)] = {
+        "game",
+        "phase",
+        "round",
+        "rounds",
+        "remaining",
+        "players",
+        "length",
+    } | {
+        "symbols",
+        "set",
+        "cracked",
+        "guess_counts",
+        "you",
+    }
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
         "game",
@@ -696,6 +712,65 @@ def wits_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]
     return pts
 
 
+def mastermind(code: list[int], guess: list[int]) -> tuple[int, int]:
+    hits = sum(a == b for a, b in zip(code, guess, strict=True))
+    common = sum(min(code.count(x), guess.count(x)) for x in set(guess))
+    return hits, common - hits
+
+
+async def play_codes(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots hide random codes, then crack each other with a consistent-guess solver (every guess fits all
+    feedback so far). After the reveal every piece of feedback must match the revealed codes."""
+    from itertools import product
+
+    await all_until(bots, game_is("codes", "set"), "codes set")
+    for b in bots:
+        await b.send(t="act", a="set", code=[rng.randrange(6) for _ in range(4)])
+    await all_until(bots, game_is("codes", "crack"), "codes crack")
+    every = [list(c) for c in product(range(6), repeat=4)]
+
+    async def crack(b: Bot) -> None:
+        for target in [o for o in bots if o is not b]:
+            for _ in range(12):
+                g = b.state["game"]  # type: ignore[index]
+                if g["phase"] != "crack" or b.pid in g["cracked"][target.pid]:
+                    break
+                seen = g["you"]["guesses"].get(target.pid, [])
+                fits = [
+                    c for c in every if all(mastermind(c, h["code"]) == (h["hits"], h["near"]) for h in seen)
+                ]
+                n = len(seen)
+                await b.send(t="act", a="guess", target=target.pid, code=rng.choice(fits))
+                await b.until(
+                    lambda s, n=n, t=target.pid: (
+                        len((s["game"] or {}).get("you", {}).get("guesses", {}).get(t, [])) > n
+                        or (s["game"] or {}).get("phase") != "crack"
+                    ),
+                    "guess answered",
+                )
+                await asyncio.sleep(1.6)  # the server's cooldown is 1.5 s
+
+    await asyncio.gather(*(crack(b) for b in bots))
+    if host.state["game"]["phase"] == "crack":  # type: ignore[index]
+        await skip(host)
+    await all_until(bots, game_is("codes", "final"), "codes final")
+    codes = host.state["game"]["codes"]  # type: ignore[index]
+    for b in bots:
+        for target, gs in b.state["game"]["you"]["guesses"].items():  # type: ignore[index]
+            for h in gs:
+                check(mastermind(codes[target], h["code"]) == (h["hits"], h["near"]), "codes: wrong feedback")
+
+
+def codes_points(cracked: dict[str, list[str]], ids: list[str]) -> dict[str, int]:
+    pts = dict.fromkeys(ids, 0)
+    for owner, who in cracked.items():
+        for i, pid in enumerate(who):
+            pts[pid] += (300, 200)[i] if i < 2 else 100
+        if not who:
+            pts[owner] += 200
+    return pts
+
+
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
@@ -1025,6 +1100,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "split",
             "chicken",
             "wits",
+            "codes",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1065,6 +1141,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_chicken(host, bots, rng)
             elif game == "wits":
                 await play_wits(host, bots, rng)
+            elif game == "codes":
+                await play_codes(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1076,6 +1154,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = price_points(g["history"], [b.pid for b in bots], g["duels"])
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
+            elif game == "codes":
+                want = codes_points(host.state["game"]["cracked"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"codes: scores {got} != crack order {want}")
             elif game == "wits":
                 g = host.state["game"]  # type: ignore[index]
                 want = wits_points(g["history"], [b.pid for b in bots])

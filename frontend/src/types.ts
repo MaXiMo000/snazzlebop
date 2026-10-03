@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "wits" | "chicken" | "split" | "dice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codes" | "wits" | "chicken" | "split" | "dice";
   title: string;
   blurb: string;
   min_players: number;
@@ -313,6 +313,7 @@ export type GameView =
   | MuralView
   | BlackjackView
   | CrosswordView
+  | CodesView
   | WitsView
   | ChickenView
   | SplitView
@@ -482,4 +483,23 @@ export interface WitsView extends GameBase {
   you: { answer: number | null; bets: number[] | null };
   result?: WitsResult;
   history?: (WitsResult & { q: string })[];
+}
+
+export interface CodesGuess {
+  code: number[];
+  hits: number;
+  near: number;
+}
+export interface CodesView extends GameBase {
+  game: "codes";
+  players: { id: string; name: string }[];
+  length: number;
+  symbols: number;
+  set: string[];
+  /** code owner -> who cracked it, in order */
+  cracked: Record<string, string[]>;
+  guess_counts: Record<string, number>;
+  you: { code: number[]; guesses: Record<string, CodesGuess[]>; cooldown: number };
+  /** every code, once it's over */
+  codes?: Record<string, number[]>;
 }
