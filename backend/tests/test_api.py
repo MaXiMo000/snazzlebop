@@ -78,6 +78,7 @@ def test_games_catalog(client):
         "mural",
         "blackjack",
         "crossword",
+        "dice",
     }
 
 

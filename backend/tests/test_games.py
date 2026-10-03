@@ -33,7 +33,8 @@ def make(cls, n, seed=1):
 class RegistryTests(unittest.TestCase):
     def test_registry_has_all_games(self):
         self.assertEqual(
-            set(REGISTRY), {"frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword"}
+            set(REGISTRY),
+            {"frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword", "dice"},
         )
 
     def test_player_count_enforced(self):
