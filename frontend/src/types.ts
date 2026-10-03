@@ -154,7 +154,12 @@ export interface TelepathyResult {
   category: { title: string; options: string[] };
   picks: Record<string, number>;
   points: Record<string, number>;
+  /** streak bonus included in points */
+  bonus: Record<string, number>;
   taxed: number[];
+  /** a contrarian round: no tax, only unique picks score */
+  contrarian: boolean;
+  streaks: Record<string, number>;
 }
 export interface TelepathyView extends GameBase {
   game: "telepathy";
@@ -163,6 +168,8 @@ export interface TelepathyView extends GameBase {
   locked: string[];
   you_locked: boolean;
   your_pick: number | null;
+  contrarian: boolean;
+  streaks: Record<string, number>;
   result?: TelepathyResult;
   final?: { history: TelepathyResult[]; mind_meld: { players: [string, string]; matches: number } | null };
 }
@@ -177,23 +184,28 @@ export interface MuralView extends GameBase {
   game: "mural";
   players: { id: string; name: string }[];
   mural: MuralTile[];
-  /** target is the painting's index: only for innocent players, never the Mole or a TV */
-  you: { is_mole: boolean; target: number | null };
+  /** how many Moles (1, or 2 at 7-8 players), never who */
+  moles: number;
+  /** target is the painting's index: only for innocent players, never a Mole or a TV */
+  you: { is_mole: boolean; target: number | null; can_swap: boolean; swap_with: string | null; guessed: boolean };
+  /** hint rounds whose reveal had a Switcheroo in it (not who) */
+  swapped_rounds: number[];
   hinted: string[];
   your_hint: number | null;
   /** one map per revealed hint round: player id -> tile index */
   hints: Record<string, number>[];
   votes_in: number;
   you_voted: string | null;
-  caught: string | null;
+  caught: string[];
   result?: {
-    mole: string;
+    moles: string[];
     target: number;
-    caught: boolean;
-    guess: number | null;
-    stole: boolean;
+    caught: string[];
+    guesses: Record<string, number>;
+    stole: string[];
     tally: Record<string, number>;
     votes: Record<string, string>;
+    swaps: { round: number; by: string; with: string }[];
   };
 }
 

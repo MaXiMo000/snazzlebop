@@ -79,6 +79,8 @@ ALLOWED_KEYS[("telepathy", "pick")] = {
     "remaining",
     "players",
     "category",
+    "contrarian",
+    "streaks",
 } | {
     "locked",
     "you_locked",
@@ -128,6 +130,8 @@ for _phase in ("briefing", "hint", "vote", "mole_guess"):
         "players",
         "mural",
         "you",
+        "moles",
+        "swapped_rounds",
     } | {
         "hinted",
         "your_hint",
@@ -290,6 +294,7 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
                         g["your_hint"] in (None, HINTS.get((b.pid, g["round"]))),
                         f"{b.name} was shown a hint that isn't theirs",
                     )
+                check(you["swap_with"] in (None, SWAPS.get(b.pid)), f"{b.name} saw someone else's Switcheroo")
             if game == "blackjack" and g["phase"] in ("bet", "play"):
                 check(len(g["dealer"]["cards"]) <= 1, f"{b.name} saw the dealer's hole card")
                 check("shoe" not in g and "deck" not in g, f"{b.name} saw the shoe")
@@ -304,7 +309,8 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
     if game == "alibi":
         check(len(killers) == 1, f"expected exactly one bot told it is the killer, got {len(killers)}")
     if game == "mural":
-        check(len(moles) == 1, f"expected exactly one bot told it is the Mole, got {len(moles)}")
+        want = 2 if len(bots) >= 7 else 1
+        check(len(moles) == want, f"expected {want} bots told they are a Mole, got {len(moles)}")
         check(len(paintings) == 1, "innocents were shown different paintings")
     return checked
 
@@ -312,6 +318,7 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
 # -- games --------------------------------------------------------------------------------------------
 PICKS: dict[tuple[str, int], int] = {}  # (pid, round) -> the option that bot picked
 HINTS: dict[tuple[str, int], int] = {}  # (pid, round) -> the tile that bot hinted
+SWAPS: dict[str, str] = {}  # mole -> who it swapped hints with (secret until the end)
 
 
 async def play_blackjack(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -396,6 +403,7 @@ async def play_crossword(host: Bot, bots: list[Bot], rng: random.Random) -> None
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
+    streak = {b.pid: 0 for b in bots}
     for rnd in range(1, 7):
         await all_until(bots, game_is("telepathy", "pick", rnd), f"telepathy pick {rnd}")
         for i, b in enumerate(bots):
@@ -410,16 +418,24 @@ async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None
         )
         counts = {o: list(r["picks"].values()).count(o) for o in set(r["picks"].values())}
         for pid, opt in r["picks"].items():
-            want = 0 if counts[opt] > n / 2 else 100 * (counts[opt] - 1)
+            if r["contrarian"]:  # no tax; only a pick nobody else made scores
+                base = 200 if counts[opt] == 1 else 0
+            else:
+                base = 0 if counts[opt] > n / 2 else 100 * (counts[opt] - 1)
+            streak[pid] = streak[pid] + 1 if base > 0 else 0
+            want = base + (50 * min(streak[pid] - 1, 3) if streak[pid] >= 2 else 0)
             check(r["points"][pid] == want, f"telepathy scoring is off for option {opt}")
+        check(r["streaks"] == streak, "telepathy streaks don't follow the rules")
         await skip(host)
 
 
 async def play_mural(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     HINTS.clear()
+    SWAPS.clear()
     await all_until(bots, game_is("mural", "briefing"), "mural briefing")
-    mole = next(b for b in bots if b.state["game"]["you"]["is_mole"])  # type: ignore[index]
-    target = next(b for b in bots if b is not mole).state["game"]["you"]["target"]  # type: ignore[index]
+    moles = [b for b in bots if b.state["game"]["you"]["is_mole"]]  # type: ignore[index]
+    mole = moles[0]
+    target = next(b for b in bots if b not in moles).state["game"]["you"]["target"]  # type: ignore[index]
     tiles = host.state["game"]["mural"]  # type: ignore[index]
 
     def related(i: int) -> bool:
@@ -427,19 +443,30 @@ async def play_mural(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         return i != target and (a["color"] == t["color"] or a["kind"] == t["kind"])
 
     await skip(host)
+    victim = next(b for b in bots if b not in moles)
     for rnd in (1, 2):
         await all_until(bots, game_is("mural", "hint", rnd), f"mural hint {rnd}")
+        if rnd == 1:  # the first Mole pulls a Switcheroo on an innocent
+            SWAPS[mole.pid] = victim.pid
+            await mole.send(t="act", a="swap", target=victim.pid)
+            await mole.until(lambda s: s["game"]["you"]["swap_with"] is not None, "swap applied")
         for b in bots:
             used = {HINTS.get((b.pid, r)) for r in (1, 2)}
-            choices = [i for i in range(16) if i not in used and (b is mole or related(i))]
+            choices = [i for i in range(16) if i not in used and (b in moles or related(i))]
             tile = rng.choice(choices)
             HINTS[(b.pid, rnd)] = tile
             await b.send(t="act", a="hint", tile=tile)
     await all_until(bots, game_is("mural", "vote"), "mural vote")
+    shown = host.state["game"]["hints"][0]  # type: ignore[index]
+    check(
+        (shown[mole.pid], shown[victim.pid]) == (HINTS[(victim.pid, 1)], HINTS[(mole.pid, 1)]),
+        "the Switcheroo didn't swap the two hints in the reveal",
+    )
+    check(host.state["game"]["swapped_rounds"] == [1], "the swap wasn't announced")  # type: ignore[index]
     for b in bots:
         # Innocents vote for whoever dropped the most unrelated hints; the Mole deflects.
         others = [o for o in bots if o is not b]
-        if b is mole:
+        if b in moles:
             pick = rng.choice(others)
         else:
             pick = max(
@@ -450,15 +477,21 @@ async def play_mural(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         bots, lambda s: (s.get("game") or {}).get("phase") in ("mole_guess", "final"), "mural vote close"
     )
     if host.state["game"]["phase"] == "mole_guess":  # type: ignore[index]
-        await all_until([mole], game_is("mural", "mole_guess"), "mole guess")
-        await mole.send(t="act", a="guess", tile=rng.randrange(16))
+        for m in moles:
+            if m.pid in host.state["game"]["caught"]:  # type: ignore[index]
+                await m.send(t="act", a="guess", tile=rng.randrange(16))
     await all_until(bots, game_is("mural", "final"), "mural final")
     r = host.state["game"]["result"]  # type: ignore[index]
     check(
-        r["mole"] == mole.pid and r["target"] == target, "mural result doesn't match what the bots were told"
+        sorted(r["moles"]) == sorted(m.pid for m in moles) and r["target"] == target,
+        "mural result doesn't match what the bots were told",
+    )
+    check(
+        r["swaps"] == [{"round": 0, "by": mole.pid, "with": victim.pid, "done": True}],
+        "swap missing from the result",
     )
     outcome = "stole the win" if r["stole"] else "caught" if r["caught"] else "escaped"
-    print(f"  mural: the Mole {outcome}")
+    print(f"  mural: {len(moles)} mole(s), {outcome}")
 
 
 async def play_frenemy(host: Bot, bots: list[Bot], rng: random.Random) -> None:

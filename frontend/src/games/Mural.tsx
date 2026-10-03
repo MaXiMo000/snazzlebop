@@ -29,9 +29,10 @@ export function Mural({ view, you, receivedAt, send, tv = false }: Props) {
       show.stinger("MOLE SPOTTED!");
     } else if (phase === "final" && view.result) {
       const r = view.result;
-      const moleWon = !r.caught || r.stole;
-      const iWon = tv ? !moleWon : (you === r.mole) === moleWon;
-      show.stinger(r.stole ? "STOLEN!" : r.caught ? "GOTCHA!" : "THE MOLE ESCAPED!", moleWon ? "bad" : "good");
+      const missed = r.caught.filter((m) => !r.stole.includes(m));
+      const roomWon = missed.length > 0;
+      const iWon = tv ? roomWon : r.moles.includes(you) ? !r.caught.includes(you) || r.stole.includes(you) : roomWon;
+      show.stinger(r.stole.length ? "STOLEN!" : roomWon ? "GOTCHA!" : "THE MOLE ESCAPED!", roomWon ? "good" : "bad");
       if (iWon) {
         sfx.fanfare();
         show.celebrate();
@@ -55,13 +56,20 @@ export function Mural({ view, you, receivedAt, send, tv = false }: Props) {
               Everyone knows which tile is the secret <b>painting</b>, except the Mole. Each hint round, pick a tile that
               shares a <b>colour</b> or a <b>kind</b> with the painting. Hints are revealed together. Then find the Mole.
             </p>
+            {view.moles > 1 && (
+              <p>
+                <b>Two Moles tonight.</b> They don’t know about each other. The two most-voted players are accused.
+              </p>
+            )}
+            <p className="muted">Careful: each Mole can secretly swap their hint with someone else’s once.</p>
           </Card>
         )}
         {view.phase === "mole_guess" && (
           <Card tone="stage" className="center">
             <p className="sign">Mole spotted</p>
             <p className="lead space-top">
-              It was <b>{nameOf(view.players, view.caught ?? "")}</b>! One guess at the painting to steal the win…
+              {view.caught.map((id) => nameOf(view.players, id)).join(" and ")}{" "}
+              {view.caught.length > 1 ? "were Moles" : "was a Mole"}! One guess each at the painting to steal the win…
             </p>
           </Card>
         )}
@@ -86,9 +94,15 @@ function Role({ view }: { view: MuralView }) {
       <Card tone="stage">
         <p className="sign">Top secret</p>
         <p className="space-top">
-          You’re the <b>Mole</b>. You don’t know the painting. Watch the hints, blend in, and if they catch you, guess
-          the painting to steal the win.
+          You’re {view.moles > 1 ? "a" : "the"} <b>Mole</b>. You don’t know the painting. Watch the hints, blend in, and
+          if they catch you, guess the painting to steal the win.
+          {view.moles > 1 ? " There’s one other Mole, and neither of you knows who the other is." : ""}
         </p>
+        {view.you.swap_with && (
+          <p className="space-top">
+            🔀 Your hint will swap places with <b>{nameOf(view.players, view.you.swap_with)}</b>’s in this round’s reveal.
+          </p>
+        )}
       </Card>
     );
   }
@@ -107,7 +121,7 @@ function Role({ view }: { view: MuralView }) {
 function Board({ view, you, send, tv }: { view: MuralView; you: string; send: Props["send"]; tv: boolean }) {
   const [chosen, setChosen] = useState<number | null>(null);
   const hinting = !tv && view.phase === "hint" && view.your_hint === null;
-  const guessing = !tv && view.phase === "mole_guess" && view.you.is_mole;
+  const guessing = !tv && view.phase === "mole_guess" && view.caught.includes(you) && !view.you.guessed;
   const used = new Set(view.hints.map((h) => h[you]).filter((x) => x !== undefined));
   const final = view.result;
   const badges = (i: number) =>
@@ -128,7 +142,9 @@ function Board({ view, you, send, tv }: { view: MuralView; you: string; send: Pr
             <button
               key={i}
               type="button"
-              className={`tile ${isTarget ? "target" : ""} ${mine ? "mine" : ""} ${final?.guess === i ? "guessed" : ""}`}
+              className={`tile ${isTarget ? "target" : ""} ${mine ? "mine" : ""} ${
+                final && Object.values(final.guesses).includes(i) ? "guessed" : ""
+              }`}
               aria-pressed={pickable ? chosen === i : undefined}
               disabled={!pickable || (hinting && used.has(i))}
               onClick={() => setChosen(i)}
@@ -176,6 +192,14 @@ function Board({ view, you, send, tv }: { view: MuralView; you: string; send: Pr
           </p>
         </div>
       )}
+      {view.swapped_rounds.length > 0 && (
+        <p className="space-top">
+          <span className="chip cherry">
+            🔀 A Mole swapped two hints in round {view.swapped_rounds.join(" and ")}. Who? That’s for you to work out.
+          </span>
+        </p>
+      )}
+      {!tv && view.phase === "hint" && view.you.can_swap && <Swap view={view} you={you} send={send} />}
       {guessing && (
         <div className="row space-top">
           <Btn
@@ -192,12 +216,47 @@ function Board({ view, you, send, tv }: { view: MuralView; you: string; send: Pr
   );
 }
 
+function Swap({ view, you, send }: { view: MuralView; you: string; send: Props["send"] }) {
+  const [target, setTarget] = useState("");
+  return (
+    <div className="ask-form space-top">
+      <div>
+        <label className="field" htmlFor="swap-target">
+          Switcheroo (once): swap your hint with
+        </label>
+        <select id="swap-target" value={target} onChange={(e) => setTarget(e.target.value)}>
+          <option value="">Pick a player…</option>
+          {view.players
+            .filter((p) => p.id !== you)
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+        </select>
+      </div>
+      <Btn
+        variant="danger"
+        disabled={!target}
+        onClick={() => {
+          sfx.pop();
+          send({ t: "act", a: "swap", target });
+        }}
+      >
+        Swap hints
+      </Btn>
+    </div>
+  );
+}
+
 function Vote({ view, you, send }: { view: MuralView; you: string; send: Props["send"] }) {
   return (
     <Card>
       <h3>Who’s the Mole?</h3>
       <p>
-        Most votes wins. If the Mole isn’t the <b>single</b> top pick, they escape.{" "}
+        {view.moles > 1
+          ? "The two most-voted players are accused. A tie at second place accuses only the top one."
+          : "Most votes wins. If the Mole isn’t the single top pick, they escape."}{" "}
         <span aria-live="polite">
           {view.votes_in}/{view.players.length} votes in.
         </span>
@@ -226,29 +285,40 @@ function Vote({ view, you, send }: { view: MuralView; you: string; send: Props["
 
 function Result({ view, you, tv }: { view: MuralView; you: string; tv: boolean }) {
   const r = view.result!;
-  const mole = nameOf(view.players, r.mole);
   const painting = view.mural[r.target]!;
-  const moleWon = !r.caught || r.stole;
-  const personal = tv ? "" : (you === r.mole) === moleWon ? " 🎉 You win this one." : " Better luck next time.";
+  const missed = r.caught.filter((m) => !r.stole.includes(m));
+  const iWon = r.moles.includes(you) ? !r.caught.includes(you) || r.stole.includes(you) : missed.length > 0;
+  const personal = tv ? "" : iWon ? " 🎉 You win this one." : " Better luck next time.";
+  const fate = (m: string) =>
+    !r.caught.includes(m)
+      ? "escaped"
+      : r.stole.includes(m)
+        ? "was caught but named the painting and stole the win"
+        : `was caught, and guessed ${r.guesses[m] != null ? `the ${view.mural[r.guesses[m]!]!.name}` : "nothing"}`;
   return (
     <Card tone="stage" className="center">
-      <p className="sign">{r.stole ? "Stolen!" : r.caught ? "Gotcha!" : "The Mole escaped!"}</p>
+      <p className="sign">{r.stole.length ? "Stolen!" : missed.length ? "Gotcha!" : "The Mole escaped!"}</p>
       <p className="lead space-top">
-        The Mole was <b>{mole}</b>. The painting was the{" "}
+        The painting was the{" "}
         <b>
           <span aria-hidden="true">{painting.emoji} </span>
           {painting.name}
         </b>
         .
       </p>
-      <p>
-        {!r.caught
-          ? "Nobody pinned them down."
-          : r.stole
-            ? `Caught, but they guessed the painting and stole the win!`
-            : `Caught, and their guess (${r.guess != null ? view.mural[r.guess]!.name : "none"}) was wrong.`}
-        {personal}
-      </p>
+      <ul className="evidence">
+        {r.moles.map((m) => (
+          <li key={m}>
+            🕶️ <b>{nameOf(view.players, m)}</b> {fate(m)}.
+          </li>
+        ))}
+        {r.swaps.map((s) => (
+          <li key={s.by}>
+            🔀 {nameOf(view.players, s.by)} swapped hints with {nameOf(view.players, s.with)} in round {s.round + 1}.
+          </li>
+        ))}
+      </ul>
+      <p>{personal}</p>
     </Card>
   );
 }

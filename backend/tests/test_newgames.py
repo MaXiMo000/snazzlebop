@@ -68,7 +68,16 @@ class TelepathyTests(unittest.TestCase):
         final = game.view_for(TV)["final"]
         self.assertEqual(sorted(final["mind_meld"]["players"]), ["p0", "p1"])
         self.assertEqual(final["mind_meld"]["matches"], TelepathyTax.ROUNDS)
-        self.assertEqual(game.scores()["p0"], 100 * TelepathyTax.ROUNDS)
+        # p0 always matches one other mind: 100 a round plus the streak bonus, except the
+        # contrarian round, where a shared pick scores nothing and breaks the streak.
+        want, streak = 0, 0
+        for r in range(TelepathyTax.ROUNDS):
+            if r == game.contrarian_round:
+                streak = 0
+                continue
+            streak += 1
+            want += 100 + (50 * min(streak - 1, 3) if streak >= 2 else 0)
+        self.assertEqual(game.scores()["p0"], want)
         titles = [h["category"]["title"] for h in final["history"]]
         self.assertEqual(len(set(titles)), TelepathyTax.ROUNDS)
 
@@ -92,13 +101,13 @@ def shares(game, i):
 class MuralTests(unittest.TestCase):
     def setUp(self):
         self.game, self.ids = make(MoleInTheMural, 5, seed=3)
-        self.innocents = [i for i in self.ids if i != self.game.mole]
+        self.innocents = [i for i in self.ids if i != self.game.moles[0]]
 
     def hint_round(self, mole_tile=None):
         g = self.game
         for pid in self.ids:
             used = {h[pid] for h in g.hints if pid in h}
-            if pid == g.mole:
+            if pid == g.moles[0]:
                 tile = mole_tile if mole_tile is not None else next(i for i in range(16) if i not in used)
             else:
                 tile = next(i for i in range(16) if shares(g, i) and i not in used)
@@ -115,11 +124,11 @@ class MuralTests(unittest.TestCase):
         g.advance()  # briefing -> hints
         for pid in self.innocents:
             self.assertEqual(g.view_for(pid)["you"]["target"], g.target)
-        for viewer in (g.mole, TV):
+        for viewer in (g.moles[0], TV):
             v = g.view_for(viewer)
             self.assertIsNone(v["you"]["target"])
             self.assertNotIn("result", v)
-        self.assertTrue(g.view_for(g.mole)["you"]["is_mole"])
+        self.assertTrue(g.view_for(g.moles[0])["you"]["is_mole"])
         for viewer in [*self.innocents, TV]:
             self.assertFalse(g.view_for(viewer)["you"]["is_mole"])
         self.assertNotIn("mole", {k for k in g.view_for(TV)})
@@ -143,7 +152,7 @@ class MuralTests(unittest.TestCase):
         for pid in self.ids:
             if pid == skip:
                 continue
-            tile = next(i for i in range(16) if (pid == g.mole and i != g.target) or shares(g, i))
+            tile = next(i for i in range(16) if (pid == g.moles[0] and i != g.target) or shares(g, i))
             g.handle(pid, {"a": "hint", "tile": tile})
 
     def test_innocents_must_hint_well_but_the_mole_is_never_corrected(self):
@@ -157,7 +166,7 @@ class MuralTests(unittest.TestCase):
             with self.assertRaises(GameError):
                 g.handle(innocent, {"a": "hint", "tile": unrelated})
         # The mole may pick anything, even the painting: refusing it would reveal the painting.
-        g.handle(g.mole, {"a": "hint", "tile": g.target})
+        g.handle(g.moles[0], {"a": "hint", "tile": g.target})
         for bad in (16, -1, True, "3"):
             with self.assertRaises(GameError):
                 g.handle(innocent, {"a": "hint", "tile": bad})
@@ -171,25 +180,27 @@ class MuralTests(unittest.TestCase):
             self.hint_round()
             self.assertEqual(g.phase, "vote")
             for pid in self.ids:
-                target = g.mole if pid != g.mole else self.innocents[0]
+                target = g.moles[0] if pid != g.moles[0] else self.innocents[0]
                 g.handle(pid, {"a": "vote", "target": target})
             self.assertEqual(g.phase, "mole_guess")
-            self.assertEqual(g.view_for(TV)["caught"], g.mole)  # the room knows who now
-            self.assertIsNone(g.view_for(g.mole)["you"]["target"])  # still not the painting
+            self.assertEqual(g.view_for(TV)["caught"], [g.moles[0]])  # the room knows who now
+            self.assertIsNone(g.view_for(g.moles[0])["you"]["target"])  # still not the painting
             with self.assertRaises(GameError):
                 g.handle(self.innocents[0], {"a": "guess", "tile": 0})  # only the mole guesses
             guess = g.target if correct else next(i for i in range(16) if i != g.target)
-            g.handle(g.mole, {"a": "guess", "tile": guess})
+            g.handle(g.moles[0], {"a": "guess", "tile": guess})
             self.assertTrue(g.finished)
             r = g.view_for(TV)["result"]
+            mole = g.moles[0]
             self.assertEqual(
-                (r["mole"], r["target"], r["caught"], r["stole"]), (g.mole, g.target, True, correct)
+                (r["moles"], r["target"], r["caught"], r["stole"]),
+                ([mole], g.target, [mole], [mole] if correct else []),
             )
             if correct:
-                self.assertEqual(g.scores()[g.mole], 200)
+                self.assertEqual(g.scores()[g.moles[0]], 200)
                 self.assertEqual(g.scores()[self.innocents[0]], 0)
             else:
-                self.assertEqual(g.scores()[g.mole], 0)
+                self.assertEqual(g.scores()[g.moles[0]], 0)
                 self.assertEqual(g.scores()[self.innocents[0]], 200)  # 150 win + 50 for the right vote
 
     def test_mole_escapes_when_not_the_single_top_vote(self):
@@ -200,8 +211,8 @@ class MuralTests(unittest.TestCase):
         for pid in self.ids:
             g.handle(pid, {"a": "vote", "target": next(o for o in self.innocents if o != pid)})
         self.assertTrue(g.finished)
-        self.assertFalse(g.view_for(TV)["result"]["caught"])
-        self.assertEqual(g.scores()[g.mole], 300)
+        self.assertEqual(g.view_for(TV)["result"]["caught"], [])
+        self.assertEqual(g.scores()[g.moles[0]], 300)
 
 
 if __name__ == "__main__":

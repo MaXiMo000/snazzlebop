@@ -20,6 +20,11 @@ export function Telepathy({ view, you, receivedAt, send, tv = false }: Props) {
       if (tv || mine === undefined) {
         sfx.ding();
         show.stinger("MINDS REVEALED!");
+      } else if (view.result.contrarian) {
+        const won = (view.result.points[you] ?? 0) > 0;
+        if (won) sfx.fanfare();
+        else sfx.buzz();
+        show.stinger(won ? "LONE WOLF!" : "TOO POPULAR!", won ? "good" : "bad");
       } else if (view.result.taxed.includes(mine)) {
         sfx.buzz();
         show.stinger("TAXED!", "bad");
@@ -42,7 +47,15 @@ export function Telepathy({ view, you, receivedAt, send, tv = false }: Props) {
     <div className="seg-telepathy stack">
       {show.node}
       <ShowHead sign={sign} title="Telepathy Tax" remaining={view.remaining} receivedAt={receivedAt}>
-        {view.phase !== "final" && <span className="chip plum">+100 per matching mind · majority = taxed</span>}
+        {view.phase !== "final" &&
+          (view.contrarian ? (
+            <span className="chip cherry">Contrarian round: only a pick nobody else makes scores (+200), no tax</span>
+          ) : (
+            <span className="chip plum">+100 per matching mind · majority = taxed · streaks pay extra</span>
+          ))}
+        {view.phase === "pick" && (view.streaks[you] ?? 0) >= 1 && (
+          <span className="chip">🔥 You’re on a {view.streaks[you]}-round streak</span>
+        )}
       </ShowHead>
       <div key={`${view.phase}-${view.round}`} className="stack enter">
         {view.phase === "pick" && <Pick view={view} send={send} tv={tv} />}
@@ -62,9 +75,17 @@ function Pick({ view, send, tv }: { view: TelepathyView; send: Props["send"]; tv
         <h3 className="prompt space-top">{view.category.title}</h3>
       </Card>
       <Card>
-        {!tv && !view.you_locked && (
-          <p>Pick the answer you think <b>some</b> of the room will pick. Not too many!</p>
-        )}
+        {!tv &&
+          !view.you_locked &&
+          (view.contrarian ? (
+            <p>
+              Contrarian round! Pick the answer you think <b>nobody else</b> will pick.
+            </p>
+          ) : (
+            <p>
+              Pick the answer you think <b>some</b> of the room will pick. Not too many!
+            </p>
+          ))}
         <div className="option-grid" role="group" aria-label={`Answers for ${view.category.title}`}>
           {view.category.options.map((opt, i) => (
             <Btn
@@ -103,17 +124,19 @@ function Reveal({ result, view, you }: { result: TelepathyResult; view: Telepath
           const pickers = view.players.filter((p) => result.picks[p.id] === i);
           if (!pickers.length) return null;
           const taxed = result.taxed.includes(i);
+          const each = result.contrarian ? (pickers.length === 1 ? 200 : 0) : (pickers.length - 1) * 100;
           return (
             <Card key={opt} className={`answer ${taxed ? "taxed" : ""}`}>
               <div className="row between">
                 <h3>{opt}</h3>
-                {taxed ? <span className="chip cherry">TAXED!</span> : <span className="chip">+{(pickers.length - 1) * 100} each</span>}
+                {taxed ? <span className="chip cherry">TAXED!</span> : <span className="chip">+{each} each</span>}
               </div>
               <ul className="contestants">
                 {pickers.map((p) => (
                   <li key={p.id} className={`contestant ${p.id === you ? "you" : ""}`}>
                     {p.name}
                     {p.id === you ? " (you)" : ""}
+                    {(result.bonus[p.id] ?? 0) > 0 && <span className="chip">🔥 +{result.bonus[p.id]} streak</span>}
                   </li>
                 ))}
               </ul>
@@ -162,6 +185,7 @@ function Final({ view, you }: { view: TelepathyView; you: string }) {
             return (
               <li key={h.category.title}>
                 <b>{h.category.title}</b>
+                {h.contrarian ? " · contrarian" : ""}
                 {h.taxed.length ? ` · taxed: ${h.taxed.map((i) => h.category.options[i]).join(", ")}` : ""}
                 {best && best[1] > 0 ? ` · top: ${nameOf(view.players, best[0])} +${best[1]}` : " · nobody matched"}
               </li>

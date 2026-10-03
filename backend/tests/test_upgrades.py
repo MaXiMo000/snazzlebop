@@ -222,5 +222,170 @@ class PriceUpgradeTests(unittest.TestCase):
         self.assertEqual(len(names), len(set(names)))
 
 
+class TelepathyUpgradeTests(unittest.TestCase):
+    def make(self, n=4):
+        from app.games.telepathy import TelepathyTax
+
+        return make(TelepathyTax, n, seed=3)
+
+    def play(self, g, picks):
+        for pid, opt in picks.items():
+            g.handle(pid, {"a": "pick", "option": opt})
+        if g.phase == "pick":
+            g.advance()
+
+    def test_contrarian_round_pays_only_unique_picks_and_has_no_tax(self):
+        from app.games.telepathy import CONTRARIAN_POINTS
+
+        g = self.make(4)
+        g.contrarian_round = 0
+        self.assertTrue(g.view_for("tv:x")["contrarian"])
+        self.play(g, {"p0": 0, "p1": 0, "p2": 1, "p3": 1})  # pairs: nobody unique
+        self.assertEqual(g.results[0]["points"], {"p0": 0, "p1": 0, "p2": 0, "p3": 0})
+        g.advance()
+        g.contrarian_round = 1
+        self.play(g, {"p0": 0, "p1": 0, "p2": 0, "p3": 5})  # majority on 0, but no tax: just not unique
+        r = g.results[1]
+        self.assertEqual(r["taxed"], [])
+        self.assertEqual(r["points"]["p3"], CONTRARIAN_POINTS)
+        self.assertEqual(r["points"]["p0"], 0)
+
+    def test_streak_bonus_grows_and_caps(self):
+        g = self.make(4)
+        g.contrarian_round = 99  # keep the normal rules for this test
+        got = []
+        for _ in range(g.ROUNDS):
+            self.play(g, {"p0": 0, "p1": 0, "p2": 1, "p3": 2})  # p0 matches p1 every round
+            got.append(g.results[-1]["points"]["p0"])
+            g.advance()
+        self.assertEqual(got, [100, 150, 200, 250, 250, 250])
+        self.assertEqual(g.results[-1]["streaks"]["p2"], 0)
+
+    def test_a_miss_resets_the_streak(self):
+        g = self.make(4)
+        g.contrarian_round = 99
+        self.play(g, {"p0": 0, "p1": 0, "p2": 1, "p3": 2})
+        g.advance()
+        self.play(g, {"p0": 3, "p1": 0, "p2": 1, "p3": 2})  # p0 alone: no match, streak over
+        self.assertEqual(g.results[-1]["streaks"]["p0"], 0)
+        g.advance()
+        self.play(g, {"p0": 0, "p1": 0, "p2": 1, "p3": 2})
+        self.assertEqual(g.results[-1]["points"]["p0"], 100)
+
+
+class MuralUpgradeTests(unittest.TestCase):
+    def make(self, n, seed=4):
+        from app.games.mural import MoleInTheMural
+
+        g = make(MoleInTheMural, n, seed=seed)
+        g.advance()  # briefing -> hint round 1
+        return g
+
+    def legal_hint(self, g, pid, used=()):
+        from app.games.mural import _related
+
+        if pid in g.moles:
+            return next(i for i in range(16) if i not in used)
+        return next(
+            i
+            for i in range(16)
+            if i != g.target and i not in used and _related(g.mural[i], g.mural[g.target])
+        )
+
+    def test_two_moles_at_seven_players_who_dont_know_each_other(self):
+        g = self.make(7)
+        self.assertEqual(len(g.moles), 2)
+        a, b = g.moles
+        for m in g.moles:
+            view = g.view_for(m)
+            self.assertTrue(view["you"]["is_mole"])
+            self.assertIsNone(view["you"]["target"])
+            other = b if m == a else a
+            self.assertNotIn(other, [k for k, v in view["you"].items() if isinstance(v, str)])
+        for viewer in (*SPECTATORS, next(p for p in g.player_ids if p not in g.moles)):
+            self.assertEqual(g.view_for(viewer)["moles"], 2)
+            self.assertNotIn("result", g.view_for(viewer))
+        self.assertEqual(len(self.make(6).moles), 1)
+
+    def test_top_two_accused_and_each_caught_mole_guesses_once(self):
+        g = self.make(7, seed=9)
+        for _ in range(2):
+            for pid in g.player_ids:
+                used = [h[pid] for h in g.hints if pid in h]
+                g.handle(pid, {"a": "hint", "tile": self.legal_hint(g, pid, used)})
+        self.assertEqual(g.phase, "vote")
+        m1, m2 = g.moles
+        innocents = [p for p in g.player_ids if p not in g.moles]
+        # 3 votes on m1, 2 on m2, 1 each on two innocents: the top two (m1, m2) are accused.
+        votes = {innocents[0]: m1, innocents[1]: m1, innocents[2]: m1, innocents[3]: m2, innocents[4]: m2}
+        votes[m1], votes[m2] = innocents[0], innocents[1]
+        for voter, target in votes.items():
+            g.handle(voter, {"a": "vote", "target": target})
+        self.assertEqual(g.phase, "mole_guess")
+        self.assertEqual(sorted(g.caught), sorted([m1, m2]))
+        with self.assertRaises(GameError):
+            g.handle(innocents[0], {"a": "guess", "tile": 0})
+        g.handle(m1, {"a": "guess", "tile": g.target})  # m1 steals
+        with self.assertRaises(GameError):
+            g.handle(m1, {"a": "guess", "tile": 0})  # once
+        self.assertEqual(g.phase, "mole_guess")  # still waiting for m2
+        g.handle(m2, {"a": "guess", "tile": (g.target + 1) % 16})
+        self.assertTrue(g.finished)
+        self.assertEqual(g.result["stole"], [m1])
+        self.assertEqual(g.scores()[m1], 200)
+        self.assertEqual(g.scores()[m2], 0)
+        self.assertEqual(
+            g.scores()[innocents[0]], 75 + 50
+        )  # half the 150 (one of two moles missed) + a vote on a mole
+
+    def test_a_tie_at_the_cutoff_accuses_nobody_there(self):
+        g = self.make(4)
+        for _ in range(2):
+            for pid in g.player_ids:
+                used = [h[pid] for h in g.hints if pid in h]
+                g.handle(pid, {"a": "hint", "tile": self.legal_hint(g, pid, used)})
+        mole = g.moles[0]
+        a, b, c = (p for p in g.player_ids if p != mole)
+        # 2 votes on the mole, 2 on an innocent: tied at the top, so nobody is accused
+        for voter, target in ((a, mole), (b, mole), (mole, a), (c, a)):
+            g.handle(voter, {"a": "vote", "target": target})
+        self.assertTrue(g.finished)
+        self.assertEqual(g.result["caught"], [])
+        self.assertEqual(g.scores()[mole], 300)
+
+    def test_switcheroo_swaps_hints_in_the_reveal_only_and_stays_secret(self):
+        g = self.make(5)
+        mole = g.moles[0]
+        victim = next(p for p in g.player_ids if p != mole)
+        with self.assertRaises(GameError):
+            g.handle(victim, {"a": "swap", "target": mole})  # only a mole
+        g.handle(mole, {"a": "swap", "target": victim})
+        with self.assertRaises(GameError):
+            g.handle(mole, {"a": "swap", "target": victim})  # once
+        self.assertEqual(g.view_for(mole)["you"]["swap_with"], victim)
+        for viewer in (victim, *SPECTATORS):
+            self.assertIsNone(g.view_for(viewer)["you"]["swap_with"])
+            self.assertEqual(g.view_for(viewer)["swapped_rounds"], [])
+        hints = {pid: self.legal_hint(g, pid) for pid in g.player_ids}
+        for pid, tile in hints.items():
+            g.handle(pid, {"a": "hint", "tile": tile})
+        shown = g.hints[0]
+        self.assertEqual((shown[mole], shown[victim]), (hints[victim], hints[mole]))
+        self.assertEqual(g.view_for("tv:x")["swapped_rounds"], [1])
+        self.assertNotIn(mole, str(g.view_for("tv:x")["swapped_rounds"]))
+
+    def test_a_swap_fizzles_if_the_partner_never_hinted(self):
+        g = self.make(5)
+        mole = g.moles[0]
+        victim = next(p for p in g.player_ids if p != mole)
+        g.handle(mole, {"a": "swap", "target": victim})
+        for pid in g.player_ids:
+            if pid != victim:
+                g.handle(pid, {"a": "hint", "tile": self.legal_hint(g, pid)})
+        g.advance()  # time runs out without the victim's hint
+        self.assertEqual(g.view_for("tv:x")["swapped_rounds"], [])
+        self.assertNotIn(victim, g.hints[0])
+
+
 if __name__ == "__main__":
     unittest.main()

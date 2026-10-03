@@ -4,6 +4,9 @@ Each round shows a category and six options. Everyone secretly picks one. You sc
 *other* player who picked the same thing. The tax: if more than half the room picked your answer,
 it was too obvious and the tax collector takes the lot (0 points). Picks stay secret until the
 reveal; the view only ever says who has locked in.
+
+Streaks: score in back-to-back rounds for a growing bonus. One mid-game round is announced as a
+Contrarian round: no tax, and only a pick nobody else made scores.
 """
 
 from __future__ import annotations
@@ -16,6 +19,9 @@ from .base import Game, GameError, as_int
 from .content import TELEPATHY_CATEGORIES
 
 POINTS_PER_MATCH = 100
+STREAK_BONUS = 50  # per extra round in a scoring streak...
+STREAK_CAP = 3  # ...up to +150
+CONTRARIAN_POINTS = 200
 
 
 class TelepathyTax(Game):
@@ -42,7 +48,13 @@ class TelepathyTax(Game):
         self.round = 0
         self.results: list[dict[str, Any]] = []
         self.final: dict[str, Any] | None = None
+        self.streaks: dict[str, int] = {p.id: 0 for p in self.players}
+        self.contrarian_round = self.rng.randrange(1, self.ROUNDS - 1)  # never the first or last
         self._enter_pick()
+
+    @property
+    def is_contrarian(self) -> bool:
+        return self.round == self.contrarian_round
 
     def _enter_pick(self) -> None:
         self.picks: dict[str, int] = {}
@@ -53,17 +65,33 @@ class TelepathyTax(Game):
     def _reveal(self) -> None:
         counts = Counter(self.picks.values())
         majority = len(self.players) / 2
-        taxed = sorted(opt for opt, c in counts.items() if c > majority)
+        contrarian = self.is_contrarian
+        taxed = [] if contrarian else sorted(opt for opt, c in counts.items() if c > majority)
         points: dict[str, int] = {}
-        for pid, opt in self.picks.items():
-            points[pid] = 0 if opt in taxed else POINTS_PER_MATCH * (counts[opt] - 1)
-            self.add_points(pid, points[pid])
+        bonus: dict[str, int] = {}
+        for p in self.players:
+            opt = self.picks.get(p.id)
+            if opt is None:
+                base = 0
+            elif contrarian:
+                base = CONTRARIAN_POINTS if counts[opt] == 1 else 0
+            else:
+                base = 0 if opt in taxed else POINTS_PER_MATCH * (counts[opt] - 1)
+            self.streaks[p.id] = self.streaks[p.id] + 1 if base > 0 else 0
+            extra = STREAK_BONUS * min(self.streaks[p.id] - 1, STREAK_CAP) if self.streaks[p.id] >= 2 else 0
+            if opt is not None:
+                points[p.id] = base + extra
+                bonus[p.id] = extra
+            self.add_points(p.id, base + extra)
         self.results.append(
             {
                 "category": self.categories[self.round],
                 "picks": dict(self.picks),
                 "points": points,
+                "bonus": bonus,
                 "taxed": taxed,
+                "contrarian": contrarian,
+                "streaks": dict(self.streaks),
             }
         )
         self.phase = "reveal"
@@ -134,12 +162,56 @@ class TelepathyTax(Game):
             "you_locked": pid in self.picks,
             # Only your own pick, and only while picking. Everyone's picks arrive with the reveal.
             "your_pick": self.picks.get(pid) if self.phase == "pick" else None,
+            "contrarian": self.is_contrarian and self.phase != "final",
+            "streaks": dict(self.streaks),  # public: it only follows from revealed rounds
         }
         if self.phase == "reveal":
             view["result"] = self.results[-1]
         if self.phase == "final" and self.final is not None:
             view["final"] = self.final
         return view
+
+    def highlights(self) -> list[dict[str, str]]:
+        if not self.final:
+            return []
+        out: list[dict[str, str]] = []
+        meld = self.final["mind_meld"]
+        if meld:
+            a, b = (self.name_of(x) for x in meld["players"])
+            out.append(
+                {"icon": "🧠", "title": "Mind meld", "text": f"{a} and {b} matched {meld['matches']} times"}
+            )
+        best: dict[str, int] = {}
+        for r in self.results:
+            for pid, n in r["streaks"].items():
+                best[pid] = max(best.get(pid, 0), n)
+        if best:
+            hot = max(best, key=lambda p: best[p])
+            if best[hot] >= 3:
+                text = f"{self.name_of(hot)} scored {best[hot]} rounds in a row"
+                out.append({"icon": "🔥", "title": "On a streak", "text": text})
+        for r in self.results:
+            if r["contrarian"]:
+                wolves = [self.name_of(p) for p, pts in r["points"].items() if pts - r["bonus"].get(p, 0) > 0]
+                if wolves:
+                    out.append(
+                        {
+                            "icon": "🐺",
+                            "title": "Lone wolf",
+                            "text": f"{', '.join(wolves)} went their own way",
+                        }
+                    )
+        taxed: dict[str, int] = {}
+        for r in self.results:
+            for pid, opt in r["picks"].items():
+                if opt in r["taxed"]:
+                    taxed[pid] = taxed.get(pid, 0) + 1
+        if taxed:
+            magnet = max(taxed, key=lambda p: taxed[p])
+            if taxed[magnet] >= 3:
+                text = f"{self.name_of(magnet)} paid the tax {taxed[magnet]} times"
+                out.append({"icon": "🧾", "title": "Tax magnet", "text": text})
+        return out
 
     def summary(self) -> dict[str, Any]:
         return {"players": len(self.players), "rounds": len(self.results)}
