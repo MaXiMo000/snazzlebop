@@ -149,6 +149,14 @@ ALLOWED_KEYS[("dice", "bid")] = {
     "out",
     "history",
 }
+ALLOWED_KEYS[("split", "choose")] = {"game", "phase", "round", "rounds", "remaining", "players", "pairs"} | {
+    "bye",
+    "locked",
+    "said",
+    "lines",
+    "record",
+    "you",
+}
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
         "game",
@@ -520,6 +528,50 @@ async def play_dice(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     print(f"  dice: {n} players, {len(g['history'])} challenges")
 
 
+async def play_split(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Random choices and lines; a choice must never show up in anyone else's frame before the reveal."""
+    for rnd in range(1, 6):
+        await all_until(bots, game_is("split", "choose", rnd), f"split choose {rnd}")
+        g = host.state["game"]  # type: ignore[index]
+        picks: dict[str, str] = {}
+        for b in bots:
+            if b.state["game"]["you"]["partner"] is None:  # type: ignore[index]
+                continue
+            if rng.random() < 0.5:
+                await b.send(t="act", a="say", line=rng.randrange(len(g["lines"])))
+            picks[b.pid] = rng.choice(["split", "steal"])
+            await b.send(t="act", a="choose", choice=picks[b.pid])
+        await all_until(bots, game_is("split", "reveal", rnd), f"split reveal {rnd}")
+        for b in bots:
+            for raw in b.raw:
+                gg = json.loads(raw).get("game") or {}
+                if gg.get("game") == "split" and gg.get("phase") == "choose" and gg.get("round") == rnd:
+                    check(
+                        gg["you"]["choice"] in (None, picks.get(b.pid)),
+                        f"{b.name} saw a choice that isn't theirs",
+                    )
+        r = host.state["game"]["result"]  # type: ignore[index]
+        for pr in r["pairs"]:
+            check(all(pr["choices"][p] == picks[p] for p in pr["players"]), "split: revealed choices != sent")
+        await skip(host)
+
+
+def split_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    pts = dict.fromkeys(ids, 0)
+    for h in history:
+        for pr in h["pairs"]:
+            a, b = pr["players"]
+            ca, cb, pot = pr["choices"][a], pr["choices"][b], pr["pot"]
+            if ca == cb == "split":
+                pts[a] += pot // 2
+                pts[b] += pot // 2
+            elif ca != cb:
+                pts[a if ca == "steal" else b] += pot
+        if h["bye"]:
+            pts[h["bye"]] += 50
+    return pts
+
+
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
@@ -837,7 +889,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         await all_until(
             bots, lambda s: sum(p["connected"] for p in s["players"]) == len(bots), "everyone online"
         )
-        games = ["frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword", "dice"]
+        games = ["frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword", "dice", "split"]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         if len(bots) >= 4:
@@ -869,6 +921,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_crossword(host, bots, rng)
             elif game == "dice":
                 await play_dice(host, bots, rng)
+            elif game == "split":
+                await play_split(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -880,6 +934,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = price_points(g["history"], [b.pid for b in bots], g["duels"])
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
+            elif game == "split":
+                want = split_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"split: scores {got} != payoffs from the revealed choices {want}")
             elif name == "blackjack-tournament":
                 # Placement points: 100 per player outlasted, +300 for a sole survivor.
                 g = host.state["game"]  # type: ignore[index]

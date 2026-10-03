@@ -8,6 +8,7 @@ from .dice import LiarsDice
 from .frenemy import FrenemyRadar
 from .mural import MoleInTheMural
 from .price import PriceIsWeird
+from .split import SplitOrSteal
 from .telepathy import TelepathyTax
 
 REGISTRY: dict[str, type[Game]] = {
@@ -21,6 +22,7 @@ REGISTRY: dict[str, type[Game]] = {
         BlackjackShowdown,
         CrosswordRace,
         LiarsDice,
+        SplitOrSteal,
     )
 }
 

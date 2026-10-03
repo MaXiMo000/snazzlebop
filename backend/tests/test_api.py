@@ -79,6 +79,7 @@ def test_games_catalog(client):
         "blackjack",
         "crossword",
         "dice",
+        "split",
     }
 
 

@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "dice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "split" | "dice";
   title: string;
   blurb: string;
   min_players: number;
@@ -313,6 +313,7 @@ export type GameView =
   | MuralView
   | BlackjackView
   | CrosswordView
+  | SplitView
   | DiceView
   | JackpotView;
 
@@ -412,4 +413,24 @@ export interface DiceView extends GameBase {
   /** the challenged round, all dice face up */
   last?: DiceChallenge & { dice: Record<string, number[]> };
   standings?: string[];
+}
+
+export interface SplitPairResult {
+  players: [string, string];
+  pot: number;
+  choices: Record<string, "split" | "steal">;
+  gain: Record<string, number>;
+}
+export interface SplitView extends GameBase {
+  game: "split";
+  players: { id: string; name: string }[];
+  pairs: { players: [string, string]; pot: number }[];
+  bye: string | null;
+  locked: string[];
+  said: Record<string, string>;
+  lines: string[];
+  record: Record<string, { split: number; steal: number }>;
+  you: { partner: string | null; choice: "split" | "steal" | null };
+  result?: { pairs: SplitPairResult[]; bye: string | null };
+  history?: { pairs: SplitPairResult[]; bye: string | null }[];
 }
