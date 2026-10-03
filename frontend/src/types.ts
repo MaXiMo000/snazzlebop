@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice";
   title: string;
   blurb: string;
   min_players: number;
@@ -313,6 +313,8 @@ export type GameView =
   | MuralView
   | BlackjackView
   | CrosswordView
+  | BoxesView
+  | LonelyView
   | RouletteView
   | CodesView
   | WitsView
@@ -554,4 +556,47 @@ export interface RouletteView extends GameBase {
   you: { is_house: boolean; locked: boolean; bets: RouletteBet[]; accuse: string | null };
   result?: RouletteResult;
   history?: RouletteResult[];
+}
+
+export interface LonelyRound {
+  picks: Record<string, number>;
+  winner: string | null;
+  pot: number;
+}
+export interface LonelyView extends GameBase {
+  game: "lonely";
+  players: { id: string; name: string }[];
+  top: number;
+  pot: number;
+  rollover: number;
+  locked: string[];
+  you: { pick: number | null };
+  wins: Record<string, number>;
+  result?: LonelyRound;
+  history?: LonelyRound[];
+}
+
+export interface BoxContent {
+  emoji: string;
+  name: string;
+  value: number;
+}
+export interface BoxSold extends BoxContent {
+  box: number;
+  winner: string | null;
+  price: number;
+  peekers: string[];
+}
+export interface BoxesView extends GameBase {
+  game: "boxes";
+  players: { id: string; name: string }[];
+  labels: string[];
+  current: number;
+  coins: Record<string, number>;
+  boxes: (BoxSold | null)[];
+  claims_list: string[];
+  you: { peek: (BoxContent & { box: number }) | null; extra: (BoxContent & { box: number }) | null };
+  high?: { player: string; amount: number } | null;
+  bids?: { player: string; amount: number }[];
+  claims?: Record<string, string>;
 }

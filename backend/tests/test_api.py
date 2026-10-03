@@ -84,6 +84,8 @@ def test_games_catalog(client):
         "wits",
         "codes",
         "roulette",
+        "lonely",
+        "boxes",
     }
 
 

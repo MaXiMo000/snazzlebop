@@ -214,6 +214,21 @@ ALLOWED_KEYS[("roulette", "bet")] = {"game", "phase", "round", "rounds", "remain
     "spins",
     "you",
 }
+ALLOWED_KEYS[("lonely", "pick")] = {"game", "phase", "round", "rounds", "remaining", "players", "top"} | {
+    "pot",
+    "rollover",
+    "locked",
+    "you",
+    "wins",
+}
+ALLOWED_KEYS[("boxes", "peek")] = {"game", "phase", "round", "rounds", "remaining", "players", "labels"} | {
+    "current",
+    "coins",
+    "boxes",
+    "claims_list",
+    "you",
+}
+ALLOWED_KEYS[("boxes", "auction")] = ALLOWED_KEYS[("boxes", "peek")] | {"high", "bids", "claims"}
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
         "game",
@@ -816,6 +831,86 @@ async def play_roulette(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         await skip(host)
 
 
+async def play_lonely(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Random picks; nobody sees another pick before the reveal; the winner follows the rule."""
+    start = {b.pid: len(b.raw) for b in bots}
+    sent: dict[int, dict[str, int]] = {}
+    for rnd in range(1, 9):
+        await all_until(bots, game_is("lonely", "pick", rnd), f"lonely pick {rnd}")
+        sent[rnd] = {}
+        for b in bots:
+            sent[rnd][b.pid] = rng.randint(1, 6)  # a small range, so collisions happen
+            await b.send(t="act", a="pick", n=sent[rnd][b.pid])
+        await all_until(bots, game_is("lonely", "reveal", rnd), f"lonely reveal {rnd}")
+        r = host.state["game"]["result"]  # type: ignore[index]
+        check(r["picks"] == sent[rnd], "lonely: revealed picks != sent")
+        lonely = [n for n in r["picks"].values() if list(r["picks"].values()).count(n) == 1]
+        want = None if not lonely else next(p for p, n in r["picks"].items() if n == min(lonely))
+        check(r["winner"] == want, f"lonely: winner {r['winner']} != {want}")
+        await skip(host)
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") == "lonely" and gg.get("phase") == "pick":
+                check(gg["you"]["pick"] in (None, sent[gg["round"]][b.pid]), f"{b.name} saw another pick")
+
+
+def lonely_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    pts = dict.fromkeys(ids, 0)
+    for h in history:
+        if h["winner"]:
+            pts[h["winner"]] += h["pot"]
+    return pts
+
+
+async def play_boxes(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Random bids and claims. A box's contents may only show up for its peeker until it is sold."""
+    start = {b.pid: len(b.raw) for b in bots}
+    await all_until(bots, game_is("boxes", "peek"), "boxes peek")
+    peeks = {b.pid: b.state["game"]["you"]["peek"]["box"] for b in bots}  # type: ignore[index]
+    await skip(host)
+    for rnd in range(1, 7):
+        await all_until(bots, game_is("boxes", "auction", rnd), f"boxes auction {rnd}")
+        high = 0
+        for b in rng.sample(bots, k=len(bots)):
+            if rng.random() < 0.3:
+                await b.send(t="act", a="say", line=rng.randrange(5))
+            coins = b.state["game"]["coins"][b.pid]  # type: ignore[index]
+            amount = high + 10 * rng.randint(1, 8)
+            if rng.random() < 0.5 and amount <= coins:
+                await b.send(t="act", a="bid", amount=amount)
+                await host.until(
+                    lambda s, a=amount: (s["game"].get("high") or {}).get("amount") == a, "bid lands"
+                )
+                high = amount
+        await skip(host)
+        await all_until(bots, game_is("boxes", "sold", rnd), f"boxes sold {rnd}")
+        await skip(host)
+    await all_until(bots, game_is("boxes", "final"), "boxes final")
+    sold = host.state["game"]["boxes"]  # type: ignore[index]
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "boxes" or gg.get("phase") == "final":
+                continue
+            public = json.dumps({k: v for k, v in gg.items() if k != "you"})
+            for i, box in enumerate(sold):
+                if gg["boxes"][i] is None:
+                    check(box["name"] not in public, f"{b.name} saw box {i} before it was sold")
+                    if i != peeks[b.pid]:
+                        check(
+                            box["name"] not in json.dumps(gg["you"]), f"{b.name} saw a box they didn't peek"
+                        )
+
+
+def boxes_points(sold: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    pts = dict.fromkeys(ids, 0)
+    for s in sold:
+        if s["winner"]:
+            pts[s["winner"]] += s["value"] - s["price"]
+    return pts
+
+
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
@@ -1147,6 +1242,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "wits",
             "codes",
             "roulette",
+            "lonely",
+            "boxes",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1191,6 +1288,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_codes(host, bots, rng)
             elif game == "roulette":
                 await play_roulette(host, bots, rng)
+            elif game == "lonely":
+                await play_lonely(host, bots, rng)
+            elif game == "boxes":
+                await play_boxes(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1208,6 +1309,14 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 check(
                     got == {pid: chips[pid] - 1000 for pid in got}, f"roulette: scores {got} != stacks - 1000"
                 )
+            elif game == "lonely":
+                want = lonely_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"lonely: scores {got} != pots won {want}")
+            elif game == "boxes":
+                want = boxes_points(host.state["game"]["boxes"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"boxes: scores {got} != value minus price {want}")
             elif game == "codes":
                 want = codes_points(host.state["game"]["cracked"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

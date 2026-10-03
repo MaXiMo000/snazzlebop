@@ -48,6 +48,8 @@ class RegistryTests(unittest.TestCase):
                 "wits",
                 "codes",
                 "roulette",
+                "lonely",
+                "boxes",
             },
         )
 

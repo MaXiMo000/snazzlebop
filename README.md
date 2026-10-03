@@ -22,6 +22,8 @@ Put the show on a TV, play from your phones.
 | **Wager Wits** | 2-8 | Answer a number question, then bet chips on whose answer is closest without going over. Win without knowing a thing. |
 | **Code Crackers** | 2-8 | Hide a 4-fruit code, then race to crack everyone else's with Mastermind clues. |
 | **Roulette Royale** | 3-8 | Bet on the wheel while one of you is secretly the House, winning what the table loses. Spot the House for a bonus. |
+| **Lowest Lonely Number** | 2-8 | Everyone secretly picks 1-20; the lowest number nobody else picked takes the pot. Nobody lonely? It rolls over. |
+| **Mystery Box Auction** | 3-8 | Six sealed boxes (prizes, a dud, two bombs). You peeked inside one; bid live, bluff, and let a friend buy the bomb. |
 
 **Show night.** Pick 2-6 games for one scoreboard: the host's one-liners after every game, a highlight
 reel and awards at the finale, an optional **Jackpot** finale (everyone wagers their score on higher or
@@ -94,7 +96,7 @@ Run locally on Windows 11 + Docker Desktop against the production image (details
 
 - 251 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
   middleware, config rules, content validation), ruff, bandit, pip-audit.
-- Simulator: bots play all thirteen games over real WebSockets, scores are recomputed from the rules, and
+- Simulator: bots play all fifteen games over real WebSockets, scores are recomputed from the rules, and
   no frame ever carries another player's secret.
 - Playwright on 390 px and desktop: 20 tests including axe, keyboard, TV mode, host tools, reconnect.
 - Locust abuse suite (rate limits, socket caps, oversize/flood closes, slow reader), OWASP ZAP

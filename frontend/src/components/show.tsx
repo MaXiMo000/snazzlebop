@@ -21,6 +21,8 @@ export const SEGMENT_ICON: Record<GameCard["id"] | "jackpot", string> = {
   wits: "🧮",
   codes: "🔐",
   roulette: "🎡",
+  lonely: "🐺",
+  boxes: "📦",
   jackpot: "💎",
 };
 

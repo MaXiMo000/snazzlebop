@@ -2196,3 +2196,98 @@ h4 {
   gap: 6px;
   align-items: center;
 }
+
+/* ---- lowest lonely number ------------------------------------------------------------------- */
+.seg-lonely {
+  --accent: #0f5a73;
+  --accent-ink: #fff;
+  --accent-soft: #d4ecf3;
+}
+.number-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(44px, 1fr));
+  gap: 8px;
+}
+.number-grid .btn {
+  font-family: var(--display);
+  font-size: 1.2rem;
+}
+.lonely-picks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lonely-picks li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 2.5px solid var(--plum);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+}
+.lonely-picks li.crowded {
+  border-style: dashed;
+}
+.lonely-picks li.crowded .lonely-n {
+  text-decoration: line-through;
+}
+.lonely-picks li.win {
+  background: var(--bulb);
+  box-shadow: var(--lift-sm);
+}
+.lonely-n {
+  min-width: 2.2rem;
+  font-family: var(--display);
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+/* ---- mystery box auction -------------------------------------------------------------------- */
+.seg-boxes {
+  --accent: #8a3b12;
+  --accent-ink: #fff;
+  --accent-soft: #f6e0d2;
+}
+.box-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .box-row {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+.box {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border: 2.5px solid var(--plum);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  text-align: center;
+}
+.box.now {
+  background: var(--bulb);
+  box-shadow: var(--lift-sm);
+}
+.box.bomb {
+  border-style: dashed;
+}
+.box-label {
+  font-family: var(--display);
+}
+.box-emoji {
+  font-size: 1.8rem;
+}
+.box-value {
+  font-weight: 700;
+}

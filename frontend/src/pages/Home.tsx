@@ -34,7 +34,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Thirteen games. One room code. Zero sign-ups.</p>
+        <p className="lead">Fifteen games. One room code. Zero sign-ups.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -161,6 +161,12 @@ export function Home({ go }: { go: (path: string) => void }) {
           </li>
           <li>
             <b>Roulette Royale</b>: bet on the wheel while one of you secretly owns the House.
+          </li>
+          <li>
+            <b>Lowest Lonely Number</b>: pick 1-20; the lowest number nobody else picked wins.
+          </li>
+          <li>
+            <b>Mystery Box Auction</b>: bid on sealed boxes. You peeked inside one. Bombs included.
           </li>
         </ul>
       </Card>
