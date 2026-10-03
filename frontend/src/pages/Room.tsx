@@ -20,6 +20,7 @@ import { Frenemy } from "../games/Frenemy";
 import { Blackjack } from "../games/Blackjack";
 import { Crossword } from "../games/Crossword";
 import { Jackpot } from "../games/Jackpot";
+import { Chicken } from "../games/Chicken";
 import { Split } from "../games/Split";
 import { Dice } from "../games/Dice";
 import { Mural } from "../games/Mural";
@@ -266,6 +267,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Dice view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "split":
       return <Split view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "chicken":
+      return <Chicken view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }

@@ -2006,3 +2006,23 @@ h4 {
   gap: 6px;
   align-items: center;
 }
+
+/* ---- chicken run ---------------------------------------------------------------------------- */
+.seg-chicken {
+  --accent: #b34700;
+  --accent-ink: #fff;
+  --accent-soft: #ffe3cc;
+}
+.chicken-value {
+  margin: 8px 0 12px;
+  font-family: var(--display);
+  font-size: clamp(3.5rem, 18vw, 6.5rem);
+  line-height: 1;
+  color: var(--bulb);
+  font-variant-numeric: tabular-nums;
+}
+.btn.cash-out {
+  min-height: 84px;
+  min-width: min(100%, 320px);
+  font-size: 1.6rem;
+}

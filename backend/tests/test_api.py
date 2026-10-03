@@ -80,6 +80,7 @@ def test_games_catalog(client):
         "crossword",
         "dice",
         "split",
+        "chicken",
     }
 
 

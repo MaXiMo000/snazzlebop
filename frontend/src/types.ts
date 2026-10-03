@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "split" | "dice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "chicken" | "split" | "dice";
   title: string;
   blurb: string;
   min_players: number;
@@ -313,6 +313,7 @@ export type GameView =
   | MuralView
   | BlackjackView
   | CrosswordView
+  | ChickenView
   | SplitView
   | DiceView
   | JackpotView;
@@ -433,4 +434,23 @@ export interface SplitView extends GameBase {
   you: { partner: string | null; choice: "split" | "steal" | null };
   result?: { pairs: SplitPairResult[]; bye: string | null };
   history?: { pairs: SplitPairResult[]; bye: string | null }[];
+}
+
+export interface ChickenRound {
+  bomb: number;
+  bomb_value: number;
+  cashed: Record<string, { t: number; value: number }>;
+  boomed: string[];
+  nerve: string | null;
+}
+export interface ChickenView extends GameBase {
+  game: "chicken";
+  players: { id: string; name: string }[];
+  base: number;
+  growth: number;
+  /** seconds since the run started, as of this frame (null outside the run) */
+  started_ago: number | null;
+  cashed: Record<string, { t: number; value: number }>;
+  result?: ChickenRound;
+  history?: ChickenRound[];
 }

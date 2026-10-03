@@ -35,6 +35,8 @@ import websockets
 TIMEOUT = 15.0
 # Errors a bot may legitimately trigger (racing for the same question, etc.). Anything else fails.
 EXPECTED_ERRORS = {"already_known", "no_asks", "wrong"}  # wrong: the deliberate crossword miss
+# Per game: a Chicken Run tap that lands just after the bomb is refused, and that's the point.
+EXPECTED_BY_GAME = {"chicken": {"too_late", "wrong_phase"}}
 
 ALLOWED_KEYS = {
     ("frenemy", "rank"): {"game", "phase", "round", "rounds", "remaining", "prompt", "players", "submitted"}
@@ -157,6 +159,20 @@ ALLOWED_KEYS[("split", "choose")] = {"game", "phase", "round", "rounds", "remain
     "record",
     "you",
 }
+for _phase in ("ready", "run"):
+    ALLOWED_KEYS[("chicken", _phase)] = {
+        "game",
+        "phase",
+        "round",
+        "rounds",
+        "remaining",
+        "players",
+        "base",
+    } | {
+        "growth",
+        "started_ago",
+        "cashed",
+    }
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
         "game",
@@ -572,6 +588,65 @@ def split_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int
     return pts
 
 
+async def play_chicken(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots bail at random moments (some hold on). The bomb must never show before it goes off, every
+    banked value must follow the published formula, and no run frame may carry a countdown."""
+    for rnd in range(1, 6):
+        await all_until(bots, game_is("chicken", "run", rnd), f"chicken run {rnd}")
+        order = bots[:]
+        rng.shuffle(order)
+        start = asyncio.get_running_loop().time()
+        for b in order:
+            wait = rng.uniform(0.2, 9.0)
+            delay = start + wait - asyncio.get_running_loop().time()
+            if delay > 0:
+                await asyncio.sleep(delay)
+            if (host.state["game"] or {}).get("phase") != "run":  # type: ignore[union-attr]
+                break
+            await b.send(t="act", a="cash")
+
+        # The boom only lasts a few seconds before the next round (or the end): don't require every bot
+        # to catch it, just that the round is over, and read its result from the history.
+        def over(st: dict[str, Any], rnd: int = rnd) -> bool:
+            gg = st.get("game") or {}
+            return gg.get("phase") in ("boom", "final") or gg.get("round", 0) > rnd
+
+        await host.until(over, f"chicken boom {rnd}")
+        booms = [
+            gg["result"]
+            for gg in (json.loads(raw).get("game") or {} for raw in host.raw)
+            if gg.get("game") == "chicken" and gg.get("round") == rnd and gg.get("phase") == "boom"
+        ]
+        check(bool(booms), f"chicken: no boom frame for round {rnd}")
+        r = booms[-1]
+        for pid, c in r["cashed"].items():
+            check(c["value"] == int(20 * 1.15 ** c["t"]), f"chicken: {pid} banked {c['value']} at {c['t']}s")
+            check(c["t"] <= r["bomb"], "chicken: a cash-out after the bomb was accepted")
+        for b in bots:
+            for raw in b.raw:
+                gg = json.loads(raw).get("game") or {}
+                if (
+                    gg.get("game") == "chicken"
+                    and gg.get("round") == rnd
+                    and gg.get("phase") in ("ready", "run")
+                ):
+                    check("result" not in gg, f"{b.name} saw the bomb early")
+                    if gg["phase"] == "run":
+                        check(gg["remaining"] is None, f"{b.name} got a countdown during the run")
+        if host.state["game"]["phase"] == "boom":  # type: ignore[index]
+            await skip(host)
+
+
+def chicken_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    pts = dict.fromkeys(ids, 0)
+    for h in history:
+        for pid, c in h["cashed"].items():
+            pts[pid] += c["value"]
+        if h["nerve"]:
+            pts[h["nerve"]] += 50
+    return pts
+
+
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
@@ -889,7 +964,18 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         await all_until(
             bots, lambda s: sum(p["connected"] for p in s["players"]) == len(bots), "everyone online"
         )
-        games = ["frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword", "dice", "split"]
+        games = [
+            "frenemy",
+            "alibi",
+            "price",
+            "telepathy",
+            "mural",
+            "blackjack",
+            "crossword",
+            "dice",
+            "split",
+            "chicken",
+        ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         if len(bots) >= 4:
@@ -898,6 +984,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             if only and name not in only and name.split("-")[0] not in only:
                 continue
             game = name.split("-")[0]
+            for b in bots:
+                b.errors.clear()  # each game is judged on its own errors
             before = totals(host)
             start = {b.pid: len(b.raw) for b in bots}
             planted: dict[str, set[int]] = {}
@@ -923,6 +1011,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_dice(host, bots, rng)
             elif game == "split":
                 await play_split(host, bots, rng)
+            elif game == "chicken":
+                await play_chicken(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -934,6 +1024,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = price_points(g["history"], [b.pid for b in bots], g["duels"])
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
+            elif game == "chicken":
+                want = chicken_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"chicken: scores {got} != banked values {want}")
             elif game == "split":
                 want = split_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
@@ -958,7 +1052,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 check(sum(after.values()) > sum(before.values()), f"{game}: session scores did not go up")
             frames = check_frames(bots, game, start, planted)
             for b in bots:
-                bad = [e for e in b.errors if e not in EXPECTED_ERRORS]
+                bad = [e for e in b.errors if e not in EXPECTED_ERRORS | EXPECTED_BY_GAME.get(game, set())]
                 check(not bad, f"{b.name} got unexpected errors: {bad}")
             gained = sum(after.values()) - sum(before.values())
             hidden = sum(len(v) for v in planted.values())

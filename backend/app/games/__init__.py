@@ -3,6 +3,7 @@ from __future__ import annotations
 from .alibi import Alibi
 from .base import Game, GameError, Player
 from .blackjack import BlackjackShowdown
+from .chicken import ChickenRun
 from .crossword import CrosswordRace
 from .dice import LiarsDice
 from .frenemy import FrenemyRadar
@@ -23,6 +24,7 @@ REGISTRY: dict[str, type[Game]] = {
         CrosswordRace,
         LiarsDice,
         SplitOrSteal,
+        ChickenRun,
     )
 }
 
