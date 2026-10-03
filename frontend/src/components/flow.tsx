@@ -33,7 +33,11 @@ export function IntroScreen({ state, receivedAt, send, readOnly }: { state: Room
   return (
     <div className={`seg-${intro.game} stack enter`}>
       <ShowHead sign="Up next · how to play" title={intro.title} remaining={intro.closes_in} receivedAt={receivedAt}>
-        {mode && <span className="chip plum">{mode} mode</span>}
+        {mode && (
+          <span className="chip plum">
+            {mode} {"pace" in intro.options ? "pace" : "mode"}
+          </span>
+        )}
       </ShowHead>
       <Card tone="stage">
         <p className="sign">
@@ -86,6 +90,7 @@ const READY_LABEL: Record<string, string> = {
   talk: "Done talking, let’s choose ▶",
   ready: "Ready to run ▶",
   peek: "Seen it, start the bidding ▶",
+  teams: "Teams look good, deal ▶",
 };
 
 /** On results screens: everyone taps Ready to move on together instead of waiting for the clock. */

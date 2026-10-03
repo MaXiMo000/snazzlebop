@@ -6,6 +6,7 @@ from .blackjack import BlackjackShowdown
 from .boxes import MysteryBoxes
 from .chicken import ChickenRun
 from .codes import CodeCrackers
+from .codewords import Codewords
 from .crossword import CrosswordRace
 from .dice import LiarsDice
 from .frenemy import FrenemyRadar
@@ -35,6 +36,7 @@ REGISTRY: dict[str, type[Game]] = {
         RouletteRoyale,
         LowestLonely,
         MysteryBoxes,
+        Codewords,
     )
 }
 
@@ -49,6 +51,7 @@ def catalog() -> list[dict[str, object]]:
             "max_players": cls.max_players,
             "options": cls.OPTIONS,
             "how_to": list(cls.HOW_TO),
+            "show": cls.SHOW,
         }
         for cls in REGISTRY.values()
     ]

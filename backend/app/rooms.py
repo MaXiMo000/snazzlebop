@@ -887,7 +887,7 @@ class Hub:
             if (
                 not isinstance(raw, list)
                 or not showlib.MIN_GAMES <= len(raw) <= showlib.MAX_GAMES
-                or any(not isinstance(g, str) or g not in REGISTRY for g in raw)
+                or any(not isinstance(g, str) or g not in REGISTRY or not REGISTRY[g].SHOW for g in raw)
                 or len(set(raw)) != len(raw)
             ):
                 raise HubError("bad_show", f"Pick {showlib.MIN_GAMES}-{showlib.MAX_GAMES} different games")

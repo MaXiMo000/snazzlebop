@@ -23,6 +23,7 @@ Put the show on a TV, play from your phones.
 | **Code Crackers** | 2-8 | Hide a 4-fruit code, then race to crack everyone else's with Mastermind clues. Buy hints; arm a decoy. |
 | **Roulette Royale** | 3-8 | Bet on the wheel while one of you is secretly the House, winning what the table loses. The House can rig one spin; call an **audit**. |
 | **Lowest Lonely Number** | 2-8 | Everyone secretly picks 1-20; the lowest number nobody else picked takes the pot. Nobody lonely? It rolls over. |
+| **Codewords** (team game) | 4-8 | Red vs Blue over 25 words. Spymasters give one-word clues, guessers mark and reveal, and nobody touches the assassin. Played on its own from the lobby's Team games, not in show nights. |
 | **Mystery Box Auction** | 3-8 | Six sealed boxes (prizes, a dud, two bombs). You peeked inside one; bid live, bluff, and let a friend buy the bomb. |
 
 **Show night.** Pick 2-6 games for one scoreboard: the host's one-liners after every game, a highlight
@@ -105,11 +106,11 @@ domain, follow "Client IP and Cloudflare" in [SECURITY.md](SECURITY.md).
 Run locally on Windows 11 + Docker Desktop against the production image (details and output in
 [docs/SECURITY-EVIDENCE.md](docs/SECURITY-EVIDENCE.md)):
 
-- 308 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
+- 340 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
   middleware, config rules, content validation), ruff, bandit, pip-audit.
-- Simulator: bots play all fifteen games over real WebSockets, scores are recomputed from the rules, and
+- Simulator: bots play all sixteen games over real WebSockets, scores are recomputed from the rules, and
   no frame ever carries another player's secret.
-- Playwright on 390 px and desktop: 22 tests including axe, keyboard, TV mode, host tools, reconnect.
+- Playwright on 390 px and desktop: 26 tests including axe, keyboard, TV mode, host tools, reconnect.
 - Locust abuse suite (rate limits, socket caps, oversize/flood closes, slow reader), OWASP ZAP
   baseline, Lighthouse (home 100 a11y/best practices/SEO), colour contrast for every pair.
 - Image: Trivy CRITICAL/HIGH (fixable) clean, gitleaks over full history clean.

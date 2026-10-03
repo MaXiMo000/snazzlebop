@@ -86,6 +86,7 @@ def test_games_catalog(client):
         "roulette",
         "lonely",
         "boxes",
+        "codewords",
     }
 
 

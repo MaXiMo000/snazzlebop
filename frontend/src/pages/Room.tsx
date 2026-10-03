@@ -23,6 +23,7 @@ import { Frenemy } from "../games/Frenemy";
 import { Blackjack } from "../games/Blackjack";
 import { Crossword } from "../games/Crossword";
 import { Jackpot } from "../games/Jackpot";
+import { Codewords } from "../games/Codewords";
 import { Boxes } from "../games/Boxes";
 import { Lonely } from "../games/Lonely";
 import { Roulette } from "../games/Roulette";
@@ -261,9 +262,16 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
               <Card tone="soft">
                 <div className="row between">
                   <p className="muted">You’re the host.</p>
-                  <Btn variant="go" size="big" onClick={() => send({ t: "lobby" })}>
-                    Play another game
-                  </Btn>
+                  <div className="row">
+                    {state.game.game !== "jackpot" && (
+                      <Btn variant="gold" size="big" onClick={() => send({ t: "start", game: state.game!.game })}>
+                        🔁 Play again
+                      </Btn>
+                    )}
+                    <Btn variant="go" size="big" onClick={() => send({ t: "lobby" })}>
+                      Play another game
+                    </Btn>
+                  </div>
                 </div>
               </Card>
             )
@@ -314,6 +322,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Lonely view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "boxes":
       return <Boxes view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "codewords":
+      return <Codewords view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -537,6 +547,10 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
     race: "Everyone for themselves",
     teams: "Two teams (4+ players)",
   },
+  pace: {
+    relaxed: "Relaxed (2½ min clues, 3 min guessing)",
+    speedy: "Speedy (75 s clues, 90 s guessing)",
+  },
 };
 
 /** Start button, plus a picker for each option the game declares (first value = default). */
@@ -594,30 +608,52 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
       {isHost && <HostTools state={state} send={send} />}
       {isHost && <ShowBuilder state={state} send={send} />}
 
+      {state.games.some((g) => !g.show) && (
+        <Card tone="stage" aria-labelledby="team-games-h">
+          <p className="sign" id="team-games-h">
+            Team games
+          </p>
+          <p className="lead space-top">Split into teams and play head to head. Played on their own, not in a show night.</p>
+          <div className="grid space-top">
+            {state.games
+              .filter((g) => !g.show)
+              .map((g) => (
+                <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} />
+              ))}
+          </div>
+        </Card>
+      )}
+
       <h2>{isHost ? "Or play a single game" : "Waiting for the host to pick a game…"}</h2>
       <div className="grid">
-        {state.games.map((g) => {
-          const enough = online >= g.min_players && online <= g.max_players;
-          return (
-            <Card as="article" key={g.id} className={`segment-card seg-${g.id} game-card`} aria-labelledby={`seg-${g.id}`}>
-              <div className="band">
-                <span className="chip plum">
-                  {g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`} players
-                </span>
-                <h3 id={`seg-${g.id}`}>
-                  <span aria-hidden="true">{SEGMENT_ICON[g.id]} </span>
-                  {g.title}
-                </h3>
-              </div>
-              <div className="body">
-                <p>{g.blurb}</p>
-                {isHost && <StartGame game={g} enough={enough} send={send} />}
-              </div>
-            </Card>
-          );
-        })}
+        {state.games
+          .filter((g) => g.show)
+          .map((g) => (
+            <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} />
+          ))}
       </div>
     </div>
+  );
+}
+
+function GameCardTile({ g, online, isHost, send }: { g: GameCard; online: number; isHost: boolean; send: Send }) {
+  const enough = online >= g.min_players && online <= g.max_players;
+  return (
+    <Card as="article" key={g.id} className={`segment-card seg-${g.id} game-card`} aria-labelledby={`seg-${g.id}`}>
+      <div className="band">
+        <span className="chip plum">
+          {g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`} players
+        </span>
+        <h3 id={`seg-${g.id}`}>
+          <span aria-hidden="true">{SEGMENT_ICON[g.id]} </span>
+          {g.title}
+        </h3>
+      </div>
+      <div className="body">
+        <p>{g.blurb}</p>
+        {isHost && <StartGame game={g} enough={enough} send={send} />}
+      </div>
+    </Card>
   );
 }
 

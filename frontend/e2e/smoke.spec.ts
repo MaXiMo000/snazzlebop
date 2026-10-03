@@ -776,3 +776,61 @@ test("theme: dark by default, light on request, remembered, and both pass axe", 
   await targets(page, "home light", a11y);
   expect(a11y).toEqual([]);
 });
+
+test("Codewords: team game from the lobby, setup, a clue, marks and a reveal", async ({ page: host, browser, baseURL }, info) => {
+  test.setTimeout(4 * 60_000);
+  const problems: string[] = [];
+  const a11y: string[] = [];
+  watchConsole(host, problems);
+  const shot = shots(host, info.project.name);
+  const guests = await table(browser, baseURL!, host, ["Bo", "Cy", "Di"], problems);
+  const all = [host, ...guests];
+  // It lives in its own "Team games" section, and isn't offered for show nights.
+  const teamGames = host.locator('[aria-labelledby="team-games-h"]');
+  await expect(host.locator("#team-games-h")).toBeVisible();
+  await expect(host.getByRole("group", { name: "Games in this show, in order" }).getByRole("button", { name: "Codewords" })).toHaveCount(0);
+  await teamGames.locator("article.game-card.seg-codewords").getByRole("button", { name: /Start!/ }).click();
+  await startNow(host);
+
+  await expect(host.getByText("Pick your teams")).toBeVisible();
+  await axe(host, "codewords teams", a11y);
+  await targets(host, "codewords teams", a11y);
+  await shot("27-codewords-teams");
+  for (const p of all) await p.getByRole("button", { name: /Teams look good/ }).click();
+
+  // Exactly one player gets the clue box: the Spymaster of the team that starts.
+  await expect(host.getByText(/Spymaster’s clue/).first()).toBeVisible();
+  let spy = null;
+  for (const p of all) if (await p.getByLabel("Your clue (one word)").isVisible()) spy = p;
+  expect(spy).not.toBeNull();
+  await axe(spy!, "codewords spymaster", a11y);
+  await targets(spy!, "codewords spymaster", a11y);
+  // A word on the board is refused before it's even sent.
+  const boardWord = (await spy!.locator(".cw-card .cw-word").first().textContent())!;
+  await spy!.getByLabel("Your clue (one word)").fill(boardWord);
+  await expect(spy!.getByRole("button", { name: /Give clue/ })).toBeDisabled();
+  // Any clue that isn't (and doesn't contain) a face-down word, e.g. no ZEBRAFISH while FISH is out.
+  const words = await spy!.locator(".cw-card .cw-word").allTextContents();
+  const clue = ["QUOKKA", "ZEPHYR", "MYRRH", "SPHINX"].find((c) => words.every((w) => !c.includes(w) && !w.includes(c)))!;
+  await spy!.getByLabel("Your clue (one word)").fill(clue.toLowerCase());
+  await spy!.getByRole("button", { name: "2", exact: true }).click();
+  await spy!.getByRole("button", { name: /Give clue/ }).click();
+  await expect(host.getByText(clue).first()).toBeVisible();
+
+  // A guesser on that team marks a word (teammates see it), then reveals it.
+  let guesser = null;
+  for (const p of all) if (await p.getByRole("button", { name: "Tap a word to pick it" }).isVisible()) guesser = p;
+  expect(guesser).not.toBeNull();
+  const first = guesser!.locator("button.cw-card").first();
+  const word = (await first.locator(".cw-word").textContent())!;
+  await first.click();
+  await expect(spy!.locator(".cw-card", { hasText: word }).locator(".cw-mark")).toHaveCount(1);
+  await axe(guesser!, "codewords guesser", a11y);
+  await targets(guesser!, "codewords guesser", a11y);
+  await guesser!.getByRole("button", { name: `Reveal ${word}` }).click();
+  await expect(host.locator(".cw-card.revealed", { hasText: word })).toHaveCount(1);
+  await expect(host.getByRole("heading", { name: "Clues so far" })).toBeVisible();
+  await shot("28-codewords-board");
+  expect(a11y).toEqual([]);
+  expect(problems).toEqual([]);
+});

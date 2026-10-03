@@ -2583,3 +2583,303 @@ details.how-to[open] summary {
   color: var(--muted);
 }
 
+
+/* ---- codewords -------------------------------------------------------------------------------- */
+/* The header takes the colour of the team whose turn it is. */
+.seg-codewords {
+  --accent: #2c2f5e;
+  --accent-ink: #fff;
+  --accent-soft: #e2e2f6;
+  --cw-red: #c8203a;
+  --cw-blue: #1f5fae;
+  --cw-neutral: #b59c74;
+  --cw-assassin: #141014;
+}
+.seg-codewords.cw-turn-red {
+  --accent: var(--cw-red);
+}
+.seg-codewords.cw-turn-blue {
+  --accent: var(--cw-blue);
+}
+.cw-score {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.cw-pill {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 12px;
+  font-weight: 700;
+  color: #fff;
+  border: 2.5px solid var(--edge);
+  border-radius: 999px;
+  opacity: 0.85;
+}
+.cw-pill.red {
+  background: var(--cw-red);
+}
+.cw-pill.blue {
+  background: var(--cw-blue);
+}
+.cw-pill.on {
+  opacity: 1;
+  border-color: var(--bulb);
+  box-shadow: 0 0 0 3px rgba(255, 231, 161, 0.35);
+}
+.cw-pill b {
+  font-family: var(--display);
+  font-weight: 400;
+}
+
+/* Teams: side by side even on phones. */
+.cw-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.cw-team-card {
+  padding: 14px;
+  border-top-width: 8px;
+}
+.cw-team-card.red {
+  border-top-color: var(--cw-red);
+}
+.cw-team-card.blue {
+  border-top-color: var(--cw-blue);
+}
+.cw-team-card.on {
+  box-shadow: var(--lift), 0 0 0 3px var(--bulb);
+}
+.cw-team-card h3 {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.cw-team-card h3 .muted {
+  font-family: var(--body);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.cw-members {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+.cw-members li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: baseline;
+}
+.cw-role {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Turn banner */
+.cw-banner.red {
+  border-color: var(--cw-red);
+  box-shadow: var(--lift), 0 0 0 4px var(--cw-red);
+}
+.cw-banner.blue {
+  border-color: var(--cw-blue);
+  box-shadow: var(--lift), 0 0 0 4px var(--cw-blue);
+}
+.cw-clue {
+  font-family: var(--display);
+  font-size: clamp(2rem, 10vw, 3.4rem);
+  line-height: 1;
+  color: var(--bulb);
+  overflow-wrap: anywhere;
+}
+.cw-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.4em;
+  padding: 0 0.15em;
+  margin-left: 0.15em;
+  color: var(--plum);
+  background: var(--bulb);
+  border-radius: 12px;
+}
+.cw-banner-big {
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 7vw, 2.6rem);
+  color: var(--bulb);
+}
+.cw-counts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(44px, 1fr));
+  gap: 8px;
+}
+.cw-counts .btn {
+  font-size: 1.1rem;
+}
+.cw-problem {
+  color: #ff9aa9;
+  font-weight: 700;
+}
+:root[data-theme="light"] .cw-problem {
+  color: var(--cherry);
+}
+
+/* The board: 5x5 on every screen. Cards shrink their type to fit long words on phones. */
+.cw-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(5px, 1.4vw, 12px);
+  max-width: 860px;
+  margin-inline: auto;
+}
+.cw-card {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: clamp(54px, 15vw, 96px);
+  padding: 6px 2px;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: clamp(0.72rem, 3.3vw, 1.2rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--plum);
+  background: #f6ead6;
+  border: 2.5px solid var(--edge);
+  border-radius: 10px;
+  box-shadow: 0 4px 0 var(--shadow);
+  overflow-wrap: anywhere;
+}
+/* Longer words get smaller type so they fit on one line, even on a 360 px phone. */
+.cw-card.l8 {
+  font-size: clamp(0.62rem, 2.75vw, 1.1rem);
+}
+.cw-card.l9 {
+  font-size: clamp(0.56rem, 2.45vw, 1.05rem);
+}
+.cw-card.l10 {
+  font-size: clamp(0.5rem, 2.15vw, 1rem);
+}
+button.cw-card {
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
+}
+button.cw-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--shadow);
+}
+.cw-card.picked {
+  outline: 4px solid var(--bulb);
+  outline-offset: 2px;
+  transform: translateY(-2px);
+}
+/* Spymaster's key: a strong colour edge and tint, word still readable. */
+.cw-card.hint.red {
+  background: #f6c7cf;
+  box-shadow: inset 0 0 0 4px var(--cw-red), 0 4px 0 var(--shadow);
+}
+.cw-card.hint.blue {
+  background: #c9dbf4;
+  box-shadow: inset 0 0 0 4px var(--cw-blue), 0 4px 0 var(--shadow);
+}
+.cw-card.hint.neutral {
+  background: #ece2cf;
+}
+.cw-card.hint.assassin {
+  background: #3a3438;
+  color: #fff;
+  box-shadow: inset 0 0 0 4px #000, 0 4px 0 var(--shadow);
+}
+/* Revealed: the full colour, the word small and struck through. */
+.cw-card.revealed {
+  box-shadow: none;
+  transform: translateY(3px);
+  font-size: clamp(0.5rem, 2.1vw, 0.85rem);
+  padding-top: 4px;
+}
+.cw-card.revealed .cw-word {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+.cw-card.revealed.red {
+  background: var(--cw-red);
+  color: #fff;
+}
+.cw-card.revealed.blue {
+  background: var(--cw-blue);
+  color: #fff;
+}
+.cw-card.revealed.neutral {
+  background: var(--cw-neutral);
+  color: var(--plum);
+}
+.cw-card.revealed.assassin {
+  background: var(--cw-assassin);
+  color: #fff;
+}
+.cw-icon {
+  font-size: clamp(1rem, 4.5vw, 1.6rem);
+  line-height: 1;
+}
+.cw-marks {
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  display: flex;
+  gap: 2px;
+}
+.cw-mark {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 3px;
+  font-family: var(--body);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--plum);
+  background: var(--bulb);
+  border: 2px solid var(--plum);
+  border-radius: 999px;
+}
+.cw-guess-bar .btn:first-child {
+  flex: 1 1 200px;
+}
+.cw-log {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cw-log li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 2px solid var(--rule);
+  border-left: 6px solid var(--cw-red);
+  border-radius: var(--radius-sm);
+}
+.cw-log li.blue {
+  border-left-color: var(--cw-blue);
+}
+.cw-log-clue {
+  font-family: var(--display);
+}
+.cw-log-guesses {
+  overflow-wrap: anywhere;
+}
+
+/* ---- lobby: team games -------------------------------------------------------------------------- */
+.team-games {
+  border-top-width: 8px;
+  border-top-color: var(--cw-red, #c8203a);
+}

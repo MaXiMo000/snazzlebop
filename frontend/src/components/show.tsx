@@ -24,6 +24,7 @@ export const SEGMENT_ICON: Record<GameCard["id"] | "jackpot", string> = {
   roulette: "🎡",
   lonely: "🐺",
   boxes: "📦",
+  codewords: "🕵️",
   jackpot: "💎",
 };
 
@@ -203,7 +204,7 @@ export function ShowBuilder({ state, send }: { state: RoomState; send: Send }) {
         {market ? ". The Stock Exchange lets everyone trade shares in each other before every game" : ""}.
       </p>
       <div className="builder-games space-top" role="group" aria-label="Games in this show, in order">
-        {state.games.map((g) => {
+        {state.games.filter((g) => g.show).map((g) => {
           const at = picked.indexOf(g.id);
           return (
             <Btn

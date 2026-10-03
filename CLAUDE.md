@@ -6,7 +6,8 @@ games, security-first FastAPI backend, one Docker service on Render.
 Games: **Frenemy Radar**, **Alibi**, **Price Is Weird**, **Telepathy Tax**, **Mole in the Mural**,
 **Blackjack Showdown** (solo/side bets/chaos/tournament), **Crossword Race** (teams, bought letters),
 **Liar's Dice**, **Split or Steal**, **Chicken Run**, **Wager Wits**, **Code Crackers**, **Roulette
-Royale**, **Lowest Lonely Number**, **Mystery Box Auction**. Show nights (show.py): a playlist on one
+Royale**, **Lowest Lonely Number**, **Mystery Box Auction**, and the team game **Codewords** (`SHOW = False`:
+played on its own, never in a show playlist). Show nights (show.py): a playlist on one
 scoreboard, host quips, highlight reel and awards, Jackpot finale, power cards (games expose `peek()`),
 rivals, Friend Stock Exchange (shorts, dividends, insider tips), rematches and a season table, show
 packs, audience (react, predict, trade, MVP vote), live reactions.

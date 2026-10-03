@@ -150,6 +150,10 @@ def quip(
     if final is None and len(ranked) >= 3 and ranked[0][1] == ranked[-1][1]:
         # Everyone level: a "tie at the top" line would wrongly single out two people.
         return f"A dead heat on {game_title}: everyone finished on {ranked[0][1]}."
+    joint = [names.get(p, "?") for p, s in ranked if s == ranked[0][1]]
+    if final is None and len(joint) >= 3:
+        # A team win (or a 3+ way tie): name everyone who shares it, not just two of them.
+        return f"{', '.join(joint[:-1])} and {joint[-1]} share {game_title}. Teamwork!"
     if final == "show" and len(ranked) >= 2 and ranked[0][1] == ranked[1][1]:
         joint = [names.get(p, "?") for p, s in ranked if s == ranked[0][1]]
         return f"We can't split them: {' and '.join(joint)} share tonight's crown!"

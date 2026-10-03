@@ -242,6 +242,22 @@ ALLOWED_KEYS[("boxes", "peek")] = {"game", "phase", "round", "rounds", "remainin
     "you",
 }
 ALLOWED_KEYS[("boxes", "auction")] = ALLOWED_KEYS[("boxes", "peek")] | {"high", "bids", "claims"}
+for _phase in ("teams", "clue", "guess"):
+    ALLOWED_KEYS[("codewords", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "teams",
+        "spymasters",
+        "turn",
+        "board",
+        "left",
+        "starting",
+        "clue",
+        "guesses_left",
+        "guessed_this_turn",
+        "log",
+        "pace",
+        "you",
+        "valid_teams",
+    }
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
         "game",
@@ -973,6 +989,62 @@ def boxes_points(sold: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
     return pts
 
 
+async def play_codewords(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Teams are ready-voted in; spymasters clue, guessers reveal random words until a team wins. Only the
+    two spymasters may ever see the colour of a face-down word."""
+    start = {b.pid: len(b.raw) for b in bots}
+    await all_until(bots, game_is("codewords", "teams"), "codewords teams")
+    stage = host.state["stage"]  # type: ignore[index]
+    for b in bots:
+        await b.send(t="ready", stage=stage)
+    by_id = {b.pid: b for b in bots}
+    clues = iter(f"ZQ{chr(65 + i // 26)}{chr(65 + i % 26)}X" for i in range(600))
+    for _ in range(300):
+        await host.until(
+            lambda s: (s.get("game") or {}).get("phase") in ("clue", "guess", "final"), "codewords turn"
+        )
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        team = g["turn"]
+        if g["phase"] == "clue":
+            spy = by_id[g["spymasters"][team]]
+            await spy.send(t="act", a="clue", word=next(clues), count=rng.randint(0, 3))
+            await host.until(
+                lambda s, team=team: (
+                    (s.get("game") or {}).get("phase") != "clue" or s["game"]["turn"] != team
+                ),
+                "clue in",
+            )
+            continue
+        guesser = next(b for b in bots if g["teams"][b.pid] == team and b.pid != g["spymasters"][team])
+        hidden = [i for i, c in enumerate(g["board"]) if not c["revealed"]]
+        n = sum(c["revealed"] for c in g["board"])
+        await guesser.send(t="act", a="reveal", card=rng.choice(hidden))
+        await host.until(
+            lambda s, n=n: sum(c["revealed"] for c in (s["game"] or {}).get("board", [])) > n, "reveal"
+        )
+    await all_until(bots, game_is("codewords", "final"), "codewords final")
+    final = host.state["game"]  # type: ignore[index]
+    key = [c["color"] for c in final["board"]]
+    check(
+        None not in key and key.count("assassin") == 1, "codewords: the final board must show the whole key"
+    )
+    spies = set(final["spymasters"].values())
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "codewords" or gg.get("phase") == "final":
+                continue
+            for i, c in enumerate(gg["board"]):
+                if c["revealed"]:
+                    check(c["color"] == key[i], "codewords: a revealed colour changed")
+                elif b.pid in spies:
+                    check(c["color"] == key[i], f"{b.name} (spymaster) was shown a wrong key")
+                else:
+                    check(c["color"] is None, f"{b.name} (guesser) saw a face-down colour")
+
+
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
@@ -1306,6 +1378,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "roulette",
             "lonely",
             "boxes",
+            "codewords",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1362,6 +1435,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_lonely(host, bots, rng)
             elif game == "boxes":
                 await play_boxes(host, bots, rng)
+            elif game == "codewords":
+                await play_codewords(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1383,6 +1458,11 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = lonely_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"lonely: scores {got} != pots won {want}")
+            elif game == "codewords":
+                g = host.state["game"]  # type: ignore[index]
+                want = {pid: 300 if team == g["winner"] else 0 for pid, team in g["teams"].items()}
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"codewords: scores {got} != the winning team's {want}")
             elif game == "boxes":
                 want = boxes_points(host.state["game"]["boxes"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

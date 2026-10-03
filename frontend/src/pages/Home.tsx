@@ -34,7 +34,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Fifteen games. One room code. Zero sign-ups.</p>
+        <p className="lead">Sixteen games. One room code. Zero sign-ups.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -167,6 +167,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           </li>
           <li>
             <b>Mystery Box Auction</b>: bid on sealed boxes. You peeked inside one. Bombs included.
+          </li>
+          <li>
+            <b>Codewords</b> (teams): Spymasters give one-word clues; find your team’s words, dodge the assassin.
           </li>
         </ul>
       </Card>

@@ -93,6 +93,11 @@ class QuipTests(unittest.TestCase):
             self.assertTrue(line)
             self.assertNotIn("{", line)
 
+    def test_a_three_way_win_names_everyone(self):
+        names = {"a": "Ana", "b": "Bo", "c": "Cy", "d": "Di"}
+        line = showlib.quip({"a": 300, "b": 300, "c": 300, "d": 0}, names, "Codewords", {}, random.Random(1))
+        self.assertEqual(line, "Ana, Bo and Cy share Codewords. Teamwork!")
+
     def test_a_shared_crown_at_the_finale(self):
         names = {"a": "Ana", "b": "Bo", "c": "Cy"}
         line = showlib.quip({"a": 5, "b": 5, "c": 1}, names, "the show", {}, random.Random(1), "show")

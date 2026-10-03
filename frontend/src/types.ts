@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice";
   title: string;
   blurb: string;
   min_players: number;
@@ -16,6 +16,8 @@ export interface GameCard {
   options: Record<string, string[]>;
   /** plain-language rules */
   how_to: string[];
+  /** false for team games, which are played on their own rather than in a show */
+  show: boolean;
 }
 
 export interface GameBase {
@@ -315,6 +317,7 @@ export type GameView =
   | MuralView
   | BlackjackView
   | CrosswordView
+  | CodewordsView
   | BoxesView
   | LonelyView
   | RouletteView
@@ -708,4 +711,39 @@ export interface BoxesView extends GameBase {
   high?: { player: string; amount: number } | null;
   bids?: { player: string; amount: number }[];
   claims?: Record<string, string>;
+}
+
+export type CwColor = "red" | "blue" | "neutral" | "assassin";
+export type CwTeam = "red" | "blue";
+export interface CwCard {
+  word: string;
+  revealed: boolean;
+  /** known to Spymasters, and to everyone once revealed (or at the end) */
+  color: CwColor | null;
+  /** guessers on the team at play who are considering this word */
+  marks: string[];
+}
+export type CwLog =
+  | { type: "clue"; team: CwTeam; word: string; count: number }
+  | { type: "guess"; team: CwTeam; by: string; card: number; word: string; color: CwColor }
+  | { type: "pass"; team: CwTeam; by: string }
+  | { type: "timeout"; team: CwTeam };
+export interface CodewordsView extends GameBase {
+  game: "codewords";
+  players: { id: string; name: string }[];
+  teams: Record<string, CwTeam>;
+  spymasters: Record<CwTeam, string | null>;
+  turn: CwTeam;
+  board: CwCard[];
+  left: Record<CwTeam, number>;
+  starting: CwTeam | null;
+  clue: { team: CwTeam; word: string; count: number } | null;
+  guesses_left: number | null;
+  guessed_this_turn: number;
+  log: CwLog[];
+  pace: string;
+  you: { team: CwTeam | null; spymaster: boolean };
+  valid_teams: boolean;
+  winner?: CwTeam;
+  how?: "words" | "assassin";
 }

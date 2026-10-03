@@ -112,6 +112,8 @@ class Game(ABC):
     HOW_TO: ClassVar[tuple[str, ...]] = ()
     # Results/briefing phases the room can skip together: once every player taps Ready, it moves on.
     READING: ClassVar[frozenset[str]] = frozenset()
+    # False for team games that are played on their own rather than in a show-night playlist.
+    SHOW: ClassVar[bool] = True
 
     def __init__(
         self,
