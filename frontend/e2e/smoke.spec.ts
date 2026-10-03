@@ -735,7 +735,7 @@ test("Friend Stock Exchange: trade before each game, prices move, books revealed
   await bo.getByRole("button", { name: "Buy 5 shares of Ana" }).click();
   await expect(bo.getByText("5 held")).toBeVisible();
   await expect(bo.getByText(/Cash \$500/)).toBeVisible();
-  await expect(host.getByText(/1 trades so far/)).toBeVisible();
+  await expect(host.getByText(/1 trade so far/)).toBeVisible();
   await shot("23-market");
   await axe(host, "market", a11y);
   await targets(host, "market", a11y);

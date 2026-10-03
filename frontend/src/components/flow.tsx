@@ -81,6 +81,13 @@ export function IntroScreen({ state, receivedAt, send, readOnly }: { state: Room
   );
 }
 
+const READY_LABEL: Record<string, string> = {
+  briefing: "I’ve read it, let’s go ▶",
+  talk: "Done talking, let’s choose ▶",
+  ready: "Ready to run ▶",
+  peek: "Seen it, start the bidding ▶",
+};
+
 /** On results screens: everyone taps Ready to move on together instead of waiting for the clock. */
 export function ReadyBar({ state, send }: { state: RoomState; send: Send }) {
   const r = state.ready;
@@ -96,7 +103,7 @@ export function ReadyBar({ state, send }: { state: RoomState; send: Send }) {
           send({ t: "ready", stage: r.stage });
         }}
       >
-        {voted ? "Waiting for the others…" : "Ready for the next round ▶"}
+        {voted ? "Waiting for the others…" : READY_LABEL[state.game?.phase ?? ""] ?? "Ready for the next round ▶"}
       </Btn>
       <span className="chip plum" aria-live="polite">
         {r.votes.length}/{r.needed} ready

@@ -84,7 +84,7 @@ export function MarketFloor({ state, receivedAt, send, tv = false }: { state: Ro
           })}
         </ul>
         <p className="muted space-top" aria-live="polite">
-          {m.trades} trades so far. Holdings stay secret until the finale.
+          {m.trades} {m.trades === 1 ? "trade" : "trades"} so far. Holdings stay secret until the finale.
         </p>
       </Card>
       {isHost && !tv && (

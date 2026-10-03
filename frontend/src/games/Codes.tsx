@@ -187,9 +187,14 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
             const by = view.cracked[p.id] ?? [];
             return (
               <li key={p.id}>
-                <b>{p.name}</b>
-                {p.id === you ? " (you)" : ""}’s code{" "}
-                {view.codes?.[p.id] ? <Code code={view.codes[p.id]!} label={`${p.name}'s code`} /> : null}:{" "}
+                <b>{p.id === you ? "Your code" : `${p.name}’s code`}</b>
+                {view.codes?.[p.id] ? (
+                  <>
+                    {" "}
+                    <Code code={view.codes[p.id]!} label={`${p.name}'s code`} />
+                  </>
+                ) : null}
+                :{" "}
                 {by.length ? `cracked by ${by.map((id) => nameOf(view.players, id)).join(", ")}` : "uncracked"} ·{" "}
                 <span className="muted">
                   {view.guess_counts[p.id] ?? 0} guesses, {view.hint_counts[p.id] ?? 0} hints

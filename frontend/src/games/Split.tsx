@@ -195,8 +195,13 @@ export function Split({ view, you, receivedAt, send, tv = false }: Props) {
             ).map(({ players, pot, r }) => (
               <li key={players.join("-")} className={players.includes(you) ? "mine" : ""}>
                 <span className="chip">{pot}</span>
-                {players.map((pid) => (
+                {players.map((pid, i) => (
                   <span key={pid} className="split-player">
+                    {i > 0 && (
+                      <span className="split-vs" aria-hidden="true">
+                        vs
+                      </span>
+                    )}
                     <b>{nameOf(view.players, pid)}</b>
                     {r ? (
                       <span className={`chip ${r.choices[pid] === "split" ? "teal" : "cherry"}`}>

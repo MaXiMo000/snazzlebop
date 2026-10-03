@@ -34,6 +34,7 @@
   --muted: #cdb6d6;
   --placeholder: #a991b2;
   --edge: #5e4070;
+  --rule: #3a2849; /* hairlines inside tables and lists */
   --shadow: #05020a;
   --stage: #2b1239;
   --disabled-bg: #3a2a44;
@@ -65,6 +66,7 @@
   --muted: #6b4f73;
   --placeholder: #7d6683;
   --edge: #2b1b33;
+  --rule: #e6d6c2;
   --shadow: #2b1b33;
   --stage: #2b1b33;
   --disabled-bg: #e9dccb;
@@ -79,7 +81,6 @@
   --teal-light: #134a52;
   --cherry-light: #4f1b29;
 }
-:root:not([data-theme="light"]) .card.soft,
 :root:not([data-theme="light"]) [class*="seg-"] {
   --accent-soft: color-mix(in srgb, var(--accent) 26%, #1b1024);
 }
@@ -1021,7 +1022,7 @@ button.alert {
 .table td {
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 2px solid #e6d6c2;
+  border-bottom: 2px solid var(--rule);
   white-space: nowrap;
 }
 .table tr:last-child td {
@@ -1038,7 +1039,7 @@ button.alert {
   font-family: var(--body);
   font-weight: 700;
   font-size: 1rem;
-  background: var(--surface);
+  background: transparent;
   color: var(--ink);
 }
 .table td.lie {
@@ -1148,7 +1149,8 @@ details summary {
   font-weight: 700;
   cursor: pointer;
 }
-.winner-row td {
+.winner-row td,
+.table .winner-row th {
   background: var(--bulb);
   font-weight: 700;
   --ink: var(--plum); /* lit background: dark ink in both themes */
@@ -1311,7 +1313,7 @@ details summary {
 .bj-hand + .bj-hand {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 2px dashed #e6d6c2;
+  border-top: 2px dashed var(--rule);
 }
 .bj-hand .muted {
   margin-top: 6px;
@@ -1630,6 +1632,9 @@ details summary {
   display: inline-block;
   padding: 34px 30px;
   isolation: isolate;
+  text-shadow:
+    0 3px 0 var(--plum),
+    0 0 18px rgba(20, 11, 27, 0.9);
 }
 /* Rays stay inside the burst's own padded box, so they never sit behind neighbouring text. */
 .burst::before {
@@ -1641,8 +1646,9 @@ details summary {
     var(--mustard) 0 12deg,
     transparent 12deg 24deg
   );
-  -webkit-mask: radial-gradient(closest-side, #000 55%, transparent 100%);
-  mask: radial-gradient(closest-side, #000 55%, transparent 100%);
+  /* Clear in the middle (where the name is), rays around it. */
+  -webkit-mask: radial-gradient(closest-side, transparent 38%, #000 60%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 38%, #000 60%, transparent 100%);
   animation: rays 8s linear infinite;
 }
 @keyframes rays {
@@ -2381,7 +2387,8 @@ h4 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin: 0;
+  margin-inline: 0;
+  margin-bottom: 0; /* the top margin comes from .stack */
   padding: 0;
   list-style: none;
 }
@@ -2518,5 +2525,61 @@ details.how-to[open] summary {
   border: var(--line);
   border-radius: var(--radius);
   box-shadow: var(--lift);
+}
+
+/* ---- checkboxes: chunky, visible in both themes ------------------------------------------------ */
+.check input {
+  appearance: none;
+  display: inline-grid;
+  place-items: center;
+  border: 3px solid var(--edge);
+  border-radius: 8px;
+  background: var(--field);
+  cursor: pointer;
+}
+:root:not([data-theme="light"]) .check input {
+  border-color: #9a7aab;
+}
+.check input::after {
+  content: "";
+  width: 12px;
+  height: 7px;
+  margin-top: -3px;
+  border-left: 3.5px solid var(--plum);
+  border-bottom: 3.5px solid var(--plum);
+  transform: rotate(-45deg);
+  opacity: 0;
+}
+.check input:checked {
+  background: var(--bulb);
+  border-color: var(--bulb);
+}
+.check input:checked::after {
+  opacity: 1;
+}
+
+/* ---- finale ------------------------------------------------------------------------------------- */
+.finale .burst {
+  font-size: clamp(2rem, 9vw, 3.4rem);
+}
+.rematch small {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.btn.rematch {
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ---- split: who faces whom ------------------------------------------------------------------------ */
+.split-vs {
+  font-family: var(--display);
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 

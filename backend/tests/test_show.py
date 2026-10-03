@@ -93,6 +93,16 @@ class QuipTests(unittest.TestCase):
             self.assertTrue(line)
             self.assertNotIn("{", line)
 
+    def test_a_shared_crown_at_the_finale(self):
+        names = {"a": "Ana", "b": "Bo", "c": "Cy"}
+        line = showlib.quip({"a": 5, "b": 5, "c": 1}, names, "the show", {}, random.Random(1), "show")
+        self.assertEqual(line, "We can't split them: Ana and Bo share tonight's crown!")
+
+    def test_everyone_level_is_a_dead_heat_not_a_two_way_tie(self):
+        names = {"a": "Ana", "b": "Bo", "c": "Cy"}
+        line = showlib.quip({"a": 0, "b": 0, "c": 0}, names, "Alibi", {}, random.Random(1))
+        self.assertEqual(line, "A dead heat on Alibi: everyone finished on 0.")
+
     def test_no_repeats_within_a_mood_until_the_deck_runs_out(self):
         decks: dict[str, Deck] = {}
         rng = random.Random(2)

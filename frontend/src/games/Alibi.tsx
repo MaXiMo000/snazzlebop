@@ -569,6 +569,7 @@ function Result({ view, you, tv }: { view: AlibiView; you: string; tv: boolean }
       )}
       <Card>
         <h3>Votes</h3>
+        {Object.keys(r.votes).length === 0 && <p className="muted">Nobody voted.</p>}
         <ul className="evidence">
           {Object.entries(r.votes).map(([voter, target]) => (
             <li key={voter}>

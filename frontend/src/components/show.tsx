@@ -417,8 +417,9 @@ export function Finale({ state, isHost, send }: { state: RoomState; isHost: bool
       {isHost ? (
         <div className="stack-sm">
           {show.can_rematch && (
-            <Btn variant="gold" size="big" block onClick={() => send({ t: "rematch" })}>
-              🔁 Rematch: same lineup, next show of the season
+            <Btn variant="gold" size="big" block className="rematch" onClick={() => send({ t: "rematch" })}>
+              <span>🔁 Rematch</span>
+              <small>Same games, next show of the season</small>
             </Btn>
           )}
           <Btn variant="go" size="big" block onClick={() => send({ t: "lobby" })}>
