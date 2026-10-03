@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "dice";
   title: string;
   blurb: string;
   min_players: number;
@@ -313,6 +313,7 @@ export type GameView =
   | MuralView
   | BlackjackView
   | CrosswordView
+  | DiceView
   | JackpotView;
 
 export interface Highlight {
@@ -382,4 +383,33 @@ export interface RoomState {
 export interface Session {
   token: string;
   playerId: string;
+}
+
+export interface DiceBid {
+  player: string;
+  qty: number;
+  face: number;
+}
+export interface DiceChallenge {
+  call: "liar" | "spot";
+  caller: string;
+  bid: DiceBid;
+  actual: number;
+  loser: string | null;
+  gained: string | null;
+}
+export interface DiceView extends GameBase {
+  game: "dice";
+  players: { id: string; name: string }[];
+  counts: Record<string, number>;
+  total: number;
+  start_dice: number;
+  bid: DiceBid | null;
+  turn: string | null;
+  you: { dice: number[] };
+  out: string[];
+  history: DiceChallenge[];
+  /** the challenged round, all dice face up */
+  last?: DiceChallenge & { dice: Record<string, number[]> };
+  standings?: string[];
 }

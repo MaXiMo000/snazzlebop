@@ -132,6 +132,23 @@ ALLOWED_KEYS[("crossword", "solve")] = {
     "hint_level",
     "locked_for",
 }
+ALLOWED_KEYS[("dice", "bid")] = {
+    "game",
+    "phase",
+    "round",
+    "rounds",
+    "remaining",
+    "players",
+    "counts",
+    "total",
+} | {
+    "start_dice",
+    "bid",
+    "turn",
+    "you",
+    "out",
+    "history",
+}
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
         "game",
@@ -454,6 +471,55 @@ async def play_crossword(host: Bot, bots: list[Bot], rng: random.Random) -> None
     check(all("answer" in c for c in g["clues"]), "crossword answers weren't revealed at the end")
 
 
+async def play_dice(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots bid a little higher or call liar. Every reveal must show exactly the dice each bot was shown
+    while bidding (nobody's dice change behind their back), and nobody sees others' dice before it."""
+    by_id = {b.pid: b for b in bots}
+    for _ in range(400):
+        await host.until(lambda s: (s.get("game") or {}).get("phase") in ("bid", "reveal", "final"), "dice")
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        if g["phase"] == "reveal":
+            rnd = g["round"]
+            for pid, shown in g["last"]["dice"].items():
+                own = [
+                    json.loads(raw)["game"]["you"]["dice"]
+                    for raw in by_id[pid].raw
+                    if (json.loads(raw).get("game") or {}).get("game") == "dice"
+                    and json.loads(raw)["game"]["phase"] == "bid"
+                    and json.loads(raw)["game"]["round"] == rnd
+                ]
+                check(own and own[-1] == shown, f"dice: {pid}'s revealed dice aren't the ones it was shown")
+            await skip(host)
+            await host.until(
+                lambda s, rnd=rnd: (s["game"] or {}).get("round") != rnd or s["game"]["phase"] == "final",
+                "next roll",
+            )
+            continue
+        who = by_id[g["turn"]]
+        await who.until(lambda s, t=g["turn"]: (s.get("game") or {}).get("turn") == t, "dice turn")
+        bid = g["bid"]
+        if bid is None or rng.random() < 0.65:
+            qty, face = (
+                (bid["qty"], bid["face"] + 1)
+                if bid and bid["face"] < 6
+                else ((bid["qty"] + 1) if bid else 1, 2)
+            )
+            if qty > g["total"]:
+                await who.send(t="act", a="liar")
+            else:
+                await who.send(t="act", a="bid", qty=qty, face=face)
+        else:
+            await who.send(t="act", a="liar" if rng.random() < 0.85 else "spot")
+        await host.until(lambda s, v=g: s["game"] != v, "dice move")
+    g = host.state["game"]  # type: ignore[index]
+    check(g["phase"] == "final", "liar's dice never finished")
+    check(sorted(g["standings"]) == sorted(b.pid for b in bots), "dice standings miss a player")
+    n = len(g["standings"])
+    print(f"  dice: {n} players, {len(g['history'])} challenges")
+
+
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
@@ -743,7 +809,7 @@ def price_points(
 
 
 # -- driver -------------------------------------------------------------------------------------------
-async def run(base: str, n_bots: int, seed: int) -> None:
+async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) -> None:
     rng = random.Random(seed)
     origin = f"{urlparse(base).scheme}://{urlparse(base).netloc}"
     ws_base = origin.replace("http", "ws", 1)
@@ -771,12 +837,14 @@ async def run(base: str, n_bots: int, seed: int) -> None:
         await all_until(
             bots, lambda s: sum(p["connected"] for p in s["players"]) == len(bots), "everyone online"
         )
-        games = ["frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword"]
+        games = ["frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword", "dice"]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         if len(bots) >= 4:
             games.append("crossword-teams")
         for name in games:
+            if only and name not in only and name.split("-")[0] not in only:
+                continue
             game = name.split("-")[0]
             before = totals(host)
             start = {b.pid: len(b.raw) for b in bots}
@@ -799,6 +867,8 @@ async def run(base: str, n_bots: int, seed: int) -> None:
                 await play_blackjack(host, bots, rng)
             elif game == "crossword":
                 await play_crossword(host, bots, rng)
+            elif game == "dice":
+                await play_dice(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -853,11 +923,12 @@ def main() -> int:
     ap.add_argument("--base", default="http://localhost:10000")
     ap.add_argument("--bots", type=int, default=5, help="players besides the host (3-7)")
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--only", nargs="+", help="play just these games (e.g. dice blackjack-tournament)")
     args = ap.parse_args()
     if not 3 <= args.bots <= 7:
         ap.error("--bots must be 3-7 (Alibi needs 4 players, rooms hold 8)")
     try:
-        asyncio.run(run(args.base, args.bots, args.seed))
+        asyncio.run(run(args.base, args.bots, args.seed, args.only))
     except Check as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1

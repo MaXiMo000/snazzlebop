@@ -1906,3 +1906,67 @@ h4 {
   text-decoration: underline dotted;
   text-underline-offset: 3px;
 }
+
+/* ---- liar's dice ---------------------------------------------------------------------------- */
+.seg-dice {
+  --accent: #8c2f39;
+  --accent-ink: #fff;
+  --accent-soft: #f8dde0;
+}
+.dice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+.die {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--plum);
+  background: var(--paper);
+  border: var(--line);
+  border-radius: 12px;
+  box-shadow: var(--lift-sm);
+}
+.die.wild {
+  background: var(--bulb);
+}
+.die.hot {
+  background: var(--accent);
+  color: #fff;
+}
+.die-btn {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.dice-table,
+.dice-reveal {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dice-table li,
+.dice-reveal li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 2.5px solid var(--plum);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+}
+.dice-table li.turn {
+  background: var(--bulb);
+  box-shadow: var(--lift-sm);
+}
+.dice-table li.out {
+  border-style: dashed;
+}
