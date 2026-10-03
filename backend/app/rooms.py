@@ -463,6 +463,18 @@ class Hub:
         game.start()
         return game
 
+    @staticmethod
+    def _options(cls: type[Game], raw: Any) -> dict[str, str]:
+        """Only options the game declares, with one of its allowed values."""
+        if raw is None:
+            return {}
+        if not isinstance(raw, dict) or len(raw) > len(cls.OPTIONS):
+            raise HubError("bad_options", "Unknown game options")
+        for key, value in raw.items():
+            if key not in cls.OPTIONS or value not in cls.OPTIONS[key]:
+                raise HubError("bad_options", "Unknown game options")
+        return dict(raw)
+
     def _begin(self, room: Room, game: Game) -> None:
         room.game, room.phase = game, "game"
         room.predictions, room.highlights, room.quip = {}, [], ""
@@ -517,7 +529,7 @@ class Hub:
             cls = REGISTRY.get(msg.get("game")) if isinstance(msg.get("game"), str) else None
             if cls is None:
                 raise HubError("bad_game", "Unknown game")
-            self._begin(room, self._make_game(room, cls))
+            self._begin(room, self._make_game(room, cls, options=self._options(cls, msg.get("options"))))
             room.show = None  # a one-off game outside any show
             return True
         if kind == "show":

@@ -95,6 +95,13 @@ for _phase in ("bet", "play"):
         "remaining",
         "players",
         "chips",
+        "mode",
+        "active",
+        "out",
+        "side",
+        "side_sizes",
+        "chaos",
+        "chaos_coming",
     } | {
         "bets",
         "bet_sizes",
@@ -132,6 +139,7 @@ for _phase in ("briefing", "hint", "vote", "mole_guess"):
         "you",
         "moles",
         "swapped_rounds",
+        "your_hints",
     } | {
         "hinted",
         "your_hint",
@@ -259,7 +267,11 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
                 seen = set(values(g))  # exact values, not substrings: "remaining" floats hold any digits
                 for other, amounts in planted.items():
                     if other != b.pid:
-                        check(not (amounts & seen), f"{b.name} saw another player's guess before the reveal")
+                        leak = amounts & seen
+                        where = [k for k, v in g.items() if leak & set(values(v))]
+                        check(
+                            not leak, f"{b.name} saw another player's guess {sorted(leak)} in {where} early"
+                        )
                 mine = set(g.get("your_guesses") or [])
                 check(mine <= planted.get(b.pid, set()), f"{b.name} was shown guesses that aren't theirs")
                 own = MOVES.get(b.pid, {})
@@ -323,13 +335,32 @@ SWAPS: dict[str, str] = {}  # mole -> who it swapped hints with (secret until th
 
 async def play_blackjack(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     by_id = {b.pid: b for b in bots}
-    for rnd in range(1, 6):
-        await all_until(bots, game_is("blackjack", "bet", rnd), f"blackjack bet {rnd}")
-        before = dict(host.state["game"]["chips"])  # type: ignore[index]
-        for b in bots:
-            chips = host.state["game"]["chips"][b.pid]  # type: ignore[index]
-            if chips >= 50:
-                await b.send(t="act", a="bet", amount=100 if chips >= 100 else 50)
+    first = {b.pid: len(b.raw) for b in bots}  # this game's frames only (the log spans the session)
+    chaos_seen_at: int | None = None
+    for rnd in range(1, 20):
+        await all_until(
+            bots,
+            lambda s, rnd=rnd: (
+                game_is("blackjack", "bet", rnd)(s) or (s.get("game") or {}).get("phase") == "final"
+            ),
+            f"blackjack bet {rnd}",
+        )
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        if g["chaos"] and chaos_seen_at is None:
+            chaos_seen_at = rnd
+        before = dict(g["chips"])
+        live = [b for b in bots if b.pid in g["active"] and g["chips"][b.pid] >= 50]
+        for i, b in enumerate(live):
+            chips = g["chips"][b.pid]
+            amount = 100 if chips >= 100 else 50
+            side = {}
+            # Every other bot backs the next player's hand when it can afford both: side bets settle
+            # inside "net", so the chips-moved check below covers them too.
+            if i % 2 == 1 and len(live) > 1 and chips >= amount + 50:
+                side = {"side_on": live[(i + 1) % len(live)].pid, "side_amount": 50}
+            await b.send(t="act", a="bet", amount=amount, **side)
         await all_until(bots, lambda s: (s.get("game") or {}).get("phase") in ("play", "settle"), "deal")
         for _ in range(60):  # one action per loop; each waits for the table to move on
             g = host.state["game"]  # type: ignore[index]
@@ -357,6 +388,14 @@ async def play_blackjack(host: Bot, bots: list[Bot], rng: random.Random) -> None
                 f"blackjack: chips moved {g['chips'][pid] - before[pid]} != net {net}",
             )
         await skip(host)
+    # The Chaos card shows only on its own hand: no frame of an earlier hand may carry it.
+    for b in bots:
+        for raw in b.raw[first[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") == "blackjack" and gg.get("phase") in ("bet", "play", "settle"):
+                early = chaos_seen_at is None or gg["round"] < chaos_seen_at
+                if early:
+                    check(gg["chaos"] is None, f"{b.name} saw the Chaos card before its hand")
 
 
 def crossword_oracle() -> dict[str, str]:
@@ -621,7 +660,10 @@ async def play_price(host: Bot, bots: list[Bot], planted: dict[str, set[int]], r
             # Distinct per bot and round. Even bots stay under the cheapest possible price ($240 item
             # x0.5 = $120) so every round has a winner; odd bots overshoot the priciest ($2.6M x2).
             amount = 3 + rnd * 20 + i if i % 2 == 0 else 9_000_000 + rnd * 1_000 + i
-            extra = {"amount2": amount + 5} if i == 0 and rnd <= 2 else {}  # host hedges twice
+            # Host hedges twice. Every planted guess must be unique across bots and odd (every price is
+            # even), so a match in someone else's frame can only be a real leak: +10,000 keeps it odd and
+            # clear of every other bot's guesses (small ones under 200, big ones over 9,000,000).
+            extra = {"amount2": amount + 10_000} if i == 0 and rnd <= 2 else {}
             planted.setdefault(b.pid, set()).update([amount, *extra.values()])
             await b.send(t="act", a="guess", amount=amount, **extra)
         await all_until(bots, game_is("price", "reveal", rnd), f"price reveal {rnd}")
@@ -714,11 +756,18 @@ async def run(base: str, n_bots: int, seed: int) -> None:
         await all_until(
             bots, lambda s: sum(p["connected"] for p in s["players"]) == len(bots), "everyone online"
         )
-        for game in ("frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword"):
+        games = ["frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword"]
+        if len(bots) >= 3:
+            games.insert(6, "blackjack-tournament")
+        for name in games:
+            game = name.split("-")[0]
             before = totals(host)
             start = {b.pid: len(b.raw) for b in bots}
             planted: dict[str, set[int]] = {}
-            await host.send(t="start", game=game)
+            if name == "blackjack-tournament":
+                await host.send(t="start", game=game, options={"mode": "tournament"})
+            else:
+                await host.send(t="start", game=game)
             if game == "frenemy":
                 await play_frenemy(host, bots, rng)
             elif game == "alibi":
@@ -742,6 +791,17 @@ async def run(base: str, n_bots: int, seed: int) -> None:
                 want = price_points(g["history"], [b.pid for b in bots], g["duels"])
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
+            elif name == "blackjack-tournament":
+                # Placement points: 100 per player outlasted, +300 for a sole survivor.
+                g = host.state["game"]  # type: ignore[index]
+                order, n = g["standings"], len(g["standings"])
+                sole = len(g["active"]) == 1
+                want = {
+                    pid: 100 * (n - 1 - i) + (300 if i == 0 and sole else 0) for i, pid in enumerate(order)
+                }
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"blackjack tournament: scores {got} != placings {want}")
+                check(sorted(order) == sorted(b.pid for b in bots), "tournament standings miss a player")
             elif game == "blackjack":
                 # The house has an edge, so a table can lose overall: each score must be net chips.
                 chips = host.state["game"]["chips"]  # type: ignore[index]
@@ -756,7 +816,7 @@ async def run(base: str, n_bots: int, seed: int) -> None:
             gained = sum(after.values()) - sum(before.values())
             hidden = sum(len(v) for v in planted.values())
             note = f", {hidden} planted guesses never leaked" if hidden else ""
-            print(f"OK {game}: {frames} frames checked, {gained:+} points{note}")
+            print(f"OK {name}: {frames} frames checked, {gained:+} points{note}")
             await host.send(t="lobby")
             await all_until(bots, lambda s: s["room"]["phase"] == "lobby", "lobby")
     except Check:

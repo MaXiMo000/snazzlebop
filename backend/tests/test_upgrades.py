@@ -373,6 +373,13 @@ class MuralUpgradeTests(unittest.TestCase):
         self.assertEqual((shown[mole], shown[victim]), (hints[victim], hints[mole]))
         self.assertEqual(g.view_for("tv:x")["swapped_rounds"], [1])
         self.assertNotIn(mole, str(g.view_for("tv:x")["swapped_rounds"]))
+        # Round 2: the victim may reuse neither their real tile nor be blocked by the mole's shown one.
+        self.assertEqual(g.view_for(victim)["your_hints"], [hints[victim]])
+        self.assertEqual(g.view_for("tv:x")["your_hints"], [])
+        with self.assertRaises(GameError):
+            g.handle(victim, {"a": "hint", "tile": hints[victim]})
+        if hints[mole] != hints[victim]:
+            g.handle(mole, {"a": "hint", "tile": hints[victim]})  # the mole never hinted that one itself
 
     def test_a_swap_fizzles_if_the_partner_never_hinted(self):
         g = self.make(5)

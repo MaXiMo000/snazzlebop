@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useCountUp, useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
@@ -85,9 +86,18 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
       show.celebrate();
     }
   });
+  useOnChange(view.chaos?.id ?? null, (_, now) => {
+    if (now) {
+      sfx.buzz();
+      show.stinger("CHAOS CARD!", "bad");
+    }
+  });
+  const solo = view.players.length === 1;
   const sign =
     view.phase === "final"
-      ? "Final stacks"
+      ? view.mode === "tournament"
+        ? "Tournament over"
+        : "Final stacks"
       : `Hand ${view.round} of ${view.rounds} · ${
           { bet: "Place your bets", play: "Players' turn", settle: "Payout" }[view.phase as "bet" | "play" | "settle"] ?? ""
         }`;
@@ -95,8 +105,20 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
     <div className="seg-blackjack stack">
       {show.node}
       <ShowHead sign={sign} title="Blackjack Showdown" remaining={view.remaining} receivedAt={receivedAt}>
-        {view.reshuffled && view.phase === "bet" && <span className="chip plum">Fresh shoe shuffled</span>}
+        <div className="row">
+          {view.mode === "tournament" && <span className="chip cherry">Tournament: shortest stack goes home</span>}
+          {solo && <span className="chip plum">Solo: just you and the dealer</span>}
+          {view.reshuffled && view.phase === "bet" && <span className="chip plum">Fresh shoe shuffled</span>}
+          {view.chaos_coming && !view.chaos && <span className="chip">🃏 A Chaos card is somewhere in the shoe…</span>}
+        </div>
       </ShowHead>
+      {view.chaos && (
+        <Card tone="stage" className="center chaos" role="status">
+          <p className="sign">Chaos card</p>
+          <h3 className="space-top">{view.chaos.label}</h3>
+          <p>{view.chaos.text}</p>
+        </Card>
+      )}
 
       {view.phase !== "final" && (
         <Card tone="stage" className="felt">
@@ -153,8 +175,11 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
             const hands = view.hands[p.id] ?? [];
             const outcomes = view.result?.outcomes[p.id] ?? [];
             const turn = view.turn?.player === p.id;
+            const gone = view.out.find((o) => o.player === p.id);
+            const side = view.side[p.id];
+            const sidePay = view.result?.side[p.id];
             return (
-              <Card key={p.id} className={`seat ${turn ? "turn" : ""}`} aria-current={turn ? "true" : undefined}>
+              <Card key={p.id} className={`seat ${turn ? "turn" : ""} ${gone ? "out" : ""}`} aria-current={turn ? "true" : undefined}>
                 <div className="row between">
                   <h3>
                     {p.name}
@@ -162,7 +187,20 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
                   </h3>
                   <Chips n={view.chips[p.id] ?? 0} />
                 </div>
-                {hands.length === 0 ? (
+                {gone && (
+                  <p>
+                    <span className="chip cherry">
+                      Out after hand {gone.hand} ({gone.why})
+                    </span>
+                  </p>
+                )}
+                {side && (
+                  <p className="muted">
+                    Side bet: {side.amount} on {nameOf(view.players, side.on)}
+                    {sidePay ? (sidePay.pay > side.amount ? " · paid!" : sidePay.pay === side.amount ? " · refunded" : " · lost") : ""}
+                  </p>
+                )}
+                {gone ? null : hands.length === 0 ? (
                   <p className="muted">
                     {view.phase === "bet"
                       ? view.bets[p.id]
@@ -197,6 +235,15 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
 
 function BetPanel({ view, you, send }: { view: BlackjackView; you: string; send: Props["send"] }) {
   const chips = view.chips[you] ?? 0;
+  const [sideOn, setSideOn] = useState("");
+  const [sideAmount, setSideAmount] = useState(view.side_sizes[0] ?? 0);
+  if (!view.active.includes(you)) {
+    return (
+      <Card tone="soft" className="center">
+        <p>You’re out of this tournament. Cheer the survivors on!</p>
+      </Card>
+    );
+  }
   if (view.you.bet) {
     return (
       <Card tone="soft" className="center">
@@ -215,6 +262,35 @@ function BetPanel({ view, you, send }: { view: BlackjackView; you: string; send:
   return (
     <Card tone="soft" className="center">
       <h3>Place your bet</h3>
+      {view.side_sizes.length > 0 && (
+        <div className="ask-form space-top">
+          <div>
+            <label className="field" htmlFor="side-on">
+              Side bet on a friend’s hand (optional)
+            </label>
+            <select id="side-on" value={sideOn} onChange={(e) => setSideOn(e.target.value)}>
+              <option value="">No side bet</option>
+              {view.players
+                .filter((p) => p.id !== you && view.active.includes(p.id) && (view.chips[p.id] ?? 0) >= (view.bet_sizes[0] ?? 50))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div role="group" aria-label="Side bet size" className="row">
+            {view.side_sizes.map((n) => (
+              <Btn key={n} size="small" variant="ghost" aria-pressed={sideAmount === n} disabled={!sideOn} onClick={() => setSideAmount(n)}>
+                {n}
+              </Btn>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="muted">
+        {sideOn ? `Pays 1:1 if ${nameOf(view.players, sideOn)}’s hand makes money, refunded on a push.` : ""}
+      </p>
       <div className="row center" role="group" aria-label="Bet size">
         {view.bet_sizes.map((b) => (
           <Btn
@@ -222,10 +298,10 @@ function BetPanel({ view, you, send }: { view: BlackjackView; you: string; send:
             variant="gold"
             size="big"
             className="bet-chip"
-            disabled={b > chips}
+            disabled={b + (sideOn ? sideAmount : 0) > chips}
             onClick={() => {
               sfx.pop();
-              send({ t: "act", a: "bet", amount: b });
+              send({ t: "act", a: "bet", amount: b, ...(sideOn ? { side_on: sideOn, side_amount: sideAmount } : {}) });
             }}
           >
             {b}
@@ -237,7 +313,40 @@ function BetPanel({ view, you, send }: { view: BlackjackView; you: string; send:
 }
 
 function Final({ view, you }: { view: BlackjackView; you: string }) {
-  const ranked = [...view.players].sort((a, b) => (view.chips[b.id] ?? 0) - (view.chips[a.id] ?? 0));
+  const ranked = (view.standings ?? []).length
+    ? view.standings!.map((id) => view.players.find((p) => p.id === id)!).filter(Boolean)
+    : [...view.players].sort((a, b) => (view.chips[b.id] ?? 0) - (view.chips[a.id] ?? 0));
+  if (view.mode === "tournament") {
+    const champ = ranked[0];
+    return (
+      <>
+        <Card tone="stage" className="center felt">
+          <p className="sign">Last one standing</p>
+          {champ && (
+            <p className="lead space-top">
+              <span className="burst">
+                <b>{champ.name}</b>
+              </span>
+              {champ.id === you ? " (you!)" : ""} wins the tournament with {view.chips[champ.id]} chips.
+            </p>
+          )}
+        </Card>
+        <Card>
+          <h3>Standings</h3>
+          <ol className="evidence">
+            {ranked.map((p) => {
+              const gone = view.out.find((o) => o.player === p.id);
+              return (
+                <li key={p.id}>
+                  <b>{p.name}</b>: {gone ? `out after hand ${gone.hand} (${gone.why})` : `survived with ${view.chips[p.id]} chips`}
+                </li>
+              );
+            })}
+          </ol>
+        </Card>
+      </>
+    );
+  }
   const top = ranked[0];
   return (
     <>

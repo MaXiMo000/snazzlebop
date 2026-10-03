@@ -106,6 +106,8 @@ class Game(ABC):
     blurb: ClassVar[str]
     min_players: ClassVar[int]
     max_players: ClassVar[int]
+    # Host-chosen settings: option name -> allowed values (first = default). Validated by the hub.
+    OPTIONS: ClassVar[dict[str, list[str]]] = {}
 
     def __init__(
         self,
@@ -115,6 +117,7 @@ class Game(ABC):
         timings: dict[str, float] | None = None,
         decks: dict[str, Deck] | None = None,
         theme: str = "",
+        options: dict[str, str] | None = None,
     ) -> None:
         if not self.min_players <= len(players) <= self.max_players:
             raise GameError(
@@ -127,6 +130,7 @@ class Game(ABC):
         self.timings = {**self.default_timings(), **(timings or {})}
         self.decks = decks if decks is not None else {}
         self.theme = theme  # a show pack (content.THEMES); "" = everything
+        self.options = dict(options or {})
         self.version = 0
         self.phase = "init"
         self.round = 0

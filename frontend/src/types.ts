@@ -12,6 +12,8 @@ export interface GameCard {
   blurb: string;
   min_players: number;
   max_players: number;
+  /** host-chosen settings: name -> allowed values (first is the default) */
+  options: Record<string, string[]>;
 }
 
 export interface GameBase {
@@ -188,6 +190,8 @@ export interface MuralView extends GameBase {
   moles: number;
   /** target is the painting's index: only for innocent players, never a Mole or a TV */
   you: { is_mole: boolean; target: number | null; can_swap: boolean; swap_with: string | null; guessed: boolean };
+  /** your own real hints so far (the public record may show a swap) */
+  your_hints: number[];
   /** hint rounds whose reveal had a Switcheroo in it (not who) */
   swapped_rounds: number[];
   hinted: string[];
@@ -219,9 +223,19 @@ export interface BlackjackHand {
 export interface BlackjackView extends GameBase {
   game: "blackjack";
   players: { id: string; name: string }[];
+  mode: "classic" | "tournament";
+  /** still in the game (everyone in classic) */
+  active: string[];
+  out: { player: string; hand: number; why: "busted" | "shortest stack" }[];
   chips: Record<string, number>;
   bets: Record<string, number>;
+  side: Record<string, { on: string; amount: number }>;
   bet_sizes: number[];
+  /** empty when playing solo */
+  side_sizes: number[];
+  chaos: { id: string; label: string; text: string } | null;
+  chaos_coming: boolean;
+  standings?: string[];
   hands: Record<string, BlackjackHand[]>;
   dealer: { cards: string[]; hidden: boolean; value: number };
   shoe_left: number;
@@ -234,6 +248,9 @@ export interface BlackjackView extends GameBase {
     dealer_blackjack: boolean;
     net: Record<string, number>;
     outcomes: Record<string, ("bust" | "blackjack" | "lose" | "push" | "win")[]>;
+    side: Record<string, { on: string; amount: number; pay: number }>;
+    chaos: string | null;
+    eliminated: string[];
   };
   history?: { hand: number; net: Record<string, number>; dealer_value: number }[];
 }

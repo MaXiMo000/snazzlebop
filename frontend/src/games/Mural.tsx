@@ -122,7 +122,7 @@ function Board({ view, you, send, tv }: { view: MuralView; you: string; send: Pr
   const [chosen, setChosen] = useState<number | null>(null);
   const hinting = !tv && view.phase === "hint" && view.your_hint === null;
   const guessing = !tv && view.phase === "mole_guess" && view.caught.includes(you) && !view.you.guessed;
-  const used = new Set(view.hints.map((h) => h[you]).filter((x) => x !== undefined));
+  const used = new Set(view.your_hints); // your real hints: the public ones may show a swap
   const final = view.result;
   const badges = (i: number) =>
     view.hints.flatMap((h, r) =>

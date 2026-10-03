@@ -1893,3 +1893,12 @@ h4 {
 .duel-pick:disabled {
   cursor: default;
 }
+
+/* ---- blackjack extras ----------------------------------------------------------------------- */
+.seat.out {
+  border-style: dashed; /* not faded: the text keeps full contrast */
+}
+.card.stage.chaos {
+  outline: 4px dashed var(--mustard);
+  outline-offset: -10px;
+}

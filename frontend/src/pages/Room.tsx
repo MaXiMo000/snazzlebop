@@ -23,7 +23,7 @@ import { Jackpot } from "../games/Jackpot";
 import { Mural } from "../games/Mural";
 import { Price } from "../games/Price";
 import { Telepathy } from "../games/Telepathy";
-import type { RoomState, Session } from "../types";
+import type { GameCard, RoomState, Session } from "../types";
 
 type Send = (m: Record<string, unknown>) => void;
 
@@ -459,6 +459,49 @@ function AudienceLobby({ state }: { state: RoomState }) {
   );
 }
 
+const OPTION_LABELS: Record<string, Record<string, string>> = {
+  mode: { classic: "Classic (5 hands)", tournament: "Tournament (knockouts, 3+ players)" },
+};
+
+/** Start button, plus a picker for each option the game declares (first value = default). */
+function StartGame({ game, enough, send }: { game: GameCard; enough: boolean; send: Send }) {
+  const [chosen, setChosen] = useState<Record<string, string>>({});
+  const options = Object.entries(game.options ?? {});
+  const picked = Object.fromEntries(options.map(([k, vals]) => [k, chosen[k] ?? vals[0]!]));
+  return (
+    <>
+      {options.map(([key, values]) => (
+        <div key={key} className="space-top">
+          <label className="field" htmlFor={`opt-${game.id}-${key}`}>
+            {key === "mode" ? "Mode" : key}
+          </label>
+          <select
+            id={`opt-${game.id}-${key}`}
+            value={picked[key]}
+            onChange={(e) => setChosen((c) => ({ ...c, [key]: e.target.value }))}
+          >
+            {values.map((v) => (
+              <option key={v} value={v}>
+                {OPTION_LABELS[key]?.[v] ?? v}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
+      <Btn
+        className="space-top"
+        variant="accent"
+        block
+        disabled={!enough}
+        onClick={() => send({ t: "start", game: game.id, ...(options.length ? { options: picked } : {}) })}
+      >
+        {enough ? "Start!" : `Need ${game.min_players}+ online`}
+        <span className="sr-only"> {game.title}</span>
+      </Btn>
+    </>
+  );
+}
+
 function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; send: Send }) {
   const online = state.players.filter((p) => p.connected).length;
   return (
@@ -491,12 +534,7 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
               </div>
               <div className="body">
                 <p>{g.blurb}</p>
-                {isHost && (
-                  <Btn variant="accent" block disabled={!enough} onClick={() => send({ t: "start", game: g.id })}>
-                    {enough ? "Start!" : `Need ${g.min_players}+ online`}
-                    <span className="sr-only"> {g.title}</span>
-                  </Btn>
-                )}
+                {isHost && <StartGame game={g} enough={enough} send={send} />}
               </div>
             </Card>
           );

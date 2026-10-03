@@ -60,7 +60,8 @@ class MoleInTheMural(Game):
         self.target = tiles.index(painting)
         n_moles = 2 if len(self.players) >= TWO_MOLES_FROM else 1
         self.moles: list[str] = rng.sample(self.player_ids, n_moles)
-        self.hints: list[dict[str, int]] = []  # revealed rounds only (after any swap)
+        self.hints: list[dict[str, int]] = []  # revealed rounds only, as shown (after any swap)
+        self.played: dict[str, list[int]] = {}  # what each player really hinted, round by round
         self.current: dict[str, int] = {}
         self.swaps: list[dict[str, Any]] = []  # {"round", "by", "with", "done"}: secret until the end
         self.votes: dict[str, str] = {}
@@ -79,6 +80,8 @@ class MoleInTheMural(Game):
         return next((s for s in self.swaps if s["by"] == pid and s["round"] == self.round), None)
 
     def _close_hint_round(self) -> None:
+        for pid, tile in self.current.items():
+            self.played.setdefault(pid, []).append(tile)
         shown = dict(self.current)
         for s in self.swaps:
             if s["round"] == self.round and s["by"] in shown and s["with"] in shown:
@@ -148,7 +151,8 @@ class MoleInTheMural(Game):
             if pid in self.current:
                 raise GameError("already_locked", "Your hint is already in")
             tile = self._tile(action)
-            if any(h.get(pid) == tile for h in self.hints):
+            # Their own earlier hints, not the public record: a Switcheroo may have swapped that.
+            if tile in self.played.get(pid, []):
                 raise GameError("bad_input", "Pick a tile you haven't used yet")
             if pid not in self.moles:  # never validate a Mole: a refusal would point at the painting
                 if tile == self.target:
@@ -231,6 +235,7 @@ class MoleInTheMural(Game):
             },
             "hinted": sorted(self.current) if self.phase == "hint" else [],
             "your_hint": self.current.get(pid) if self.phase == "hint" else None,
+            "your_hints": list(self.played.get(pid, [])),  # what you really hinted (only yours)
             "hints": [dict(h) for h in self.hints],
             # Rounds whose reveal had a swap in it: public, but not who did it.
             "swapped_rounds": sorted({s["round"] + 1 for s in self.swaps if s["done"]}),
