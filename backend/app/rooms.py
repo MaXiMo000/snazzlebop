@@ -28,9 +28,9 @@ ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: avoids lookalikes
 ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
-    *("show", "next", "theme", "react", "predict", "trade"),
+    *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch"),
 }
-AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict"}
+AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp"}
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
 MAX_TV_PER_ROOM = 2  # big-screen viewers; issuing a third evicts the oldest
 MAX_AUDIENCE = 30  # named watchers who can react and predict, beyond the 8 seats
@@ -39,6 +39,7 @@ REACT_GAP = 0.8  # seconds between reactions from one person (extra taps are ign
 ROOM_REACTS_PER_SEC = 6  # and a room-wide ceiling, so a big audience can't turn into a broadcast storm
 KEEP_REACTIONS = 12
 MARKET_SECONDS = 30.0  # the trading window before each show game
+FAN_BONUS = 50  # the audience's MVP of a show game
 
 
 class HubError(Exception):
@@ -109,6 +110,16 @@ class Room:
     market_next: str = ""  # the game the open market is waiting for
     market_until: float = 0.0
     market_moves: dict[str, float] = field(default_factory=dict)  # price changes after the last game
+    market_dividends: dict[str, int] = field(default_factory=dict)  # cash paid after the last game
+    insider: str = ""  # who got this trading window's tip
+    tip: str = ""
+    rivals: list[tuple[str, str]] = field(default_factory=list)  # this show game's pairings
+    rival_news: list[dict[str, Any]] = field(default_factory=list)  # who beat whom, last game
+    card_news: list[dict[str, Any]] = field(default_factory=list)  # cards revealed, last game
+    mvp_votes: dict[str, str] = field(default_factory=dict)  # audience id -> MVP of the last game
+    season_no: int = 0  # shows finished in this room
+    season: dict[str, dict[str, int]] = field(default_factory=dict)  # pid -> {"wins", "points"}
+    last_show: dict[str, Any] = field(default_factory=dict)  # for the rematch button
     last_active: float = 0.0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -319,6 +330,13 @@ class Hub:
             "reactions": room.reactions,
             "crowd": self._crowd_view(room, pid),
             "market": self._market_view(room, pid),
+            "cards": self._cards_view(room, pid),
+            "rivals": {
+                "pairs": [list(p) for p in room.rivals] if room.phase in ("game", "results") else [],
+                "news": room.rival_news if room.phase == "results" else [],
+                "bonus": showlib.RIVAL_BONUS,
+            },
+            "season": {"number": room.season_no, "table": room.season} if room.season_no else None,
             "players": [
                 {
                     "id": p.id,
@@ -350,6 +368,27 @@ class Hub:
             "reel": s.reel if s.finished else [],
             "awards": s.awards if s.finished else [],
             "market": s.market is not None,
+            "can_rematch": bool(room.last_show),
+        }
+
+    def _cards_view(self, room: Room, pid: str) -> dict[str, Any] | None:
+        s = room.show
+        if s is None:
+            return None
+        idx = len(s.games)  # the game being played now
+        this_game = [p for p in s.plays if p["game"] == idx] if room.phase == "game" else []
+        played = next((p for p in s.plays if p["pid"] == pid), None)
+        return {
+            "catalog": showlib.CARDS,
+            "in_play": len(this_game),  # how many cards are down this game: never whose or which
+            "news": room.card_news if room.phase == "results" else [],  # the reveal
+            "you": {
+                "card": s.cards.get(pid),
+                "played": played["card"] if played else None,
+                "peek": s.peeks.get(pid),
+            }
+            if pid in room.players
+            else None,
         }
 
     def _market_view(self, room: Room, pid: str) -> dict[str, Any] | None:
@@ -358,7 +397,7 @@ class Hub:
             return None
         titles = {gid: cls.title for gid, cls in REGISTRY.items()}
         finale = room.phase == "finale"
-        mine = pid in room.players
+        mine = pid in room.players or pid in room.audience
         return {
             "open": room.phase == "market",
             "closes_in": max(0.0, room.market_until - self.clock()) if room.phase == "market" else None,
@@ -366,15 +405,21 @@ class Hub:
             "prices": dict(m.prices),
             "history": [dict(h) for h in m.history],
             "moves": dict(room.market_moves),
+            "dividends": dict(room.market_dividends) if room.phase == "results" else {},
+            "dividend": showlib.DIVIDEND,
             "trades": m.trades,
             # Your own book only; everyone's is revealed at the finale.
             "you": {
-                "cash": m.cash.get(pid, 0),
+                # The audience is seated on their first trade: until then they hold the starting cash.
+                "cash": m.cash.get(pid, showlib.START_CASH),
                 "holdings": dict(m.holdings.get(pid, {})),
-                "worth": m.worth(pid),
+                "worth": m.worth(pid) if pid in m.cash else showlib.START_CASH,
+                "tip": room.tip if pid == room.insider and room.phase == "market" else "",
             }
             if mine
             else None,
+            # Audience traders, named at the finale so their books can be shown.
+            "crowd": {w.id: w.name for w in room.audience.values() if w.id in m.cash} if finale else {},
             "worth": {p: m.worth(p) for p in m.cash} if finale else {},
             "books": {p: dict(h) for p, h in m.holdings.items()} if finale else {},
             "bonus": {p: m.bonus(p) for p in m.cash} if finale else {},
@@ -396,12 +441,29 @@ class Hub:
             ],
             # who can be backed this game: the game's own contestants (not everyone ever seated)
             "contestants": [{"id": p.id, "name": p.name} for p in room.game.players]
-            if room.game is not None and room.phase == "game"
+            if room.game is not None and room.phase in ("game", "results")
             else [],
             "picks": picks,  # how many of the crowd back each player this game (never who)
             "open": self._predict_open(room),
             "you_picked": room.predictions.get(pid),
+            "mvp": {
+                "open": self._mvp_open(room),
+                "you_voted": room.mvp_votes.get(pid),
+                "votes": self._tally(room.mvp_votes),
+                "bonus": FAN_BONUS,
+            },
         }
+
+    @staticmethod
+    def _tally(votes: dict[str, str]) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for target in votes.values():
+            out[target] = out.get(target, 0) + 1
+        return out
+
+    @staticmethod
+    def _mvp_open(room: Room) -> bool:
+        return room.phase == "results" and room.show is not None and room.game is not None
 
     # -- outbound: one mailbox per connection, latest state wins ---------------------------------
     # Every frame is a full snapshot, so a connection only ever needs the newest one. If a send is
@@ -512,14 +574,42 @@ class Hub:
     def _begin(self, room: Room, game: Game) -> None:
         room.game, room.phase = game, "game"
         room.predictions, room.highlights, room.quip = {}, [], ""
+        room.card_news, room.rival_news, room.rivals, room.mvp_votes = [], [], [], {}
+        s = room.show
+        if s is not None:
+            s.peeks.clear()
+            if game.game_id != "jackpot":
+                showlib.deal_cards(s, game.player_ids, self.rng)
+                room.rivals = showlib.rivals(room.total_scores, game.player_ids, self.rng)
         if self.on_game_started and game.game_id in REGISTRY:  # top up content in the background
             try:
                 self.on_game_started(game.game_id, room.theme)
             except Exception:
                 log.exception("on_game_started failed")
 
+    def _award_mvp(self, room: Room) -> None:
+        """The audience's MVP of the game that just ended: +FAN_BONUS each for the top vote (ties share)."""
+        votes = self._tally(room.mvp_votes)
+        room.mvp_votes = {}
+        if not votes or room.show is None:
+            return
+        top = max(votes.values())
+        names = room.names()
+        for pid in (p for p, v in votes.items() if v == top and p in room.players):
+            room.total_scores[pid] = room.total_scores.get(pid, 0) + FAN_BONUS
+            title = room.show.games[-1]["title"] if room.show.games else ""
+            room.show.reel.append(
+                {
+                    "icon": "⭐",
+                    "title": "Fan favourite",
+                    "text": f"The crowd voted {names.get(pid, '?')} MVP (+{FAN_BONUS})",
+                    "game": title,
+                }
+            )
+
     def _start_next(self, room: Room, s: showlib.Show) -> None:
         """Start the show's next segment, or close the show with the finale."""
+        self._award_mvp(room)
         nxt = s.next_game()
         if nxt == "jackpot":
             stakes = {p.id: room.total_scores.get(p.id, 0) for p in room.players.values()}
@@ -538,9 +628,15 @@ class Hub:
     def _open_market(self, room: Room, game_id: str) -> None:
         """Trading window before a show game. The game itself is built when the bell rings."""
         market = room.show.market if room.show else None
+        room.insider, room.tip = "", ""
         if market is not None:
             for pid in room.players:
                 market.seat(pid)
+            online = [p.id for p in room.connected_players()]
+            if online:  # one random player gets an insider tip: someone else's secret book
+                room.insider = self.rng.choice(online)
+                names = room.names() | {w.id: w.name for w in room.audience.values()}
+                room.tip = market.tip(room.insider, self.rng, names)
         room.game, room.phase = None, "market"
         room.market_next = game_id
         room.market_until = self.clock() + MARKET_SECONDS
@@ -560,6 +656,50 @@ class Hub:
             return
         self._begin(room, game)
         s.started += 1
+
+    def _start_show(self, room: Room, games: list[str], jackpot: bool, market: bool) -> None:
+        game = self._make_game(room, REGISTRY[games[0]])  # raises before anything changes
+        room.total_scores = {p: 0 for p in room.players}  # a new show, a fresh scoreboard
+        room.last_show = {"games": list(games), "jackpot": jackpot, "market": market}
+        if market:
+            room.show = showlib.Show(playlist=list(games), jackpot=jackpot, market=showlib.Market())
+            self._open_market(room, games[0])
+        else:
+            room.show = showlib.Show(playlist=list(games), jackpot=jackpot, started=1)
+            self._begin(room, game)
+
+    def _play_card(self, room: Room, pid: str, msg: dict[str, Any]) -> bool:
+        """Play your one power card on the game being played. Secret until that game's results."""
+        s, game = room.show, room.game
+        if pid not in room.players or s is None or game is None or room.phase != "game":
+            raise HubError("no_card", "Cards are played during a show game")
+        if game.game_id == "jackpot" or game.finished:
+            raise HubError("no_card", "No cards in this game")
+        if pid not in game.player_ids:
+            raise HubError("no_card", "You're not in this game")
+        card = s.cards.get(pid)
+        if card is None:
+            raise HubError("no_card", "You've played your card this show")
+        play: dict[str, Any] = {"pid": pid, "card": card, "game": len(s.games)}
+        if card in showlib.EARLY_CARDS and not self._predict_open(room):
+            raise HubError("too_late", "That card only works before the first round is over")
+        if card == "steal":
+            target = msg.get("target")
+            if not isinstance(target, str) or target == pid or target not in game.player_ids:
+                raise HubError("bad_target", "Pick a rival in this game")
+            play["target"] = target
+        if card == "peek":
+            try:
+                seen = game.peek(pid)
+            except Exception:  # a peek bug must never break the game
+                log.exception("peek failed")
+                seen = None
+            if not seen:
+                raise HubError("nothing_to_peek", "Nothing to peek at right now. Try again in a moment")
+            s.peeks[pid] = seen
+        del s.cards[pid]
+        s.plays.append(play)
+        return True
 
     def _finale(self, room: Room, s: showlib.Show) -> None:
         s.finished = True
@@ -581,9 +721,29 @@ class Hub:
                         "text": f"{names.get(tycoon, '?')} ended worth ${worth:,}",
                     }
                 )
+        if s.market is not None:
+            fans = {w.id: w for w in room.audience.values() if w.id in s.market.cash}
+            if fans:
+                best = max(fans, key=s.market.worth)
+                if s.market.worth(best) > showlib.START_CASH:
+                    s.awards.append(
+                        {
+                            "icon": "🤑",
+                            "title": "Crowd tycoon",
+                            "text": f"{fans[best].name} (audience) ended worth ${s.market.worth(best):,}",
+                        }
+                    )
         s.quip = room.quip = showlib.quip(
             totals, names, room.title or "the show", room.decks, self.rng, "show"
         )
+        # The season: every show in this room adds to a running table (shows won, points).
+        room.season_no += 1
+        top = max(totals.values(), default=0)
+        for pid, pts in totals.items():
+            row = room.season.setdefault(pid, {"wins": 0, "points": 0})
+            row["points"] += pts
+            if pts == top:
+                row["wins"] += 1
         room.game, room.phase = None, "finale"
 
     def _apply(self, room: Room, pid: str, kind: str, msg: dict[str, Any]) -> bool:
@@ -608,8 +768,9 @@ class Hub:
             cls = REGISTRY.get(msg.get("game")) if isinstance(msg.get("game"), str) else None
             if cls is None:
                 raise HubError("bad_game", "Unknown game")
-            self._begin(room, self._make_game(room, cls, options=self._options(cls, msg.get("options"))))
+            game = self._make_game(room, cls, options=self._options(cls, msg.get("options")))
             room.show = None  # a one-off game outside any show
+            self._begin(room, game)
             return True
         if kind == "show":
             if not is_host:
@@ -628,25 +789,39 @@ class Hub:
             market = msg.get("market", False)
             if not isinstance(jackpot, bool) or not isinstance(market, bool):
                 raise HubError("bad_message", "Unknown message")
-            game = self._make_game(room, REGISTRY[raw[0]])  # raises before anything changes
-            room.total_scores = {p: 0 for p in room.players}  # a new show, a fresh scoreboard
-            if market:
-                room.show = showlib.Show(playlist=list(raw), jackpot=jackpot, market=showlib.Market())
-                self._open_market(room, raw[0])
-            else:
-                room.show = showlib.Show(playlist=list(raw), jackpot=jackpot, started=1)
-                self._begin(room, game)
+            self._start_show(room, list(raw), jackpot, market)
+            return True
+        if kind == "rematch":
+            if not is_host:
+                raise HubError("not_host", "Only the host can start a rematch", 403)
+            if room.phase != "finale" or not room.last_show:
+                raise HubError("no_show", "Rematches start from a show's finale")
+            ls = room.last_show
+            self._start_show(room, list(ls["games"]), ls["jackpot"], ls["market"])
+            return True
+        if kind == "card":
+            return self._play_card(room, pid, msg)
+        if kind == "mvp":
+            if pid not in room.audience:
+                raise HubError("audience_only", "Only the audience votes for MVP")
+            if not self._mvp_open(room) or room.game is None:
+                raise HubError("mvp_closed", "MVP voting is closed")
+            target = msg.get("target")
+            if not isinstance(target, str) or target not in room.game.player_ids:
+                raise HubError("bad_target", "Pick a contestant")
+            room.mvp_votes[pid] = target
             return True
         if kind == "trade":
             market = room.show.market if room.show else None
-            if pid not in room.players or market is None or room.phase != "market":
+            trader_ok = pid in room.players or pid in room.audience
+            if not trader_ok or market is None or room.phase != "market":
                 raise HubError("market_closed", "The market is closed")
             target, qty = msg.get("target"), msg.get("qty")
             if not isinstance(target, str) or target not in room.players:
                 raise HubError("bad_trade", "Pick a player to trade")
             if isinstance(qty, bool) or not isinstance(qty, int):
                 raise HubError("bad_trade", "Trade a whole number of shares")
-            market.seat(pid)
+            market.seat(pid, listed=pid in room.players)
             market.seat(target)
             try:
                 market.trade(pid, target, qty)
@@ -700,6 +875,7 @@ class Hub:
                 raise HubError("not_host", "Only the host can do that", 403)
             room.game, room.phase, room.show = None, "lobby", None
             room.highlights, room.quip, room.predictions = [], "", {}
+            room.rivals, room.rival_news, room.card_news, room.mvp_votes = [], [], [], {}
             return True
         if kind in ("kick", "lock", "title"):
             if not is_host:
@@ -769,6 +945,14 @@ class Hub:
         if game is None or not game.finished or room.phase != "game":
             return
         scores = game.scores()
+        s = room.show
+        if s is not None and game.game_id != "jackpot":
+            idx = len(s.games)
+            scores, room.card_news = showlib.apply_cards([p for p in s.plays if p["game"] == idx], scores)
+            room.rival_news = showlib.settle_rivals(room.rivals, scores)
+            for r in room.rival_news:
+                if r["winner"] is not None:
+                    scores[r["winner"]] = scores.get(r["winner"], 0) + showlib.RIVAL_BONUS
         for pid, pts in scores.items():
             room.total_scores[pid] = room.total_scores.get(pid, 0) + pts
         room.phase = "results"
@@ -790,6 +974,9 @@ class Hub:
             for pid in scores:
                 room.show.market.seat(pid)
             room.market_moves = room.show.market.reprice(scores)
+            top = max(scores.values(), default=0)
+            winners = [p for p, v in scores.items() if v == top] if scores else []
+            room.market_dividends = room.show.market.pay_dividends(winners)
         if room.show is not None:
             room.show.games.append({"game": game.game_id, "title": game.title, "scores": dict(scores)})
             room.show.reel.extend({**h, "game": game.title} for h in room.highlights)

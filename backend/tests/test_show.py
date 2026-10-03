@@ -356,7 +356,7 @@ class MarketTests(unittest.TestCase):
         self.assertEqual((m.cash["a"], m.holdings["a"]), (500, {"b": 5}))
         m.trade("a", "b", -2)
         self.assertEqual((m.cash["a"], m.holdings["a"]), (700, {"b": 3}))
-        for bad in (0, 11, -4):  # nothing, too many at once, more than you own
+        for bad in (0, 11):  # nothing, too many at once
             with self.assertRaises(ValueError, msg=bad):
                 m.trade("a", "b", bad)
         m.trade("a", "a", 7)  # backing yourself is allowed
@@ -369,6 +369,26 @@ class MarketTests(unittest.TestCase):
             m.trade("a", "b", 10)  # 3 + 10 + 10 > 20 shares of one player
         with self.assertRaises(ValueError):
             m.trade("a", "ghost", 1)
+
+    def test_shorts_dividends_and_tips(self):
+        m = self.market("a", "b", "c")
+        m.trade("a", "b", -5)  # a short: cash now, owe the price later
+        self.assertEqual((m.cash["a"], m.holdings["a"]), (1500, {"b": -5}))
+        with self.assertRaises(ValueError):
+            m.trade("a", "a", -1)  # never short yourself
+        for _ in range(1):
+            m.trade("a", "b", -10)
+        with self.assertRaises(ValueError):
+            m.trade("a", "b", -10)  # past the 20-share short limit
+        m.reprice({"b": 0, "a": 5, "c": 9})  # b came last: -20%
+        self.assertEqual(m.worth("a"), m.cash["a"] - 15 * 80)
+        m.trade("c", "b", 2)
+        paid = m.pay_dividends(["b"])
+        self.assertEqual(paid, {"a": -15 * showlib.DIVIDEND, "c": 2 * showlib.DIVIDEND})
+        m.seat("au:x", listed=False)  # the audience trades but isn't a stock
+        self.assertNotIn("au:x", m.prices)
+        tip = m.tip("b", random.Random(1), {"a": "Ann", "c": "Cy", "b": "Bo"})
+        self.assertTrue(tip.startswith(("Ann holds -15 × Bo", "Cy holds +2 × Bo")), tip)
 
     def test_prices_follow_placement_with_ties_and_a_floor(self):
         m = self.market("a", "b", "c")

@@ -16,6 +16,7 @@ import {
   ThemePicker,
 } from "../components/show";
 import { MarketFloor, MarketMoves } from "../components/market";
+import { CardReveal, MvpVote, PowerCard, Rivals } from "../components/extras";
 import { Alibi } from "../games/Alibi";
 import { Frenemy } from "../games/Frenemy";
 import { Blackjack } from "../games/Blackjack";
@@ -206,7 +207,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       {phase === "finale" && state.show && <Finale state={state} isHost={isHost} send={send} />}
       {phase === "market" && state.market && (
         <>
-          <MarketFloor state={state} receivedAt={receivedAt} send={send} tv={audience} />
+          <MarketFloor state={state} receivedAt={receivedAt} send={send} />
           <ReactionBar send={send} />
           <Contestants players={state.players} you={state.you} title="Show scoreboard" />
         </>
@@ -214,11 +215,16 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       {(phase === "game" || phase === "results") && state.game && (
         <>
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
+          {phase === "game" && state.role === "player" && <PowerCard state={state} send={send} />}
+          {phase === "game" && state.role !== "player" && <CardsDown state={state} />}
+          <Rivals state={state} />
           {phase === "results" && (
             <>
               <HostLine quip={state.quip} />
+              <CardReveal state={state} />
               <Highlights items={state.highlights} />
-              {state.market && <MarketMoves m={state.market} players={state.players} />}
+              {state.market && <MarketMoves m={state.market} players={state.players} you={state.you} />}
+              <MvpVote state={state} send={send} />
             </>
           )}
           <ReactionBar send={send} />
@@ -374,15 +380,20 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
         <div className="tv-split">
           <div className="stack">
             <GameRouter state={state} receivedAt={receivedAt} send={noop} />
+            {phase === "game" && <CardsDown state={state} />}
             {phase === "results" && (
               <>
                 <HostLine quip={state.quip} />
+                <CardReveal state={state} />
                 <Highlights items={state.highlights} />
+                {state.market && <MarketMoves m={state.market} players={state.players} you="" />}
+                <MvpVote state={state} send={noop} />
               </>
             )}
           </div>
           <div className="stack">
             <Contestants players={state.players} you="" title={state.show ? "Show scoreboard" : "Scoreboard"} />
+            <Rivals state={state} />
             {watching > 0 && <p className="chip plum">🎟️ {watching} in the audience</p>}
           </div>
         </div>
@@ -584,5 +595,16 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
         })}
       </div>
     </div>
+  );
+}
+
+/** For screens that can't play cards: just the suspense. */
+function CardsDown({ state }: { state: RoomState }) {
+  const n = state.cards?.in_play ?? 0;
+  if (!n) return null;
+  return (
+    <p className="chip plum wrap" aria-live="polite">
+      🃏 {n} power {n === 1 ? "card" : "cards"} played this game. Revealed at the results!
+    </p>
   );
 }

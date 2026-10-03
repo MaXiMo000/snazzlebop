@@ -190,6 +190,15 @@ class FrenemyRadar(Game):
             self._enter_next()
 
     # -- views --------------------------------------------------------------
+    def peek(self, pid: str) -> str | None:
+        """Power card: where one person put you in this round's ranking (not who)."""
+        if self.phase != "rank":
+            return None
+        orders = [o for r, o in self.rankings[self.round].items() if r != pid and pid in o]
+        if not orders:
+            return None
+        return f"Someone has ranked you #{self.rng.choice(orders).index(pid) + 1} this round."
+
     def view_for(self, pid: str) -> dict[str, Any]:
         submitted = [p.id for p in self.players if p.id in self.rankings[self.round]]
         view: dict[str, Any] = {

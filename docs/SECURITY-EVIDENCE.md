@@ -256,6 +256,38 @@ Run locally against the production image and a dev server.
   - Canned lines in Split or Steal (an index, no free text).
   - Audience `react`/`predict` (whitelisted, throttled).
 
+## 9. Two more games, game upgrades and show extras (2026-10-03)
+
+Run locally against the production image.
+
+- **Backend:** 308 tests (`pytest`: 308 passed). New files: `test_lonely`, `test_boxes`,
+  `test_show_extras`; upgrade tests added to the dice, split, chicken, codes, roulette and wits files.
+- **New secrets, and how they're kept:**
+  - **Lowest Lonely Number:** picks until the reveal.
+  - **Mystery Box Auction:** box contents until each box is sold; your peek is in your view only.
+    Tested by scanning every other player's and a spectator's view for each unsold box's contents.
+  - **Chicken Run short fuse:** the target's personal bomb time is never sent; the target only learns
+    "someone shortened it". Saboteurs are named at the bang.
+  - **Code Crackers decoys:** the decoy code is never sent. A decoyed answer is flagged to its guesser
+    after their next guess on that code, and a decoy can never fake a crack (tested).
+  - **Roulette rigging:** the House's rig is invisible until the spin. A rigged spin is publicly
+    detectable: the committed number (with its nonce) no longer matches the wheel.
+  - **Power cards:** your hand and plays are in your view only; others see only how many cards are
+    down this game, until the results. Peek results go only to the player who peeked.
+  - **Stock Exchange:** books stay private until the finale; the one insider tip per trading window
+    goes to one player only (tested: exactly one view carries a tip).
+- **New input surfaces**, all validated with tests: `card` (players in a show game; steal targets
+  must be in the game; Double Down and Shield only in the first round), `mvp` (audience only, during
+  a show game's results, a contestant of that game), `rematch` (host, finale only), audience `trade`,
+  and the new game actions (`pick`, `bid`, `say`, `insure`, `fuse`, `hint`, `decoy`, `rig`,
+  `audit`, `wager`), each strictly typed and bounded.
+- **Simulator:** every game passes with exact score recomputation for Lonely (pots), Boxes (value
+  minus price), Chicken (insurance and fuse costs), Split (Golden Pot), Codes (hint costs; decoyed
+  answers excluded from the feedback check) and Roulette (fair number matches the commitment;
+  rigged spins and audits are consistent).
+- **Playwright:** 22 tests (the two new games and the Chicken tricks in the newer-games test; a show
+  test for power cards, rivals, the season table and a rematch), with axe and 44 px target checks.
+
 ## What is not covered (be honest)
 
 - **Single instance, in-memory limits.** Rate limits and rooms reset on restart and are per process.

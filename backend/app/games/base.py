@@ -213,6 +213,11 @@ class Game(ABC):
     @abstractmethod
     def view_for(self, pid: str) -> dict[str, Any]: ...
 
+    def peek(self, pid: str) -> str | None:
+        """The Peek power card: one private line about a secret in the game as it stands right now (or None
+        when there's nothing to see). Called only for a seated player; the line goes only to them."""
+        return None
+
     def highlights(self) -> list[dict[str, str]]:
         """Moments worth a line in the show's highlight reel, once the game is over:
         [{"icon": "🎯", "title": "Sharpshooter", "text": "Bo guessed within $3"}]. Names are fine here

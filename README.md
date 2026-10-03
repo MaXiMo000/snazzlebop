@@ -16,20 +16,28 @@ Put the show on a TV, play from your phones.
 | **Mole in the Mural** | 4-8 | Everyone knows the secret tile except the Mole (two Moles at 7-8). Hint by colour or kind, spot the bluffer; Moles get one sneaky hint **Switcheroo**. |
 | **Blackjack Showdown** | 1-8 | Solo or the whole room against the dealer: split, double, side bets on friends, a secret **Chaos hand**, and a knockout tournament mode. |
 | **Crossword Race** | 2-8 | A fresh grid every game. First right answer takes the clue; buy a private letter; or play in two teams. |
-| **Liar's Dice** | 2-8 | Secret dice, public bids on the whole table (ones wild). Raise, call **Liar!** or **Spot on!** Last one rolling wins. |
-| **Split or Steal** | 2-8 | Paired every round over a pot: both split, share; one steals, they take it; both steal, nobody does. Everyone's record is public. |
-| **Chicken Run** | 2-8 | The pot climbs every second; cash out before the hidden bomb goes off. |
-| **Wager Wits** | 2-8 | Answer a number question, then bet chips on whose answer is closest without going over. Win without knowing a thing. |
-| **Code Crackers** | 2-8 | Hide a 4-fruit code, then race to crack everyone else's with Mastermind clues. |
-| **Roulette Royale** | 3-8 | Bet on the wheel while one of you is secretly the House, winning what the table loses. Spot the House for a bonus. |
+| **Liar's Dice** | 2-8 | Secret dice, public bids on the whole table (ones wild). Raise, call **Liar!** or **Spot on!** Down to your last die? A **Palifico** round. Last one rolling wins. |
+| **Split or Steal** | 2-8 | Paired every round over a pot: both split, share; one steals, they take it; both steal, nobody does. Trash talk first, public records, and a **Golden Pot** finale with everyone in. |
+| **Chicken Run** | 2-8 | The pot climbs every second; cash out before the hidden bomb goes off. Buy insurance, or shorten a rival's fuse. |
+| **Wager Wits** | 2-8 | Answer a number question, then bet chips on whose answer is closest without going over. The last question is **all in**. |
+| **Code Crackers** | 2-8 | Hide a 4-fruit code, then race to crack everyone else's with Mastermind clues. Buy hints; arm a decoy. |
+| **Roulette Royale** | 3-8 | Bet on the wheel while one of you is secretly the House, winning what the table loses. The House can rig one spin; call an **audit**. |
 | **Lowest Lonely Number** | 2-8 | Everyone secretly picks 1-20; the lowest number nobody else picked takes the pot. Nobody lonely? It rolls over. |
 | **Mystery Box Auction** | 3-8 | Six sealed boxes (prizes, a dud, two bombs). You peeked inside one; bid live, bluff, and let a friend buy the bomb. |
 
 **Show night.** Pick 2-6 games for one scoreboard: the host's one-liners after every game, a highlight
 reel and awards at the finale, an optional **Jackpot** finale (everyone wagers their score on higher or
-lower), themed show packs, and the optional **Friend Stock Exchange**: before every game everyone trades
-shares in each other, prices move with how people actually do, and net worth turns into points at the
-end. Up to 30 more people can join as the **audience** to react and predict winners.
+lower), and themed show packs. Also:
+
+- **Power cards:** one secret card each per show (Double Down, Shield, Steal 50, Peek), revealed at the
+  results.
+- **Rivals:** every game pairs the closest scores; beat yours for +50.
+- **Friend Stock Exchange** (optional): before every game everyone trades shares in each other (long or
+  short). Prices move with how people actually do, winners pay dividends, one player gets an insider
+  tip, and net worth turns into points at the end.
+- **Rematch:** rerun the lineup from the finale; a season table tracks shows won.
+- **Audience:** up to 30 more people react, predict winners, trade on the exchange and vote an MVP
+  (+50).
 
 | Lobby | Blackjack | Crossword |
 | --- | --- | --- |
@@ -94,11 +102,11 @@ domain, follow "Client IP and Cloudflare" in [SECURITY.md](SECURITY.md).
 Run locally on Windows 11 + Docker Desktop against the production image (details and output in
 [docs/SECURITY-EVIDENCE.md](docs/SECURITY-EVIDENCE.md)):
 
-- 251 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
+- 308 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
   middleware, config rules, content validation), ruff, bandit, pip-audit.
 - Simulator: bots play all fifteen games over real WebSockets, scores are recomputed from the rules, and
   no frame ever carries another player's secret.
-- Playwright on 390 px and desktop: 20 tests including axe, keyboard, TV mode, host tools, reconnect.
+- Playwright on 390 px and desktop: 22 tests including axe, keyboard, TV mode, host tools, reconnect.
 - Locust abuse suite (rate limits, socket caps, oversize/flood closes, slow reader), OWASP ZAP
   baseline, Lighthouse (home 100 a11y/best practices/SEO), colour contrast for every pair.
 - Image: Trivy CRITICAL/HIGH (fixable) clean, gitleaks over full history clean.

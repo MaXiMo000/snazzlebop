@@ -212,6 +212,13 @@ class MoleInTheMural(Game):
             self._finish()
 
     # -- views --------------------------------------------------------------
+    def peek(self, pid: str) -> str | None:
+        """Power card: one player who is definitely not a Mole."""
+        if self.finished:
+            return None
+        clean = [p for p in self.player_ids if p != pid and p not in self.moles]
+        return f"{self.name_of(self.rng.choice(clean))} is not a Mole." if clean else None
+
     def view_for(self, pid: str) -> dict[str, Any]:
         is_player = pid in self.round_scores
         is_mole = pid in self.moles

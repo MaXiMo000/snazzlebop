@@ -148,6 +148,15 @@ class TelepathyTax(Game):
             self._next()
 
     # -- views --------------------------------------------------------------
+    def peek(self, pid: str) -> str | None:
+        """Power card: the most popular pick so far this round (not whose)."""
+        others = [o for p, o in self.picks.items() if p != pid]
+        if self.phase != "pick" or not others:
+            return None
+        top = max(set(others), key=others.count)
+        name = self.categories[self.round]["options"][top]
+        return f"{others.count(top)} of the picks so far are on {name}."
+
     def view_for(self, pid: str) -> dict[str, Any]:
         cat = self.categories[min(self.round, self.ROUNDS - 1)]
         view: dict[str, Any] = {

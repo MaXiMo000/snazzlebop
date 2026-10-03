@@ -418,6 +418,14 @@ class BlackjackShowdown(Game):
             self._after_settle()
 
     # -- views --------------------------------------------------------------
+    def peek(self, pid: str) -> str | None:
+        """Power card: the dealer's face-down card."""
+        if self.phase != "play" or len(self.dealer) < 2:
+            return None
+        card = self.dealer[1]
+        suit = {"S": "♠", "H": "♥", "D": "♦", "C": "♣"}[card[-1]]
+        return f"The dealer's hidden card is {card[:-1]}{suit}."
+
     def view_for(self, pid: str) -> dict[str, Any]:
         show_dealer = self.phase in ("settle", "final")
         dealer_cards = list(self.dealer) if show_dealer else self.dealer[:1]

@@ -270,6 +270,15 @@ class CrosswordRace(Game):
                 totals[self.team_of[c["solved_by"]]] += 40 + 10 * len(c["word"])
         return totals
 
+    def peek(self, pid: str) -> str | None:
+        """Power card: one letter of an unsolved answer."""
+        open_clues = [c for c in self.clues if c["solved_by"] is None]
+        if self.phase != "solve" or not open_clues:
+            return None
+        clue = self.rng.choice(open_clues)
+        i = self.rng.randrange(len(clue["word"]))
+        return f"{clue['num']} {clue['dir']}: letter {i + 1} is {clue['word'][i]}."
+
     def view_for(self, pid: str) -> dict[str, Any]:
         rows = max((r for r, _ in self.letters), default=0) + 1
         # Letters your side paid for: yours (and your team's) only, never anyone else's or the TV's.

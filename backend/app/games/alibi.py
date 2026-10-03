@@ -501,6 +501,13 @@ class Alibi(Game):
             self._finish()
 
     # -- views --------------------------------------------------------------
+    def peek(self, pid: str) -> str | None:
+        """Power card: one player who is definitely innocent (never yourself, never the killer)."""
+        if self.finished or self.phase == "final":
+            return None
+        clean = [p for p in self.player_ids if p not in (pid, self.killer)]
+        return f"{self.name_of(self.rng.choice(clean))} is innocent." if clean else None
+
     def view_for(self, pid: str) -> dict[str, Any]:
         is_killer = pid == self.killer
         card = [

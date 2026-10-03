@@ -343,6 +343,29 @@ export interface ShowState {
   awards: Highlight[];
   /** the Friend Stock Exchange runs across this show */
   market: boolean;
+  /** the host can rerun this lineup from the finale */
+  can_rematch: boolean;
+}
+
+export type CardId = "double" | "shield" | "steal" | "peek";
+export interface CardsState {
+  catalog: Record<string, { name: string; icon: string; text: string }>;
+  /** cards played in the current game (never whose or which) */
+  in_play: number;
+  /** results only: what was played and what it did */
+  news: { pid: string; card: CardId; game: number; target?: string; effect: number }[];
+  you: { card: CardId | null; played: CardId | null; peek: string | null } | null;
+}
+
+export interface RivalsState {
+  pairs: string[][];
+  news: { players: string[]; winner: string | null }[];
+  bonus: number;
+}
+
+export interface SeasonState {
+  number: number;
+  table: Record<string, { wins: number; points: number }>;
 }
 
 export interface MarketState {
@@ -354,8 +377,13 @@ export interface MarketState {
   history: Record<string, number>[];
   /** price changes after the last game (0.3 = +30%) */
   moves: Record<string, number>;
+  /** cash paid (or owed, for shorts) from the last game's winner */
+  dividends: Record<string, number>;
+  dividend: number;
   trades: number;
-  you: { cash: number; holdings: Record<string, number>; worth: number } | null;
+  you: { cash: number; holdings: Record<string, number>; worth: number; tip: string } | null;
+  /** finale: audience traders' names */
+  crowd: Record<string, string>;
   /** finale only: everyone's numbers */
   worth: Record<string, number>;
   books: Record<string, Record<string, number>>;
@@ -376,6 +404,7 @@ export interface Crowd {
   picks: Record<string, number>;
   open: boolean;
   you_picked: string | null;
+  mvp: { open: boolean; you_voted: string | null; votes: Record<string, number>; bonus: number };
 }
 
 export type Role = "player" | "tv" | "audience";
@@ -399,6 +428,9 @@ export interface RoomState {
   reactions: Reaction[];
   crowd: Crowd;
   market: MarketState | null;
+  cards: CardsState | null;
+  rivals: RivalsState;
+  season: SeasonState | null;
   players: PlayerInfo[];
   games: GameCard[];
   game: GameView | null;

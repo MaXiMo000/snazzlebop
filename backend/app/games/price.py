@@ -261,6 +261,16 @@ class PriceIsWeird(Game):
             self._next()
 
     # -- views --------------------------------------------------------------
+    def peek(self, pid: str) -> str | None:
+        """Power card: which way this round's sealed chaos spin goes."""
+        if self.phase != "guess":
+            return None
+        if self.modifier > 1:
+            return "The sealed spin will push this price UP."
+        if self.modifier < 1:
+            return "The sealed spin will shrink this price."
+        return "The sealed spin leaves this price alone."
+
     def view_for(self, pid: str) -> dict[str, Any]:
         item = self.items[self.round]
         view: dict[str, Any] = {

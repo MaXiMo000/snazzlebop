@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Season } from "./extras";
 import { Btn, Card, nameOf } from "./ui";
 import { useShow } from "./fx";
 import { sfx } from "../lib/sfx";
@@ -410,10 +411,18 @@ export function Finale({ state, isHost, send }: { state: RoomState; isHost: bool
       {state.market && <MarketFinale m={state.market} players={state.players} you={state.you} />}
       <Highlights items={show.awards} title="Awards" />
       <Highlights items={show.reel} title="Highlight reel" />
+      <Season state={state} />
       {isHost ? (
-        <Btn variant="go" size="big" block onClick={() => send({ t: "lobby" })}>
-          Back to the lobby
-        </Btn>
+        <div className="stack-sm">
+          {show.can_rematch && (
+            <Btn variant="gold" size="big" block onClick={() => send({ t: "rematch" })}>
+              🔁 Rematch: same lineup, next show of the season
+            </Btn>
+          )}
+          <Btn variant="go" size="big" block onClick={() => send({ t: "lobby" })}>
+            Back to the lobby
+          </Btn>
+        </div>
       ) : (
         state.role === "player" && <p className="muted center">Thanks for playing! The host takes it from here.</p>
       )}

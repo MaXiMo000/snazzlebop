@@ -25,13 +25,23 @@ export function MarketFloor({ state, receivedAt, send, tv = false }: { state: Ro
       <ShowHead sign={`Up next: ${m.next}`} title="Friend Stock Exchange" remaining={m.closes_in} receivedAt={receivedAt}>
         <span className="chip plum">Buy your friends before they win · prices move with every game</span>
       </ShowHead>
+      {me?.tip && !tv && (
+        <Card tone="soft" className="center">
+          <p className="sign">🤫 Insider tip</p>
+          <p className="lead space-top">{me.tip}</p>
+          <p className="muted">Only you got this one.</p>
+        </Card>
+      )}
       {me && !tv && (
         <Card tone="stage" className="center">
           <p className="sign">Your portfolio</p>
           <p className="lead space-top">
             Cash <b>{money(me.cash)}</b> · net worth <b>{money(me.worth)}</b>
           </p>
-          <p className="muted">Every $10 of profit is a show point at the finale (losses count too).</p>
+          <p className="muted">
+            Every $10 of profit is a show point at the finale (losses count too). Selling what you don’t own opens a short. Each game’s winner pays
+            ${m.dividend} a share.
+          </p>
         </Card>
       )}
       <Card>
@@ -51,14 +61,20 @@ export function MarketFloor({ state, receivedAt, send, tv = false }: { state: Ro
                 <Move pct={m.moves[p.id]} />
                 {me && !tv && (
                   <span className="ticker-trade">
-                    <span className="muted">{held} held</span>
+                    <span className="muted">{held < 0 ? `${-held} short` : `${held} held`}</span>
                     <Btn size="small" variant="go" aria-label={`Buy 1 share of ${p.name}`} disabled={!canBuy(1)} onClick={() => trade(send, p.id, 1)}>
                       +1
                     </Btn>
                     <Btn size="small" variant="go" aria-label={`Buy 5 shares of ${p.name}`} disabled={!canBuy(5)} onClick={() => trade(send, p.id, 5)}>
                       +5
                     </Btn>
-                    <Btn size="small" variant="danger" aria-label={`Sell 1 share of ${p.name}`} disabled={held < 1} onClick={() => trade(send, p.id, -1)}>
+                    <Btn
+                      size="small"
+                      variant="danger"
+                      aria-label={held > 0 ? `Sell 1 share of ${p.name}` : `Short 1 share of ${p.name}`}
+                      disabled={held - 1 < -MAX_HOLDING || (p.id === state.you && held < 1)}
+                      onClick={() => trade(send, p.id, -1)}
+                    >
                       −1
                     </Btn>
                   </span>
@@ -90,12 +106,18 @@ function trade(send: Send, target: string, qty: number) {
   send({ t: "trade", target, qty });
 }
 
-/** After a game: how the prices moved. */
-export function MarketMoves({ m, players }: { m: MarketState; players: { id: string; name: string }[] }) {
+/** After a game: how the prices moved, and your dividend. */
+export function MarketMoves({ m, players, you }: { m: MarketState; players: { id: string; name: string }[]; you: string }) {
   if (!Object.keys(m.moves).length) return null;
+  const paid = m.dividends[you];
   return (
     <Card tone="soft" aria-label="Stock prices after this game">
       <h3>📈 The market reacts</h3>
+      {paid !== undefined && (
+        <p className="lead">
+          {paid >= 0 ? `💰 Dividend: +${money(paid)}` : `💸 Your short paid ${money(-paid)} in dividends`}
+        </p>
+      )}
       <ul className="evidence">
         {[...players]
           .sort((a, b) => (m.moves[b.id] ?? 0) - (m.moves[a.id] ?? 0))
@@ -111,7 +133,8 @@ export function MarketMoves({ m, players }: { m: MarketState; players: { id: str
 
 /** Finale: everyone's books and net worth, finally public. */
 export function MarketFinale({ m, players, you }: { m: MarketState; players: { id: string; name: string }[]; you: string }) {
-  const ranked = [...players].sort((a, b) => (m.worth[b.id] ?? 0) - (m.worth[a.id] ?? 0));
+  const traders = [...players, ...Object.entries(m.crowd).map(([id, name]) => ({ id, name: `${name} (audience)` }))];
+  const ranked = traders.filter((p) => p.id in m.worth).sort((a, b) => (m.worth[b.id] ?? 0) - (m.worth[a.id] ?? 0));
   return (
     <Card aria-labelledby="market-final-h">
       <h3 id="market-final-h">📈 Friend Stock Exchange: closing bell</h3>
@@ -127,7 +150,7 @@ export function MarketFinale({ m, players, you }: { m: MarketState; players: { i
               {book.length > 0 && (
                 <span className="muted">
                   {" "}
-                  · held {book.map(([t, q]) => `${q} × ${nameOf(players, t)}`).join(", ")}
+                  · held {book.map(([t, q]) => `${q < 0 ? `short ${-q}` : q} × ${nameOf(players, t)}`).join(", ")}
                 </span>
               )}
             </li>

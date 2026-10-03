@@ -27,6 +27,10 @@ class Show:
     awards: list[dict[str, str]] = field(default_factory=list)
     quip: str = ""
     market: Market | None = None  # Friend Stock Exchange, when the host turned it on
+    # Power cards: one per player per show. Hand and plays are secret until the game's results.
+    cards: dict[str, str] = field(default_factory=dict)  # pid -> card id still in hand
+    plays: list[dict[str, Any]] = field(default_factory=list)  # {"pid", "card", "game", "target"?}
+    peeks: dict[str, str] = field(default_factory=dict)  # pid -> what their Peek showed (private)
 
     def next_game(self) -> str | None:
         """The next thing to start: a playlist game id, "jackpot", or None when the show is over."""
@@ -35,6 +39,72 @@ class Show:
         if self.jackpot and not self.jackpot_played:
             return "jackpot"
         return None
+
+
+# -- power cards -----------------------------------------------------------------------------------
+CARDS: dict[str, dict[str, str]] = {
+    "double": {"name": "Double Down", "icon": "🎲", "text": "Double your points this game (losses too)"},
+    "shield": {"name": "Shield", "icon": "🛡️", "text": "A losing game counts as zero"},
+    "steal": {"name": "Steal 50", "icon": "🦝", "text": "Take 50 points from a rival"},
+    "peek": {"name": "Peek", "icon": "👁️", "text": "See one secret in the game being played"},
+}
+STEAL_POINTS = 50
+EARLY_CARDS = ("double", "shield")  # only before the first round of a game is over
+
+
+def deal_cards(show: Show, pids: list[str], rng: random.Random) -> None:
+    """One random card for everyone who doesn't have one yet (and hasn't played one this show)."""
+    used = {p["pid"] for p in show.plays}
+    for pid in pids:
+        if pid not in show.cards and pid not in used:
+            show.cards[pid] = rng.choice(sorted(CARDS))
+
+
+def apply_cards(
+    plays: list[dict[str, Any]], scores: dict[str, int]
+) -> tuple[dict[str, int], list[dict[str, Any]]]:
+    """A finished game's scores after the cards played in it, and what each card did (for the reveal).
+    Double first, then Shield (a doubled loss is still shielded), then steals."""
+    out = dict(scores)
+    news: list[dict[str, Any]] = []
+    for kind in ("double", "shield", "steal", "peek"):
+        for play in (p for p in plays if p["card"] == kind):
+            pid, effect = play["pid"], 0
+            if kind == "double" and pid in out:
+                effect = out[pid]
+                out[pid] += effect
+            elif kind == "shield" and pid in out and out[pid] < 0:
+                effect = -out[pid]
+                out[pid] = 0
+            elif kind == "steal":
+                target = play["target"]
+                out[pid] = out.get(pid, 0) + STEAL_POINTS
+                out[target] = out.get(target, 0) - STEAL_POINTS
+                effect = STEAL_POINTS
+            news.append({**play, "effect": effect})
+    return out, news
+
+
+# -- rivals ----------------------------------------------------------------------------------------
+RIVAL_BONUS = 50
+
+
+def rivals(totals: dict[str, int], pids: list[str], rng: random.Random) -> list[tuple[str, str]]:
+    """Pair everyone with the closest score on the show's board (random among ties); an odd one out
+    has no rival this game."""
+    order = list(pids)
+    rng.shuffle(order)  # ties break randomly, then a stable sort keeps that
+    order.sort(key=lambda p: -totals.get(p, 0))
+    return [(order[i], order[i + 1]) for i in range(0, len(order) - 1, 2)]
+
+
+def settle_rivals(pairs: list[tuple[str, str]], scores: dict[str, int]) -> list[dict[str, Any]]:
+    """Who beat their rival this game (a draw pays nobody)."""
+    out = []
+    for a, b in pairs:
+        sa, sb = scores.get(a, 0), scores.get(b, 0)
+        out.append({"players": [a, b], "winner": a if sa > sb else b if sb > sa else None})
+    return out
 
 
 # -- the host's one-liners --------------------------------------------------------------------------
@@ -167,15 +237,17 @@ def awards(show: Show, totals: dict[str, int], names: dict[str, str]) -> list[di
 START_CASH = 1000
 START_PRICE = 100
 MIN_PRICE = 10
-MAX_HOLDING = 20  # shares of any one player
+MAX_HOLDING = 20  # shares of any one player, long or short
 MAX_TRADE = 10  # shares per trade
 TOP_MOVE, BOTTOM_MOVE = 0.30, -0.20  # winner's price change ... last place's
 POINTS_PER_DOLLARS = 10  # every $10 of profit (or loss) is one show point at the finale
+DIVIDEND = 10  # per share of each game's winner (a short pays it)
 
 
 @dataclass
 class Market:
-    """Shares in your friends. Cash and holdings are private; prices are public."""
+    """Shares in your friends. Cash and holdings are private; prices are public. Players are both traders
+    and stocks; the audience only trades. A negative holding is a short."""
 
     cash: dict[str, int] = field(default_factory=dict)
     holdings: dict[str, dict[str, int]] = field(default_factory=dict)  # trader -> player -> shares
@@ -183,13 +255,15 @@ class Market:
     history: list[dict[str, int]] = field(default_factory=list)  # prices after each game
     trades: int = 0
 
-    def seat(self, pid: str) -> None:
+    def seat(self, pid: str, *, listed: bool = True) -> None:
         self.cash.setdefault(pid, START_CASH)
         self.holdings.setdefault(pid, {})
-        self.prices.setdefault(pid, START_PRICE)
+        if listed:
+            self.prices.setdefault(pid, START_PRICE)
 
     def trade(self, trader: str, target: str, qty: int) -> None:
-        """Buy (qty > 0) or sell (qty < 0) shares of `target` at today's price. Raises ValueError."""
+        """Buy (qty > 0) or sell (qty < 0) shares of `target` at today's price. Selling more than you own
+        opens a short (cash now, owe the price later). Raises ValueError."""
         if target not in self.prices or trader not in self.cash:
             raise ValueError("Unknown player")
         if qty == 0 or abs(qty) > MAX_TRADE:
@@ -200,8 +274,10 @@ class Market:
             raise ValueError("Not enough cash")
         if held + qty > MAX_HOLDING:
             raise ValueError(f"At most {MAX_HOLDING} shares of one player")
-        if held + qty < 0:
-            raise ValueError("You don't own that many shares")
+        if held + qty < 0 and target == trader:
+            raise ValueError("You can't short yourself")
+        if held + qty < -MAX_HOLDING:
+            raise ValueError(f"Short at most {MAX_HOLDING} shares of one player")
         self.cash[trader] -= cost
         self.holdings[trader][target] = held + qty
         if self.holdings[trader][target] == 0:
@@ -223,6 +299,28 @@ class Market:
                 moves[pid] = round(move, 3)
         self.history.append(dict(self.prices))
         return moves
+
+    def pay_dividends(self, winners: list[str]) -> dict[str, int]:
+        """Each game's winner(s) pay every shareholder; shorts pay it instead. Returns cash moved."""
+        paid: dict[str, int] = {}
+        for trader, book in self.holdings.items():
+            amount = sum(book.get(w, 0) * DIVIDEND for w in winners)
+            if amount:
+                self.cash[trader] += amount
+                paid[trader] = amount
+        return paid
+
+    def tip(self, insider: str, rng: random.Random, names: dict[str, str]) -> str:
+        """An insider tip: one other trader's whole book (books are otherwise secret)."""
+        others = [t for t in self.holdings if t != insider and t in names]
+        if not others:
+            return ""
+        who = rng.choice(sorted(others))
+        book = self.holdings[who]
+        if not book:
+            return f"{names[who]} hasn't bought anything yet."
+        parts = [f"{q:+} × {names.get(t, '?')}" for t, q in sorted(book.items(), key=lambda kv: -abs(kv[1]))]
+        return f"{names[who]} holds {', '.join(parts)}."
 
     def worth(self, pid: str) -> int:
         return self.cash.get(pid, 0) + sum(
