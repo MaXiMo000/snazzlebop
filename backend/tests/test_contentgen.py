@@ -48,6 +48,13 @@ class ValidationTests(unittest.TestCase):
         self.assertIsNone(v_alibi({**good, "locations": good["locations"][:5]}))
         self.assertIsNone(v_alibi({**good, "locations": [*good["locations"][:5], "ladder"]}))
 
+    def test_codewords_are_single_plain_words(self):
+        from app.contentgen import v_codeword
+
+        self.assertEqual(v_codeword(" lantern "), "LANTERN")
+        for bad in ("ICE CREAM", "R2D2", "AB", "A" * 13, "café", 5, None, "ÉCLAIR"):
+            self.assertIsNone(v_codeword(bad), bad)
+
     def test_crossword_never_gives_the_answer_away(self):
         self.assertEqual(v_crossword({"word": "otter", "clue": "Playful river swimmer"})["word"], "OTTER")
         for bad in (

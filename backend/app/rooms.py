@@ -14,6 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from . import prank
 from . import show as showlib
 from .config import Settings
 from .games import REGISTRY, Game, GameError, Player, catalog
@@ -127,6 +128,8 @@ class Room:
     ready: set[str] = field(default_factory=set)  # who tapped Ready (intro, or a skippable results screen)
     ready_stage: str = ""  # the game stage those votes are for
     last_standings: list[dict[str, Any]] = field(default_factory=list)  # the last finale, kept for the lobby
+    # The prank: how many scares each matching person has been sent (only they ever see their count).
+    scares: dict[str, int] = field(default_factory=dict)
     last_active: float = 0.0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -156,6 +159,7 @@ class Hub:
         self.on_game_started = on_game_started
         self.timings = timings or {}
         self.intro_seconds = intro_seconds
+        self.prank_targets = prank.targets(settings.jumpscare_names) if settings.jumpscare else ()
         self.send_timeout = 5.0  # a socket that can't take a frame this long is dropped
         self._mail: dict[Connection, dict[str, Any]] = {}
         self._tasks: set[asyncio.Task[None]] = set()
@@ -182,6 +186,7 @@ class Hub:
         room.host_id = player.id
         room.total_scores[player.id] = 0
         self.rooms[room.code] = room
+        self._scare(room, player.id, name)
         return room, player, self._issue(room, player)
 
     def get(self, code: str) -> Room | None:
@@ -205,7 +210,25 @@ class Hub:
         room.players[player.id] = player
         room.total_scores[player.id] = 0
         room.last_active = self.clock()
+        self._scare(room, player.id, name)
         return room, player, self._issue(room, player)
+
+    def _scare(self, room: Room, pid: str, name: str | None = None) -> None:
+        """Queue a jump scare for this person if their name is on the (private) list. With a name, it's
+        their arrival; without, it's a score screen for someone already matched."""
+        if not self.prank_targets:
+            return
+        if name is not None:
+            if not prank.matches(name, self.prank_targets):
+                return
+        elif pid not in room.scares:
+            return
+        room.scares[pid] = room.scares.get(pid, 0) + 1
+
+    def _scare_everyone_matched(self, room: Room) -> None:
+        for pid in list(room.scares):
+            if pid in room.players or pid in room.audience:
+                self._scare(room, pid)
 
     @staticmethod
     def _name_free(room: Room, name: str) -> None:
@@ -227,6 +250,7 @@ class Hub:
         watcher = Watcher(id="au:" + secrets.token_urlsafe(6), name=name)
         room.audience[watcher.id] = watcher
         room.last_active = self.clock()
+        self._scare(room, watcher.id, name)
         token = sign_token(self.settings.secret_key, watcher.id, room.code, self.settings.token_ttl_seconds)
         return room, watcher, token
 
@@ -349,6 +373,7 @@ class Hub:
             "intro": self._intro_view(room) if room.phase == "intro" else None,
             "ready": self._ready_view(room),
             "last_standings": room.last_standings if room.phase == "lobby" else [],
+            "scare": room.scares.get(pid, 0),  # only ever this viewer's own count
             "players": [
                 {
                     "id": p.id,
@@ -847,6 +872,7 @@ class Hub:
             row["points"] += pts
             if pts == top:
                 row["wins"] += 1
+        self._scare_everyone_matched(room)
         room.game, room.phase = None, "finale"
 
     def _apply(self, room: Room, pid: str, kind: str, msg: dict[str, Any]) -> bool:
@@ -1074,6 +1100,7 @@ class Hub:
         for pid, pts in scores.items():
             room.total_scores[pid] = room.total_scores.get(pid, 0) + pts
         room.phase = "results"
+        self._scare_everyone_matched(room)  # the scores are up: boo
         names = room.names()
         try:
             room.highlights = game.highlights()

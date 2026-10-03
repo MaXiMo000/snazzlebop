@@ -451,6 +451,8 @@ export interface RoomState {
   ready: { open: boolean; stage: string; votes: string[]; needed: number };
   /** the running game's rules */
   how_to: string[];
+  /** the prank: how many jump scares the server has queued for this viewer */
+  scare: number;
   /** lobby: the last show's final standings */
   last_standings: { id: string; name: string; total: number }[];
   players: PlayerInfo[];

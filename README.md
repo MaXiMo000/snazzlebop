@@ -106,7 +106,7 @@ domain, follow "Client IP and Cloudflare" in [SECURITY.md](SECURITY.md).
 Run locally on Windows 11 + Docker Desktop against the production image (details and output in
 [docs/SECURITY-EVIDENCE.md](docs/SECURITY-EVIDENCE.md)):
 
-- 340 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
+- 349 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
   middleware, config rules, content validation), ruff, bandit, pip-audit.
 - Simulator: bots play all sixteen games over real WebSockets, scores are recomputed from the rules, and
   no frame ever carries another player's secret.

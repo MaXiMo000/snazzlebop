@@ -168,6 +168,16 @@ def v_wits(raw: Any) -> dict[str, Any] | None:
     return {"q": q, "a": a, "unit": unit}
 
 
+def v_codeword(raw: Any) -> str | None:
+    """A Codewords board word: one common English word, A-Z only."""
+    if not isinstance(raw, str):
+        return None
+    word = raw.strip().upper()
+    if not re.fullmatch(r"[A-Z]{3,12}", word) or _DENY.search(word):
+        return None
+    return word
+
+
 _PLACEHOLDER = re.compile(r"\{([a-z]+)\}")
 
 
@@ -310,6 +320,18 @@ KINDS["wits"] = Kind(
     lambda x: f"{x['q']} -> {x['a']} {x['unit']}",
 )
 
+KINDS["codewords"] = Kind(
+    C.CODEWORDS,
+    lambda x: x,
+    v_codeword,
+    _S,
+    "Codewords board words for a Codenames-style team game: single common English nouns (3-12 letters, "
+    "A-Z only, no proper names of real people or brands) that have more than one meaning or many "
+    "associations, so a one-word clue can link several of them (e.g. BAT, SPRING, TRUNK, CRANE). "
+    "Upper case. Very varied topics.",
+    lambda x: x,
+)
+
 GAME_KINDS = {
     "frenemy": "frenemy",
     "price": "price",
@@ -318,6 +340,7 @@ GAME_KINDS = {
     "mural": "mural",
     "crossword": "crossword",
     "wits": "wits",
+    "codewords": "codewords",
 }
 
 SYSTEM = (

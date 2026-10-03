@@ -82,6 +82,11 @@ class Settings:
     content_model: str = "claude-opus-5-5"
     content_calls_per_hour: int = 20
 
+    # The jump-scare prank: JUMPSCARE=on plus JUMPSCARE_NAMES (comma separated). Off by default; the
+    # names live only in the environment (e.g. the Render dashboard), never in the repo.
+    jumpscare: bool = False
+    jumpscare_names: tuple[str, ...] = field(default=(), repr=False)
+
     extra: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -150,4 +155,6 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         anthropic_api_key=e.get("ANTHROPIC_API_KEY", "").strip(),
         content_model=e.get("CONTENT_MODEL", "").strip() or defaults.content_model,
         content_calls_per_hour=int(num("CONTENT_CALLS_PER_HOUR", defaults.content_calls_per_hour)),
+        jumpscare=e.get("JUMPSCARE", "").strip().lower() in ("on", "1", "true", "yes"),
+        jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")),
     )

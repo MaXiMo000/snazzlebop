@@ -18,6 +18,7 @@ import {
 import { MarketFloor, MarketMoves } from "../components/market";
 import { CardReveal, MvpVote, PowerCard, Rivals } from "../components/extras";
 import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
+import { JumpScare } from "../components/JumpScare";
 import { Alibi } from "../games/Alibi";
 import { Frenemy } from "../games/Frenemy";
 import { Blackjack } from "../games/Blackjack";
@@ -188,6 +189,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
   const audience = state.role === "audience";
   return (
     <div className="stack">
+      <JumpScare count={state.scare} room={code} you={state.you} />
       <ReactionOverlay reactions={state.reactions} />
       {status === "reconnecting" && (
         <div className="alert calm row between" role="status">

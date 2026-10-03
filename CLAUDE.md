@@ -103,6 +103,13 @@ Free web instances sleep when idle and drop live rooms; use the Starter plan for
    add it to the lobby catalog (automatic via `catalog()`). Give it `HOW_TO` (plain rules, shown on the
    intro screen before it starts) and `READING` (results phases the room can skip together with Ready).
 
+## The prank (optional)
+
+`JUMPSCARE=on` + `JUMPSCARE_NAMES=a,b,c` (dashboard only, never in git): matching players get a full-screen
+ghost and a synthesised scream on arrival and on every score screen (`prank.py`, `JumpScare.tsx`,
+`lib/scare.ts`). Matching forgives case, look-alike digits and one wrong letter. Only the target's own
+view carries the `scare` counter. Ghosts and sound are generated on the device: nothing is downloaded.
+
 ## Conventions
 
 - Python: typed, ruff-clean, `from __future__ import annotations`, small functions.

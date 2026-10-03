@@ -2883,3 +2883,71 @@ button.cw-card:hover {
   border-top-width: 8px;
   border-top-color: var(--cw-red, #c8203a);
 }
+
+/* ---- the jump scare (prank names only) ------------------------------------------------------------ */
+.jumpscare {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, #2a0000 0%, #000 70%);
+  animation: scare-in 0.06s steps(1) both;
+  cursor: pointer;
+}
+.jumpscare-face {
+  /* A close-up, centred however big it is: the face fills the screen on phones and laptops alike. */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(max(100vw, 72vh), 150vh);
+  margin-left: calc(min(max(100vw, 72vh), 150vh) / -2);
+  margin-top: calc(min(max(100vw, 72vh), 150vh) * -0.625);
+  max-width: none;
+  animation:
+    scare-lunge 0.35s cubic-bezier(0.1, 1.6, 0.3, 1) both,
+    scare-shake 0.09s linear 0.35s 18;
+}
+.jumpscare-face .ghost {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0 40px rgba(255, 0, 0, 0.35));
+}
+.tilt-0 { rotate: -9deg; }
+.tilt-1 { rotate: -6deg; }
+.tilt-2 { rotate: -3deg; }
+.tilt-3 { rotate: 0deg; }
+.tilt-4 { rotate: 3deg; }
+.tilt-5 { rotate: 6deg; }
+.tilt-6 { rotate: 9deg; }
+@keyframes scare-in {
+  from {
+    opacity: 1;
+  }
+}
+@keyframes scare-lunge {
+  from {
+    transform: scale(0.25);
+  }
+  to {
+    transform: scale(1.12);
+  }
+}
+@keyframes scare-shake {
+  25% {
+    translate: -14px 6px;
+  }
+  50% {
+    translate: 12px -8px;
+  }
+  75% {
+    translate: -6px -10px;
+  }
+}
+/* Reduced motion: it still appears (that's the joke), it just doesn't lunge or shake. */
+@media (prefers-reduced-motion: reduce) {
+  .jumpscare-face {
+    animation: none;
+    transform: scale(1.12);
+  }
+}
