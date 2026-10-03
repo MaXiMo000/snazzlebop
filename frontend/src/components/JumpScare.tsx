@@ -2,9 +2,14 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "rea
 import { scream } from "../lib/scare";
 
 /** Real photos dropped into src/assets/scares are bundled at build time and used first. */
-const PHOTOS: string[] = Object.values(
-  import.meta.glob<string>("../assets/scares/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}", { eager: true, query: "?url", import: "default" }),
-);
+const PHOTO_URLS = import.meta.glob<string>("../assets/scares/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+/** Photo names ("porthole"), used to pick a photo and to frame it (.photo-porthole in the CSS). */
+const PHOTOS: string[] = Object.keys(PHOTO_URLS).map((path) => path.split("/").pop()!.replace(/\.\w+$/, ""));
+const photoUrl = (name: string) => Object.entries(PHOTO_URLS).find(([path]) => path.includes(`/${name}.`))?.[1] ?? "";
 
 /** Drawn in code (no images from the internet): six kinds of ghost, every one randomised. */
 type Kind = "wraith" | "onryo" | "skull" | "grinner" | "banshee" | "hollow";
@@ -294,9 +299,12 @@ export function JumpScare({ count, room, you }: { count: number; room: string; y
     } catch {
       /* fine: a refresh might replay it */
     }
+    // Pick now and preload during the pause, so the photo is on screen the instant it fires.
+    const next = roll();
+    if (next.photo) new Image().src = photoUrl(next.photo);
     // A random pause first, so it never comes exactly when expected.
     const wait = window.setTimeout(() => {
-      setLook(roll());
+      setLook(next);
       scream();
     }, r(1400, 4200));
     return () => window.clearTimeout(wait);
@@ -312,9 +320,9 @@ export function JumpScare({ count, room, you }: { count: number; room: string; y
   if (look.photo) {
     // A real photo: full screen, harsh black-and-white, lunging in with a glitchy flicker.
     return (
-      <div className="jumpscare photo" aria-hidden="true" onClick={() => setLook(null)}>
-        <img className="jumpscare-photo" src={look.photo} alt="" decoding="sync" />
-        <img className="jumpscare-photo ghost-red" src={look.photo} alt="" decoding="sync" />
+      <div className={`jumpscare photo photo-${look.photo}`} aria-hidden="true" onClick={() => setLook(null)}>
+        <img className="jumpscare-photo" src={photoUrl(look.photo)} alt="" decoding="sync" />
+        <img className="jumpscare-photo ghost-red" src={photoUrl(look.photo)} alt="" decoding="sync" />
         <div className="jumpscare-grain" />
       </div>
     );

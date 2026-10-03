@@ -3112,8 +3112,31 @@ button.cw-card:hover {
     transform: scale(0.35);
   }
   to {
-    transform: scale(1.18);
+    transform: scale(var(--zoom, 1.18));
   }
+}
+/* Framing per photo: zoom in on the face so it fills a phone screen. */
+.photo-porthole {
+  --zoom: 1.6;
+}
+.photo-porthole .jumpscare-photo {
+  object-position: 48% 50%;
+}
+.photo-veiled {
+  --zoom: 1.9;
+}
+.photo-veiled .jumpscare-photo {
+  object-position: 50% 30%;
+}
+.photo-wet-hair {
+  --zoom: 1.7;
+}
+.photo-wet-hair .jumpscare-photo {
+  object-position: 55% 38%;
+}
+.photo-hooded-ghost,
+.photo-zombie-grin {
+  --zoom: 1.35;
 }
 @keyframes scare-flicker {
   50% {
@@ -3129,6 +3152,6 @@ button.cw-card:hover {
   .jumpscare-photo,
   .jumpscare-photo.ghost-red {
     animation: none;
-    transform: scale(1.1);
+    transform: scale(var(--zoom, 1.1));
   }
 }
