@@ -152,5 +152,66 @@ class LiarsDiceTests(unittest.TestCase):
             self.assertEqual(len(g.alive()), 1)
 
 
+class PalificoTests(unittest.TestCase):
+    def drop_to_one(self, n=3):
+        """p0 bids five 6s with no 6s or ones anywhere: p1 calls liar, p0 drops to their last die."""
+        g = make(n)
+        rig(g, {"p0": [2, 3], **{f"p{i}": [2, 3, 4] for i in range(1, n)}})
+        g.handle("p0", {"a": "bid", "qty": 5, "face": 6})
+        g.handle("p1", {"a": "liar"})
+        self.assertEqual(g.counts["p0"], 1)
+        g.advance()
+        return g
+
+    def test_last_die_triggers_one_palifico_round_opened_by_that_player(self):
+        g = self.drop_to_one()
+        self.assertTrue(g.palifico)
+        self.assertEqual(g.turn, "p0")
+        self.assertTrue(g.view_for("p2")["palifico"])
+
+    def test_ones_are_not_wild_and_the_face_is_fixed(self):
+        g = self.drop_to_one()
+        g.dice = {"p0": [1], "p1": [1, 1, 4], "p2": [4, 5, 6]}
+        g.handle("p0", {"a": "bid", "qty": 1, "face": 4})
+        with self.assertRaises(GameError):
+            g.handle("p1", {"a": "bid", "qty": 2, "face": 5})  # can't change face
+        with self.assertRaises(GameError):
+            g.handle("p1", {"a": "bid", "qty": 1, "face": 4})  # must raise the count
+        g.handle("p1", {"a": "bid", "qty": 3, "face": 4})
+        g.handle("p2", {"a": "liar"})  # only two 4s: ones don't count
+        self.assertEqual(g.last["actual"], 2)
+        self.assertTrue(g.last["palifico"])
+        self.assertEqual(g.last["loser"], "p1")
+
+    def test_ones_can_be_bid_in_palifico_only(self):
+        g = self.drop_to_one()
+        g.handle("p0", {"a": "bid", "qty": 1, "face": 1})
+        self.assertEqual(g.bid["face"], 1)
+        g2 = make(3)
+        with self.assertRaises(GameError):
+            g2.handle(g2.turn, {"a": "bid", "qty": 1, "face": 1})
+
+    def test_once_per_player_and_not_heads_up(self):
+        g = self.drop_to_one()
+        g.dice = {"p0": [3], "p1": [3, 4, 5], "p2": [3, 4, 5]}
+        g.handle("p0", {"a": "bid", "qty": 1, "face": 2})
+        g.handle("p1", {"a": "bid", "qty": 7, "face": 2})
+        g.handle("p2", {"a": "liar"})  # no 2s: p1 drops to 2 dice
+        g.advance()
+        self.assertFalse(g.palifico)
+        # p0 wins a die back, then drops to one again: no second palifico for them.
+        rig(g, {"p0": [2, 3], "p1": [2, 3], "p2": [2, 3]})
+        g.handle("p0", {"a": "bid", "qty": 6, "face": 6})
+        g.handle("p1", {"a": "liar"})
+        g.advance()
+        self.assertFalse(g.palifico)
+        two = make(2)
+        rig(two, {"p0": [2, 3], "p1": [2, 3]})
+        two.handle("p0", {"a": "bid", "qty": 4, "face": 6})
+        two.handle("p1", {"a": "liar"})
+        two.advance()
+        self.assertFalse(two.palifico)  # heads-up: no palifico
+
+
 if __name__ == "__main__":
     unittest.main()

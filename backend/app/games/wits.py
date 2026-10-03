@@ -6,6 +6,10 @@ chips on whichever answers they think are closest *without going over*. Odds gro
 middle of the board to 5:1 at the edges; "lower than all" pays 6:1. Each chip on the winning slot
 pays 100 x its odds, and whoever wrote the winning answer gets +100. Six rounds.
 
+The last question is ALL IN: instead of free chips, everyone wagers their own points on one slot (up
+to everything they've won this game, or 200 if that's less). Right: the wager times the odds. Wrong:
+the wager is gone.
+
 Secrecy: answers stay hidden until everyone has answered (then they're the board); bets stay
 hidden until the reveal; the true answer only arrives with the reveal.
 """
@@ -23,6 +27,7 @@ CHIP_VALUE = 100
 AUTHOR_BONUS = 100
 TOO_LOW_ODDS = 6
 MAX_ANSWER = 10**9
+ALL_IN_FLOOR = 200  # the most you can wager when you have less than this
 
 
 def board_odds(n: int) -> list[int]:
@@ -56,6 +61,7 @@ class WagerWits(Game):
     def _ask(self) -> None:
         self.answers: dict[str, int] = {}
         self.bets: dict[str, list[int]] = {}  # player -> slots their chips are on
+        self.wagers: dict[str, int] = {}  # all-in round: player -> points on their one slot
         self.board: list[dict[str, Any]] = []
         self.result: dict[str, Any] | None = None
         self.phase = "answer"
@@ -84,7 +90,11 @@ class WagerWits(Game):
         win = under[-1] if under else self.board[0]
         gains: dict[str, int] = {p.id: 0 for p in self.players}
         for pid, slots in self.bets.items():
-            gains[pid] += sum(CHIP_VALUE * win["odds"] for s in slots if s == win["slot"])
+            if self.all_in:
+                stake = self.wagers[pid]
+                gains[pid] += stake * win["odds"] if slots[0] == win["slot"] else -stake
+            else:
+                gains[pid] += sum(CHIP_VALUE * win["odds"] for s in slots if s == win["slot"])
         for pid in win["by"]:
             gains[pid] += AUTHOR_BONUS
         for pid, g in gains.items():
@@ -94,6 +104,7 @@ class WagerWits(Game):
             "slot": win["slot"],
             "gains": gains,
             "bets": {p: list(s) for p, s in self.bets.items()},
+            "wagers": dict(self.wagers),
             "answers": dict(self.answers),
         }
         self.history.append({"q": self.questions[self.round]["q"], **self.result})
@@ -130,14 +141,35 @@ class WagerWits(Game):
             if pid in self.bets:
                 raise GameError("already_locked", "Your chips are down")
             slots = action.get("slots")
-            if not isinstance(slots, list) or len(slots) != CHIPS:
-                raise GameError("bad_input", f"Place exactly {CHIPS} chips")
-            self.bets[pid] = [as_int(s, lo=0, hi=len(self.board) - 1, field="Slot") for s in slots]
+            need = 1 if self.all_in else CHIPS
+            if not isinstance(slots, list) or len(slots) != need:
+                raise GameError(
+                    "bad_input", "Pick one slot" if self.all_in else f"Place exactly {CHIPS} chips"
+                )
+            picked = [as_int(s, lo=0, hi=len(self.board) - 1, field="Slot") for s in slots]
+            if self.all_in:
+                self.wagers[pid] = as_int(action.get("wager"), lo=0, hi=self.max_wager(pid), field="Wager")
+            self.bets[pid] = picked
             self.bump()
             if len(self.bets) == len(self.players):
                 self._reveal()
             return
         raise GameError("bad_action", "Unknown action")
+
+    @property
+    def all_in(self) -> bool:
+        return self.round == ROUNDS - 1
+
+    def max_wager(self, pid: str) -> int:
+        return max(self.round_scores.get(pid, 0), ALL_IN_FLOOR)
+
+    def peek(self, pid: str) -> str | None:
+        """Power card: whether the true answer is above or below a number on the board."""
+        if self.phase != "bet" or len(self.board) < 2:
+            return None
+        slot = self.rng.choice(self.board[1:])
+        side = "at or above" if self.questions[self.round]["a"] >= slot["value"] else "below"
+        return f"The real answer is {side} {slot['value']:,}."
 
     def tick(self) -> None:
         if not self.finished and self.expired():
@@ -168,9 +200,12 @@ class WagerWits(Game):
             "bet_in": sorted(self.bets) if self.phase == "bet" else [],
             "chips": CHIPS,
             "chip_value": CHIP_VALUE,
+            "all_in": self.all_in,
             "you": {
                 "answer": self.answers.get(pid),
                 "bets": list(self.bets.get(pid, [])) if self.phase == "bet" else None,
+                "wager": self.wagers.get(pid) if self.phase == "bet" else None,
+                "max_wager": self.max_wager(pid) if pid in self.round_scores else 0,
             },
         }
         if self.phase in ("reveal", "final") and self.result:

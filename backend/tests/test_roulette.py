@@ -9,6 +9,9 @@ from collections import Counter
 
 from app.games import GameError, Player
 from app.games.roulette import (
+    AUDIT_COST,
+    AUDIT_REWARD,
+    RIG_PENALTY,
     ROUNDS,
     SPOT_BONUS,
     START_CHIPS,
@@ -126,6 +129,67 @@ class RouletteTests(unittest.TestCase):
         with self.assertRaises(GameError):
             g.handle(p, {"a": "lock", "bets": [], "accuse": p})
         self.assertNotIn(p, g.locked)
+
+
+class RigAndAuditTests(unittest.TestCase):
+    def setup(self, rig, audit):
+        g = make(4)
+        g.number = 7
+        g.commit = commitment(7, g.nonce)
+        bettors = [p for p in g.player_ids if p != g.house]
+        # Everyone's on red: the worst numbers for the table are the black ones and zero.
+        for i, pid in enumerate(bettors):
+            g.handle(
+                pid,
+                {
+                    "a": "lock",
+                    "bets": [{"kind": "red", "value": None, "amount": 100}],
+                    "audit": audit and i == 0,
+                },
+            )
+        before = dict(g.chips)
+        g.handle(g.house, {"a": "lock", "bets": [], "rig": rig})
+        return g, bettors, before
+
+    def test_a_rig_lands_on_the_worst_number_and_breaks_the_commitment(self):
+        g, bettors, _ = self.setup(rig=True, audit=False)
+        r = g.result
+        self.assertTrue(r["rigged"])
+        self.assertFalse(wins("red", None, r["number"]))
+        self.assertEqual(r["fair_number"], 7)
+        self.assertEqual(commitment(r["fair_number"], r["nonce"]), r["commit"])
+        self.assertNotEqual(commitment(r["number"], r["nonce"]), r["commit"])  # anyone can see the rig
+        self.assertFalse(r["caught"])
+        self.assertEqual(r["house_net"], 300)
+
+    def test_an_audit_catches_the_rig(self):
+        g, bettors, before = self.setup(rig=True, audit=True)
+        r = g.result
+        self.assertTrue(r["caught"])
+        self.assertEqual(r["audit"], {bettors[0]: AUDIT_REWARD, g.house: -RIG_PENALTY})
+        self.assertEqual(g.chips[g.house] - before[g.house], 300 - RIG_PENALTY)
+        self.assertEqual(g.chips[bettors[0]] - before[bettors[0]], -100 + AUDIT_REWARD)
+
+    def test_a_false_alarm_costs_the_auditor(self):
+        g, bettors, before = self.setup(rig=False, audit=True)
+        r = g.result
+        self.assertFalse(r["rigged"])
+        self.assertEqual(r["number"], 7)
+        self.assertEqual(r["audit"], {bettors[0]: -AUDIT_COST})
+        self.assertEqual(g.chips[bettors[0]] - before[bettors[0]], 100 - AUDIT_COST)
+
+    def test_only_the_house_rigs_once_a_game_and_it_stays_secret(self):
+        g = make(4)
+        bettor = next(p for p in g.player_ids if p != g.house)
+        with self.assertRaises(GameError):
+            g.handle(bettor, {"a": "lock", "bets": [], "rig": True})
+        with self.assertRaises(GameError):
+            g.handle(bettor, {"a": "lock", "bets": [], "rig": "yes"})
+        house = g.house
+        g.handle(house, {"a": "lock", "bets": [], "rig": True})
+        for viewer in (bettor, *SPECTATORS):
+            self.assertNotIn("rig", json.dumps(g.view_for(viewer)).replace("can_rig", ""))
+        self.assertFalse(g.view_for(house)["you"]["can_rig"])  # used up for this game
 
 
 if __name__ == "__main__":

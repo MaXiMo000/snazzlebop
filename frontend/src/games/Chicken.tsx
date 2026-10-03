@@ -64,7 +64,11 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
           <p className="lead space-top">The pot starts climbing in a moment. The bomb could go off any time after 4 seconds.</p>
         </Card>
       )}
+      {view.phase === "ready" && !tv && <Tricks view={view} you={you} send={send} />}
 
+      {view.phase === "run" && !tv && view.you.fused && !mine && (
+        <p className="chip cherry wrap">⚠️ Someone shortened your fuse! Your bomb goes off early.</p>
+      )}
       {view.phase === "run" && (
         <Card tone="stage" className="center chicken-run">
           <p className="sign">The pot</p>
@@ -105,6 +109,17 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
               : "Everybody got out in time!"}
             {view.result.nerve ? ` Nerves of steel: ${nameOf(view.players, view.result.nerve)} (+50).` : ""}
           </p>
+          {Object.entries(view.result.payouts).map(([p, pts]) => (
+            <p key={p}>
+              🛟 {nameOf(view.players, p)}’s insurance paid {pts}.
+            </p>
+          ))}
+          {Object.entries(view.result.saboteurs).map(([target, by]) => (
+            <p key={target}>
+              🧨 {by.map((p) => nameOf(view.players, p)).join(" & ")} shortened {nameOf(view.players, target)}’s fuse (it blew at{" "}
+              {view.result!.fuses[target]?.toFixed(1)}s).
+            </p>
+          ))}
         </Card>
       )}
 
@@ -120,6 +135,7 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
                   <b>{p.name}</b>
                   {p.id === you ? " (you)" : ""}:{" "}
                   {c ? `banked ${c.value} at ${c.t.toFixed(1)}s` : boomed ? "💥 blown up" : view.phase === "run" ? "still in…" : "waiting"}
+                  {view.insured.includes(p.id) ? " · 🛟 insured" : ""}
                 </li>
               );
             })}
@@ -145,5 +161,39 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
         </Card>
       )}
     </div>
+  );
+}
+
+/** Before the run: buy insurance, or shorten a rival's fuse (once a game). */
+function Tricks({ view, you, send }: { view: ChickenView; you: string; send: Props["send"] }) {
+  const insured = view.insured.includes(you);
+  return (
+    <Card tone="soft">
+      <h3>Dirty tricks</h3>
+      <div className="row">
+        <Btn variant="ghost" disabled={insured} onClick={() => send({ t: "act", a: "insure" })}>
+          {insured ? "🛟 Insured" : `🛟 Insure (−${view.costs.insure})`}
+        </Btn>
+      </div>
+      <p className="muted">Blow up this round and still keep 25% of the pot.</p>
+      {view.you.fuse_used ? (
+        <p className="muted space-top">You’ve used your short fuse this game.</p>
+      ) : (
+        <>
+          <p className="space-top">
+            🧨 Shorten a rival’s fuse (−{view.costs.fuse}, once a game). Their bomb goes off early:
+          </p>
+          <div className="row" role="group" aria-label="Shorten whose fuse">
+            {view.players
+              .filter((p) => p.id !== you)
+              .map((p) => (
+                <Btn key={p.id} size="small" variant="ghost" onClick={() => send({ t: "act", a: "fuse", target: p.id })}>
+                  {p.name}
+                </Btn>
+              ))}
+          </div>
+        </>
+      )}
+    </Card>
   );
 }

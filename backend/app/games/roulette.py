@@ -8,6 +8,11 @@ a single number pays 35:1; zero loses every outside bet) and may name who they t
 
 Fairness: the spin is drawn when betting opens and committed to (sha256 of "number:nonce"); the
 nonce is revealed with the spin, so anyone can check it wasn't picked after the bets.
+Rigging: once a game, while you're the House, you can secretly rig a spin. The wheel then lands on
+whatever number is worst for the table, and the committed number no longer matches (anyone can see
+that after the spin). Anyone else can call an audit when they lock in (50 chips if the spin was
+clean). A rig that gets audited costs the House 400 and pays each auditor 100.
+
 Secrecy: nobody learns who the House is, or anyone else's bets, until the spin. To keep the House's
 cover, the House "locks in" like everyone else (with a decoy guess) and only a count is shown.
 """
@@ -26,6 +31,9 @@ MAX_BETS = 3
 SPOT_BONUS = 100  # for naming the House
 RED = frozenset({1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36})
 KINDS = {"red", "black", "odd", "even", "low", "high", "dozen", "number"}
+AUDIT_COST = 50  # a false alarm
+RIG_PENALTY = 400  # the House, when an audit catches a rig
+AUDIT_REWARD = 100  # each auditor who caught it
 
 
 def commitment(number: int, nonce: str) -> str:
@@ -69,6 +77,7 @@ class RouletteRoyale(Game):
     def start(self) -> None:
         self.chips = {p.id: START_CHIPS for p in self.players}
         self.house_count = {p.id: 0 for p in self.players}
+        self.rig_used: set[str] = set()
         self.last_house: str | None = None
         self.history: list[dict[str, Any]] = []
         self.spins: list[int] = []
@@ -88,6 +97,8 @@ class RouletteRoyale(Game):
         self.commit = commitment(self.number, self.nonce)
         self.bets: dict[str, list[dict[str, Any]]] = {}
         self.accuse: dict[str, str] = {}
+        self.audits: set[str] = set()
+        self.rigged = False
         self.locked: set[str] = set()
         self.result: dict[str, Any] | None = None
         self.phase = "bet"
@@ -117,17 +128,36 @@ class RouletteRoyale(Game):
             raise GameError("bad_input", "You don't have that many chips")
         return bets
 
+    def _nets(self, n: int) -> dict[str, int]:
+        return {
+            pid: sum(
+                b["amount"] * payout(b["kind"]) if wins(b["kind"], b["value"], n) else -b["amount"]
+                for b in bets
+            )
+            for pid, bets in self.bets.items()
+        }
+
     def _spin(self) -> None:
+        fair = self.number
+        if self.rigged:  # the worst number for the table (any of them, if several tie)
+            house = {n: -sum(self._nets(n).values()) for n in range(37)}
+            best = max(house.values())
+            self.number = self.rng.choice([n for n, v in house.items() if v == best])
         n = self.number
-        net: dict[str, int] = {}
-        for pid, bets in self.bets.items():
-            total = 0
-            for b in bets:
-                total += b["amount"] * payout(b["kind"]) if wins(b["kind"], b["value"], n) else -b["amount"]
-            net[pid] = total
+        net = self._nets(n)
+        for pid, total in net.items():
             self.chips[pid] += total
         house_net = -sum(net.values())
         self.chips[self.house] += house_net
+        # Audits: a caught rig costs the House; a false alarm costs the auditor.
+        audit: dict[str, int] = {}
+        caught = self.rigged and bool(self.audits)
+        for pid in self.audits:
+            audit[pid] = AUDIT_REWARD if self.rigged else -AUDIT_COST
+        if caught:
+            audit[self.house] = -RIG_PENALTY
+        for pid, delta in audit.items():
+            self.chips[pid] += delta
         spotted = sorted(p for p, t in self.accuse.items() if t == self.house and p != self.house)
         for pid in spotted:
             self.chips[pid] += SPOT_BONUS
@@ -143,6 +173,11 @@ class RouletteRoyale(Game):
             "net": net,
             "accuse": {p: t for p, t in self.accuse.items() if p != self.house},
             "spotted": spotted,
+            "rigged": self.rigged,
+            "fair_number": fair,  # the committed number: equal to "number" unless rigged
+            "audits": sorted(self.audits),
+            "caught": caught,
+            "audit": audit,
         }
         self.history.append(self.result)
         self.last_house = self.house
@@ -173,10 +208,20 @@ class RouletteRoyale(Game):
         accuse = action.get("accuse")
         if accuse is not None and (not isinstance(accuse, str) or accuse not in self.chips or accuse == pid):
             raise GameError("bad_input", "Name someone else")
+        rig, audit = action.get("rig", False), action.get("audit", False)
+        if not isinstance(rig, bool) or not isinstance(audit, bool):
+            raise GameError("bad_input", "Rig and audit are on or off")
+        if rig and (pid != self.house or pid in self.rig_used):
+            raise GameError("bad_input", "Only the House can rig, once a game")
         if pid == self.house:
             self._parse(pid, action.get("bets", []))  # validated like anyone's (no tell), then ignored
+            if rig:
+                self.rigged = True
+                self.rig_used.add(pid)
         else:
             self.bets[pid] = self._parse(pid, action.get("bets", []))
+            if audit:
+                self.audits.add(pid)
         if accuse is not None:
             self.accuse[pid] = accuse
         self.locked.add(pid)
@@ -210,8 +255,11 @@ class RouletteRoyale(Game):
             "commit": self.commit,
             "locked_count": len(self.locked) if self.phase == "bet" else 0,  # a count, never who
             "spins": list(self.spins),
+            "audit_cost": AUDIT_COST,
             "you": {
                 "is_house": pid == self.house and self.phase == "bet",
+                "can_rig": pid == self.house and self.phase == "bet" and pid not in self.rig_used,
+                "audit": pid in self.audits,
                 "locked": pid in self.locked,
                 "bets": [dict(b) for b in self.bets.get(pid, [])],
                 "accuse": self.accuse.get(pid),
@@ -223,10 +271,39 @@ class RouletteRoyale(Game):
             view["history"] = self.history
         return view
 
+    def peek(self, pid: str) -> str | None:
+        """Power card: one player who is NOT the House this spin."""
+        if self.phase != "bet" or pid == self.house:
+            return None
+        clean = [p for p in self.player_ids if p not in (pid, self.house)]
+        if not clean:
+            return None
+        return f"{self.name_of(self.rng.choice(clean))} is not the House this spin."
+
     def highlights(self) -> list[dict[str, str]]:
         if not self.finished:
             return []
         out: list[dict[str, str]] = []
+        busted = [h for h in self.history if h["caught"]]
+        if busted:
+            h = busted[0]
+            out.append(
+                {
+                    "icon": "🚨",
+                    "title": "Busted!",
+                    "text": f"{self.name_of(h['house'])} rigged the wheel and got caught",
+                }
+            )
+        clean_rig = [h for h in self.history if h["rigged"] and not h["caught"]]
+        if clean_rig:
+            h = clean_rig[0]
+            out.append(
+                {
+                    "icon": "🎩",
+                    "title": "Smooth operator",
+                    "text": f"{self.name_of(h['house'])} rigged a spin and nobody audited",
+                }
+            )
         straight = [
             (p, h)
             for h in self.history

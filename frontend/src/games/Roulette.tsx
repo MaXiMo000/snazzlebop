@@ -43,7 +43,13 @@ export function Roulette({ view, you, receivedAt, send, tv = false }: Props) {
   useOnChange(view.phase, (_, phase) => {
     if (phase === "spin" && view.result) {
       const mine = view.result.net[you] ?? 0;
-      if (!tv && view.result.house === you) {
+      if (view.result.caught) {
+        sfx.buzz();
+        show.stinger("BUSTED! THE WHEEL WAS RIGGED", !tv && view.result.house === you ? "bad" : "good");
+      } else if (view.result.rigged) {
+        sfx.buzz();
+        show.stinger("RIGGED! NOBODY AUDITED", "bad");
+      } else if (!tv && view.result.house === you) {
         sfx.fanfare();
         show.stinger(view.result.house_net >= 0 ? "THE HOUSE WINS" : "THE HOUSE PAYS", view.result.house_net >= 0 ? "good" : "bad");
       } else if (!tv && mine > 0) {
@@ -98,6 +104,19 @@ export function Roulette({ view, you, receivedAt, send, tv = false }: Props) {
             {view.result.spotted.length > 0 && (
               <p>Spotted by {view.result.spotted.map((p) => nameOf(view.players, p)).join(", ")} (+100 each)</p>
             )}
+            {view.result.rigged && (
+              <p className="chip cherry wrap">
+                🎩 RIGGED: the fair spin was {view.result.fair_number}.{" "}
+                {view.result.caught
+                  ? `Caught by ${view.result.audits.map((p) => nameOf(view.players, p)).join(", ")}! The House pays ${-(view.result.audit[view.result.house] ?? 0)}.`
+                  : "Nobody audited."}
+              </p>
+            )}
+            {!view.result.rigged && view.result.audits.length > 0 && (
+              <p>
+                False alarm: {view.result.audits.map((p) => nameOf(view.players, p)).join(", ")} audited a clean spin (−{view.audit_cost} each).
+              </p>
+            )}
           </Card>
           <Card>
             <h3>The table</h3>
@@ -122,8 +141,9 @@ export function Roulette({ view, you, receivedAt, send, tv = false }: Props) {
             <details className="muted">
               <summary>Check the spin wasn’t rigged</summary>
               <p className="mono">
-                sha256("{view.result.number}:{view.result.nonce}") = {view.result.commit}
+                sha256("{view.result.fair_number}:{view.result.nonce}") = {view.result.commit}
               </p>
+              {view.result.rigged && <p>The wheel showed {view.result.number}, not the committed {view.result.fair_number}.</p>}
             </details>
           </Card>
         </>
@@ -168,6 +188,7 @@ function Accuse({ view, you, value, onChange }: { view: RouletteView; you: strin
 
 function HousePanel({ view, you, send }: { view: RouletteView; you: string; send: Props["send"] }) {
   const [accuse, setAccuse] = useState("");
+  const [rig, setRig] = useState(false);
   if (view.you.locked) {
     return (
       <Card tone="stage" className="center">
@@ -182,9 +203,15 @@ function HousePanel({ view, you, send }: { view: RouletteView; you: string; send
         🏦 You’re the <b>House</b> this spin. You win whatever they lose, and pay whatever they win.
       </p>
       <p>Lock in like everyone else (a decoy guess helps) so nobody can tell.</p>
+      {view.you.can_rig && (
+        <label className="check space-top">
+          <input type="checkbox" checked={rig} onChange={(e) => setRig(e.target.checked)} />
+          <span>🎩 Rig this spin (once a game). If anyone audits, you pay 400.</span>
+        </label>
+      )}
       <div className="ask-form space-top">
         <Accuse view={view} you={you} value={accuse} onChange={setAccuse} />
-        <Btn variant="gold" onClick={() => send({ t: "act", a: "lock", bets: [], ...(accuse ? { accuse } : {}) })}>
+        <Btn variant="gold" onClick={() => send({ t: "act", a: "lock", bets: [], rig, ...(accuse ? { accuse } : {}) })}>
           Lock in
         </Btn>
       </div>
@@ -197,6 +224,7 @@ function BetPanel({ view, you, send }: { view: RouletteView; you: string; send: 
   const [stake, setStake] = useState(view.stakes[0] ?? 50);
   const [number, setNumber] = useState(17);
   const [accuse, setAccuse] = useState("");
+  const [audit, setAudit] = useState(false);
   const chips = view.chips[you] ?? 0;
   const spent = bets.reduce((s, b) => s + b.amount, 0);
   const canAdd = bets.length < view.max_bets && spent + stake <= chips;
@@ -260,6 +288,10 @@ function BetPanel({ view, you, send }: { view: RouletteView; you: string; send: 
           ))}
         </ul>
       )}
+      <label className="check space-top">
+        <input type="checkbox" checked={audit} onChange={(e) => setAudit(e.target.checked)} />
+        <span>🚨 Audit this spin: +100 if the House rigged it, −{view.audit_cost} if it’s clean</span>
+      </label>
       <div className="ask-form space-top">
         <Accuse view={view} you={you} value={accuse} onChange={setAccuse} />
         <Btn
@@ -267,7 +299,7 @@ function BetPanel({ view, you, send }: { view: RouletteView; you: string; send: 
           size="big"
           onClick={() => {
             sfx.pop();
-            send({ t: "act", a: "lock", bets, ...(accuse ? { accuse } : {}) });
+            send({ t: "act", a: "lock", bets, audit, ...(accuse ? { accuse } : {}) });
           }}
         >
           {bets.length ? `Lock in ${spent}` : "Lock in (no bets)"}

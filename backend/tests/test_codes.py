@@ -7,7 +7,7 @@ import random
 import unittest
 
 from app.games import GameError, Player
-from app.games.codes import COOLDOWN, UNCRACKED_POINTS, CodeCrackers, feedback
+from app.games.codes import COOLDOWN, HINT_COST, UNCRACKED_POINTS, CodeCrackers, feedback
 
 SPECTATORS = ("tv:screen", "au:fan")
 
@@ -96,6 +96,60 @@ class CodesTests(unittest.TestCase):
             g.handle("p0", {"a": "guess", "target": "p0", "code": [1, 2, 3, 4]})  # not your own
         with self.assertRaises(GameError):
             g.handle("p0", {"a": "guess", "target": "nobody", "code": [1, 2, 3, 4]})
+
+
+class CodesToolsTests(unittest.TestCase):
+    def setup_game(self, decoy_for=()):
+        g, self.clock = make(3)
+        codes = {"p0": [0, 1, 2, 3], "p1": [4, 4, 5, 5], "p2": [1, 1, 1, 1]}
+        for pid, code in codes.items():
+            g.handle(pid, {"a": "set", "code": code, "decoy": pid in decoy_for})
+        self.assertEqual(g.phase, "crack")
+        return g
+
+    def test_hints_cost_points_go_left_to_right_and_stop_at_two(self):
+        g = self.setup_game()
+        g.handle("p0", {"a": "hint", "target": "p1"})
+        g.handle("p0", {"a": "hint", "target": "p1"})
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "hint", "target": "p1"})
+        self.assertEqual(
+            g.view_for("p0")["you"]["hints"]["p1"], [{"pos": 0, "symbol": 4}, {"pos": 1, "symbol": 4}]
+        )
+        self.assertEqual(g.scores()["p0"], -2 * HINT_COST)
+        self.assertEqual(g.view_for("p2")["you"]["hints"], {})  # private
+        self.assertEqual(g.view_for("p2")["hint_counts"]["p0"], 2)  # the count is public
+
+    def test_decoy_fools_the_first_guess_then_owns_up(self):
+        g = self.setup_game(decoy_for=("p1",))
+        self.assertTrue(g.view_for("p1")["you"]["decoy"])
+        self.assertFalse(g.view_for("p0")["you"]["decoy"])
+        decoy = list(g.decoys["p1"])
+        self.assertNotEqual(decoy, [4, 4, 5, 5])
+        guess = [0, 0, 0, 0]
+        g.handle("p0", {"a": "guess", "target": "p1", "code": guess})
+        entry = g.guesses["p0"]["p1"][0]
+        self.assertTrue(entry["decoy"])
+        self.assertEqual((entry["hits"], entry["near"]), feedback(decoy, guess))
+        shown = g.view_for("p0")["you"]["guesses"]["p1"][0]
+        self.assertNotIn("decoy", shown)  # not flagged yet
+        self.assertEqual(g.view_for("p2")["decoy_sprung"], ["p1"])
+        self.clock.t += 2
+        g.handle("p0", {"a": "guess", "target": "p1", "code": [4, 4, 5, 0]})
+        shown = g.view_for("p0")["you"]["guesses"]["p1"]
+        self.assertTrue(shown[0]["decoy"])  # revealed by the next guess
+        self.assertEqual((shown[1]["hits"], shown[1]["near"]), (3, 0))  # the real code again
+
+    def test_decoy_never_blocks_a_real_crack(self):
+        g = self.setup_game(decoy_for=("p1",))
+        g.handle("p0", {"a": "guess", "target": "p1", "code": [4, 4, 5, 5]})
+        self.assertEqual(g.cracked["p1"], ["p0"])
+        self.assertIn("p1", g.decoys)  # still armed for the next guesser
+
+    def test_decoy_flag_must_be_a_bool(self):
+        g, _ = make(2)
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "set", "code": [0, 0, 0, 0], "decoy": "yes"})
 
 
 if __name__ == "__main__":

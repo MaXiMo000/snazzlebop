@@ -7,7 +7,14 @@ import random
 import unittest
 
 from app.games import GameError, Player
-from app.games.chicken import NERVE_BONUS, ROUNDS, ChickenRun, value_at
+from app.games.chicken import (
+    FUSE_COST,
+    INSURANCE_COST,
+    NERVE_BONUS,
+    ROUNDS,
+    ChickenRun,
+    value_at,
+)
 
 SPECTATORS = ("tv:screen", "au:fan")
 
@@ -28,7 +35,7 @@ def make(n=3, seed=1):
 
 
 def run(g, clock):
-    clock.t += 3.0
+    clock.t += g.timings["ready"]
     g.tick()  # ready -> run
     assert g.phase == "run"
 
@@ -120,6 +127,74 @@ class ChickenTests(unittest.TestCase):
             g.handle("p0", {"a": "bomb"})
         with self.assertRaises(GameError):
             g.handle("intruder", {"a": "cash"})
+
+
+class ChickenTrickTests(unittest.TestCase):
+    def test_insurance_costs_up_front_and_pays_a_quarter_on_a_boom(self):
+        g, clock = make(2)
+        g.bomb = 10.0
+        g.handle("p0", {"a": "insure"})
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "insure"})
+        self.assertEqual(g.scores()["p0"], -INSURANCE_COST)
+        self.assertEqual(g.view_for("p1")["insured"], ["p0"])
+        run(g, clock)
+        clock.t += 11
+        g.tick()  # boom: nobody cashed
+        self.assertEqual(g.result["payouts"], {"p0": int(value_at(10.0) * 0.25)})
+        self.assertEqual(g.scores()["p0"], -INSURANCE_COST + int(value_at(10.0) * 0.25))
+        self.assertEqual(g.result["extras"]["p0"], g.scores()["p0"])
+
+    def test_insured_and_cashed_out_just_pays_the_premium(self):
+        g, clock = make(2)
+        g.bomb = 10.0
+        g.handle("p0", {"a": "insure"})
+        run(g, clock)
+        clock.t += 2
+        g.handle("p0", {"a": "cash"})
+        clock.t += 9
+        g.tick()
+        self.assertEqual(g.result["payouts"], {})
+        self.assertEqual(g.scores()["p0"], value_at(2.0) - INSURANCE_COST + NERVE_BONUS)
+
+    def test_short_fuse_blows_the_target_early_and_stays_secret(self):
+        g, clock = make(3)
+        g.bomb = 20.0
+        g.handle("p0", {"a": "fuse", "target": "p1"})
+        fuse = g.fuses["p1"]
+        self.assertTrue(8.0 <= fuse <= 16.0)
+        self.assertEqual(g.scores()["p0"], -FUSE_COST)
+        self.assertTrue(g.view_for("p1")["you"]["fused"])
+        for viewer in ("p0", "p2", *SPECTATORS):
+            view = g.view_for(viewer)
+            self.assertFalse(view["you"]["fused"])
+            self.assertNotIn("result", view)
+            self.assertNotIn(str(round(fuse, 2)), json.dumps(view))
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "fuse", "target": "p2"})  # once a game
+        run(g, clock)
+        clock.t += fuse + 0.1
+        with self.assertRaises(GameError):
+            g.handle("p1", {"a": "cash"})  # their fuse went off
+        g.handle("p2", {"a": "cash"})  # the real bomb hasn't
+        clock.t = clock.t + 20
+        g.tick()
+        self.assertIn("p1", g.result["boomed"])
+        self.assertEqual(g.result["saboteurs"], {"p1": ["p0"]})
+
+    def test_trick_rules(self):
+        g, clock = make(2)
+        for bad in (None, "p0", "zz", 3):
+            with self.assertRaises(GameError, msg=repr(bad)):
+                g.handle("p0", {"a": "fuse", "target": bad})
+        run(g, clock)
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "insure"})  # too late: the run started
+
+    def test_peek_gives_a_safe_window_below_your_bomb(self):
+        g, _ = make(2)
+        g.bomb = 20.0
+        self.assertIn("15 seconds", g.peek("p0"))
 
 
 if __name__ == "__main__":

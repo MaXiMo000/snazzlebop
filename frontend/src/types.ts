@@ -424,6 +424,7 @@ export interface DiceChallenge {
   actual: number;
   loser: string | null;
   gained: string | null;
+  palifico?: boolean;
 }
 export interface DiceView extends GameBase {
   game: "dice";
@@ -431,6 +432,8 @@ export interface DiceView extends GameBase {
   counts: Record<string, number>;
   total: number;
   start_dice: number;
+  /** ones aren't wild and the face is fixed this round */
+  palifico: boolean;
   bid: DiceBid | null;
   turn: string | null;
   you: { dice: number[] };
@@ -447,6 +450,11 @@ export interface SplitPairResult {
   choices: Record<string, "split" | "steal">;
   gain: Record<string, number>;
 }
+export interface SplitResult {
+  pairs: SplitPairResult[];
+  bye: string | null;
+  golden?: { pot: number; choices: Record<string, "split" | "steal">; gain: Record<string, number> };
+}
 export interface SplitView extends GameBase {
   game: "split";
   players: { id: string; name: string }[];
@@ -457,8 +465,11 @@ export interface SplitView extends GameBase {
   lines: string[];
   record: Record<string, { split: number; steal: number }>;
   you: { partner: string | null; choice: "split" | "steal" | null };
-  result?: { pairs: SplitPairResult[]; bye: string | null };
-  history?: { pairs: SplitPairResult[]; bye: string | null }[];
+  /** the last round: everyone in one pot */
+  golden: boolean;
+  golden_pot: number | null;
+  result?: SplitResult;
+  history?: SplitResult[];
 }
 
 export interface ChickenRound {
@@ -467,6 +478,14 @@ export interface ChickenRound {
   cashed: Record<string, { t: number; value: number }>;
   boomed: string[];
   nerve: string | null;
+  insured: string[];
+  /** insurance paid out to blown-up insured players */
+  payouts: Record<string, number>;
+  /** target -> who shortened their fuse */
+  saboteurs: Record<string, string[]>;
+  fuses: Record<string, number>;
+  /** per player: payouts minus what they spent on tricks this round */
+  extras: Record<string, number>;
 }
 export interface ChickenView extends GameBase {
   game: "chicken";
@@ -476,6 +495,9 @@ export interface ChickenView extends GameBase {
   /** seconds since the run started, as of this frame (null outside the run) */
   started_ago: number | null;
   cashed: Record<string, { t: number; value: number }>;
+  insured: string[];
+  costs: { insure: number; fuse: number };
+  you: { fused: boolean; fuse_used: boolean };
   result?: ChickenRound;
   history?: ChickenRound[];
 }
@@ -492,6 +514,8 @@ export interface WitsResult {
   slot: number;
   gains: Record<string, number>;
   bets: Record<string, number[]>;
+  /** the all-in question: points each player put on their one slot */
+  wagers: Record<string, number>;
   answers: Record<string, number>;
 }
 export interface WitsView extends GameBase {
@@ -503,7 +527,9 @@ export interface WitsView extends GameBase {
   bet_in: string[];
   chips: number;
   chip_value: number;
-  you: { answer: number | null; bets: number[] | null };
+  /** the last question: one slot, your own points at stake */
+  all_in: boolean;
+  you: { answer: number | null; bets: number[] | null; wager: number | null; max_wager: number };
   result?: WitsResult;
   history?: (WitsResult & { q: string })[];
 }
@@ -512,6 +538,8 @@ export interface CodesGuess {
   code: number[];
   hits: number;
   near: number;
+  /** that answer came from the owner's decoy (shown once you've guessed again) */
+  decoy?: boolean;
 }
 export interface CodesView extends GameBase {
   game: "codes";
@@ -522,7 +550,18 @@ export interface CodesView extends GameBase {
   /** code owner -> who cracked it, in order */
   cracked: Record<string, string[]>;
   guess_counts: Record<string, number>;
-  you: { code: number[]; guesses: Record<string, CodesGuess[]>; cooldown: number };
+  hint_counts: Record<string, number>;
+  /** owners whose decoy has already fooled someone */
+  decoy_sprung: string[];
+  hint_cost: number;
+  max_hints: number;
+  you: {
+    code: number[];
+    decoy: boolean;
+    guesses: Record<string, CodesGuess[]>;
+    hints: Record<string, { pos: number; symbol: number }[]>;
+    cooldown: number;
+  };
   /** every code, once it's over */
   codes?: Record<string, number[]>;
 }
@@ -543,6 +582,13 @@ export interface RouletteResult {
   net: Record<string, number>;
   accuse: Record<string, string>;
   spotted: string[];
+  rigged: boolean;
+  /** the committed number (differs from `number` only when rigged) */
+  fair_number: number;
+  audits: string[];
+  caught: boolean;
+  /** chips moved by audits: rewards, false alarms, the House's penalty */
+  audit: Record<string, number>;
 }
 export interface RouletteView extends GameBase {
   game: "roulette";
@@ -553,7 +599,16 @@ export interface RouletteView extends GameBase {
   commit: string;
   locked_count: number;
   spins: number[];
-  you: { is_house: boolean; locked: boolean; bets: RouletteBet[]; accuse: string | null };
+  audit_cost: number;
+  you: {
+    is_house: boolean;
+    /** the House, and they haven't rigged a spin yet this game */
+    can_rig: boolean;
+    audit: boolean;
+    locked: boolean;
+    bets: RouletteBet[];
+    accuse: string | null;
+  };
   result?: RouletteResult;
   history?: RouletteResult[];
 }

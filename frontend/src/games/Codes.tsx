@@ -90,6 +90,7 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
   });
   const targets = view.players.filter((p) => p.id !== you && !crackedByMe.includes(p.id));
   const [target, setTarget] = useState<string>("");
+  const [decoy, setDecoy] = useState(false);
   const current = targets.find((p) => p.id === target)?.id ?? targets[0]?.id ?? "";
   const sign = view.phase === "set" ? "Set your secret code" : view.phase === "crack" ? "Crack them all!" : "Codes revealed";
   return (
@@ -109,7 +110,11 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
             <>
               <h3>Hide your code</h3>
               <p className="muted">Four fruit, repeats allowed. Make it hard to guess!</p>
-              <Composer length={view.length} action="Lock my code" onDone={(code) => send({ t: "act", a: "set", code })} />
+              <label className="check">
+                <input type="checkbox" checked={decoy} onChange={(e) => setDecoy(e.target.checked)} />
+                <span>🎭 Arm a decoy: the first guess on my code gets fake clues</span>
+              </label>
+              <Composer length={view.length} action="Lock my code" onDone={(code) => send({ t: "act", a: "set", code, decoy })} />
             </>
           )}
         </Card>
@@ -126,6 +131,7 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
         <Card tone="soft">
           <p>
             Your code: <Code code={view.you.code} label="Your code" />
+            {view.you.decoy ? " · 🎭 decoy armed" : view.decoy_sprung.includes(you) ? " · 🎭 your decoy fooled someone!" : ""}
           </p>
           {targets.length === 0 ? (
             <p className="lead">You’ve cracked every code! 🎉</p>
@@ -139,6 +145,17 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
                 ))}
               </div>
               <h3 className="space-top">Cracking {nameOf(view.players, current)}</h3>
+              {(view.you.hints[current] ?? []).length > 0 && (
+                <p>
+                  Hints:{" "}
+                  {(view.you.hints[current] ?? []).map((h) => `position ${h.pos + 1} is ${FRUIT_NAME[h.symbol]}`).join(" · ")}
+                </p>
+              )}
+              {(view.you.hints[current] ?? []).length < view.max_hints && (
+                <Btn size="small" variant="ghost" onClick={() => send({ t: "act", a: "hint", target: current })}>
+                  💡 Buy a hint (−{view.hint_cost})
+                </Btn>
+              )}
               <ol className="guess-list">
                 {(view.you.guesses[current] ?? []).map((g, i) => (
                   <li key={i}>
@@ -149,6 +166,7 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
                         {"○".repeat(g.near)}
                       </span>
                     </span>
+                    {g.decoy && <span className="chip cherry">🎭 decoy! ignore this one</span>}
                   </li>
                 ))}
               </ol>
@@ -173,7 +191,10 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
                 {p.id === you ? " (you)" : ""}’s code{" "}
                 {view.codes?.[p.id] ? <Code code={view.codes[p.id]!} label={`${p.name}'s code`} /> : null}:{" "}
                 {by.length ? `cracked by ${by.map((id) => nameOf(view.players, id)).join(", ")}` : "uncracked"} ·{" "}
-                <span className="muted">{view.guess_counts[p.id] ?? 0} guesses made</span>
+                <span className="muted">
+                  {view.guess_counts[p.id] ?? 0} guesses, {view.hint_counts[p.id] ?? 0} hints
+                  {view.decoy_sprung.includes(p.id) ? " · 🎭 decoy sprung" : ""}
+                </span>
               </li>
             );
           })}

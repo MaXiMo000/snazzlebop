@@ -5,7 +5,11 @@ show a face ("five 4s"); ones are wild and count as any face. Each bid must rais
 dice, or the same number of a higher face. Instead of bidding you can call "Liar!" (all dice are
 revealed: if there are fewer than bid, the bidder loses a die, otherwise the caller does) or "Spot
 on!" (exactly that many: you win a die back, up to your starting count; otherwise you lose one).
-Lose all your dice and you're out; the last one rolling wins. Score: 100 per player you outlast,
+Lose all your dice and you're out; the last one rolling wins.
+
+Palifico: the first time someone drops to their last die (with three or more still rolling), the next
+round is special. They open it, ones are NOT wild, and the face is fixed by the opening bid: everyone
+can only raise the count. Score: 100 per player you outlast,
 +300 for the winner.
 
 Secrecy: your dice reach only you until a challenge reveals the table, and the reveal shows that
@@ -48,6 +52,8 @@ class LiarsDice(Game):
         self.out: list[str] = []  # in the order they went out
         self.history: list[dict[str, Any]] = []
         self.opener = self.rng.choice(self.player_ids)
+        self.palifico_done: set[str] = set()  # each player gets one palifico round
+        self.palifico_next: str | None = None
         self.round = 0
         self._roll()
 
@@ -60,6 +66,8 @@ class LiarsDice(Game):
             p: sorted(self.rng.randint(1, FACES) for _ in range(self.counts[p])) for p in self.alive()
         }
         self.bid: dict[str, Any] | None = None  # {"player", "qty", "face"}
+        self.palifico = self.palifico_next is not None
+        self.palifico_next = None
         self.turn = self.opener if self.counts.get(self.opener, 0) > 0 else self._after(self.opener)
         self.last: dict[str, Any] | None = None
         self.phase = "bid"
@@ -79,7 +87,8 @@ class LiarsDice(Game):
         return sum(self.counts[p] for p in self.alive())
 
     def count_face(self, face: int) -> int:
-        return sum(1 for ds in self.dice.values() for d in ds if d == face or d == 1)
+        wild = not self.palifico
+        return sum(1 for ds in self.dice.values() for d in ds if d == face or (wild and d == 1))
 
     def _challenge(self, caller: str, kind: str) -> None:
         bid = self.bid
@@ -97,6 +106,9 @@ class LiarsDice(Game):
             self.counts[loser] -= 1
             if self.counts[loser] == 0:
                 self.out.append(loser)
+            elif self.counts[loser] == 1 and loser not in self.palifico_done and len(self.alive()) >= 3:
+                self.palifico_done.add(loser)
+                self.palifico_next = loser
         if winner_back is not None:
             self.counts[winner_back] += 1
         self.last = {
@@ -106,6 +118,7 @@ class LiarsDice(Game):
             "actual": actual,
             "loser": loser,
             "gained": winner_back,
+            "palifico": self.palifico,
             "dice": {p: list(ds) for p, ds in self.dice.items()},
         }
         self.history.append({k: v for k, v in self.last.items() if k != "dice"})
@@ -146,8 +159,11 @@ class LiarsDice(Game):
             raise GameError("not_your_turn", "It's not your turn")
         if kind == "bid":
             qty = as_int(action.get("qty"), lo=1, hi=self.total_dice(), field="Number of dice")
-            face = as_int(action.get("face"), lo=2, hi=FACES, field="Face")
-            if self.bid and not (
+            face = as_int(action.get("face"), lo=1 if self.palifico else 2, hi=FACES, field="Face")
+            if self.palifico and self.bid:
+                if face != self.bid["face"] or qty <= self.bid["qty"]:
+                    raise GameError("bad_input", "Palifico: same face, more dice")
+            elif self.bid and not (
                 qty > self.bid["qty"] or (qty == self.bid["qty"] and face > self.bid["face"])
             ):
                 raise GameError("bad_input", "Raise the bid: more dice, or the same number of a higher face")
@@ -192,6 +208,7 @@ class LiarsDice(Game):
             "total": self.total_dice(),
             "start_dice": self.start_dice,
             "bid": dict(self.bid) if self.bid else None,
+            "palifico": self.palifico if self.phase == "bid" else bool(self.last and self.last["palifico"]),
             "turn": self.turn if self.phase == "bid" else None,
             "you": {"dice": list(self.dice.get(pid, [])) if self.phase != "final" else []},
             "out": list(self.out),
@@ -202,6 +219,14 @@ class LiarsDice(Game):
         if self.phase == "final":
             view["standings"] = list(self.standings)
         return view
+
+    def peek(self, pid: str) -> str | None:
+        """Power card: one die from one rival's cup."""
+        rivals = [p for p in self.alive() if p != pid and self.dice.get(p)]
+        if self.phase != "bid" or not rivals:
+            return None
+        who = self.rng.choice(rivals)
+        return f"{self.name_of(who)} has a {self.rng.choice(self.dice[who])}."
 
     def highlights(self) -> list[dict[str, str]]:
         if not self.finished:

@@ -15,7 +15,20 @@ interface Props {
 export function Split({ view, you, receivedAt, send, tv = false }: Props) {
   const show = useShow();
   useOnChange(view.phase, (_, phase) => {
-    if (phase === "reveal" && view.result && !tv) {
+    if (phase === "reveal" && view.result?.golden) {
+      const g = view.result.golden;
+      const thieves = Object.keys(g.choices).filter((p) => g.choices[p] === "steal");
+      if (thieves.length === 0) {
+        sfx.fanfare();
+        show.stinger("EVERYONE SPLITS!");
+      } else if (thieves.length === 1) {
+        sfx.fanfare();
+        show.stinger(thieves[0] === you && !tv ? "THE GOLDEN HEIST!" : "ONE THIEF!", thieves[0] === you || tv ? "good" : "bad");
+      } else {
+        sfx.buzz();
+        show.stinger("GREED WINS. NOBODY DOES.", "bad");
+      }
+    } else if (phase === "reveal" && view.result && !tv) {
       const mine = view.result.pairs.find((p) => p.players.includes(you));
       if (!mine) return;
       const other = mine.players.find((p) => p !== you)!;
@@ -42,8 +55,13 @@ export function Split({ view, you, receivedAt, send, tv = false }: Props) {
   });
   const partner = view.you.partner;
   const myPair = view.pairs.find((p) => p.players.includes(you));
+  const deciding = view.phase === "talk" || view.phase === "choose";
   const sign =
-    view.phase === "final" ? "Final scores" : `Round ${view.round} of ${view.rounds} · ${view.phase === "choose" ? "Decide" : "Reveal"}`;
+    view.phase === "final"
+      ? "Final scores"
+      : `${view.golden ? "The Golden Pot" : `Round ${view.round} of ${view.rounds}`} · ${
+          view.phase === "talk" ? "Talk it out" : view.phase === "choose" ? "Decide" : "Reveal"
+        }`;
   return (
     <div className="seg-split stack">
       {show.node}
@@ -51,7 +69,19 @@ export function Split({ view, you, receivedAt, send, tv = false }: Props) {
         <span className="chip plum">Both split: share · one steals: takes all · both steal: nothing</span>
       </ShowHead>
 
-      {!tv && view.phase === "choose" && partner && myPair && (
+      {view.golden && deciding && (
+        <Card tone="stage" className="center">
+          <p className="sign">The Golden Pot</p>
+          <p className="space-top">
+            <span className="price-tag">{view.golden_pot}</span>
+          </p>
+          <p className="lead space-top">Everyone in one pot. All split: share it. ONE steals: they take it all. Two or more steal: nobody gets a thing.</p>
+          <p aria-live="polite">
+            {view.locked.length} of {view.players.length} locked in
+          </p>
+        </Card>
+      )}
+      {!tv && deciding && !view.golden && partner && myPair && (
         <Card tone="stage" className="center">
           <p className="sign">Your pot</p>
           <p className="space-top">
@@ -71,15 +101,17 @@ export function Split({ view, you, receivedAt, send, tv = false }: Props) {
           </p>
         </Card>
       )}
-      {!tv && view.phase === "choose" && !partner && view.bye === you && (
+      {!tv && deciding && !view.golden && !partner && view.bye === you && (
         <Card tone="soft" className="center">
           <p className="lead">You’re sitting this round out (+50 for the bye). Watch the drama!</p>
         </Card>
       )}
 
-      {!tv && view.phase === "choose" && partner && (
+      {!tv && deciding && (partner || view.golden) && (
         <Card tone="soft">
-          {view.you.choice ? (
+          {view.phase === "talk" ? (
+            <p className="lead center">Trash talk first. The buttons unlock in a moment…</p>
+          ) : view.you.choice ? (
             <p className="lead center">
               Locked in: <b>{view.you.choice === "split" ? "SPLIT 🤝" : "STEAL 🦹"}</b>. No take-backs.
             </p>
@@ -112,7 +144,7 @@ export function Split({ view, you, receivedAt, send, tv = false }: Props) {
           )}
           {!view.said[you] && (
             <div className="space-top">
-              <p className="muted">Say one thing to your partner (everyone hears it):</p>
+              <p className="muted">Say one thing{view.golden ? " to the table" : " to your partner"} (everyone hears it):</p>
               <div className="row" role="group" aria-label="Say something">
                 {view.lines.map((line, i) => (
                   <Btn key={line} size="small" variant="ghost" onClick={() => send({ t: "act", a: "say", line: i })}>
@@ -126,7 +158,34 @@ export function Split({ view, you, receivedAt, send, tv = false }: Props) {
         </Card>
       )}
 
-      {view.phase !== "final" && (
+      {view.golden && (view.phase === "reveal" || deciding) && (
+        <Card>
+          <h3>{view.phase === "reveal" ? "The Golden reveal" : "At the table"}</h3>
+          <ul className="evidence">
+            {view.players.map((p) => {
+              const g = view.result?.golden;
+              return (
+                <li key={p.id}>
+                  <b>{p.name}</b>
+                  {p.id === you ? " (you)" : ""}
+                  {g ? (
+                    <>
+                      {" "}
+                      <span className={`chip ${g.choices[p.id] === "split" ? "teal" : "cherry"}`}>
+                        {g.choices[p.id] === "split" ? "🤝 split" : "🦹 steal"} · +{g.gain[p.id]}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="muted">{view.locked.includes(p.id) ? " locked in" : " deciding…"}</span>
+                  )}
+                  {!g && view.said[p.id] && <span className="muted"> · “{view.said[p.id]}”</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+      {view.phase !== "final" && !view.golden && (
         <Card>
           <h3>{view.phase === "reveal" ? "The reveal" : "This round"}</h3>
           <ul className="split-pairs">

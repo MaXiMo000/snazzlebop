@@ -6,8 +6,13 @@ right place) and "near" (right symbol, wrong place). First to crack a code score
 later 100. A code nobody cracks earns its owner 200. A short cooldown between guesses keeps it a
 brain race, not a button-mashing one.
 
-Secrecy: codes, guesses and feedback are private to the guesser until the end; the public board only
-says who has cracked whom.
+Two tools:
+- Buy a hint (50 points): learn one position of a rival's code, left to right, up to two per code.
+- Decoy (free, chosen with your code): the first guess anyone makes on your code gets feedback for a
+  different code. The guesser finds out it was a decoy when they guess that code again.
+
+Secrecy: codes, guesses, hints and feedback are private to the guesser until the end; the public board
+says who has cracked whom, how many guesses and hints each player has used, and whose decoy is spent.
 """
 
 from __future__ import annotations
@@ -23,6 +28,8 @@ CRACK_POINTS = (300, 200)  # first, second; later crackers get LATE_POINTS
 LATE_POINTS = 100
 UNCRACKED_POINTS = 200
 COOLDOWN = 1.5  # seconds between one player's guesses
+HINT_COST = 50
+MAX_HINTS = 2  # per code
 
 
 def feedback(code: list[int], guess: list[int]) -> tuple[int, int]:
@@ -51,6 +58,9 @@ class CodeCrackers(Game):
         self.guesses: dict[str, dict[str, list[dict[str, Any]]]] = {p.id: {} for p in self.players}
         self.cracked: dict[str, list[str]] = {p.id: [] for p in self.players}  # owner -> crackers in order
         self.next_guess: dict[str, float] = {}
+        self.decoys: dict[str, list[int]] = {}  # owner -> decoy code, until someone hits it
+        self.decoy_sprung: list[str] = []  # owners whose decoy has fooled someone (public)
+        self.hints: dict[str, dict[str, list[dict[str, int]]]] = {p.id: {} for p in self.players}
         self.round = 0
         self.phase = "set"
         self.set_deadline(self.timings["set"])
@@ -91,11 +101,16 @@ class CodeCrackers(Game):
             if pid in self.codes:
                 raise GameError("already_locked", "Your code is set")
             self.codes[pid] = self._code(action.get("code"))
+            decoy = action.get("decoy", False)
+            if not isinstance(decoy, bool):
+                raise GameError("bad_input", "Decoy is on or off")
+            if decoy:
+                self.decoys[pid] = self._decoy_for(self.codes[pid])
             self.bump()
             if len(self.codes) == len(self.players):
                 self._begin_crack()
             return
-        if kind != "guess":
+        if kind not in ("guess", "hint"):
             raise GameError("bad_action", "Unknown action")
         if self.phase != "crack":
             raise GameError("wrong_phase", "Not cracking yet")
@@ -104,13 +119,30 @@ class CodeCrackers(Game):
             raise GameError("bad_input", "Pick someone else's code")
         if pid in self.cracked[target]:
             raise GameError("already_cracked", "You already cracked that one")
+        if kind == "hint":
+            got = self.hints[pid].setdefault(target, [])
+            if len(got) >= MAX_HINTS:
+                raise GameError("no_hints", f"{MAX_HINTS} hints per code")
+            pos = len(got)
+            got.append({"pos": pos, "symbol": self.codes[target][pos]})
+            self.add_points(pid, -HINT_COST)
+            self.bump()
+            return
         now = self.clock()
         if now < self.next_guess.get(pid, 0.0):
             raise GameError("cooldown", "Steady! One guess at a time")
         guess = self._code(action.get("code"))
         hits, near = feedback(self.codes[target], guess)
         self.next_guess[pid] = now + COOLDOWN
-        self.guesses[pid].setdefault(target, []).append({"code": guess, "hits": hits, "near": near})
+        entry: dict[str, Any] = {"code": guess, "hits": hits, "near": near}
+        decoy = self.decoys.get(target)
+        if decoy is not None and hits < LENGTH:  # a real crack always counts; a decoy can't fake one
+            fake = feedback(decoy, guess)
+            if fake[0] < LENGTH:
+                entry.update(hits=fake[0], near=fake[1], decoy=True)
+                del self.decoys[target]
+                self.decoy_sprung.append(target)
+        self.guesses[pid].setdefault(target, []).append(entry)
         if hits == LENGTH:
             order = len(self.cracked[target])
             self.add_points(pid, CRACK_POINTS[order] if order < len(CRACK_POINTS) else LATE_POINTS)
@@ -118,6 +150,37 @@ class CodeCrackers(Game):
         self.bump()
         if self._all_cracked():
             self._finish()
+
+    def _decoy_for(self, code: list[int]) -> list[int]:
+        """A different code that still shares a little with the real one, so the lie is plausible."""
+        while True:
+            fake = list(code)
+            for i in self.rng.sample(range(LENGTH), 2):
+                fake[i] = self.rng.randrange(SYMBOLS)
+            if fake != code:
+                return fake
+
+    def _guess_view(self, entries: list[dict[str, Any]], final: bool) -> list[dict[str, Any]]:
+        """A decoyed answer is flagged once you've guessed that code again (or at the end)."""
+        out = []
+        for i, g in enumerate(entries):
+            shown = {k: v for k, v in g.items() if k != "decoy"}
+            if g.get("decoy") and (final or i < len(entries) - 1):
+                shown["decoy"] = True
+            out.append(shown)
+        return out
+
+    def peek(self, pid: str) -> str | None:
+        """Power card: one free position of a rival's code you haven't cracked."""
+        if self.phase != "crack":
+            return None
+        rivals = [o for o in self.codes if o != pid and pid not in self.cracked[o]]
+        if not rivals:
+            return None
+        who = self.rng.choice(rivals)
+        pos = self.rng.randrange(LENGTH)
+        names = ("apple", "banana", "grapes", "cherries", "lemon", "kiwi")
+        return f"{self.name_of(who)}'s code has {names[self.codes[who][pos]]} in position {pos + 1}."
 
     def tick(self) -> None:
         if not self.finished and self.expired():
@@ -145,9 +208,15 @@ class CodeCrackers(Game):
             "set": sorted(self.codes) if self.phase == "set" else [],
             "cracked": {k: list(v) for k, v in self.cracked.items()},  # who cracked whom: public
             "guess_counts": {p: sum(len(g) for g in gs.values()) for p, gs in self.guesses.items()},
+            "hint_counts": {p: sum(len(h) for h in hs.values()) for p, hs in self.hints.items()},
+            "decoy_sprung": list(self.decoy_sprung),
+            "hint_cost": HINT_COST,
+            "max_hints": MAX_HINTS,
             "you": {
                 "code": list(self.codes.get(pid, [])),
-                "guesses": {t: [dict(g) for g in gs] for t, gs in self.guesses.get(pid, {}).items()},
+                "decoy": pid in self.decoys,  # still armed
+                "guesses": {t: self._guess_view(gs, final) for t, gs in self.guesses.get(pid, {}).items()},
+                "hints": {t: [dict(h) for h in hs] for t, hs in self.hints.get(pid, {}).items()},
                 "cooldown": max(0.0, self.next_guess.get(pid, 0.0) - self.clock()),
             },
         }

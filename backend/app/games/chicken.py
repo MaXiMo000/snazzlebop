@@ -5,6 +5,11 @@ CASH OUT to bank the value at the moment the server gets your tap. Somewhere bet
 seconds a hidden bomb goes off: anyone still in gets nothing. The round's biggest cash-out takes a
 +50 bonus for nerve. Five rounds.
 
+While everyone gets ready, two dirty tricks (paid for from this game's points):
+- Insurance (30): if you blow up this round, you still get 25% of what the pot had reached.
+- Short fuse (40, once a game): pick a rival. Their personal bomb goes off at a random 40-80% of the
+  real one. They're told someone did it (not who); the culprit is named at the bang.
+
 Secrecy: the bomb time lives only here until it goes off. The run phase deliberately has no public
 deadline (a countdown would give the bomb away); clients animate the value from `started_ago`.
 """
@@ -19,6 +24,9 @@ ROUNDS = 5
 BASE, GROWTH = 20.0, 1.15
 BOMB_MIN, BOMB_MAX = 4.0, 24.0
 NERVE_BONUS = 50
+INSURANCE_COST, INSURANCE_SHARE = 30, 0.25
+FUSE_COST = 40
+FUSE_MIN, FUSE_MAX = 0.4, 0.8
 
 
 def value_at(t: float) -> int:
@@ -37,10 +45,11 @@ class ChickenRun(Game):
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"ready": 3.0, "boom": 7.0}
+        return {"ready": 8.0, "boom": 7.0}
 
     def start(self) -> None:
         self.history: list[dict[str, Any]] = []
+        self.fuse_used: set[str] = set()
         self.round = 0
         self._ready()
 
@@ -49,6 +58,9 @@ class ChickenRun(Game):
         self.cashed: dict[str, dict[str, Any]] = {}  # pid -> {"t", "value"}
         self.run_start: float | None = None
         self.result: dict[str, Any] | None = None
+        self.insured: set[str] = set()
+        self.fuses: dict[str, float] = {}  # target -> personal bomb time (secret)
+        self.saboteurs: dict[str, list[str]] = {}  # target -> who shortened it
         self.phase = "ready"
         self.set_deadline(self.timings["ready"])
         self.bump()
@@ -62,6 +74,9 @@ class ChickenRun(Game):
     def elapsed(self) -> float:
         return 0.0 if self.run_start is None else self.clock() - self.run_start
 
+    def bomb_for(self, pid: str) -> float:
+        return self.fuses.get(pid, self.bomb)
+
     def _end_round(self) -> None:
         best = max(self.cashed.values(), key=lambda c: c["value"], default=None)
         champs = [p for p, c in self.cashed.items() if best and c["value"] == best["value"]]
@@ -72,12 +87,31 @@ class ChickenRun(Game):
             self.add_points(bonus, NERVE_BONUS)
         boomed = [p for p in self.player_ids if p not in self.cashed]
         bomb = round(self.bomb, 2)
+        payouts = {
+            p: int(value_at(round(self.bomb_for(p), 2)) * INSURANCE_SHARE)
+            for p in boomed
+            if p in self.insured
+        }
+        for pid, pts in payouts.items():
+            self.add_points(pid, pts)
+        # Costs were taken when bought; the record carries the net so anyone can check the total.
+        extras = {p: payouts.get(p, 0) for p in self.player_ids}
+        for p in self.insured:
+            extras[p] -= INSURANCE_COST
+        for subs in self.saboteurs.values():
+            for p in subs:
+                extras[p] -= FUSE_COST
         self.result = {
             "bomb": bomb,
             "bomb_value": value_at(bomb),
             "cashed": {p: dict(c) for p, c in self.cashed.items()},
             "boomed": boomed,
             "nerve": bonus,
+            "insured": sorted(self.insured),
+            "payouts": payouts,
+            "fuses": {p: round(t, 2) for p, t in self.fuses.items()},
+            "saboteurs": {p: list(v) for p, v in self.saboteurs.items()},
+            "extras": extras,
         }
         self.history.append(self.result)
         self.phase = "boom"
@@ -96,11 +130,17 @@ class ChickenRun(Game):
 
     def handle(self, pid: str, action: dict[str, Any]) -> None:
         self.require_player(pid)
-        if action.get("a") != "cash":
+        kind = action.get("a")
+        if kind in ("insure", "fuse"):
+            self._trick(pid, kind, action)
+            return
+        if kind != "cash":
             raise GameError("bad_action", "Unknown action")
         if self.phase == "run" and self.elapsed() >= self.bomb:
             self._end_round()  # the tap arrived after the bang
             raise GameError("too_late", "BOOM! Too late")
+        if self.phase == "run" and pid not in self.cashed and self.elapsed() >= self.bomb_for(pid):
+            raise GameError("too_late", "BOOM! Your fuse was short")
         if self.phase != "run":
             raise GameError("wrong_phase", "Wait for the run")
         if pid in self.cashed:
@@ -111,6 +151,27 @@ class ChickenRun(Game):
         self.bump()
         if len(self.cashed) == len(self.players):
             self._end_round()
+
+    def _trick(self, pid: str, kind: str, action: dict[str, Any]) -> None:
+        if self.phase != "ready":
+            raise GameError("wrong_phase", "Tricks only before the run starts")
+        if kind == "insure":
+            if pid in self.insured:
+                raise GameError("already_locked", "You're already insured")
+            self.insured.add(pid)
+            self.add_points(pid, -INSURANCE_COST)
+        else:
+            target = action.get("target")
+            if not isinstance(target, str) or target == pid or target not in self.round_scores:
+                raise GameError("bad_target", "Pick a rival")
+            if pid in self.fuse_used:
+                raise GameError("already_used", "One short fuse per game")
+            self.fuse_used.add(pid)
+            self.add_points(pid, -FUSE_COST)
+            fuse = self.bomb * self.rng.uniform(FUSE_MIN, FUSE_MAX)
+            self.fuses[target] = min(fuse, self.fuses.get(target, self.bomb))
+            self.saboteurs.setdefault(target, []).append(pid)
+        self.bump()
 
     def tick(self) -> None:
         if self.finished:
@@ -143,12 +204,25 @@ class ChickenRun(Game):
             "growth": GROWTH,
             "started_ago": round(self.elapsed(), 3) if self.phase == "run" else None,
             "cashed": {p: dict(c) for p, c in self.cashed.items()},  # who's out, and for how much: public
+            "insured": sorted(self.insured),  # public: everyone can see who's nervous
+            "costs": {"insure": INSURANCE_COST, "fuse": FUSE_COST},
+            "you": {
+                "fused": pid in self.fuses,  # someone shortened your fuse (never who, never when)
+                "fuse_used": pid in self.fuse_used,
+            },
         }
         if self.phase in ("boom", "final") and self.result:
             view["result"] = self.result  # the bomb time, only once it has gone off
         if self.phase == "final":
             view["history"] = self.history
         return view
+
+    def peek(self, pid: str) -> str | None:
+        """Power card: a safe window. Your bomb is somewhere after this."""
+        if self.phase not in ("ready", "run") or self.finished:
+            return None
+        safe = max(BOMB_MIN, int(self.bomb_for(pid) * 0.75))
+        return f"Your bomb won't go off before {safe:g} seconds this round."
 
     def highlights(self) -> list[dict[str, str]]:
         if not self.finished:

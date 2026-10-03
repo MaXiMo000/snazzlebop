@@ -6,6 +6,10 @@ both split, each takes half; one steals, the stealer takes it all; both steal, n
 Everyone's record of splits and steals is public, so grudges build round by round. Each player can
 send one canned line per round ("I'm splitting, promise") to soften up their partner: no free text.
 
+Every round opens with ten seconds of trash talk (canned lines only) before the buttons unlock.
+The last round is the Golden Pot: everyone in one big pot. All split: share it equally. Exactly one
+steals: they take everything. Two or more steal: nobody gets a thing.
+
 Secrecy: choices stay on the server until the round's reveal. A player who doesn't choose splits.
 """
 
@@ -17,6 +21,7 @@ from .base import Game, GameError, as_int
 
 ROUNDS = 5
 BYE_POINTS = 50
+GOLDEN_PER_PLAYER = 150  # the final pot: this much per player at the table
 LINES = (
     "I'm splitting 🤝",
     "Trust me 😇",
@@ -39,7 +44,7 @@ class SplitOrSteal(Game):
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"choose": 25.0, "reveal": 9.0}
+        return {"talk": 10.0, "choose": 20.0, "reveal": 9.0}
 
     def start(self) -> None:
         self.met: set[frozenset[str]] = set()
@@ -69,8 +74,18 @@ class SplitOrSteal(Game):
                 break
         return best or [], bye
 
+    @property
+    def golden(self) -> bool:
+        return self.round == ROUNDS - 1
+
+    def golden_pot(self) -> int:
+        return GOLDEN_PER_PLAYER * len(self.players)
+
     def _begin(self) -> None:
-        pairs, bye = self._pairs()
+        if self.golden:
+            pairs, bye = [], None
+        else:
+            pairs, bye = self._pairs()
         self.pairs = pairs
         self.bye = bye
         base = 100 * (self.round + 1)
@@ -78,9 +93,12 @@ class SplitOrSteal(Game):
         self.choices: dict[str, str] = {}
         self.said: dict[str, int] = {}
         self.result: dict[str, Any] | None = None
-        self.phase = "choose"
-        self.set_deadline(self.timings["choose"])
+        self.phase = "talk"
+        self.set_deadline(self.timings["talk"])
         self.bump()
+
+    def in_play(self, pid: str) -> bool:
+        return self.golden or self.partner(pid) is not None
 
     def partner(self, pid: str) -> str | None:
         for a, b in self.pairs:
@@ -88,7 +106,29 @@ class SplitOrSteal(Game):
                 return b if pid == a else a
         return None
 
+    def _reveal_golden(self) -> None:
+        pot = self.golden_pot()
+        choices = {p: self.choices.get(p, "split") for p in self.player_ids}
+        stealers = [p for p, c in choices.items() if c == "steal"]
+        if not stealers:
+            gain = dict.fromkeys(self.player_ids, pot // len(self.players))
+        elif len(stealers) == 1:
+            gain = {p: pot if p == stealers[0] else 0 for p in self.player_ids}
+        else:
+            gain = dict.fromkeys(self.player_ids, 0)
+        for pid in self.player_ids:
+            self.add_points(pid, gain[pid])
+            self.record[pid].append(choices[pid])
+        self.result = {"pairs": [], "bye": None, "golden": {"pot": pot, "choices": choices, "gain": gain}}
+        self.history.append(self.result)
+        self.phase = "reveal"
+        self.set_deadline(self.timings["reveal"])
+        self.bump()
+
     def _reveal(self) -> None:
+        if self.golden:
+            self._reveal_golden()
+            return
         outcome: list[dict[str, Any]] = []
         for a, b in self.pairs:
             pot = self.pots[frozenset((a, b))]
@@ -127,9 +167,9 @@ class SplitOrSteal(Game):
     def handle(self, pid: str, action: dict[str, Any]) -> None:
         self.require_player(pid)
         kind = action.get("a")
-        if self.phase != "choose":
+        if self.phase not in ("talk", "choose"):
             raise GameError("wrong_phase", "Wait for the next round")
-        if self.partner(pid) is None:
+        if not self.in_play(pid):
             raise GameError("bye", "You're sitting this round out")
         if kind == "say":
             if pid in self.said:
@@ -139,6 +179,8 @@ class SplitOrSteal(Game):
             return
         if kind != "choose":
             raise GameError("bad_action", "Unknown action")
+        if self.phase != "choose":
+            raise GameError("wrong_phase", "Talk first: the buttons unlock in a moment")
         choice = action.get("choice")
         if choice not in ("split", "steal"):
             raise GameError("bad_input", "Split or steal?")
@@ -146,7 +188,8 @@ class SplitOrSteal(Game):
             raise GameError("already_locked", "Your choice is locked in")
         self.choices[pid] = choice
         self.bump()
-        if all(p in self.choices for pair in self.pairs for p in pair):
+        playing = self.player_ids if self.golden else [p for pair in self.pairs for p in pair]
+        if all(p in self.choices for p in playing):
             self._reveal()
 
     def tick(self) -> None:
@@ -156,10 +199,24 @@ class SplitOrSteal(Game):
     def advance(self) -> None:
         if self.finished:
             return
-        if self.phase == "choose":
+        if self.phase == "talk":
+            self.phase = "choose"
+            self.set_deadline(self.timings["choose"])
+            self.bump()
+        elif self.phase == "choose":
             self._reveal()
         elif self.phase == "reveal":
             self._next()
+
+    def peek(self, pid: str) -> str | None:
+        """Power card: one opponent's locked-in choice (your partner, or anyone in the Golden Pot)."""
+        if self.phase != "choose" or not self.in_play(pid):
+            return None
+        rivals = [p for p in self.choices if p != pid and (self.golden or p == self.partner(pid))]
+        if not rivals:
+            return None
+        who = self.rng.choice(rivals)
+        return f"{self.name_of(who)} has locked in {self.choices[who].upper()}."
 
     def view_for(self, pid: str) -> dict[str, Any]:
         mate = self.partner(pid) if pid in self.byes else None
@@ -172,6 +229,8 @@ class SplitOrSteal(Game):
             "players": [{"id": p.id, "name": p.name} for p in self.players],
             "pairs": [{"players": [a, b], "pot": self.pots[frozenset((a, b))]} for a, b in self.pairs],
             "bye": self.bye,
+            "golden": self.golden,
+            "golden_pot": self.golden_pot() if self.golden else None,
             "locked": sorted(self.choices),  # who has chosen, never what
             "said": {p: LINES[i] for p, i in self.said.items()},  # canned lines are public
             "lines": list(LINES),
@@ -179,7 +238,10 @@ class SplitOrSteal(Game):
             "record": {
                 p: {"split": r.count("split"), "steal": r.count("steal")} for p, r in self.record.items()
             },
-            "you": {"partner": mate, "choice": self.choices.get(pid) if self.phase == "choose" else None},
+            "you": {
+                "partner": mate,
+                "choice": self.choices.get(pid) if self.phase in ("talk", "choose") else None,
+            },
         }
         if self.phase in ("reveal", "final") and self.result:
             view["result"] = self.result
@@ -196,7 +258,7 @@ class SplitOrSteal(Game):
             p: sum(
                 1
                 for h in self.history
-                for pr in h["pairs"]
+                for pr in [*h["pairs"], *([h["golden"]] if h.get("golden") else [])]
                 if pr["choices"].get(p) == "steal" and pr["gain"][p] > 0
             )
             for p in self.record
@@ -216,6 +278,21 @@ class SplitOrSteal(Game):
                         "title": "Ice cold",
                         "text": f"{self.name_of(shark)} stole {steals[shark]} pots",
                     }
+                )
+        gold = next((h["golden"] for h in self.history if h.get("golden")), None)
+        if gold:
+            thieves = [p for p, c in gold["choices"].items() if c == "steal"]
+            if len(thieves) == 1:
+                out.append(
+                    {
+                        "icon": "🏆",
+                        "title": "Golden heist",
+                        "text": f"{self.name_of(thieves[0])} stole the whole {gold['pot']} Golden Pot",
+                    }
+                )
+            elif not thieves:
+                out.append(
+                    {"icon": "🤝", "title": "Honour among friends", "text": "Everyone split the Golden Pot"}
                 )
         doom = [pr for h in self.history for pr in h["pairs"] if set(pr["choices"].values()) == {"steal"}]
         if doom:

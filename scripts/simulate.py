@@ -145,6 +145,7 @@ ALLOWED_KEYS[("dice", "bid")] = {
     "total",
 } | {
     "start_dice",
+    "palifico",
     "bid",
     "turn",
     "you",
@@ -153,12 +154,15 @@ ALLOWED_KEYS[("dice", "bid")] = {
 }
 ALLOWED_KEYS[("split", "choose")] = {"game", "phase", "round", "rounds", "remaining", "players", "pairs"} | {
     "bye",
+    "golden",
+    "golden_pot",
     "locked",
     "said",
     "lines",
     "record",
     "you",
 }
+ALLOWED_KEYS[("split", "talk")] = ALLOWED_KEYS[("split", "choose")]
 for _phase in ("ready", "run"):
     ALLOWED_KEYS[("chicken", _phase)] = {
         "game",
@@ -172,6 +176,9 @@ for _phase in ("ready", "run"):
         "growth",
         "started_ago",
         "cashed",
+        "insured",
+        "costs",
+        "you",
     }
 for _phase in ("answer", "bet"):
     ALLOWED_KEYS[("wits", _phase)] = {
@@ -188,6 +195,7 @@ for _phase in ("answer", "bet"):
         "bet_in",
         "chips",
         "chip_value",
+        "all_in",
         "you",
     }
 for _phase in ("set", "crack"):
@@ -204,6 +212,10 @@ for _phase in ("set", "crack"):
         "set",
         "cracked",
         "guess_counts",
+        "hint_counts",
+        "decoy_sprung",
+        "hint_cost",
+        "max_hints",
         "you",
     }
 ALLOWED_KEYS[("roulette", "bet")] = {"game", "phase", "round", "rounds", "remaining", "players", "chips"} | {
@@ -212,6 +224,7 @@ ALLOWED_KEYS[("roulette", "bet")] = {"game", "phase", "round", "rounds", "remain
     "commit",
     "locked_count",
     "spins",
+    "audit_cost",
     "you",
 }
 ALLOWED_KEYS[("lonely", "pick")] = {"game", "phase", "round", "rounds", "remaining", "players", "top"} | {
@@ -582,7 +595,9 @@ async def play_dice(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         bid = g["bid"]
         if bid is None or rng.random() < 0.65:
             qty, face = (
-                (bid["qty"], bid["face"] + 1)
+                (bid["qty"] + 1, bid["face"])  # palifico: the face is fixed
+                if bid and g["palifico"]
+                else (bid["qty"], bid["face"] + 1)
                 if bid and bid["face"] < 6
                 else ((bid["qty"] + 1) if bid else 1, 2)
             )
@@ -603,14 +618,18 @@ async def play_dice(host: Bot, bots: list[Bot], rng: random.Random) -> None:
 async def play_split(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     """Random choices and lines; a choice must never show up in anyone else's frame before the reveal."""
     for rnd in range(1, 6):
-        await all_until(bots, game_is("split", "choose", rnd), f"split choose {rnd}")
+        await all_until(bots, game_is("split", "talk", rnd), f"split talk {rnd}")
         g = host.state["game"]  # type: ignore[index]
-        picks: dict[str, str] = {}
-        for b in bots:
-            if b.state["game"]["you"]["partner"] is None:  # type: ignore[index]
-                continue
+        golden = g["golden"]
+        check(golden == (rnd == 5), "split: the Golden Pot must be the last round")
+        playing = [b for b in bots if golden or b.state["game"]["you"]["partner"] is not None]  # type: ignore[index]
+        for b in playing:
             if rng.random() < 0.5:
                 await b.send(t="act", a="say", line=rng.randrange(len(g["lines"])))
+        await skip(host)
+        await all_until(bots, game_is("split", "choose", rnd), f"split choose {rnd}")
+        picks: dict[str, str] = {}
+        for b in playing:
             picks[b.pid] = rng.choice(["split", "steal"])
             await b.send(t="act", a="choose", choice=picks[b.pid])
         await all_until(bots, game_is("split", "reveal", rnd), f"split reveal {rnd}")
@@ -625,6 +644,8 @@ async def play_split(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         r = host.state["game"]["result"]  # type: ignore[index]
         for pr in r["pairs"]:
             check(all(pr["choices"][p] == picks[p] for p in pr["players"]), "split: revealed choices != sent")
+        if golden:
+            check(r["golden"]["choices"] == picks, "split: golden choices != sent")
         await skip(host)
 
 
@@ -641,6 +662,14 @@ def split_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int
                 pts[a if ca == "steal" else b] += pot
         if h["bye"]:
             pts[h["bye"]] += 50
+        if h.get("golden"):
+            gold = h["golden"]
+            thieves = [p for p, c in gold["choices"].items() if c == "steal"]
+            for p in gold["choices"]:
+                if not thieves:
+                    pts[p] += gold["pot"] // len(gold["choices"])
+                elif thieves == [p]:
+                    pts[p] += gold["pot"]
     return pts
 
 
@@ -648,6 +677,15 @@ async def play_chicken(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     """Bots bail at random moments (some hold on). The bomb must never show before it goes off, every
     banked value must follow the published formula, and no run frame may carry a countdown."""
     for rnd in range(1, 6):
+        await all_until(bots, game_is("chicken", "ready", rnd), f"chicken ready {rnd}")
+        for b in bots:  # dirty tricks before the run
+            if rng.random() < 0.3:
+                await b.send(t="act", a="insure")
+            if rng.random() < 0.2 and not b.state["game"]["you"]["fuse_used"]:  # type: ignore[index]
+                await b.send(t="act", a="fuse", target=rng.choice([o.pid for o in bots if o is not b]))
+        await host.send(t="ping")  # a round trip, so every trick has landed before the skip
+        await asyncio.sleep(0.5)
+        await skip(host)
         await all_until(bots, game_is("chicken", "run", rnd), f"chicken run {rnd}")
         order = bots[:]
         rng.shuffle(order)
@@ -700,6 +738,8 @@ def chicken_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, i
             pts[pid] += c["value"]
         if h["nerve"]:
             pts[h["nerve"]] += 50
+        for pid, x in h["extras"].items():  # insurance payouts minus tricks bought
+            pts[pid] += x
     return pts
 
 
@@ -722,7 +762,11 @@ async def play_wits(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                     check(not (others & set(values(gg))), f"{b.name} saw another answer before the board")
         n = len(host.state["game"]["board"])  # type: ignore[index]
         for b in bots:
-            await b.send(t="act", a="bet", slots=[rng.randrange(n), rng.randrange(n)])
+            if rnd == 6:  # all in: one slot, a wager of the bot's own points
+                top = b.state["game"]["you"]["max_wager"]  # type: ignore[index]
+                await b.send(t="act", a="bet", slots=[rng.randrange(n)], wager=rng.randint(0, top))
+            else:
+                await b.send(t="act", a="bet", slots=[rng.randrange(n), rng.randrange(n)])
         await all_until(bots, game_is("wits", "reveal", rnd), f"wits reveal {rnd}")
         await skip(host)
 
@@ -748,7 +792,7 @@ async def play_codes(host: Bot, bots: list[Bot], rng: random.Random) -> None:
 
     await all_until(bots, game_is("codes", "set"), "codes set")
     for b in bots:
-        await b.send(t="act", a="set", code=[rng.randrange(6) for _ in range(4)])
+        await b.send(t="act", a="set", code=[rng.randrange(6) for _ in range(4)], decoy=rng.random() < 0.5)
     await all_until(bots, game_is("codes", "crack"), "codes crack")
     every = [list(c) for c in product(range(6), repeat=4)]
 
@@ -758,11 +802,19 @@ async def play_codes(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                 g = b.state["game"]  # type: ignore[index]
                 if g["phase"] != "crack" or b.pid in g["cracked"][target.pid]:
                     break
-                seen = g["you"]["guesses"].get(target.pid, [])
+                seen = [h for h in g["you"]["guesses"].get(target.pid, []) if not h.get("decoy")]
+                hints = g["you"]["hints"].get(target.pid, [])
+                if not hints and rng.random() < 0.3:
+                    await b.send(t="act", a="hint", target=target.pid)
+                    await b.until(lambda s, t=target.pid: bool(s["game"]["you"]["hints"].get(t)), "hint")
+                    continue
                 fits = [
-                    c for c in every if all(mastermind(c, h["code"]) == (h["hits"], h["near"]) for h in seen)
-                ]
-                n = len(seen)
+                    c
+                    for c in every
+                    if all(mastermind(c, h["code"]) == (h["hits"], h["near"]) for h in seen)
+                    and all(c[h["pos"]] == h["symbol"] for h in hints)
+                ] or every  # an unflagged decoy answer can leave nothing consistent for a moment
+                n = len(g["you"]["guesses"].get(target.pid, []))
                 await b.send(t="act", a="guess", target=target.pid, code=rng.choice(fits))
                 await b.until(
                     lambda s, n=n, t=target.pid: (
@@ -781,11 +833,17 @@ async def play_codes(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     for b in bots:
         for target, gs in b.state["game"]["you"]["guesses"].items():  # type: ignore[index]
             for h in gs:
+                if h.get("decoy"):  # a decoy answer must not be the real one's, and never a fake crack
+                    check(h["hits"] < 4, "codes: a decoy faked a crack")
+                    continue
                 check(mastermind(codes[target], h["code"]) == (h["hits"], h["near"]), "codes: wrong feedback")
+        for target, hs in b.state["game"]["you"]["hints"].items():  # type: ignore[index]
+            for h in hs:
+                check(codes[target][h["pos"]] == h["symbol"], "codes: a hint lied")
 
 
-def codes_points(cracked: dict[str, list[str]], ids: list[str]) -> dict[str, int]:
-    pts = dict.fromkeys(ids, 0)
+def codes_points(cracked: dict[str, list[str]], ids: list[str], hints: dict[str, int]) -> dict[str, int]:
+    pts = {pid: -50 * hints.get(pid, 0) for pid in ids}
     for owner, who in cracked.items():
         for i, pid in enumerate(who):
             pts[pid] += (300, 200)[i] if i < 2 else 100
@@ -812,12 +870,16 @@ async def play_roulette(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                     {"kind": "number", "value": rng.randrange(37), "amount": 50},
                 ]
             others = [o.pid for o in bots if o is not b]
-            await b.send(t="act", a="lock", bets=bets, accuse=rng.choice(others))
+            you = b.state["game"]["you"]  # type: ignore[index]
+            tricks = {"rig": rng.random() < 0.5} if you["can_rig"] else {"audit": rng.random() < 0.3}
+            await b.send(t="act", a="lock", bets=bets, accuse=rng.choice(others), **tricks)
         await all_until(bots, game_is("roulette", "spin", rnd), f"roulette spin {rnd}")
         r = host.state["game"]["result"]  # type: ignore[index]
         check(r["house"] == houses[0].pid, "roulette: the revealed House isn't the one that was told")
-        proof = hashlib.sha256(f"{r['number']}:{r['nonce']}".encode()).hexdigest()
-        check(proof == commit == r["commit"], "roulette: the spin doesn't match its commitment")
+        proof = hashlib.sha256(f"{r['fair_number']}:{r['nonce']}".encode()).hexdigest()
+        check(proof == commit == r["commit"], "roulette: the fair spin doesn't match its commitment")
+        check(r["rigged"] or r["number"] == r["fair_number"], "roulette: an unrigged spin moved")
+        check(r["caught"] == (r["rigged"] and bool(r["audits"])), "roulette: audit outcome is wrong")
         check(
             r["house_net"] == -sum(r["net"].values()), "roulette: the House didn't take what the table lost"
         )
@@ -1318,7 +1380,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"boxes: scores {got} != value minus price {want}")
             elif game == "codes":
-                want = codes_points(host.state["game"]["cracked"], [b.pid for b in bots])  # type: ignore[index]
+                g = host.state["game"]  # type: ignore[index]
+                want = codes_points(g["cracked"], [b.pid for b in bots], g["hint_counts"])
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"codes: scores {got} != crack order {want}")
             elif game == "wits":

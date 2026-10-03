@@ -442,6 +442,9 @@ a {
 .chip.paper {
   background: var(--paper);
 }
+.chip.wrap {
+  white-space: normal;
+}
 
 /* "ON AIR"-style lit sign used for segment titles */
 .sign {

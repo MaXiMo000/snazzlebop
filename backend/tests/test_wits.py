@@ -7,7 +7,15 @@ import random
 import unittest
 
 from app.games import GameError, Player
-from app.games.wits import AUTHOR_BONUS, CHIP_VALUE, ROUNDS, TOO_LOW_ODDS, WagerWits, board_odds
+from app.games.wits import (
+    ALL_IN_FLOOR,
+    AUTHOR_BONUS,
+    CHIP_VALUE,
+    ROUNDS,
+    TOO_LOW_ODDS,
+    WagerWits,
+    board_odds,
+)
 
 SPECTATORS = ("tv:screen", "au:fan")
 
@@ -92,6 +100,56 @@ class WitsTests(unittest.TestCase):
         self.assertTrue(g.finished)
         self.assertEqual(len(g.history), ROUNDS)
         self.assertEqual(len({h["q"] for h in g.history}), ROUNDS)
+
+
+class AllInTests(unittest.TestCase):
+    def to_last(self, scores):
+        g = make(3)
+        for _ in range(ROUNDS - 1):
+            g.advance()  # answer -> bet (nobody answered: just the "lower than all" slot)
+            g.advance()  # reveal
+            g.advance()  # next question
+        self.assertTrue(g.all_in)
+        g.round_scores.update(scores)
+        g.questions[g.round] = {"q": "Q", "a": 50, "unit": ""}
+        for pid, v in (("p0", 10), ("p1", 40), ("p2", 90)):
+            g.handle(pid, {"a": "answer", "value": v})
+        return g
+
+    def test_one_slot_and_a_wager_up_to_your_score_or_the_floor(self):
+        g = self.to_last({"p0": 500, "p1": 0, "p2": -50})
+        view = g.view_for("p0")
+        self.assertTrue(view["all_in"])
+        self.assertEqual(view["you"]["max_wager"], 500)
+        self.assertEqual(g.view_for("p1")["you"]["max_wager"], ALL_IN_FLOOR)
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "bet", "slots": [1, 2], "wager": 100})  # one slot only
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "bet", "slots": [2], "wager": 501})
+        with self.assertRaises(GameError):
+            g.handle("p1", {"a": "bet", "slots": [2], "wager": True})
+
+    def test_right_pays_the_odds_wrong_loses_the_wager(self):
+        g = self.to_last({"p0": 500, "p1": 300, "p2": 0})
+        win = next(s for s in g.board if s["value"] == 40)
+        g.handle("p0", {"a": "bet", "slots": [win["slot"]], "wager": 400})
+        g.handle("p1", {"a": "bet", "slots": [0], "wager": 300})
+        g.handle("p2", {"a": "bet", "slots": [win["slot"]], "wager": 0})
+        gains = g.result["gains"]
+        self.assertEqual(gains["p0"], 400 * win["odds"])
+        self.assertEqual(gains["p1"], -300 + AUTHOR_BONUS)  # lost the wager, but wrote the answer
+        self.assertEqual(gains["p2"], 0)
+        self.assertEqual(g.result["wagers"], {"p0": 400, "p1": 300, "p2": 0})
+
+    def test_wagers_stay_secret_until_the_reveal(self):
+        g = self.to_last({"p0": 500, "p1": 0, "p2": 0})
+        g.handle("p0", {"a": "bet", "slots": [1], "wager": 437})
+        self.assertEqual(g.view_for("p0")["you"]["wager"], 437)
+        for viewer in ("p1", *SPECTATORS):
+            view = g.view_for(viewer)
+            view.pop("remaining")  # a float timer could contain any digits
+            self.assertIsNone(view["you"]["wager"])
+            self.assertNotIn("437", json.dumps(view))
 
 
 if __name__ == "__main__":

@@ -41,7 +41,9 @@ export function Wits({ view, you, receivedAt, send, tv = false }: Props) {
     <div className="seg-wits stack">
       {show.node}
       <ShowHead sign={sign} title="Wager Wits" remaining={view.remaining} receivedAt={receivedAt}>
-        <span className="chip plum">Closest without going over wins · bet on anyone’s answer</span>
+        <span className={`chip ${view.all_in ? "cherry" : "plum"}`}>
+          {view.all_in ? "ALL IN: bet your own points on one answer" : "Closest without going over wins · bet on anyone’s answer"}
+        </span>
       </ShowHead>
 
       {view.phase !== "final" && (
@@ -149,16 +151,45 @@ function AnswerForm({ view, send }: { view: WitsView; send: Props["send"] }) {
 
 function Board({ view, you, send, tv }: { view: WitsView; you: string; send: Props["send"]; tv: boolean }) {
   const [chips, setChips] = useState<number[]>([]);
+  const [wager, setWager] = useState(0);
+  const need = view.all_in ? 1 : view.chips;
   const placed = view.you.bets && view.you.bets.length > 0;
   const betting = !tv && view.phase === "bet" && !placed;
   const winner = view.result?.slot;
   return (
     <Card>
       <h3>{view.phase === "bet" ? "The board: who’s closest without going over?" : "The board"}</h3>
-      {betting && (
+      {betting && !view.all_in && (
         <p className="muted">
           Tap a slot for each of your {view.chips} chips (you can double up). Each winning chip pays {view.chip_value} × its odds.
         </p>
+      )}
+      {betting && view.all_in && (
+        <div className="stack-sm">
+          <p className="muted">Pick ONE slot and wager up to {view.you.max_wager} of your points. Right: wager × odds. Wrong: it’s gone.</p>
+          <div className="ask-form">
+            <div>
+              <label className="field" htmlFor="wits-wager">
+                Your wager
+              </label>
+              <input
+                id="wits-wager"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={view.you.max_wager}
+                value={wager}
+                onChange={(e) => setWager(Math.max(0, Math.min(view.you.max_wager, Math.floor(Number(e.target.value) || 0))))}
+              />
+            </div>
+            <Btn variant="ghost" onClick={() => setWager(Math.floor(view.you.max_wager / 2))}>
+              Half
+            </Btn>
+            <Btn variant="danger" onClick={() => setWager(view.you.max_wager)}>
+              All in!
+            </Btn>
+          </div>
+        </div>
       )}
       <div className="wits-board" role="group" aria-label="Answer slots">
         {view.board.map((s) => {
@@ -169,7 +200,7 @@ function Board({ view, you, send, tv }: { view: WitsView; you: string; send: Pro
               type="button"
               className={`wits-slot ${winner === s.slot ? "win" : ""}`}
               aria-pressed={mine > 0}
-              disabled={!betting || chips.length >= view.chips}
+              disabled={!betting || chips.length >= need}
               onClick={() => {
                 sfx.pop();
                 setChips((c) => [...c, s.slot]);
@@ -189,13 +220,13 @@ function Board({ view, you, send, tv }: { view: WitsView; you: string; send: Pro
           <Btn
             variant="accent"
             size="big"
-            disabled={chips.length !== view.chips}
+            disabled={chips.length !== need}
             onClick={() => {
               sfx.pop();
-              send({ t: "act", a: "bet", slots: chips });
+              send({ t: "act", a: "bet", slots: chips, ...(view.all_in ? { wager } : {}) });
             }}
           >
-            {chips.length === view.chips ? "Place my bets" : `Pick ${view.chips - chips.length} more`}
+            {chips.length !== need ? `Pick ${need - chips.length} more` : view.all_in ? `Wager ${wager}` : "Place my bets"}
           </Btn>
           <Btn variant="ghost" disabled={!chips.length} onClick={() => setChips([])}>
             Clear
@@ -204,7 +235,7 @@ function Board({ view, you, send, tv }: { view: WitsView; you: string; send: Pro
       )}
       {view.phase === "bet" && (
         <p className="muted space-top" aria-live="polite">
-          {placed ? "Your chips are down. " : ""}
+          {placed ? (view.all_in ? `You wagered ${view.you.wager}. ` : "Your chips are down. ") : ""}
           {view.bet_in.length} of {view.players.length} have bet
         </p>
       )}

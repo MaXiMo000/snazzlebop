@@ -60,8 +60,8 @@ export function Dice({ view, you, receivedAt, send, tv = false }: Props) {
     <div className="seg-dice stack">
       {show.node}
       <ShowHead sign={sign} title="Liar's Dice" remaining={view.remaining} receivedAt={receivedAt}>
-        <span className="chip plum">
-          {view.total} dice on the table · ones are wild
+        <span className={`chip ${view.palifico ? "cherry" : "plum"}`}>
+          {view.total} dice on the table · {view.palifico ? "PALIFICO: ones are NOT wild, face is fixed" : "ones are wild"}
         </span>
       </ShowHead>
 
@@ -139,11 +139,20 @@ export function Dice({ view, you, receivedAt, send, tv = false }: Props) {
 
 function BidForm({ view, send }: { view: DiceView; send: Props["send"] }) {
   // Default to the smallest legal raise: same count with the next face, or one more die of twos.
+  // Palifico: the opening bid fixes the face (ones allowed), and every raise adds dice.
   const bid = view.bid;
-  const start = bid ? (bid.face < 6 ? { qty: bid.qty, face: bid.face + 1 } : { qty: bid.qty + 1, face: 2 }) : { qty: 1, face: 2 };
+  const pal = view.palifico;
+  const start = bid
+    ? pal
+      ? { qty: bid.qty + 1, face: bid.face }
+      : bid.face < 6
+        ? { qty: bid.qty, face: bid.face + 1 }
+        : { qty: bid.qty + 1, face: 2 }
+    : { qty: 1, face: 2 };
   const [qty, setQty] = useState(start.qty);
   const [face, setFace] = useState(start.face);
-  const legal = !bid || qty > bid.qty || (qty === bid.qty && face > bid.face);
+  const faces = pal ? (bid ? [bid.face] : [1, 2, 3, 4, 5, 6]) : [2, 3, 4, 5, 6];
+  const legal = !bid || (pal ? qty > bid.qty && face === bid.face : qty > bid.qty || (qty === bid.qty && face > bid.face));
   return (
     <div className="stack-sm space-top">
       <p>
@@ -161,7 +170,7 @@ function BidForm({ view, send }: { view: DiceView; send: Props["send"] }) {
         </Btn>
       </div>
       <div className="row" role="group" aria-label="Which face">
-        {[2, 3, 4, 5, 6].map((f) => (
+        {faces.map((f) => (
           <Btn key={f} size="small" variant="ghost" aria-pressed={face === f} aria-label={FACE_NAME[f]} onClick={() => setFace(f)}>
             <span aria-hidden="true" className="die-btn">
               {PIPS[f]}
@@ -192,7 +201,7 @@ function BidForm({ view, send }: { view: DiceView; send: Props["send"] }) {
           </>
         )}
       </div>
-      {!legal && <p className="muted">Raise it: more dice, or the same number of a higher face.</p>}
+      {!legal && <p className="muted">{pal ? "Palifico: same face, more dice." : "Raise it: more dice, or the same number of a higher face."}</p>}
     </div>
   );
 }
@@ -218,7 +227,7 @@ function Reveal({ view, you }: { view: DiceView; you: string }) {
             <b>{nameOf(view.players, pid)}</b>
             <span className="dice-row">
               {ds.map((d, i) => (
-                <Die key={i} face={d} hot={d === l.bid.face || d === 1} />
+                <Die key={i} face={d} hot={d === l.bid.face || (d === 1 && !l.palifico)} />
               ))}
             </span>
           </li>
