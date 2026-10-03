@@ -214,7 +214,15 @@ function Reveal({ view, you }: { view: DiceView; you: string }) {
         {nameOf(view.players, l.caller)} called {l.call === "spot" ? "spot on" : "liar"} on {bidText(l.bid.qty, l.bid.face)}
       </h3>
       <p className="lead">
-        There were <b>{l.actual}</b>.{" "}
+        There were <b>{l.actual}</b>
+        {l.wild > 0 ? (
+          <>
+            {" "}
+            ({l.exact} {FACE_NAME[l.bid.face]}
+            {l.exact === 1 ? "" : "s"} + {l.wild} wild {l.wild === 1 ? "one" : "ones"})
+          </>
+        ) : null}
+        .{" "}
         {l.loser
           ? `${nameOf(view.players, l.loser)}${l.loser === you ? " (you)" : ""} loses a die.`
           : l.gained

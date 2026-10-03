@@ -3,7 +3,7 @@ import type { RoomState } from "../types";
 
 /**
  * connecting -> open, then on a drop: reconnecting (with backoff) -> open again,
- * or "lost" after MAX_RETRIES (the player can retry). "closed" = the room or seat is gone (1008),
+ * or "lost" after MAX_RETRIES (the player can retry). "closed" = the room or seat is gone (1008; a flood close is 4008 and reconnects),
  * "kicked" = the host removed this player (4001). Those two are final.
  */
 export type Status = "connecting" | "open" | "reconnecting" | "lost" | "closed" | "kicked";
@@ -85,6 +85,7 @@ export function useRoom(code: string, token: string | null): RoomConnection {
         // Retrying won't help: the room/seat is gone (1008) or the host removed us (4001).
         if (ev.code === KICKED) return setStatus("kicked");
         if (ev.code === 1008) return setStatus("closed");
+        // 4008 = too many messages too fast: just reconnect (the server rate limits the handshake too).
         if (retries >= MAX_RETRIES) return setStatus("lost");
         dropped.current = true;
         retries += 1;

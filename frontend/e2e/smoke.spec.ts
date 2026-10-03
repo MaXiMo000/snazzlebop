@@ -120,6 +120,13 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
 
   // Frenemy Radar
   await host.locator("article.game-card.seg-frenemy").getByRole("button", { name: "Start!" }).click();
+  // The "how to play" screen comes first, on every phone.
+  await expect(host.getByText("The rules")).toBeVisible();
+  await expect(bo.getByRole("button", { name: /I’m ready/ })).toBeVisible();
+  await shot("03b-intro");
+  await axe(host, "intro", a11y);
+  await targets(host, "intro", a11y);
+  await startNow(host);
   await expect(host.getByText(/Rank\s+everyone/)).toBeVisible();
   await expect(bo.getByRole("button", { name: /Lock it in/ })).toBeVisible();
   await shot("04-frenemy");
@@ -129,6 +136,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
 
   // Alibi
   await host.locator("article.game-card.seg-alibi").getByRole("button", { name: "Start!" }).click();
+  await startNow(host);
   await expect(host.getByRole("heading", { name: "Read your card!" })).toBeVisible();
   await expect(others[0]!.getByRole("heading", { name: "Your alibi" })).toBeVisible();
   await shot("05-alibi");
@@ -138,6 +146,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
 
   // Price Is Weird
   await host.locator("article.game-card.seg-price").getByRole("button", { name: "Start!" }).click();
+  await startNow(host);
   await expect(host.getByLabel("Your price ($)")).toBeVisible();
   await expect(others[1]!.getByLabel("Your price ($)")).toBeVisible();
   await shot("06-price");
@@ -147,6 +156,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
 
   // Telepathy Tax
   await host.locator("article.game-card.seg-telepathy").getByRole("button", { name: /Start!/ }).click();
+  await startNow(host);
   await expect(host.getByRole("group", { name: /Answers for/ })).toBeVisible();
   await expect(bo.getByRole("group", { name: /Answers for/ }).getByRole("button")).toHaveCount(6);
   await shot("09-telepathy");
@@ -156,6 +166,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
 
   // Mole in the Mural
   await host.locator("article.game-card.seg-mural").getByRole("button", { name: /Start!/ }).click();
+  await startNow(host);
   await expect(host.getByRole("group", { name: "The mural, 16 tiles" }).getByRole("button")).toHaveCount(16);
   await expect(host.getByRole("heading", { name: "How it works" })).toBeVisible();
   await shot("10-mural");
@@ -165,6 +176,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
 
   // Blackjack Showdown
   await host.locator("article.game-card.seg-blackjack").getByRole("button", { name: /Start!/ }).click();
+  await startNow(host);
   await expect(host.getByRole("heading", { name: "Place your bet" })).toBeVisible();
   await expect(bo.getByRole("group", { name: "Bet size" }).getByRole("button")).toHaveCount(4);
   await shot("11-blackjack");
@@ -174,6 +186,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
 
   // Crossword Race
   await host.locator("article.game-card.seg-crossword").getByRole("button", { name: /Start!/ }).click();
+  await startNow(host);
   await expect(host.getByLabel(/\d+ (Across|Down) \(\d+ letters\)/)).toBeVisible();
   await expect(host.getByRole("heading", { name: "Across" })).toBeVisible();
   await shot("12-crossword");
@@ -213,6 +226,15 @@ test("keyboard only: skip link, create a room, start a game, guess", async ({ pa
   expect(await start.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe("none");
   await page.keyboard.press("Enter");
 
+  // The "how to play" screen: Tab to Ready and press Enter; the guest taps Ready too.
+  const ready = page.getByRole("button", { name: /I’m ready/ });
+  await expect(ready).toBeVisible();
+  for (let i = 0; i < 40 && !(await ready.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press("Tab");
+  await expect(ready).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/You’re ready!/)).toBeVisible();
+  await guest.getByRole("button", { name: /I’m ready/ }).click();
+
   const guess = page.getByLabel("Your price ($)");
   await expect(guess).toBeVisible();
   await guess.focus();
@@ -242,6 +264,7 @@ test("TV mode: read-only big screen of the public state", async ({ page: host, b
   await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
 
   await host.locator("article.game-card.seg-price").getByRole("button", { name: /Start!/ }).click();
+  await startNow(host);
   await expect(tv.getByText(/0 of 2 guesses locked in/)).toBeVisible();
   await expect(tv.getByLabel("Your price ($)")).toHaveCount(0); // nothing to type into on the TV
   await guest.getByLabel("Your price ($)").fill("100");
@@ -277,6 +300,7 @@ test("reduced motion: the spin lands at once, no stingers or confetti; sound tog
   await guest.getByLabel("Your name").fill("Sol");
   await guest.getByRole("button", { name: "Join as a contestant" }).click();
   await host.locator("article.game-card.seg-price").getByRole("button", { name: /Start!/ }).click();
+  await startNow(host);
   for (const [p, amount] of [[host, "1"], [guest, "2"]] as const) {
     await p.getByLabel("Your price ($)").fill(amount);
     await p.getByRole("button", { name: "Lock it in!" }).click();
@@ -313,6 +337,7 @@ test("Frenemy result card draws on the device and downloads as a PNG", async ({ 
   }
   await expect(host.getByRole("heading", { name: /In the room \(3 online\)/ })).toBeVisible();
   await host.locator("article.game-card.seg-frenemy").getByRole("button", { name: /Start!/ }).click();
+  await startNow(host);
   for (let round = 0; round < 3; round++) {
     for (const p of players) {
       await p.getByRole("button", { name: "The room ranks me number 1" }).click();
@@ -405,8 +430,13 @@ test("reconnect: a dropped phone shows progress, then comes back on air in the s
 });
 
 /** Host presses Skip until `until` shows up (the next host button after a game ends). */
+/** Every game opens with a "how to play" screen: the host starts it straight away. */
+async function startNow(host: Page) {
+  await host.getByRole("button", { name: "Start now ▶" }).click();
+}
+
 async function skipUntil(host: Page, until: ReturnType<Page["getByRole"]>) {
-  const skip = host.getByRole("button", { name: /Skip wait/ });
+  const skip = host.getByRole("button", { name: /Skip wait|Start now ▶/ });
   for (let i = 0; i < 150; i++) {  // Liar's Dice can take dozens of skips to play out
     await expect(skip.or(until).first()).toBeVisible();
     if (await until.isVisible()) return;
@@ -453,6 +483,7 @@ test("show night: playlist, audience predictions and reactions, jackpot, finale"
   await axe(host, "show builder", a11y);
   await targets(host, "show builder", a11y);
   await host.getByRole("button", { name: "Start the show (2 games)" }).click();
+  await startNow(host);
 
   // The audience backs a winner and reacts; everyone sees the show strip.
   await expect(host.getByRole("navigation", { name: /Show progress/ })).toBeVisible();
@@ -468,8 +499,10 @@ test("show night: playlist, audience predictions and reactions, jackpot, finale"
   await skipUntil(host, host.getByRole("button", { name: /Next: Telepathy Tax/ }));
   await expect(host.getByText("The host says")).toBeVisible();
   await host.getByRole("button", { name: /Next: Telepathy Tax/ }).click();
+  await startNow(host);
   await skipUntil(host, host.getByRole("button", { name: /Next: Jackpot finale/ }));
   await host.getByRole("button", { name: /Next: Jackpot finale/ }).click();
+  await startNow(host);
 
   // Jackpot: a secret wager, then the reveal.
   await expect(host.getByRole("heading", { name: "Jackpot Round" })).toBeVisible();
@@ -525,6 +558,7 @@ test("the newer games: first screens, a real move each, axe and targets", async 
   const [bo, cy] = await table(browser, baseURL!, host, ["Bo", "Cy"], problems);
   const start = async (id: string) => {
     await host.locator(`article.game-card.seg-${id}`).getByRole("button", { name: /Start!/ }).click();
+    await startNow(host);
   };
   const back = async () => {
     await skipUntil(host, host.getByRole("button", { name: "Play another game" }));
@@ -616,7 +650,9 @@ test("the newer games: first screens, a real move each, axe and targets", async 
     await p.getByRole("group", { name: "Pick a number" }).getByRole("button", { name: n, exact: true }).click();
   }
   await expect(host.getByText(/wins 100 with/)).toBeVisible();
-  await expect(host.getByText("Cy", { exact: false }).first()).toBeVisible();
+  // Everyone taps Ready on the results to move on together, without waiting for the clock.
+  for (const p of [host, bo, cy]) await p.getByRole("button", { name: /Ready for the next round/ }).click();
+  await expect(host.getByText(/Round 2 of 8/)).toBeVisible();
   await back();
 
   // Mystery Box Auction: everyone sees their own peek; a bid takes the top spot.
@@ -647,6 +683,7 @@ test("show extras: power cards, rivals, MVP votes, rematch and the season", asyn
   await games.getByRole("button", { name: "Split or Steal" }).click();
   await host.getByRole("button", { name: /Jackpot finale: on/ }).click();
   await host.getByRole("button", { name: "Start the show (2 games)" }).click();
+  await startNow(host);
 
   await expect(host.getByRole("heading", { name: "Lowest Lonely Number" })).toBeVisible();
   await expect(host.getByRole("heading", { name: /Power cards/ })).toBeVisible();
@@ -667,12 +704,14 @@ test("show extras: power cards, rivals, MVP votes, rematch and the season", asyn
   await expect(host.getByRole("heading", { name: /Cards on the table/ })).toBeVisible();
   await expect(host.getByText(/Bo played/)).toBeVisible();
   await host.getByRole("button", { name: /Next: Split or Steal/ }).click();
+  await startNow(host);
   await skipUntil(host, host.getByRole("button", { name: /Next: the grand finale/ }));
   await host.getByRole("button", { name: /Next: the grand finale/ }).click();
   await expect(host.getByRole("heading", { name: /The season: 1 show/ })).toBeVisible();
   await expect(host.locator(".confetti")).toHaveCount(0, { timeout: 6000 });
   await axe(host, "season finale", a11y);
   await host.getByRole("button", { name: /Rematch/ }).click();
+  await startNow(host);
   await expect(host.getByRole("heading", { name: "Lowest Lonely Number" })).toBeVisible();
   await expect(cy.getByRole("heading", { name: "Lowest Lonely Number" })).toBeVisible();
   expect(a11y).toEqual([]);
@@ -701,6 +740,7 @@ test("Friend Stock Exchange: trade before each game, prices move, books revealed
   await axe(host, "market", a11y);
   await targets(host, "market", a11y);
   await host.getByRole("button", { name: /Ring the bell now/ }).click();
+  await startNow(host);
   await expect(host.getByRole("heading", { name: "Price Is Weird" })).toBeVisible();
 
   await skipUntil(host, host.getByRole("button", { name: /Next: Telepathy Tax/ }));
@@ -708,6 +748,7 @@ test("Friend Stock Exchange: trade before each game, prices move, books revealed
   await host.getByRole("button", { name: /Next: Telepathy Tax/ }).click();
   await expect(host.getByRole("heading", { name: "Friend Stock Exchange" })).toBeVisible();
   await host.getByRole("button", { name: /Ring the bell now/ }).click();
+  await startNow(host);
   await skipUntil(host, host.getByRole("button", { name: /Next: the grand finale/ }));
   await host.getByRole("button", { name: /Next: the grand finale/ }).click();
   await expect(host.getByRole("heading", { name: /closing bell/ })).toBeVisible();

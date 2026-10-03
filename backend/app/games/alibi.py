@@ -51,10 +51,20 @@ class Alibi(Game):
     )
     min_players: ClassVar[int] = 4
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "One of you is secretly the killer. Your card says where you were each half hour.",
+        "Innocents' cards are true. The killer's card has a fake slot or two.",
+        "Reveal your slots, ask others about theirs, and watch for red flags where a story clashes "
+        "with the camera clues.",
+        "One Objection! each: right +50, wrong -50. The killer can plant one fake clue.",
+        "Then vote. Catch the killer: +150 for a right vote, +50 for every innocent. If they "
+        "escape, the killer takes +300.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["briefing"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"briefing": 30.0, "round": 75.0, "vote": 45.0}
+        return {"briefing": 45.0, "round": 90.0, "vote": 60.0}
 
     # -- setup --------------------------------------------------------------
     def start(self) -> None:

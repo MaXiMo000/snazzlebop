@@ -108,6 +108,10 @@ class Game(ABC):
     max_players: ClassVar[int]
     # Host-chosen settings: option name -> allowed values (first = default). Validated by the hub.
     OPTIONS: ClassVar[dict[str, list[str]]] = {}
+    # Plain-language rules, shown before the game starts and behind "How to play" during it.
+    HOW_TO: ClassVar[tuple[str, ...]] = ()
+    # Results/briefing phases the room can skip together: once every player taps Ready, it moves on.
+    READING: ClassVar[frozenset[str]] = frozenset()
 
     def __init__(
         self,

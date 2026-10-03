@@ -28,7 +28,7 @@ ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: avoids lookalikes
 ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
-    *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch"),
+    *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready"),
 }
 AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp"}
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
@@ -40,6 +40,7 @@ ROOM_REACTS_PER_SEC = 6  # and a room-wide ceiling, so a big audience can't turn
 KEEP_REACTIONS = 12
 MARKET_SECONDS = 30.0  # the trading window before each show game
 FAN_BONUS = 50  # the audience's MVP of a show game
+INTRO_SECONDS = 45.0  # "how to play" before every game; it starts sooner once everyone taps Ready
 
 
 class HubError(Exception):
@@ -120,6 +121,12 @@ class Room:
     season_no: int = 0  # shows finished in this room
     season: dict[str, dict[str, int]] = field(default_factory=dict)  # pid -> {"wins", "points"}
     last_show: dict[str, Any] = field(default_factory=dict)  # for the rematch button
+    # The "how to play" screen before a game: {"game", "options", "slot"}; the game is built at the end.
+    intro: dict[str, Any] = field(default_factory=dict)
+    intro_until: float = 0.0
+    ready: set[str] = field(default_factory=set)  # who tapped Ready (intro, or a skippable results screen)
+    ready_stage: str = ""  # the game stage those votes are for
+    last_standings: list[dict[str, Any]] = field(default_factory=list)  # the last finale, kept for the lobby
     last_active: float = 0.0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -139,6 +146,7 @@ class Hub:
         on_game_finished: Callable[[str, dict[str, Any]], None] | None = None,
         on_game_started: Callable[[str, str], None] | None = None,  # (game id, show pack)
         timings: dict[str, dict[str, float]] | None = None,
+        intro_seconds: float = INTRO_SECONDS,  # 0 = games start straight away (used by unit tests)
     ) -> None:
         self.settings = settings
         self.clock = clock
@@ -147,6 +155,7 @@ class Hub:
         self.on_game_finished = on_game_finished
         self.on_game_started = on_game_started
         self.timings = timings or {}
+        self.intro_seconds = intro_seconds
         self.send_timeout = 5.0  # a socket that can't take a frame this long is dropped
         self._mail: dict[Connection, dict[str, Any]] = {}
         self._tasks: set[asyncio.Task[None]] = set()
@@ -337,6 +346,9 @@ class Hub:
                 "bonus": showlib.RIVAL_BONUS,
             },
             "season": {"number": room.season_no, "table": room.season} if room.season_no else None,
+            "intro": self._intro_view(room) if room.phase == "intro" else None,
+            "ready": self._ready_view(room),
+            "last_standings": room.last_standings if room.phase == "lobby" else [],
             "players": [
                 {
                     "id": p.id,
@@ -350,6 +362,7 @@ class Hub:
             "games": catalog() if between else [],
             "game": game_view,
             "stage": room.game.stage if room.game is not None else None,
+            "how_to": list(room.game.HOW_TO) if game_view is not None and room.game is not None else [],
         }
 
     @staticmethod
@@ -369,6 +382,35 @@ class Hub:
             "awards": s.awards if s.finished else [],
             "market": s.market is not None,
             "can_rematch": bool(room.last_show),
+        }
+
+    def _intro_view(self, room: Room) -> dict[str, Any]:
+        gid = room.intro.get("game", "")
+        cls = Jackpot if gid == "jackpot" else REGISTRY.get(gid)
+        online = [p.id for p in room.connected_players()]
+        return {
+            "game": gid,
+            "title": cls.title if cls else gid,
+            "blurb": cls.blurb if cls else "",
+            "how_to": list(cls.HOW_TO) if cls else [],
+            "options": dict(room.intro.get("options", {})),
+            "closes_in": max(0.0, room.intro_until - self.clock()),
+            "ready": sorted(p for p in room.ready if p in online),
+            "needed": len(online),
+        }
+
+    def _ready_view(self, room: Room) -> dict[str, Any]:
+        """A results/briefing screen everyone can skip together."""
+        g = room.game
+        open_ = room.phase == "game" and g is not None and not g.finished and g.phase in g.READING
+        votes = sorted(room.ready) if open_ and room.ready_stage == (g.stage if g else "") else []
+        return {
+            "open": open_,
+            "stage": g.stage if open_ and g is not None else "",
+            "votes": votes,
+            "needed": len([p for p in g.player_ids if room.players.get(p) and room.players[p].connected])
+            if open_ and g is not None
+            else 0,
         }
 
     def _cards_view(self, room: Room, pid: str) -> dict[str, Any] | None:
@@ -573,6 +615,7 @@ class Hub:
 
     def _begin(self, room: Room, game: Game) -> None:
         room.game, room.phase = game, "game"
+        room.ready, room.ready_stage, room.last_standings = set(), "", []
         room.predictions, room.highlights, room.quip = {}, [], ""
         room.card_news, room.rival_news, room.rivals, room.mvp_votes = [], [], [], {}
         s = room.show
@@ -612,18 +655,58 @@ class Hub:
         self._award_mvp(room)
         nxt = s.next_game()
         if nxt == "jackpot":
-            stakes = {p.id: room.total_scores.get(p.id, 0) for p in room.players.values()}
-            self._begin(room, self._make_game(room, Jackpot, stakes=stakes))
-            s.jackpot_played = True
+            self._open_intro(room, "jackpot", slot="jackpot")
         elif nxt is not None:
-            game = self._make_game(room, REGISTRY[nxt])  # raises (e.g. too few players) before anything moves
+            self._make_game(room, REGISTRY[nxt])  # raises (e.g. too few players) before anything moves
             if s.market is not None:
                 self._open_market(room, nxt)
             else:
-                self._begin(room, game)
-                s.started += 1
+                self._open_intro(room, nxt, slot="playlist")
         else:
             self._finale(room, s)
+
+    def _open_intro(
+        self, room: Room, game_id: str, options: dict[str, str] | None = None, slot: str = ""
+    ) -> None:
+        """The "how to play" screen. The game is built (and its clocks start) only when it ends."""
+        room.intro = {"game": game_id, "options": dict(options or {}), "slot": slot}
+        room.ready = set()
+        room.predictions, room.highlights, room.quip = {}, [], ""
+        if self.intro_seconds <= 0:
+            self._close_intro(room)
+            return
+        room.game, room.phase = None, "intro"
+        room.intro_until = self.clock() + self.intro_seconds
+
+    def _close_intro(self, room: Room) -> None:
+        i, s = room.intro, room.show
+        if not i:
+            return
+        room.intro, room.ready = {}, set()
+        try:
+            if i["game"] == "jackpot":
+                stakes = {p.id: room.total_scores.get(p.id, 0) for p in room.players.values()}
+                game = self._make_game(room, Jackpot, stakes=stakes)
+            else:
+                game = self._make_game(room, REGISTRY[i["game"]], options=i["options"])
+        except (GameError, HubError):
+            # Someone left during the intro and the game can't run.
+            if s is not None and i["slot"] == "playlist":
+                s.started += 1
+                room.phase = "results"
+                self._start_next(room, s)
+            elif s is not None and i["slot"] == "jackpot":
+                s.jackpot_played = True
+                room.phase = "results"
+                self._start_next(room, s)
+            else:
+                room.game, room.phase = None, "lobby"
+            return
+        self._begin(room, game)
+        if s is not None and i["slot"] == "playlist":
+            s.started += 1
+        elif s is not None and i["slot"] == "jackpot":
+            s.jackpot_played = True
 
     def _open_market(self, room: Room, game_id: str) -> None:
         """Trading window before a show game. The game itself is built when the bell rings."""
@@ -646,27 +729,47 @@ class Hub:
         s = room.show
         if s is None or room.phase != "market":
             return
-        try:
-            game = self._make_game(room, REGISTRY[room.market_next])
-        except (GameError, HubError):
-            # Someone left during trading and the game can't run: skip it and move on.
-            s.started += 1
-            room.phase = "results"
-            self._start_next(room, s)
-            return
-        self._begin(room, game)
-        s.started += 1
+        self._open_intro(room, room.market_next, slot="playlist")
 
     def _start_show(self, room: Room, games: list[str], jackpot: bool, market: bool) -> None:
         game = self._make_game(room, REGISTRY[games[0]])  # raises before anything changes
         room.total_scores = {p: 0 for p in room.players}  # a new show, a fresh scoreboard
         room.last_show = {"games": list(games), "jackpot": jackpot, "market": market}
+        del game  # only built to check the room can play it
         if market:
             room.show = showlib.Show(playlist=list(games), jackpot=jackpot, market=showlib.Market())
             self._open_market(room, games[0])
         else:
-            room.show = showlib.Show(playlist=list(games), jackpot=jackpot, started=1)
-            self._begin(room, game)
+            room.show = showlib.Show(playlist=list(games), jackpot=jackpot)
+            self._open_intro(room, games[0], slot="playlist")
+
+    def _ready(self, room: Room, pid: str, msg: dict[str, Any]) -> bool:
+        """Ready votes: on the intro, everyone online starts the game; on a results/briefing screen,
+        everyone in the game moves it on. Nobody can be rushed: it takes every single vote."""
+        if pid not in room.players:
+            raise HubError("players_only", "Only contestants can do that")
+        online = {p.id for p in room.connected_players()}
+        if room.phase == "intro":
+            room.ready.add(pid)
+            if online <= room.ready:
+                self._close_intro(room)
+            return True
+        g = room.game
+        if room.phase != "game" or g is None or g.finished or g.phase not in g.READING:
+            raise HubError("not_now", "Nothing to skip right now")
+        seen = msg.get("stage")
+        if not isinstance(seen, str) or seen != g.stage:
+            return False  # that screen already moved on
+        if pid not in g.player_ids:
+            raise HubError("players_only", "You're not in this game")
+        if room.ready_stage != g.stage:
+            room.ready_stage, room.ready = g.stage, set()
+        room.ready.add(pid)
+        if {p for p in g.player_ids if p in online} <= room.ready:
+            room.ready, room.ready_stage = set(), ""
+            g.advance()
+            self._maybe_finish(room)
+        return True
 
     def _play_card(self, room: Room, pid: str, msg: dict[str, Any]) -> bool:
         """Play your one power card on the game being played. Secret until that game's results."""
@@ -763,19 +866,22 @@ class Hub:
         if kind == "start":
             if not is_host:
                 raise HubError("not_host", "Only the host can start a game", 403)
-            if room.phase == "game":
+            if room.phase in ("game", "intro", "market"):
                 raise HubError("in_progress", "A game is already running", 409)
             cls = REGISTRY.get(msg.get("game")) if isinstance(msg.get("game"), str) else None
             if cls is None:
                 raise HubError("bad_game", "Unknown game")
-            game = self._make_game(room, cls, options=self._options(cls, msg.get("options")))
+            options = self._options(cls, msg.get("options"))
+            self._make_game(room, cls, options=options)  # raises (too few players) before anything changes
             room.show = None  # a one-off game outside any show
-            self._begin(room, game)
+            self._open_intro(room, cls.game_id, options)
             return True
+        if kind == "ready":
+            return self._ready(room, pid, msg)
         if kind == "show":
             if not is_host:
                 raise HubError("not_host", "Only the host can start a show", 403)
-            if room.phase == "game":
+            if room.phase in ("game", "intro", "market"):
                 raise HubError("in_progress", "A game is already running", 409)
             raw = msg.get("games")
             if (
@@ -859,6 +965,9 @@ class Hub:
             if room.phase == "market":  # the host rings the closing bell early
                 self._close_market(room)
                 return True
+            if room.phase == "intro":  # the host starts the game now
+                self._close_intro(room)
+                return True
             if room.game is None or room.phase != "game":
                 raise HubError("no_game", "No game is running")
             seen = msg.get("stage")
@@ -873,6 +982,15 @@ class Hub:
         if kind == "lobby":
             if not is_host:
                 raise HubError("not_host", "Only the host can do that", 403)
+            if room.phase == "finale":  # keep the final standings on the lobby screen
+                room.last_standings = sorted(
+                    (
+                        {"id": p.id, "name": p.name, "total": room.total_scores.get(p.id, 0)}
+                        for p in room.players.values()
+                    ),
+                    key=lambda r: -r["total"],
+                )
+            room.intro, room.ready = {}, set()
             room.game, room.phase, room.show = None, "lobby", None
             room.highlights, room.quip, room.predictions = [], "", {}
             room.rivals, room.rival_news, room.card_news, room.mvp_votes = [], [], [], {}
@@ -992,6 +1110,11 @@ class Hub:
             if room.phase == "market" and self.clock() >= room.market_until:
                 async with room.lock:
                     self._close_market(room)
+                await self.broadcast(room)
+                continue
+            if room.phase == "intro" and self.clock() >= room.intro_until:
+                async with room.lock:
+                    self._close_intro(room)
                 await self.broadcast(room)
                 continue
             game = room.game

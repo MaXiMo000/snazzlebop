@@ -43,12 +43,21 @@ class PriceIsWeird(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Guess the price of a weird item. Closest WITHOUT going over wins the pot.",
+        "Then a sealed chaos spin multiplies the real price (x0.5, x1 or x2): it was locked in "
+        "before anyone guessed.",
+        "You have two chips: sabotage a rival's guess, or double your stake.",
+        "Between items: a quick duel (which costs more? +25). Last round: the Showcase, three "
+        "prizes, one total, triple pot.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["reveal"])
 
     ROUNDS = 5
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"guess": 25.0, "reveal": 10.0, "duel": 12.0}
+        return {"guess": 35.0, "reveal": 15.0, "duel": 18.0}
 
     def start(self) -> None:
         # Single items for rounds 1-4, a 3-prize Showcase for the last, and a pair per Price Duel.

@@ -69,10 +69,18 @@ class RouletteRoyale(Game):
     )
     min_players: ClassVar[int] = 3
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Bet on the wheel: red/black, odd/even, high/low (1:1), a dozen (2:1) or a number (35:1).",
+        "Each spin one of you is secretly the House: they don't bet, they win what the table loses.",
+        "Guess who the House is for +100.",
+        "The House can rig one spin a game. Call an audit if you smell a rat (+100 if right, -50 if not).",
+        "Score: your final chips minus the 1,000 you started with.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["spin"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"bet": 35.0, "spin": 10.0}
+        return {"bet": 45.0, "spin": 15.0}
 
     def start(self) -> None:
         self.chips = {p.id: START_CHIPS for p in self.players}

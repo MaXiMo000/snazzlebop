@@ -8,7 +8,7 @@ server defended itself the way SECURITY.md says it does. Locust exits non-zero i
 
   1 room_of_8         a legit room: 8 sockets connect, play a Price round, all see the reveal
   2 socket_cap        12 sockets from one IP are accepted, the 13th is refused
-  3 message_flood     50 msg/s on one socket is closed with 1008
+  3 message_flood     50 msg/s on one socket is closed with 4008 (slow down)
   4 oversized_frames  a 3 KB frame (app limit 2 KB) and a 20 KB frame (uvicorn 16 KB) close with 1009
   5 slow_reader       a client that never reads is dropped while the room keeps playing
   6 create_flood      a burst of POST /api/rooms gets 429 + Retry-After
@@ -145,8 +145,8 @@ class Suite:
         except (websocket.WebSocketConnectionClosedException, OSError):
             pass
         code = self.close_code(ws, 5)
-        expect(code == 1008, f"flooding socket closed with {code}, expected 1008")
-        return f"sent {sent} msgs at ~50/s; server closed the socket with 1008"
+        expect(code == 4008, f"flooding socket closed with {code}, expected 4008")
+        return f"sent {sent} msgs at ~50/s; server closed the socket with 4008"
 
     def oversized_frames(self) -> str:
         out = []

@@ -99,7 +99,8 @@ Free web instances sleep when idle and drop live rooms; use the Starter plan for
    (Redis) first.
 7. Adding a game: subclass `Game`, register in `games/__init__.py`, add a React screen + type,
    write `view_for` secrecy tests (players AND a TV spectator id), give it a TV (read-only) screen,
-   add it to the lobby catalog (automatic via `catalog()`).
+   add it to the lobby catalog (automatic via `catalog()`). Give it `HOW_TO` (plain rules, shown on the
+   intro screen before it starts) and `READING` (results phases the room can skip together with Ready).
 
 ## Conventions
 

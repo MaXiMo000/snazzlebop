@@ -62,10 +62,11 @@ class BoxesTests(unittest.TestCase):
     def test_soft_close_extends_a_late_bid(self):
         g, clock = make()
         g.advance()
-        clock.t += 14
+        soft = g.timings["soft"]
+        clock.t += g.timings["auction"] - 1  # one second left on the hammer
         g.handle("p0", {"a": "bid", "amount": 10})
-        self.assertAlmostEqual(g.remaining(), 6.0)
-        clock.t += 5
+        self.assertAlmostEqual(g.remaining(), soft)
+        clock.t += soft - 1
         g.tick()
         self.assertEqual(g.phase, "auction")
         clock.t += 1

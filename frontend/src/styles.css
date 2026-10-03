@@ -155,6 +155,9 @@ body {
   background-attachment: fixed;
   overflow-x: hidden;
 }
+html {
+  overflow-x: clip; /* nothing may ever make the page scroll sideways */
+}
 
 h1,
 h2,
@@ -474,7 +477,9 @@ a {
   border-radius: 999px;
   background: var(--bulb);
   color: var(--plum);
-  white-space: nowrap;
+  /* Long chips (rules, banners) wrap on phones instead of running off the screen. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
   --ink: var(--plum); /* lit background: dark ink in both themes */
   --muted: var(--plum-soft);
 }
@@ -731,9 +736,12 @@ button.alert {
 /* ---- game header ------------------------------------------------------------------ */
 .show-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+}
+.show-head .grow {
+  min-width: 0;
 }
 .show-head h2 {
   margin: 6px 0 0;
@@ -1484,8 +1492,12 @@ details summary {
   pointer-events: none;
   padding: 14px 28px;
   font-family: var(--display);
-  font-size: clamp(2rem, 11vw, 4.4rem);
-  white-space: nowrap;
+  font-size: clamp(1.5rem, 8vw, 4.4rem);
+  line-height: 1.1;
+  text-align: center;
+  width: max-content;
+  max-width: min(88vw, 900px);
+  overflow-wrap: anywhere;
   color: var(--plum);
   background: var(--bulb);
   border: 5px solid var(--edge);
@@ -1909,8 +1921,13 @@ h4 {
   12% {
     transform: translateY(-12vh) scale(1.1);
   }
+  85% {
+    opacity: 1;
+  }
   100% {
-    transform: translateY(-110vh) scale(1);
+    /* lvh: past the top even when a phone's address bar is hidden; fade out so nothing lingers */
+    transform: translateY(-125lvh) scale(1);
+    opacity: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2458,3 +2475,48 @@ h4 {
     white-space: nowrap;
   }
 }
+
+/* ---- pacing: rules, ready-up ------------------------------------------------------------------ */
+.how-to-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 1.4em;
+  font-size: 1.05rem;
+  text-align: left;
+}
+.card.stage .how-to-list li::marker {
+  color: var(--bulb);
+  font-family: var(--display);
+}
+details.how-to {
+  padding: 10px 18px;
+  box-shadow: var(--lift-sm);
+}
+details.how-to summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+details.how-to[open] summary {
+  margin-bottom: 10px;
+}
+/* Ready for the next round: pinned to the bottom of the screen on phones so it's always in reach. */
+.ready-bar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: var(--surface);
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+}
+

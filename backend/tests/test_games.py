@@ -114,10 +114,10 @@ class FrenemyTests(unittest.TestCase):
 
     def test_timer_moves_game_forward(self):
         game, clock, _ = make(FrenemyRadar, 3)
-        clock.advance(61)
+        clock.advance(game.timings["rank"] + 1)
         game.tick()
         self.assertEqual(game.phase, "reveal")
-        clock.advance(21)
+        clock.advance(game.timings["reveal"] + 1)
         game.tick()
         self.assertEqual(game.phase, "rank")
         self.assertEqual(game.round, 1)

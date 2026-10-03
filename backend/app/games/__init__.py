@@ -48,6 +48,7 @@ def catalog() -> list[dict[str, object]]:
             "min_players": cls.min_players,
             "max_players": cls.max_players,
             "options": cls.OPTIONS,
+            "how_to": list(cls.HOW_TO),
         }
         for cls in REGISTRY.values()
     ]

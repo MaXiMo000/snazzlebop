@@ -35,7 +35,7 @@ Final run (all PASS, Locust exit code 0):
 | --- | --- | --- | --- |
 | 1 | Room of 8 sockets | 8 players play normally | 8/8 connected, played a Price round, all saw the reveal |
 | 2 | >12 sockets per IP | refused | 12 accepted; the 13th was refused at the handshake (HTTP 403) |
-| 3 | 50 msg/s on one socket | closed 1008 | closed with **1008** (limit is 8 msg/s, burst 16) |
+| 3 | 50 msg/s on one socket | closed 1008 | closed with **1008** (limit is 8 msg/s, burst 16). Since 2026-10-04 the flood close is **4008** so a real player who taps too fast reconnects instead of seeing "room ended" |
 | 4 | Oversized frames | closed 1009 | 3 KB (app limit 2 KB) → **1009** in 1 ms; 20 KB (uvicorn `--ws-max-size 16384`) → **1009** in 1 ms |
 | 5 | Client that never reads | dropped | dropped after **18 s**; 3 readers kept playing (114 host msgs, ~118 frames each, 525 KB delivered); app log: `dropping unresponsive connection` |
 | 6 | Room-creation flood | 429 | 429 from request 6 of 20 (15 refused), `Retry-After: 10` |

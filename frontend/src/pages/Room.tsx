@@ -17,6 +17,7 @@ import {
 } from "../components/show";
 import { MarketFloor, MarketMoves } from "../components/market";
 import { CardReveal, MvpVote, PowerCard, Rivals } from "../components/extras";
+import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
 import { Alibi } from "../games/Alibi";
 import { Frenemy } from "../games/Frenemy";
 import { Blackjack } from "../games/Blackjack";
@@ -128,6 +129,7 @@ function JoinGate({ code, onJoined, go }: { code: string; onJoined: (s: Session)
 
 function Live({ code, session, go, onLeave }: { code: string; session: Session; go: (p: string) => void; onLeave: () => void }) {
   const { state, receivedAt, status, attempt, recovered, error, send, retry, clearError } = useRoom(code, session.token);
+  useScrollToTopOn(`${state?.room.phase}:${state?.stage}:${state?.intro?.game ?? ""}`);
 
   useEffect(() => {
     document.title = `Room ${code} · Snazzlebop`;
@@ -153,7 +155,11 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
     return (
       <Card tone="stage" className="center enter">
         <h2>{status === "kicked" ? "You’ve been removed" : "That’s a wrap"}</h2>
-        <p>{status === "kicked" ? "The host removed you from this room." : "This room has ended, or your seat expired."}</p>
+        <p>
+          {status === "kicked"
+            ? "The host removed you from this room."
+            : "This room has ended. The server may have restarted (for example for an update), or your seat expired. Start a new room to keep playing."}
+        </p>
         <Btn
           variant="gold"
           onClick={() => {
@@ -205,6 +211,13 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       {phase === "lobby" &&
         (audience ? <AudienceLobby state={state} /> : <Lobby state={state} isHost={isHost} send={send} />)}
       {phase === "finale" && state.show && <Finale state={state} isHost={isHost} send={send} />}
+      {phase === "intro" && state.intro && (
+        <>
+          <IntroScreen state={state} receivedAt={receivedAt} send={send} readOnly={audience} />
+          <ReactionBar send={send} />
+          <Contestants players={state.players} you={state.you} title={state.show ? "Show scoreboard" : "Scoreboard"} />
+        </>
+      )}
       {phase === "market" && state.market && (
         <>
           <MarketFloor state={state} receivedAt={receivedAt} send={send} />
@@ -214,7 +227,9 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       )}
       {(phase === "game" || phase === "results") && state.game && (
         <>
+          <HowToPlay lines={state.how_to} />
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
+          {phase === "game" && <ReadyBar state={state} send={send} />}
           {phase === "game" && state.role === "player" && <PowerCard state={state} send={send} />}
           {phase === "game" && state.role !== "player" && <CardsDown state={state} />}
           <Rivals state={state} />
@@ -316,6 +331,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
   }, [code]);
   const { state, receivedAt, status } = useRoom(code, session?.token ?? null);
   const noop = () => undefined;
+  useScrollToTopOn(`${state?.room.phase}:${state?.stage}:${state?.intro?.game ?? ""}`);
 
   if (error || status === "closed" || status === "lost" || status === "kicked") {
     return (
@@ -356,6 +372,11 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
       {state.show && phase !== "lobby" && phase !== "finale" && <ShowStrip show={state.show} />}
       {phase === "finale" && state.show ? (
         <Finale state={state} isHost={false} send={noop} />
+      ) : phase === "intro" && state.intro ? (
+        <div className="tv-split">
+          <IntroScreen state={state} receivedAt={receivedAt} send={noop} readOnly />
+          <Contestants players={state.players} you="" title={state.show ? "Show scoreboard" : "Scoreboard"} />
+        </div>
       ) : phase === "market" && state.market ? (
         <div className="tv-split">
           <MarketFloor state={state} receivedAt={receivedAt} send={noop} tv />
@@ -498,6 +519,7 @@ function AudienceLobby({ state }: { state: RoomState }) {
   const online = state.players.filter((p) => p.connected).length;
   return (
     <div className="stack enter">
+      <LastStandings state={state} />
       <RoomSign state={state} />
       <Contestants players={state.players} you="" title={`Contestants (${online} online)`} />
       <Card tone="soft" className="center">
@@ -561,6 +583,7 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
   return (
     <div className="stack enter">
       <RoomSign state={state} />
+      <LastStandings state={state} />
 
       <Contestants
         players={state.players}

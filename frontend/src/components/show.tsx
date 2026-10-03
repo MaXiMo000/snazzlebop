@@ -69,14 +69,16 @@ export function ReactionBar({ send }: { send: Send }) {
 export function ReactionOverlay({ reactions }: { reactions: Reaction[] }) {
   const seen = useRef<number>(Math.max(0, ...reactions.map((r) => r.id)));
   const [flying, setFlying] = useState<Reaction[]>([]);
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
   useEffect(() => {
     const fresh = reactions.filter((r) => r.id > seen.current);
     if (!fresh.length) return;
     seen.current = Math.max(...fresh.map((r) => r.id));
     setFlying((f) => [...f, ...fresh].slice(-16));
     const ids = new Set(fresh.map((r) => r.id));
-    const t = window.setTimeout(() => setFlying((f) => f.filter((r) => !ids.has(r.id))), 2600);
-    return () => window.clearTimeout(t);
+    // Each batch removes itself. (Clearing this on the next batch left earlier emoji stuck on screen.)
+    timers.current.push(window.setTimeout(() => setFlying((f) => f.filter((r) => !ids.has(r.id))), 2600));
   }, [reactions]);
   if (!flying.length) return null;
   return (

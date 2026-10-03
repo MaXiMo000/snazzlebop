@@ -45,10 +45,18 @@ class WagerWits(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "A question with a number for an answer. Everyone writes a guess.",
+        "The guesses go on a board. Bet your 2 free chips on the one closest WITHOUT going over "
+        "(your own counts too).",
+        "Odds are bigger at the edges of the board. Writing the winning guess: +100.",
+        "The last question is ALL IN: bet your own points on one answer.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["reveal"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"answer": 35.0, "bet": 30.0, "reveal": 12.0}
+        return {"answer": 45.0, "bet": 35.0, "reveal": 15.0}
 
     def start(self) -> None:
         self.questions = [

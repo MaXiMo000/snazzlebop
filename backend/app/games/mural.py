@@ -39,10 +39,20 @@ class MoleInTheMural(Game):
     )
     min_players: ClassVar[int] = 4
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "16 tiles hide one secret painting. Everyone knows which it is except the Mole (two Moles "
+        "with 7-8 players).",
+        "Two hint rounds: secretly tap a tile that shares a colour or a kind with the painting.",
+        "The Mole doesn't know it, so they bluff from everyone else's hints. Once they can swap "
+        "their hint with someone else's.",
+        "Then vote out the Mole. Caught Moles get one guess at the painting to steal points.",
+        "Moles who escape score big; catching them pays everyone else.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["briefing"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"briefing": 20.0, "hint": 40.0, "vote": 40.0, "mole_guess": 25.0}
+        return {"briefing": 30.0, "hint": 50.0, "vote": 50.0, "mole_guess": 30.0}
 
     # -- setup --------------------------------------------------------------
     def start(self) -> None:

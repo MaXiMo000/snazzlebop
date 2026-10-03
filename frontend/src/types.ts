@@ -14,6 +14,8 @@ export interface GameCard {
   max_players: number;
   /** host-chosen settings: name -> allowed values (first is the default) */
   options: Record<string, string[]>;
+  /** plain-language rules */
+  how_to: string[];
 }
 
 export interface GameBase {
@@ -415,7 +417,7 @@ export interface RoomState {
   role: Role;
   room: {
     code: string;
-    phase: "lobby" | "game" | "results" | "finale" | "market";
+    phase: "lobby" | "intro" | "game" | "results" | "finale" | "market";
     host: string;
     title: string;
     locked: boolean;
@@ -431,6 +433,23 @@ export interface RoomState {
   cards: CardsState | null;
   rivals: RivalsState;
   season: SeasonState | null;
+  /** the "how to play" screen before a game */
+  intro: {
+    game: string;
+    title: string;
+    blurb: string;
+    how_to: string[];
+    options: Record<string, string>;
+    closes_in: number;
+    ready: string[];
+    needed: number;
+  } | null;
+  /** a results screen everyone can skip together */
+  ready: { open: boolean; stage: string; votes: string[]; needed: number };
+  /** the running game's rules */
+  how_to: string[];
+  /** lobby: the last show's final standings */
+  last_standings: { id: string; name: string; total: number }[];
   players: PlayerInfo[];
   games: GameCard[];
   game: GameView | null;
@@ -457,6 +476,9 @@ export interface DiceChallenge {
   loser: string | null;
   gained: string | null;
   palifico?: boolean;
+  /** dice showing the bid face, and ones counted as wild (actual = exact + wild) */
+  exact: number;
+  wild: number;
 }
 export interface DiceView extends GameBase {
   game: "dice";

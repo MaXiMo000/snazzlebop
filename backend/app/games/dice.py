@@ -41,10 +41,18 @@ class LiarsDice(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Everyone has secret dice. Bids are about ALL the dice on the table, everyone's together.",
+        "ONES ARE WILD: they count as any face. 'Three fives' means fives plus ones.",
+        "On your turn: raise the bid (more dice, or the same number of a higher face), or call it.",
+        "LIAR! if you think there are fewer. SPOT ON! if you think it's exactly right (win a die back).",
+        "Whoever's wrong loses a die. Lose them all and you're out. Last one rolling wins.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["reveal"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"turn": 30.0, "reveal": 8.0}
+        return {"turn": 40.0, "reveal": 15.0}
 
     def start(self) -> None:
         self.start_dice = dice_for(len(self.players))
@@ -95,6 +103,7 @@ class LiarsDice(Game):
         if bid is None:  # handle() already refuses this; kept so the type is narrowed honestly
             raise GameError("bad_input", "There's no bid to challenge yet")
         actual = self.count_face(bid["face"])
+        on_face = sum(1 for ds in self.dice.values() for d in ds if d == bid["face"])
         if kind == "liar":
             loser = bid["player"] if actual < bid["qty"] else caller
             winner_back = None
@@ -116,6 +125,8 @@ class LiarsDice(Game):
             "caller": caller,
             "bid": dict(bid),
             "actual": actual,
+            "exact": on_face,  # dice showing the face itself
+            "wild": actual - on_face,  # ones counted as that face (0 in a Palifico round)
             "loser": loser,
             "gained": winner_back,
             "palifico": self.palifico,

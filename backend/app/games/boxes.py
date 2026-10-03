@@ -60,10 +60,17 @@ class MysteryBoxes(Game):
     )
     min_players: ClassVar[int] = 3
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Six sealed boxes: three prizes, one empty dud, two bombs (they cost points).",
+        "Before bidding you secretly peek inside one box. Nobody knows who saw what.",
+        "Boxes are auctioned one at a time. Bid with your 600 coins; a late bid adds time.",
+        "Win a box: score its value minus what you paid. Make one claim per box, true or a bluff.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["peek", "sold"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"peek": 10.0, "auction": 15.0, "soft": 6.0, "sold": 6.0}
+        return {"peek": 15.0, "auction": 20.0, "soft": 8.0, "sold": 10.0}
 
     def start(self) -> None:
         prizes = [PRIZES[i] for i in self.deal("prizes", len(PRIZES), 3)]

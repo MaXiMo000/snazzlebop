@@ -41,10 +41,18 @@ class SplitOrSteal(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Each round you're paired with someone over a pot of points.",
+        "Talk first (canned lines only), then secretly choose SPLIT or STEAL.",
+        "Both split: share it. One steals: they take it all. Both steal: nobody gets anything.",
+        "Everyone's record of splits and steals is public, so grudges build.",
+        "Last round is the Golden Pot: everyone in one pot. One thief takes it all, two or more get nothing.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["reveal", "talk"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"talk": 10.0, "choose": 20.0, "reveal": 9.0}
+        return {"talk": 12.0, "choose": 25.0, "reveal": 14.0}
 
     def start(self) -> None:
         self.met: set[frozenset[str]] = set()

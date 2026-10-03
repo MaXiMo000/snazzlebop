@@ -42,10 +42,17 @@ class ChickenRun(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "The pot climbs every second. Tap CASH OUT to bank what it's worth right then.",
+        "A hidden bomb goes off somewhere between 4 and 24 seconds. Still in? You get nothing.",
+        "Biggest cash-out of the round gets +50 for nerve.",
+        "Before each run: buy insurance (keep 25% if you blow up), or once a game shorten a rival's fuse.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["boom", "ready"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"ready": 8.0, "boom": 7.0}
+        return {"ready": 12.0, "boom": 10.0}
 
     def start(self) -> None:
         self.history: list[dict[str, Any]] = []

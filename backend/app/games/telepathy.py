@@ -33,12 +33,20 @@ class TelepathyTax(Game):
     )
     min_players: ClassVar[int] = 3
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Each round: a category and six answers. Secretly pick one.",
+        "You score 100 for every other player who picked the same thing as you.",
+        "The tax: if MORE than half the room picked it, it was too obvious and nobody scores it.",
+        "Score in back-to-back rounds for a streak bonus. In the Contrarian round, only a pick "
+        "nobody else made scores.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["reveal"])
 
     ROUNDS = 6
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"pick": 30.0, "reveal": 12.0}
+        return {"pick": 35.0, "reveal": 15.0}
 
     def start(self) -> None:
         self.categories = [

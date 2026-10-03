@@ -8,7 +8,7 @@ import unittest
 from typing import Any
 
 from app.config import Settings
-from app.rooms import Hub, HubError, clean_name
+from app.rooms import INTRO_SECONDS, Hub, HubError, clean_name
 
 FAST = {
     "frenemy": {"rank": 5, "reveal": 2},
@@ -60,7 +60,7 @@ class NameTests(unittest.TestCase):
 class HubHarness(unittest.IsolatedAsyncioTestCase):
     """Helpers only (no tests), so other modules can build hubs without re-running these tests."""
 
-    def make_hub(self, **overrides):
+    def make_hub(self, intro=False, **overrides):
         settings = Settings(secret_key="s" * 40, **overrides)
         self.finished: list[tuple[str, dict]] = []
         self.clock = Clock()
@@ -70,6 +70,7 @@ class HubHarness(unittest.IsolatedAsyncioTestCase):
             rng=random.Random(3),
             on_game_finished=lambda g, s: self.finished.append((g, s)),
             timings=FAST,
+            intro_seconds=INTRO_SECONDS if intro else 0,  # most tests go straight into the game
         )
 
     async def party(self, hub, n):
@@ -205,7 +206,7 @@ class HubTests(HubHarness):
         self.clock.t += 3
         await hub.tick()
         self.assertEqual(room.game.phase, "duel")
-        self.clock.t += 13
+        self.clock.t += room.game.timings["duel"] + 1
         await hub.tick()
         self.assertEqual(room.game.phase, "guess")
 

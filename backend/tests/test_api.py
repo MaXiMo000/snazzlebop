@@ -191,8 +191,9 @@ def test_ws_message_limits(tmp_path):
             assert auth(ws, room["token"])["t"] == "state"
             for _ in range(50):
                 ws.send_json({"t": "ping"})
-            with pytest.raises(WebSocketDisconnect):
+            with pytest.raises(WebSocketDisconnect) as closed:
                 ws.receive_json()  # the server never answers pings; the flood closes the socket
+            assert closed.value.code == 4008  # "slow down": the client reconnects, not "room ended"
         room2 = make_room(c, "Big")
         with c.websocket_connect(f"/ws/{room2['code']}") as ws:
             auth(ws, room2["token"])
@@ -231,6 +232,14 @@ def test_full_price_game_over_websockets(client):
         err = wg.receive_json()
         assert err["t"] == "error" and err["code"] == "not_host"
         wh.send_json({"t": "start", "game": "price"})
+        state = wh.receive_json()
+        # First the "how to play" screen; it starts once everyone online taps Ready.
+        assert state["room"]["phase"] == "intro" and state["game"] is None
+        assert state["intro"]["game"] == "price" and state["intro"]["how_to"]
+        wh.send_json({"t": "ready"})
+        state = wh.receive_json()
+        assert state["room"]["phase"] == "intro" and state["intro"]["ready"] == [host["player_id"]]
+        wg.send_json({"t": "ready"})
         state = wh.receive_json()
         assert state["room"]["phase"] == "game" and state["game"]["phase"] == "guess"
         assert "true_price" not in str(state)

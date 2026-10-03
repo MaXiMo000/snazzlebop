@@ -48,10 +48,17 @@ class CodeCrackers(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Hide a secret code of 4 fruits (repeats allowed).",
+        "Then race to crack everyone else's. Each guess tells you: ● right fruit, right place; ○ "
+        "right fruit, wrong place.",
+        "First to crack a code: +300, second +200, then +100. A code nobody cracks: +200 to its owner.",
+        "Buy a hint (-50), or arm a decoy so the first guess on your code gets fake clues.",
+    )
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"set": 30.0, "crack": 240.0}
+        return {"set": 45.0, "crack": 300.0}
 
     def start(self) -> None:
         self.codes: dict[str, list[int]] = {}

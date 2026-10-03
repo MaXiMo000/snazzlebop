@@ -316,7 +316,7 @@ class Bot:
         return f"{stage} {locked}closed={self.closed} errors={self.errors[-5:]}"
 
     async def send(self, **msg: Any) -> None:
-        # The server closes sockets that exceed 8 msg/s (burst 16) with 1008. Bots run at machine
+        # The server closes sockets that exceed 8 msg/s (burst 16) with 4008. Bots run at machine
         # speed, so pace them at 5/s: still far faster than a human, never a flood.
         loop = asyncio.get_running_loop()
         wait = self.next_send - loop.time()
@@ -1326,6 +1326,14 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await host.send(t="start", game=game, options={"mode": "teams"})
             else:
                 await host.send(t="start", game=game)
+            # Every game opens with a "how to play" screen; it starts once every player taps Ready.
+            await all_until(bots, lambda s: s["room"]["phase"] == "intro", f"{game} intro")
+            check(bool(host.state["intro"]["how_to"]), f"{game}: the intro has no rules")  # type: ignore[index]
+            for b in bots:
+                await b.send(t="ready")
+            await all_until(
+                bots, lambda s: s["room"]["phase"] == "game", f"{game} starts after everyone is ready"
+            )
             if game == "frenemy":
                 await play_frenemy(host, bots, rng)
             elif game == "alibi":

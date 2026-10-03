@@ -115,12 +115,19 @@ class CrosswordRace(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "A brand-new crossword. Tap a clue, type the answer.",
+        "First right answer takes the word: 40 points + 10 per letter.",
+        "A wrong answer locks you out for 2 seconds. Letters appear as hints over time, and you can"
+        " buy one private letter.",
+        "Team mode: two teams race to fill the same grid.",
+    )
     OPTIONS: ClassVar[dict[str, list[str]]] = {"mode": ["race", "teams"]}
     TEAMS_MIN = 4
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"solve": 240.0}
+        return {"solve": 300.0}
 
     def start(self) -> None:
         self.mode = self.options.get("mode", "race")

@@ -152,6 +152,16 @@ class LiarsDiceTests(unittest.TestCase):
             self.assertEqual(len(g.alive()), 1)
 
 
+class RevealBreakdownTests(unittest.TestCase):
+    def test_the_reveal_splits_real_faces_from_wild_ones(self):
+        g = make(3)
+        rig(g, {"p0": [1, 5], "p1": [5, 5, 6], "p2": [1, 2, 4]})
+        g.handle("p0", {"a": "bid", "qty": 3, "face": 5})
+        g.handle("p1", {"a": "spot"})
+        self.assertEqual((g.last["actual"], g.last["exact"], g.last["wild"]), (5, 3, 2))
+        self.assertEqual(g.history[-1]["wild"], 2)
+
+
 class PalificoTests(unittest.TestCase):
     def drop_to_one(self, n=3):
         """p0 bids five 6s with no 6s or ones anywhere: p1 calls liar, p0 drops to their last die."""

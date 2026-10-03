@@ -47,6 +47,9 @@ lower), and themed show packs. Also:
 | --- | --- | --- |
 | ![Mural on a phone](docs/screenshots/mural-mobile.png) | ![Alibi on a phone](docs/screenshots/alibi-mobile.png) | ![TV mode](docs/screenshots/tv.png) |
 
+Every game opens with a short "how to play" screen that starts once everyone taps Ready, results
+screens move on as soon as everyone is ready, and the rules stay one tap away during play.
+
 Also: a dark theme by default ("after hours" neon studio) with a light toggle, TV mode (read-only big-screen view), host tools (rename the show, lock the room, remove a player),
 reconnect into the same seat, generated sound effects (off by default), reduced-motion support, and a web app manifest
 so phones can add it to the home screen (no service worker: the game needs a live connection anyway).

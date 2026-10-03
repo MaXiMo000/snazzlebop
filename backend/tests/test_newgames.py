@@ -87,7 +87,7 @@ class TelepathyTests(unittest.TestCase):
         game = TelepathyTax(players, rng=random.Random(2), clock=lambda: clock[0])
         game.start()
         game.handle("p0", {"a": "pick", "option": 0})
-        clock[0] += 31
+        clock[0] += game.timings["pick"] + 1
         game.tick()
         self.assertEqual(game.phase, "reveal")
         self.assertEqual(game.view_for("p0")["result"]["points"], {"p0": 0})

@@ -38,10 +38,17 @@ class LowestLonely(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Everyone secretly picks a number from 1 to 20.",
+        "The LOWEST number that NOBODY ELSE picked wins the pot.",
+        "Same number as someone else? Both knocked out. So is 1 too obvious?",
+        "No lonely number? The pot rolls over. The last round pays double.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["reveal"])
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"pick": 12.0, "reveal": 6.0}
+        return {"pick": 20.0, "reveal": 12.0}
 
     def start(self) -> None:
         self.history: list[dict[str, Any]] = []

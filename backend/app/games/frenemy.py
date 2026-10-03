@@ -21,12 +21,20 @@ class FrenemyRadar(Game):
     )
     min_players: ClassVar[int] = 3
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Each round names a trait, like 'most likely to survive a zombie movie'.",
+        "Secretly rank EVERYONE on it, yourself included, then lock in.",
+        "Bonus: guess where the room will put you (+50 spot on, +25 one off).",
+        "The reveal shows your blind spot: where you put yourself vs where the others did. The "
+        "closer you are to how the room sees you, the more you score.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["reveal"])
 
     ROUNDS = 3
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"rank": 60.0, "reveal": 20.0}
+        return {"rank": 75.0, "reveal": 25.0}
 
     def start(self) -> None:
         self.prompts = [PROMPTS[i] for i in self.deal("prompts", len(PROMPTS), self.ROUNDS, kind="frenemy")]

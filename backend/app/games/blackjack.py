@@ -66,6 +66,14 @@ class BlackjackShowdown(Game):
     )
     min_players: ClassVar[int] = 1
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "Everyone plays the dealer (not each other). Get closer to 21 than the dealer without going over.",
+        "Bet, then hit, stand, double or split. Blackjack pays 3:2. Dealer stands on soft 17.",
+        "Side bet on a friend's hand if you think they'll win.",
+        "One secret Chaos hand changes a rule. In tournament mode the lowest stack is knocked out.",
+        "Your score is the chips you end with minus the 1,000 you started with.",
+    )
+    READING: ClassVar[frozenset[str]] = frozenset(["settle"])
     OPTIONS: ClassVar[dict[str, list[str]]] = {"mode": ["classic", "tournament"]}
 
     HANDS = 5
@@ -73,7 +81,7 @@ class BlackjackShowdown(Game):
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"bet": 25.0, "turn": 25.0, "settle": 9.0}
+        return {"bet": 30.0, "turn": 30.0, "settle": 14.0}
 
     # -- setup --------------------------------------------------------------
     def start(self) -> None:

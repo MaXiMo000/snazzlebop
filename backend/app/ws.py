@@ -14,6 +14,8 @@ from fastapi import WebSocket
 from .rooms import Hub, Room
 from .security import RateLimiter, client_ip, verify_token
 
+FLOOD = 4008  # WebSocket close: too many messages; reconnecting is allowed
+
 log = logging.getLogger("snazzlebop.ws")
 
 
@@ -132,7 +134,9 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
                 await _close(ws, 1009)
                 break
             if not bucket.allow("c"):
-                await _close(ws, 1008)
+                # 4008 "slow down", not 1008: the client may reconnect (the handshake is rate limited
+                # too), so a burst of taps never looks like "the room has ended".
+                await _close(ws, FLOOD)
                 break
             try:
                 msg = json.loads(text)

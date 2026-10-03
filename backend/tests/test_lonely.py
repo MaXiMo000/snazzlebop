@@ -67,7 +67,7 @@ class LonelyTests(unittest.TestCase):
     def test_no_pick_sits_the_round_out(self):
         g, clock = make(3)
         g.handle("p0", {"a": "pick", "n": 4})
-        clock.t += 13
+        clock.t += g.timings["pick"] + 1
         g.tick()
         self.assertEqual(g.phase, "reveal")
         self.assertEqual(g.result["winner"], "p0")

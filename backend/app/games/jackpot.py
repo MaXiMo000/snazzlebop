@@ -24,6 +24,11 @@ class Jackpot(Game):
     blurb: ClassVar[str] = "Wager your show score: is the real price higher or lower?"
     min_players: ClassVar[int] = 1
     max_players: ClassVar[int] = 8
+    HOW_TO: ClassVar[tuple[str, ...]] = (
+        "The finale. One weird item with a price tag that's wrong on purpose.",
+        "Secretly wager some of your show score: is the real price HIGHER or LOWER than the tag?",
+        "Right: win your wager. Wrong: lose it. Everyone can bet at least 200.",
+    )
 
     def __init__(
         self,
@@ -38,7 +43,7 @@ class Jackpot(Game):
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"wager": 40.0}
+        return {"wager": 45.0}
 
     def cap(self, pid: str) -> int:
         return max(self.stakes.get(pid, 0), FLOOR)
