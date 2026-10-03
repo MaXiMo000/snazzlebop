@@ -15,6 +15,7 @@ import {
   ShowStrip,
   ThemePicker,
 } from "../components/show";
+import { MarketFloor, MarketMoves } from "../components/market";
 import { Alibi } from "../games/Alibi";
 import { Frenemy } from "../games/Frenemy";
 import { Blackjack } from "../games/Blackjack";
@@ -201,6 +202,13 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       {phase === "lobby" &&
         (audience ? <AudienceLobby state={state} /> : <Lobby state={state} isHost={isHost} send={send} />)}
       {phase === "finale" && state.show && <Finale state={state} isHost={isHost} send={send} />}
+      {phase === "market" && state.market && (
+        <>
+          <MarketFloor state={state} receivedAt={receivedAt} send={send} tv={audience} />
+          <ReactionBar send={send} />
+          <Contestants players={state.players} you={state.you} title="Show scoreboard" />
+        </>
+      )}
       {(phase === "game" || phase === "results") && state.game && (
         <>
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
@@ -208,6 +216,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
             <>
               <HostLine quip={state.quip} />
               <Highlights items={state.highlights} />
+              {state.market && <MarketMoves m={state.market} players={state.players} />}
             </>
           )}
           <ReactionBar send={send} />
@@ -335,6 +344,11 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
       {state.show && phase !== "lobby" && phase !== "finale" && <ShowStrip show={state.show} />}
       {phase === "finale" && state.show ? (
         <Finale state={state} isHost={false} send={noop} />
+      ) : phase === "market" && state.market ? (
+        <div className="tv-split">
+          <MarketFloor state={state} receivedAt={receivedAt} send={noop} tv />
+          <Contestants players={state.players} you="" title="Show scoreboard" />
+        </div>
       ) : phase === "lobby" || !state.game ? (
         <div className="tv-split">
           <Card tone="stage" className="center">

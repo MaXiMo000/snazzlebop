@@ -143,7 +143,7 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
                 {(view.you.guesses[current] ?? []).map((g, i) => (
                   <li key={i}>
                     <Code code={g.code} label={`Guess ${i + 1}`} />
-                    <span className="pegs" aria-label={`${g.hits} right place, ${g.near} wrong place`}>
+                    <span className="pegs" role="img" aria-label={`${g.hits} right place, ${g.near} wrong place`}>
                       <span aria-hidden="true">
                         {"●".repeat(g.hits)}
                         {"○".repeat(g.near)}

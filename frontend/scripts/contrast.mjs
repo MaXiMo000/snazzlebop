@@ -72,6 +72,7 @@ const pairs = [
   ["#ffffff", "#3d4fa3", "Wager Wits segment"],
   ["#ffffff", "#5c4a1f", "Code Crackers segment"],
   ["#ffffff", "#7a1f3d", "Roulette segment"],
+  ["#ffffff", "#14532d", "Stock Exchange segment"],
   ["plum", "#f6dbe4", "Roulette soft cards"],
   ["plum-soft", "#f6dbe4", "muted in Roulette soft"],
   ["#ffffff", "#b3122e", "red pockets"],

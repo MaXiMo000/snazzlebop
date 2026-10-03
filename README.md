@@ -1,21 +1,33 @@
 # Snazzlebop!
 
-The party game show where your friends are the contestants. 3-8 players, one room code, no sign-up.
+The party game show where your friends are the contestants. 1-8 players (plus an audience), one room code, no sign-up.
 Put the show on a TV, play from your phones.
 
-**Live:** _not deployed yet_. See [Deploy](#deploy).
+**Live:** https://snazzlebop.onrender.com (free plan: the first visit can take a minute to wake up).
 
 ![Home page](docs/screenshots/home.png)
 
 | Game | Players | What happens |
 | --- | --- | --- |
-| **Frenemy Radar** | 3-8 | Everyone secretly ranks everyone (themselves too) on silly traits. The reveal shows your *blind spot*: where your self-image clashes with the room. Ends with a shareable result card. |
-| **Alibi** | 4-8 | A killer with a partly fake alibi hides among innocents (one of whom has a hazy memory). Grill each other, watch the board flag contradictions, vote. |
-| **Price Is Weird** | 2-8 | Guess what absurd things cost. Closest without going over wins. Sabotage a rival, survive the rigged round, go double or nothing on the last item. |
-| **Telepathy Tax** | 3-8 | Score for every mind that matches yours, but if more than half the room picks it, the tax collector takes the lot. |
-| **Mole in the Mural** | 4-8 | Everyone knows the secret tile except the Mole. Hint with tiles that share a colour or kind, then unmask the bluffer. |
-| **Blackjack Showdown** | 2-8 | The whole room against one dealer. Five hands, 1,000 chips each: hit, stand, double, split. Biggest stack wins. |
-| **Crossword Race** | 2-8 | A fresh grid every game. First right answer takes the clue; wrong guesses cost you a beat. |
+| **Frenemy Radar** | 3-8 | Secretly rank everyone (yourself too) on flattering traits; see your *blind spot*. Guess where the room puts you (mirror check). Finale: total frenemies, mutual fans, a shareable card. |
+| **Alibi** | 4-8 | A killer with a partly fake alibi hides among innocents. Grill each other, watch contradictions light up, one **Objection!** each, and the killer can plant one fake camera clue. Vote. |
+| **Price Is Weird** | 2-8 | Closest guess without going over wins, then the sealed chaos spin. Sabotage, a rigged round, price duels between items, and a 3-prize **Showcase** with double or nothing. |
+| **Telepathy Tax** | 3-8 | Score for every mind that matches yours, unless over half the room does (taxed!). Streak bonuses and a contrarian round. |
+| **Mole in the Mural** | 4-8 | Everyone knows the secret tile except the Mole (two Moles at 7-8). Hint by colour or kind, spot the bluffer; Moles get one sneaky hint **Switcheroo**. |
+| **Blackjack Showdown** | 1-8 | Solo or the whole room against the dealer: split, double, side bets on friends, a secret **Chaos hand**, and a knockout tournament mode. |
+| **Crossword Race** | 2-8 | A fresh grid every game. First right answer takes the clue; buy a private letter; or play in two teams. |
+| **Liar's Dice** | 2-8 | Secret dice, public bids on the whole table (ones wild). Raise, call **Liar!** or **Spot on!** Last one rolling wins. |
+| **Split or Steal** | 2-8 | Paired every round over a pot: both split, share; one steals, they take it; both steal, nobody does. Everyone's record is public. |
+| **Chicken Run** | 2-8 | The pot climbs every second; cash out before the hidden bomb goes off. |
+| **Wager Wits** | 2-8 | Answer a number question, then bet chips on whose answer is closest without going over. Win without knowing a thing. |
+| **Code Crackers** | 2-8 | Hide a 4-fruit code, then race to crack everyone else's with Mastermind clues. |
+| **Roulette Royale** | 3-8 | Bet on the wheel while one of you is secretly the House, winning what the table loses. Spot the House for a bonus. |
+
+**Show night.** Pick 2-6 games for one scoreboard: the host's one-liners after every game, a highlight
+reel and awards at the finale, an optional **Jackpot** finale (everyone wagers their score on higher or
+lower), themed show packs, and the optional **Friend Stock Exchange**: before every game everyone trades
+shares in each other, prices move with how people actually do, and net worth turns into points at the
+end. Up to 30 more people can join as the **audience** to react and predict winners.
 
 | Lobby | Blackjack | Crossword |
 | --- | --- | --- |
@@ -80,11 +92,11 @@ domain, follow "Client IP and Cloudflare" in [SECURITY.md](SECURITY.md).
 Run locally on Windows 11 + Docker Desktop against the production image (details and output in
 [docs/SECURITY-EVIDENCE.md](docs/SECURITY-EVIDENCE.md)):
 
-- 136 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
+- 251 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
   middleware, config rules, content validation), ruff, bandit, pip-audit.
-- Simulator: bots play all seven games over real WebSockets, scores are recomputed from the rules, and
+- Simulator: bots play all thirteen games over real WebSockets, scores are recomputed from the rules, and
   no frame ever carries another player's secret.
-- Playwright on 390 px and desktop: 14 tests including axe, keyboard, TV mode, host tools, reconnect.
+- Playwright on 390 px and desktop: 20 tests including axe, keyboard, TV mode, host tools, reconnect.
 - Locust abuse suite (rate limits, socket caps, oversize/flood closes, slow reader), OWASP ZAP
   baseline, Lighthouse (home 100 a11y/best practices/SEO), colour contrast for every pair.
 - Image: Trivy CRITICAL/HIGH (fixable) clean, gitleaks over full history clean.
@@ -93,11 +105,8 @@ Run locally on Windows 11 + Docker Desktop against the production image (details
 
 **Not verified yet:**
 
-- The live Render deployment and the launch checklist against it.
 - Cloudflare: the edge steps are written from documented behaviour and the edge-secret check is tested
   locally, but the hop count has not been checked through a real Cloudflare → Render chain.
-- Claude content generation against the real API. It's unit-tested with a stubbed client; no key has
-  been used yet.
 
 **Limits by design:** one instance with in-memory rooms and rate limits (a restart ends live games),
 anonymous play (many IPs can make many players), and no external security review or pen test. This is

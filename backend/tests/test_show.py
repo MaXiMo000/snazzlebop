@@ -341,3 +341,102 @@ class AwardTests(unittest.TestCase):
         )
         self.assertEqual(awards[2]["title"], "Steady hand")
         self.assertIn("Bo", awards[2]["text"])
+
+
+class MarketTests(unittest.TestCase):
+    def market(self, *pids):
+        m = showlib.Market()
+        for p in pids:
+            m.seat(p)
+        return m
+
+    def test_buying_selling_and_limits(self):
+        m = self.market("a", "b")
+        m.trade("a", "b", 5)
+        self.assertEqual((m.cash["a"], m.holdings["a"]), (500, {"b": 5}))
+        m.trade("a", "b", -2)
+        self.assertEqual((m.cash["a"], m.holdings["a"]), (700, {"b": 3}))
+        for bad in (0, 11, -4):  # nothing, too many at once, more than you own
+            with self.assertRaises(ValueError, msg=bad):
+                m.trade("a", "b", bad)
+        m.trade("a", "a", 7)  # backing yourself is allowed
+        with self.assertRaises(ValueError):
+            m.trade("a", "b", 1)  # $0 left
+        m.cash["a"] = 10_000
+        for _ in range(1):
+            m.trade("a", "b", 10)
+        with self.assertRaises(ValueError):
+            m.trade("a", "b", 10)  # 3 + 10 + 10 > 20 shares of one player
+        with self.assertRaises(ValueError):
+            m.trade("a", "ghost", 1)
+
+    def test_prices_follow_placement_with_ties_and_a_floor(self):
+        m = self.market("a", "b", "c")
+        moves = m.reprice({"a": 500, "b": 100, "c": 0})
+        self.assertEqual(m.prices, {"a": 130, "b": 105, "c": 80})
+        self.assertEqual(moves["b"], 0.05)
+        m.reprice({"a": 50, "b": 50, "c": 0})  # a and b share 1st/2nd: the average move
+        self.assertEqual(m.prices["a"], round(130 * 1.175))
+        m.prices["c"] = 11
+        m.reprice({"a": 9, "b": 5, "c": 0})
+        self.assertEqual(m.prices["c"], showlib.MIN_PRICE)
+
+    def test_worth_and_bonus(self):
+        m = self.market("a", "b")
+        m.trade("a", "b", 5)
+        m.reprice({"b": 10, "a": 0})  # b's price 100 -> 130
+        self.assertEqual(m.worth("a"), 500 + 5 * 130)
+        self.assertEqual(m.bonus("a"), 15)  # +$150 -> 15 points
+        self.assertEqual(m.bonus("b"), 0)
+
+
+class MarketHubTests(HubHarness):
+    async def test_a_show_with_the_stock_exchange(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 3)
+        guest = next(p for p in room.players if p != host)
+        await hub.handle_message(
+            room,
+            host,
+            conns[host],
+            {"t": "show", "games": ["price", "telepathy"], "jackpot": False, "market": True},
+        )
+        self.assertEqual(room.phase, "market")
+        self.assertIsNone(room.game)
+        view = conns[guest].last["market"]
+        self.assertTrue(view["open"])
+        self.assertEqual(view["you"]["cash"], showlib.START_CASH)
+        await hub.handle_message(room, guest, conns[guest], {"t": "trade", "target": host, "qty": 4})
+        await hub.handle_message(room, guest, conns[guest], {"t": "trade", "target": host, "qty": True})
+        self.assertIn("bad_trade", conns[guest].errors())
+        # Books are private until the finale; prices and the trade count are public.
+        self.assertEqual(conns[guest].last["market"]["you"]["holdings"], {host: 4})
+        self.assertEqual(conns[host].last["market"]["you"]["holdings"], {})
+        self.assertEqual(conns[host].last["market"]["books"], {})
+        self.assertEqual(conns[host].last["market"]["trades"], 1)
+        await hub.handle_message(room, guest, conns[guest], {"t": "skip"})  # only the host rings the bell
+        self.assertEqual(room.phase, "market")
+        await hub.handle_message(room, host, conns[host], {"t": "skip"})
+        self.assertEqual((room.phase, room.game.game_id), ("game", "price"))
+        await hub.handle_message(room, guest, conns[guest], {"t": "trade", "target": host, "qty": 1})
+        self.assertIn("market_closed", conns[guest].errors())
+        room.game.round_scores[host] = 999
+        finish(hub, room)
+        self.assertEqual(room.show.market.prices[host], 130)  # won the segment: +30%
+        await hub.handle_message(room, host, conns[host], {"t": "next"})
+        self.assertEqual(room.phase, "market")  # trading again before Telepathy
+        self.clock.t += 31
+        await hub.tick()  # the bell rings on time without the host
+        self.assertEqual(room.game.game_id, "telepathy")
+        finish(hub, room)
+        before = dict(room.total_scores)
+        await hub.handle_message(room, host, conns[host], {"t": "next"})
+        self.assertEqual(room.phase, "finale")
+        m = room.show.market
+        self.assertEqual(room.total_scores[guest] - before[guest], m.bonus(guest))
+        fin = conns[host].last["market"]
+        self.assertEqual(fin["books"][guest], {host: 4})
+        self.assertEqual(fin["worth"][guest], m.worth(guest))
+        richest = max(m.cash, key=m.worth)
+        has_award = "Market tycoon" in [a["title"] for a in room.show.awards]
+        self.assertEqual(has_award, m.worth(richest) > showlib.START_CASH)

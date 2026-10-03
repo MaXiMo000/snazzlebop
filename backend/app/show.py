@@ -26,6 +26,7 @@ class Show:
     reel: list[dict[str, str]] = field(default_factory=list)  # highlights, each tagged with its game
     awards: list[dict[str, str]] = field(default_factory=list)
     quip: str = ""
+    market: Market | None = None  # Friend Stock Exchange, when the host turned it on
 
     def next_game(self) -> str | None:
         """The next thing to start: a playlist game id, "jackpot", or None when the show is over."""
@@ -160,3 +161,73 @@ def awards(show: Show, totals: dict[str, int], names: dict[str, str]) -> list[di
             }
         )
     return out
+
+
+# -- Friend Stock Exchange ---------------------------------------------------------------------------
+START_CASH = 1000
+START_PRICE = 100
+MIN_PRICE = 10
+MAX_HOLDING = 20  # shares of any one player
+MAX_TRADE = 10  # shares per trade
+TOP_MOVE, BOTTOM_MOVE = 0.30, -0.20  # winner's price change ... last place's
+POINTS_PER_DOLLARS = 10  # every $10 of profit (or loss) is one show point at the finale
+
+
+@dataclass
+class Market:
+    """Shares in your friends. Cash and holdings are private; prices are public."""
+
+    cash: dict[str, int] = field(default_factory=dict)
+    holdings: dict[str, dict[str, int]] = field(default_factory=dict)  # trader -> player -> shares
+    prices: dict[str, int] = field(default_factory=dict)
+    history: list[dict[str, int]] = field(default_factory=list)  # prices after each game
+    trades: int = 0
+
+    def seat(self, pid: str) -> None:
+        self.cash.setdefault(pid, START_CASH)
+        self.holdings.setdefault(pid, {})
+        self.prices.setdefault(pid, START_PRICE)
+
+    def trade(self, trader: str, target: str, qty: int) -> None:
+        """Buy (qty > 0) or sell (qty < 0) shares of `target` at today's price. Raises ValueError."""
+        if target not in self.prices or trader not in self.cash:
+            raise ValueError("Unknown player")
+        if qty == 0 or abs(qty) > MAX_TRADE:
+            raise ValueError(f"Trade 1-{MAX_TRADE} shares at a time")
+        held = self.holdings[trader].get(target, 0)
+        cost = self.prices[target] * qty
+        if qty > 0 and cost > self.cash[trader]:
+            raise ValueError("Not enough cash")
+        if held + qty > MAX_HOLDING:
+            raise ValueError(f"At most {MAX_HOLDING} shares of one player")
+        if held + qty < 0:
+            raise ValueError("You don't own that many shares")
+        self.cash[trader] -= cost
+        self.holdings[trader][target] = held + qty
+        if self.holdings[trader][target] == 0:
+            del self.holdings[trader][target]
+        self.trades += 1
+
+    def reprice(self, scores: dict[str, int]) -> dict[str, float]:
+        """After a game: the winner's price rises 30%, last place's falls 20%, linear in between (ties share
+        the average of their places). Players who weren't in the game don't move."""
+        ranked = sorted(scores, key=lambda p: -scores[p])
+        n = len(ranked)
+        moves: dict[str, float] = {}
+        for pid in ranked:
+            places = [i for i, q in enumerate(ranked) if scores[q] == scores[pid]]
+            place = sum(places) / len(places)
+            move = TOP_MOVE if n == 1 else TOP_MOVE + (BOTTOM_MOVE - TOP_MOVE) * place / (n - 1)
+            if pid in self.prices:
+                self.prices[pid] = max(MIN_PRICE, round(self.prices[pid] * (1 + move)))
+                moves[pid] = round(move, 3)
+        self.history.append(dict(self.prices))
+        return moves
+
+    def worth(self, pid: str) -> int:
+        return self.cash.get(pid, 0) + sum(
+            q * self.prices.get(t, 0) for t, q in self.holdings.get(pid, {}).items()
+        )
+
+    def bonus(self, pid: str) -> int:
+        return int((self.worth(pid) - START_CASH) / POINTS_PER_DOLLARS)

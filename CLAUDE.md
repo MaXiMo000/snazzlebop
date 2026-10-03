@@ -1,12 +1,13 @@
 # Snazzlebop
 
-Party games for 3-8 friends in a browser. One room code, no signup. Retro TV game-show UI, server-authoritative
+Party games for friends in a browser (1-8 players plus an audience). One room code, no signup. Retro TV game-show UI, server-authoritative
 games, security-first FastAPI backend, one Docker service on Render.
 
-Games: **Frenemy Radar** (rank friends, see your blind spot), **Alibi** (murder-mystery deduction),
-**Price Is Weird** (guess absurd prices, sabotage, rigged round, double or nothing), **Telepathy Tax**
-(match some minds, not the majority), **Mole in the Mural** (hidden-role hint game), **Blackjack
-Showdown** (the room vs the dealer), **Crossword Race** (a fresh grid every game).
+Games: **Frenemy Radar**, **Alibi**, **Price Is Weird**, **Telepathy Tax**, **Mole in the Mural**,
+**Blackjack Showdown** (solo/side bets/chaos/tournament), **Crossword Race** (teams, bought letters),
+**Liar's Dice**, **Split or Steal**, **Chicken Run**, **Wager Wits**, **Code Crackers**, **Roulette
+Royale**. Show nights (show.py): a playlist on one scoreboard, host quips, highlight reel and awards,
+Jackpot finale, Friend Stock Exchange, show packs, audience (react + predict), live reactions.
 
 ## Layout
 
@@ -20,10 +21,10 @@ backend/            FastAPI app (Python 3.13)
     ws.py           WebSocket endpoint: origin, caps, auth handshake, flood limits
     db.py           optional anonymous stats (SQLAlchemy async; SQLite local, Postgres on Render)
     games/          base.py contract (+ Deck: per-room no-repeat dealing), content.py (all pools),
-                    frenemy.py, alibi.py, price.py, telepathy.py, mural.py, blackjack.py,
-                    crossword.py (pure Python)
+                    one module per game (pure Python), jackpot.py (show finale)
+    show.py         show night: playlist, quips, awards, Friend Stock Exchange (pure)
     contentgen.py   optional Claude content: validate, de-dup, persist, grow pools; off without a key
-  tests/            test_games / test_newgames / test_blackjack / test_crossword / test_contentgen /
+  tests/            one file per game or feature (test_games, test_upgrades, test_show, test_dice, ...),
                     test_rooms / test_security + test_api
 frontend/           Vite + React + TypeScript, hand-written CSS (game-show style), no UI library
   src/pages         Home, Room (join gate, lobby, game router, TV mode)
@@ -65,7 +66,7 @@ cd backend && ruff check . && ruff format --check . && bandit -q -r app -c pypro
 cd frontend && npm run typecheck && npm run build && npm run contrast
 cd frontend && npm run e2e                     # against a container on :10000
 cd frontend && bash scripts/lighthouse.sh      # a11y/best-practices/SEO >= 95
-python scripts/simulate.py                     # all seven games + secrecy checks over WS
+python scripts/simulate.py                     # every game + secrecy checks over WS (--only dice ...)
 python scripts/grow_pools.py                   # grow content pools with Claude (needs ANTHROPIC_API_KEY)
 python scripts/tune_alibi.py                   # Alibi balance: killer should escape 35-45% at 5p
 bash scripts/loadtest/run.sh                   # abuse suite (see docs/SECURITY-EVIDENCE.md)

@@ -81,7 +81,7 @@ export function Dice({ view, you, receivedAt, send, tv = false }: Props) {
       {!tv && view.phase === "bid" && view.you.dice.length > 0 && (
         <Card tone="soft">
           <h3>Your dice</h3>
-          <p className="dice-row" aria-label="Your dice">
+          <p className="dice-row" role="group" aria-label="Your dice">
             {view.you.dice.map((d, i) => (
               <Die key={i} face={d} />
             ))}
@@ -107,9 +107,13 @@ export function Dice({ view, you, receivedAt, send, tv = false }: Props) {
                 {p.name}
                 {p.id === you ? " (you)" : ""}
               </b>
-              <span className="cups" aria-label={`${view.counts[p.id]} dice`}>
-                {view.counts[p.id] === 0 ? "out" : <span aria-hidden="true">{"🎲".repeat(view.counts[p.id] ?? 0)}</span>}
-              </span>
+              {view.counts[p.id] === 0 ? (
+                <span className="cups">out</span>
+              ) : (
+                <span className="cups" role="img" aria-label={`${view.counts[p.id]} dice`}>
+                  <span aria-hidden="true">{"🎲".repeat(view.counts[p.id] ?? 0)}</span>
+                </span>
+              )}
             </li>
           ))}
         </ul>

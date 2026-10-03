@@ -67,7 +67,7 @@ export function Roulette({ view, you, receivedAt, send, tv = false }: Props) {
         <div className="row">
           <span className="chip plum">One of you is secretly the House</span>
           {view.spins.length > 0 && (
-            <span className="spins" aria-label={`Recent spins: ${view.spins.slice(-8).join(", ")}`}>
+            <span className="spins" role="group" aria-label={`Recent spins: ${view.spins.slice(-8).join(", ")}`}>
               {view.spins.slice(-8).map((n, i) => (
                 <Pocket key={i} n={n} />
               ))}

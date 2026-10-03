@@ -407,7 +407,7 @@ test("reconnect: a dropped phone shows progress, then comes back on air in the s
 /** Host presses Skip until `until` shows up (the next host button after a game ends). */
 async function skipUntil(host: Page, until: ReturnType<Page["getByRole"]>) {
   const skip = host.getByRole("button", { name: /Skip wait/ });
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 150; i++) {  // Liar's Dice can take dozens of skips to play out
     await expect(skip.or(until).first()).toBeVisible();
     if (await until.isVisible()) return;
     await skip.click({ timeout: 2000 }).catch(() => undefined);
@@ -489,10 +489,160 @@ test("show night: playlist, audience predictions and reactions, jackpot, finale"
   await expect(host.getByRole("heading", { name: "Awards" })).toBeVisible();
   await expect(fan.getByRole("heading", { name: "Final standings" })).toBeVisible();
   await shot("16-finale");
+  await expect(host.locator(".confetti")).toHaveCount(0, { timeout: 6000 }); // decorative, ~3.6 s
   await axe(host, "finale", a11y);
   await targets(host, "finale", a11y);
   await host.getByRole("button", { name: "Back to the lobby" }).click();
   await expect(host.getByRole("heading", { name: "Plan a show night" })).toBeVisible();
+  expect(a11y).toEqual([]);
+  expect(problems).toEqual([]);
+});
+
+async function table(browser: Browser, baseURL: string, host: Page, names: string[], problems: string[]) {
+  await host.goto("/");
+  await host.locator("#host-name").fill("Ana");
+  await host.getByRole("button", { name: "Create room" }).click();
+  await expect(host).toHaveURL(/\/r\/[A-Z]{5}$/);
+  const code = host.url().split("/").pop()!;
+  const guests: Page[] = [];
+  for (const name of names) {
+    const p = await newPlayer(browser, baseURL, problems);
+    await p.goto(`/r/${code}`);
+    await p.getByLabel("Your name").fill(name);
+    await p.getByRole("button", { name: "Join as a contestant" }).click();
+    await expect(p.getByText(`${name} (you)`)).toBeVisible();
+    guests.push(p);
+  }
+  return guests;
+}
+
+test("the six new games: first screens, a real move each, axe and targets", async ({ page: host, browser, baseURL }, info) => {
+  const problems: string[] = [];
+  const a11y: string[] = [];
+  watchConsole(host, problems);
+  const shot = shots(host, info.project.name);
+  const [bo, cy] = await table(browser, baseURL!, host, ["Bo", "Cy"], problems);
+  const start = async (id: string) => {
+    await host.locator(`article.game-card.seg-${id}`).getByRole("button", { name: /Start!/ }).click();
+  };
+  const back = async () => {
+    await skipUntil(host, host.getByRole("button", { name: "Play another game" }));
+    await host.getByRole("button", { name: "Play another game" }).click();
+    await expect(host.getByRole("heading", { name: "Or play a single game" })).toBeVisible();
+  };
+  const check = async (name: string) => {
+    await shot(name);
+    await axe(host, name, a11y);
+    await targets(host, name, a11y);
+  };
+
+  // Liar's Dice: whoever's turn it is opens the bidding.
+  await start("dice");
+  await expect(host.getByRole("heading", { name: "Liar's Dice" })).toBeVisible();
+  await check("17-dice");
+  const bidder = [host, bo, cy];
+  for (const p of bidder) {
+    const bid = p.getByRole("button", { name: /^Bid / });
+    if (await bid.isVisible()) {
+      await bid.click();
+      break;
+    }
+  }
+  await expect(host.getByText(/says there are at least/)).toBeVisible();
+  await back();
+
+  // Split or Steal
+  await start("split");
+  await expect(host.getByRole("heading", { name: "Split or Steal" })).toBeVisible();
+  await check("18-split");
+  await back();
+
+  // Chicken Run: get through the countdown and cash out.
+  await start("chicken");
+  await expect(host.getByRole("button", { name: "Cash out!" })).toBeVisible({ timeout: 10_000 });
+  await check("19-chicken");
+  await host.getByRole("button", { name: "Cash out!" }).click();
+  await expect(host.getByText(/You banked \d+/)).toBeVisible();
+  await back();
+
+  // Wager Wits: answer, then the board.
+  await start("wits");
+  for (const [p, v] of [[host, "10"], [bo, "200"], [cy, "3000"]] as const) {
+    await p.getByLabel(/Your answer/).fill(v);
+    await p.getByRole("button", { name: "Lock it in!" }).click();
+  }
+  await expect(host.getByRole("group", { name: "Answer slots" })).toBeVisible();
+  await check("20-wits");
+  await back();
+
+  // Code Crackers: everyone hides a code, then the host makes a guess.
+  await start("codes");
+  for (const p of [host, bo, cy]) {
+    for (let i = 0; i < 4; i++) await p.getByRole("button", { name: "banana" }).click();
+    await p.getByRole("button", { name: "Lock my code" }).click();
+  }
+  await expect(host.getByText(/Cracking /)).toBeVisible();
+  for (let i = 0; i < 4; i++) await host.getByRole("button", { name: "banana" }).click();
+  await host.getByRole("button", { name: "Guess" }).click();
+  await expect(host.getByText("Cracked by Ana", { exact: false }).or(host.getByLabel(/4 right place/))).toBeVisible();
+  await check("21-codes");
+  await back();
+
+  // Roulette Royale: whoever isn't the House places a bet.
+  await start("roulette");
+  await expect(host.getByRole("heading", { name: "Roulette Royale" })).toBeVisible();
+  await check("22-roulette");
+  for (const p of [host, bo, cy]) {
+    const red = p.getByRole("button", { name: "Red", exact: true });
+    if (await red.isVisible()) {
+      await red.click();
+      await p.getByRole("button", { name: /Lock in/ }).click();
+    } else {
+      await p.getByRole("button", { name: "Lock in", exact: true }).click(); // the House keeps its cover
+    }
+  }
+  await expect(host.getByText("The wheel says")).toBeVisible();
+  await back();
+
+  expect(a11y).toEqual([]);
+  expect(problems).toEqual([]);
+});
+
+test("Friend Stock Exchange: trade before each game, prices move, books revealed at the finale", async ({ page: host, browser, baseURL }, info) => {
+  const problems: string[] = [];
+  const a11y: string[] = [];
+  watchConsole(host, problems);
+  const shot = shots(host, info.project.name);
+  const [bo] = await table(browser, baseURL!, host, ["Bo", "Cy"], problems);
+  const games = host.getByRole("group", { name: "Games in this show, in order" });
+  await games.getByRole("button", { name: "Price Is Weird" }).click();
+  await games.getByRole("button", { name: "Telepathy Tax" }).click();
+  await host.getByRole("button", { name: /Jackpot finale: on/ }).click();
+  await host.getByRole("button", { name: /Friend Stock Exchange: off/ }).click();
+  await host.getByRole("button", { name: "Start the show (2 games)" }).click();
+
+  await expect(host.getByRole("heading", { name: "Friend Stock Exchange" })).toBeVisible();
+  await bo.getByRole("button", { name: "Buy 5 shares of Ana" }).click();
+  await expect(bo.getByText("5 held")).toBeVisible();
+  await expect(bo.getByText(/Cash \$500/)).toBeVisible();
+  await expect(host.getByText(/1 trades so far/)).toBeVisible();
+  await shot("23-market");
+  await axe(host, "market", a11y);
+  await targets(host, "market", a11y);
+  await host.getByRole("button", { name: /Ring the bell now/ }).click();
+  await expect(host.getByRole("heading", { name: "Price Is Weird" })).toBeVisible();
+
+  await skipUntil(host, host.getByRole("button", { name: /Next: Telepathy Tax/ }));
+  await expect(host.getByRole("heading", { name: /The market reacts/ })).toBeVisible();
+  await host.getByRole("button", { name: /Next: Telepathy Tax/ }).click();
+  await expect(host.getByRole("heading", { name: "Friend Stock Exchange" })).toBeVisible();
+  await host.getByRole("button", { name: /Ring the bell now/ }).click();
+  await skipUntil(host, host.getByRole("button", { name: /Next: the grand finale/ }));
+  await host.getByRole("button", { name: /Next: the grand finale/ }).click();
+  await expect(host.getByRole("heading", { name: /closing bell/ })).toBeVisible();
+  await expect(host.getByText(/held 5 × Ana/)).toBeVisible(); // Bo's book, public at last
+  await expect(host.locator(".confetti")).toHaveCount(0, { timeout: 6000 }); // decorative, ~3.6 s
+  await axe(host, "market finale", a11y);
   expect(a11y).toEqual([]);
   expect(problems).toEqual([]);
 });

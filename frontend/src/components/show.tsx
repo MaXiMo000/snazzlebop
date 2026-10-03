@@ -3,6 +3,7 @@ import { Btn, Card, nameOf } from "./ui";
 import { useShow } from "./fx";
 import { sfx } from "../lib/sfx";
 import type { GameCard, Highlight, Reaction, RoomState, ShowState } from "../types";
+import { MarketFinale } from "./market";
 
 type Send = (msg: Record<string, unknown>) => void;
 
@@ -179,6 +180,7 @@ export function ThemePicker({ state, send }: { state: RoomState; send: Send }) {
 export function ShowBuilder({ state, send }: { state: RoomState; send: Send }) {
   const [picked, setPicked] = useState<GameCard["id"][]>([]);
   const [jackpot, setJackpot] = useState(true);
+  const [market, setMarket] = useState(false);
   const online = state.players.filter((p) => p.connected).length;
   const byId = new Map(state.games.map((g) => [g.id, g]));
   const playable = (id: GameCard["id"]) => {
@@ -192,7 +194,8 @@ export function ShowBuilder({ state, send }: { state: RoomState; send: Send }) {
       <h3 id="builder-h">Plan a show night</h3>
       <p className="space-top">
         Pick 2-6 games in the order you want them. One scoreboard for the whole night, a highlight reel at the end
-        {jackpot ? ", and a Jackpot finale where everyone bets their score" : ""}.
+        {jackpot ? ", and a Jackpot finale where everyone bets their score" : ""}
+        {market ? ". The Stock Exchange lets everyone trade shares in each other before every game" : ""}.
       </p>
       <div className="builder-games space-top" role="group" aria-label="Games in this show, in order">
         {state.games.map((g) => {
@@ -217,6 +220,9 @@ export function ShowBuilder({ state, send }: { state: RoomState; send: Send }) {
         <Btn size="small" variant="ghost" aria-pressed={jackpot} onClick={() => setJackpot((j) => !j)}>
           <span aria-hidden="true">💎 </span>Jackpot finale: {jackpot ? "on" : "off"}
         </Btn>
+        <Btn size="small" variant="ghost" aria-pressed={market} onClick={() => setMarket((m) => !m)}>
+          <span aria-hidden="true">📈 </span>Friend Stock Exchange: {market ? "on" : "off"}
+        </Btn>
       </div>
       {unplayable.length > 0 && (
         <p className="muted space-top">
@@ -230,7 +236,7 @@ export function ShowBuilder({ state, send }: { state: RoomState; send: Send }) {
         size="big"
         block
         disabled={!ready}
-        onClick={() => send({ t: "show", games: picked, jackpot })}
+        onClick={() => send({ t: "show", games: picked, jackpot, market })}
       >
         {picked.length < 2 ? "Pick at least 2 games" : `Start the show (${picked.length} games)`}
       </Btn>
@@ -399,6 +405,7 @@ export function Finale({ state, isHost, send }: { state: RoomState; isHost: bool
           </table>
         </div>
       </Card>
+      {state.market && <MarketFinale m={state.market} players={state.players} you={state.you} />}
       <Highlights items={show.awards} title="Awards" />
       <Highlights items={show.reel} title="Highlight reel" />
       {isHost ? (

@@ -339,6 +339,25 @@ export interface ShowState {
   games: { game: string; title: string; scores: Record<string, number> }[];
   reel: Highlight[];
   awards: Highlight[];
+  /** the Friend Stock Exchange runs across this show */
+  market: boolean;
+}
+
+export interface MarketState {
+  open: boolean;
+  closes_in: number | null;
+  /** the game the trading window is for */
+  next: string;
+  prices: Record<string, number>;
+  history: Record<string, number>[];
+  /** price changes after the last game (0.3 = +30%) */
+  moves: Record<string, number>;
+  trades: number;
+  you: { cash: number; holdings: Record<string, number>; worth: number } | null;
+  /** finale only: everyone's numbers */
+  worth: Record<string, number>;
+  books: Record<string, Record<string, number>>;
+  bonus: Record<string, number>;
 }
 
 export interface Reaction {
@@ -365,7 +384,7 @@ export interface RoomState {
   role: Role;
   room: {
     code: string;
-    phase: "lobby" | "game" | "results" | "finale";
+    phase: "lobby" | "game" | "results" | "finale" | "market";
     host: string;
     title: string;
     locked: boolean;
@@ -377,6 +396,7 @@ export interface RoomState {
   quip: string;
   reactions: Reaction[];
   crowd: Crowd;
+  market: MarketState | null;
   players: PlayerInfo[];
   games: GameCard[];
   game: GameView | null;

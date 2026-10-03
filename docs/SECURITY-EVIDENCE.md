@@ -215,6 +215,47 @@ connection:
   image locally (section 6). Not checked: a second network sharing the limit, a custom domain, your
   own Cloudflare zone.
 
+## 8. Show nights, upgrades and six new games (2026-10-03)
+
+Run locally against the production image and a dev server.
+
+- **Backend:** 251 tests. Each new game has its own file. Each checks the rules exactly and checks
+  `view_for` secrecy against other players, a TV id and an audience id (`au:`). There are fuzzes for
+  Blackjack (300 games) and Liar's Dice (300 random games: dice change by at most one per challenge,
+  and every game ends).
+- **What each new game keeps secret, and how that's verified:**
+  - **Liar's Dice:** dice until a challenge. Each reveal must show exactly the dice each bot was shown.
+  - **Split or Steal:** choices until the reveal.
+  - **Chicken Run:** the bomb time. The run phase deliberately has no countdown, since one would give
+    the bomb away.
+  - **Wager Wits:** answers until the board; bets and the truth until the reveal.
+  - **Code Crackers:** codes, guesses and feedback until the end. All feedback is re-checked against
+    the revealed codes.
+  - **Roulette Royale:** who the House is and all bets until the spin. The House locks in like
+    everyone else, and only a count is shown. The spin is committed (sha256) before betting.
+  - **Alibi:** the killer's planted clue is invisible, even in the log, until the next clue drop.
+  - **Mural:** the Switcheroo (who swapped) stays secret until the end.
+  - **Stock Exchange:** books are private until the finale.
+- **Simulator** (real WebSockets, every game, 4-8 players, several seeds): all pass. Scores are
+  recomputed exactly for Price (through duels, the Showcase and double or nothing), Telepathy
+  (streaks, contrarian), Split, Chicken, Wits, Codes, Roulette and the Blackjack tournament.
+- **Bugs the simulator and tests found and fixed (each with a regression test):**
+  - The Mural "already used" check read the publicly swapped hints.
+  - Chicken Run valued a cash-out at the precise time but published the rounded one, so the two
+    disagreed.
+  - A Roulette player left in debt by a turn as the House couldn't lock in, stalling the table.
+  - The Price Showcase's triple pot wasn't applied.
+  - Six harness false positives (now unambiguous planted values, per-game frame scans).
+- **Playwright:** 20 tests on 390 px and desktop, including show night, audience, Jackpot, the
+  Stock Exchange and the six new games, with axe and 44 px target checks on every new screen. axe
+  caught `aria-label` on plain spans in three new screens; fixed with proper roles.
+- **Alibi balance**, with objections and plants: the killer escapes 40-43% at 4-8 players.
+- **New input surfaces** are all strictly validated and covered by tests:
+  - `trade` messages (players only, during the market phase).
+  - Game `options` (only values a game declares).
+  - Canned lines in Split or Steal (an index, no free text).
+  - Audience `react`/`predict` (whitelisted, throttled).
+
 ## What is not covered (be honest)
 
 - **Single instance, in-memory limits.** Rate limits and rooms reset on restart and are per process.

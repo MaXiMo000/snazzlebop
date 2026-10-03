@@ -2157,3 +2157,42 @@ h4 {
   border-width: 4px;
   box-shadow: var(--lift);
 }
+
+/* ---- friend stock exchange ------------------------------------------------------------------ */
+.seg-market {
+  --accent: #14532d;
+  --accent-ink: #fff;
+  --accent-soft: #dcf2e3;
+}
+.ticker {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ticker li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 2.5px solid var(--plum);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+}
+.ticker-name {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+.ticker-price {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+.ticker-trade {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}

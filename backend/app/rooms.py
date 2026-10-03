@@ -28,7 +28,7 @@ ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: avoids lookalikes
 ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
-    *("show", "next", "theme", "react", "predict"),
+    *("show", "next", "theme", "react", "predict", "trade"),
 }
 AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict"}
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
@@ -38,6 +38,7 @@ REACTIONS = ("😂", "😱", "👏", "🔥", "🤯", "💀")
 REACT_GAP = 0.8  # seconds between reactions from one person (extra taps are ignored, not errors)
 ROOM_REACTS_PER_SEC = 6  # and a room-wide ceiling, so a big audience can't turn into a broadcast storm
 KEEP_REACTIONS = 12
+MARKET_SECONDS = 30.0  # the trading window before each show game
 
 
 class HubError(Exception):
@@ -105,6 +106,9 @@ class Room:
     react_seq: int = 0
     react_last: dict[str, float] = field(default_factory=dict)
     react_window: list[float] = field(default_factory=list)
+    market_next: str = ""  # the game the open market is waiting for
+    market_until: float = 0.0
+    market_moves: dict[str, float] = field(default_factory=dict)  # price changes after the last game
     last_active: float = 0.0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -314,6 +318,7 @@ class Hub:
             "quip": room.quip if room.phase in ("results", "finale") else "",
             "reactions": room.reactions,
             "crowd": self._crowd_view(room, pid),
+            "market": self._market_view(room, pid),
             "players": [
                 {
                     "id": p.id,
@@ -344,6 +349,35 @@ class Hub:
             "games": [{"game": g["game"], "title": g["title"], "scores": g["scores"]} for g in s.games],
             "reel": s.reel if s.finished else [],
             "awards": s.awards if s.finished else [],
+            "market": s.market is not None,
+        }
+
+    def _market_view(self, room: Room, pid: str) -> dict[str, Any] | None:
+        m = room.show.market if room.show else None
+        if m is None:
+            return None
+        titles = {gid: cls.title for gid, cls in REGISTRY.items()}
+        finale = room.phase == "finale"
+        mine = pid in room.players
+        return {
+            "open": room.phase == "market",
+            "closes_in": max(0.0, room.market_until - self.clock()) if room.phase == "market" else None,
+            "next": titles.get(room.market_next, room.market_next) if room.phase == "market" else "",
+            "prices": dict(m.prices),
+            "history": [dict(h) for h in m.history],
+            "moves": dict(room.market_moves),
+            "trades": m.trades,
+            # Your own book only; everyone's is revealed at the finale.
+            "you": {
+                "cash": m.cash.get(pid, 0),
+                "holdings": dict(m.holdings.get(pid, {})),
+                "worth": m.worth(pid),
+            }
+            if mine
+            else None,
+            "worth": {p: m.worth(p) for p in m.cash} if finale else {},
+            "books": {p: dict(h) for p, h in m.holdings.items()} if finale else {},
+            "bonus": {p: m.bonus(p) for p in m.cash} if finale else {},
         }
 
     @staticmethod
@@ -492,16 +526,61 @@ class Hub:
             self._begin(room, self._make_game(room, Jackpot, stakes=stakes))
             s.jackpot_played = True
         elif nxt is not None:
-            self._begin(room, self._make_game(room, REGISTRY[nxt]))
-            s.started += 1
+            game = self._make_game(room, REGISTRY[nxt])  # raises (e.g. too few players) before anything moves
+            if s.market is not None:
+                self._open_market(room, nxt)
+            else:
+                self._begin(room, game)
+                s.started += 1
         else:
             self._finale(room, s)
 
+    def _open_market(self, room: Room, game_id: str) -> None:
+        """Trading window before a show game. The game itself is built when the bell rings."""
+        market = room.show.market if room.show else None
+        if market is not None:
+            for pid in room.players:
+                market.seat(pid)
+        room.game, room.phase = None, "market"
+        room.market_next = game_id
+        room.market_until = self.clock() + MARKET_SECONDS
+        room.predictions, room.highlights, room.quip = {}, [], ""
+
+    def _close_market(self, room: Room) -> None:
+        s = room.show
+        if s is None or room.phase != "market":
+            return
+        try:
+            game = self._make_game(room, REGISTRY[room.market_next])
+        except (GameError, HubError):
+            # Someone left during trading and the game can't run: skip it and move on.
+            s.started += 1
+            room.phase = "results"
+            self._start_next(room, s)
+            return
+        self._begin(room, game)
+        s.started += 1
+
     def _finale(self, room: Room, s: showlib.Show) -> None:
         s.finished = True
+        if s.market is not None:  # net worth becomes show points: $10 = 1 point, either way
+            for pid in room.players:
+                s.market.seat(pid)
+                room.total_scores[pid] = room.total_scores.get(pid, 0) + s.market.bonus(pid)
         totals = {pid: room.total_scores.get(pid, 0) for pid in room.players}
         names = room.names()
         s.awards = showlib.awards(s, totals, names)
+        if s.market is not None and room.players:
+            tycoon = max(room.players, key=s.market.worth)
+            worth = s.market.worth(tycoon)
+            if worth > showlib.START_CASH:
+                s.awards.append(
+                    {
+                        "icon": "📈",
+                        "title": "Market tycoon",
+                        "text": f"{names.get(tycoon, '?')} ended worth ${worth:,}",
+                    }
+                )
         s.quip = room.quip = showlib.quip(
             totals, names, room.title or "the show", room.decks, self.rng, "show"
         )
@@ -546,12 +625,33 @@ class Hub:
             ):
                 raise HubError("bad_show", f"Pick {showlib.MIN_GAMES}-{showlib.MAX_GAMES} different games")
             jackpot = msg.get("jackpot", True)
-            if not isinstance(jackpot, bool):
+            market = msg.get("market", False)
+            if not isinstance(jackpot, bool) or not isinstance(market, bool):
                 raise HubError("bad_message", "Unknown message")
             game = self._make_game(room, REGISTRY[raw[0]])  # raises before anything changes
-            room.show = showlib.Show(playlist=list(raw), jackpot=jackpot, started=1)
             room.total_scores = {p: 0 for p in room.players}  # a new show, a fresh scoreboard
-            self._begin(room, game)
+            if market:
+                room.show = showlib.Show(playlist=list(raw), jackpot=jackpot, market=showlib.Market())
+                self._open_market(room, raw[0])
+            else:
+                room.show = showlib.Show(playlist=list(raw), jackpot=jackpot, started=1)
+                self._begin(room, game)
+            return True
+        if kind == "trade":
+            market = room.show.market if room.show else None
+            if pid not in room.players or market is None or room.phase != "market":
+                raise HubError("market_closed", "The market is closed")
+            target, qty = msg.get("target"), msg.get("qty")
+            if not isinstance(target, str) or target not in room.players:
+                raise HubError("bad_trade", "Pick a player to trade")
+            if isinstance(qty, bool) or not isinstance(qty, int):
+                raise HubError("bad_trade", "Trade a whole number of shares")
+            market.seat(pid)
+            market.seat(target)
+            try:
+                market.trade(pid, target, qty)
+            except ValueError as exc:
+                raise HubError("bad_trade", str(exc)) from None
             return True
         if kind == "next":
             if not is_host:
@@ -581,6 +681,9 @@ class Hub:
         if kind == "skip":
             if not is_host:
                 raise HubError("not_host", "Only the host can skip", 403)
+            if room.phase == "market":  # the host rings the closing bell early
+                self._close_market(room)
+                return True
             if room.game is None or room.phase != "game":
                 raise HubError("no_game", "No game is running")
             seen = msg.get("stage")
@@ -683,6 +786,10 @@ class Hub:
                 watcher = room.audience.get(au)
                 if watcher is not None and scores.get(target) == top:
                     watcher.points += 1
+        if room.show is not None and room.show.market is not None and game.game_id != "jackpot":
+            for pid in scores:
+                room.show.market.seat(pid)
+            room.market_moves = room.show.market.reprice(scores)
         if room.show is not None:
             room.show.games.append({"game": game.game_id, "title": game.title, "scores": dict(scores)})
             room.show.reel.extend({**h, "game": game.title} for h in room.highlights)
@@ -695,6 +802,11 @@ class Hub:
     # -- timers -------------------------------------------------------------
     async def tick(self) -> None:
         for room in list(self.rooms.values()):
+            if room.phase == "market" and self.clock() >= room.market_until:
+                async with room.lock:
+                    self._close_market(room)
+                await self.broadcast(room)
+                continue
             game = room.game
             if game is None or room.phase != "game":
                 continue
