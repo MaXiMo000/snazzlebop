@@ -3,6 +3,7 @@ import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useCountUp, useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { BlackjackHand, BlackjackView } from "../types";
+import { Select } from "../components/Select";
 
 interface Props {
   view: BlackjackView;
@@ -268,7 +269,7 @@ function BetPanel({ view, you, send }: { view: BlackjackView; you: string; send:
             <label className="field" htmlFor="side-on">
               Step 1 (optional): back a friend’s hand too
             </label>
-            <select id="side-on" value={sideOn} onChange={(e) => setSideOn(e.target.value)}>
+            <Select id="side-on" value={sideOn} onChange={(e) => setSideOn(e.target.value)}>
               <option value="">No side bet</option>
               {view.players
                 .filter((p) => p.id !== you && view.active.includes(p.id) && (view.chips[p.id] ?? 0) >= (view.bet_sizes[0] ?? 50))
@@ -277,7 +278,7 @@ function BetPanel({ view, you, send }: { view: BlackjackView; you: string; send:
                     {p.name}
                   </option>
                 ))}
-            </select>
+            </Select>
           </div>
           {sideOn && (
             <div role="group" aria-label="Side bet amount" className="row">

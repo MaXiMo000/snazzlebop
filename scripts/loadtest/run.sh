@@ -14,7 +14,7 @@ docker build -q -t snazzlebop-abuse scripts/loadtest >/dev/null
 # No proxy in front, so TRUSTED_PROXY_HOPS=0: the suite's container IP is the client IP.
 docker run -d --name "$APP" --network "$NET" \
   -e ENV=production -e SECRET_KEY="$(python3 -c 'import secrets;print(secrets.token_urlsafe(48))' 2>/dev/null || python -c 'import secrets;print(secrets.token_urlsafe(48))')" \
-  -e ALLOWED_HOSTS="$APP" -e ALLOWED_ORIGINS="http://$APP:10000" -e TRUSTED_PROXY_HOPS=0 \
+  -e ALLOWED_HOSTS="$APP" -e ALLOWED_ORIGINS="http://$APP:10000" -e TRUSTED_PROXY_HOPS=0 -e JUMPSCARE=false \
   snazzlebop >/dev/null
 for _ in $(seq 1 30); do
   docker exec "$APP" python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:10000/healthz',timeout=1)" 2>/dev/null && break

@@ -3,6 +3,7 @@ import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { AlibiView } from "../types";
+import { Select } from "../components/Select";
 
 interface Props {
   view: AlibiView;
@@ -264,26 +265,26 @@ function Board({
               <label className="field" htmlFor="ask-target">
                 Who
               </label>
-              <select id="ask-target" value={target} onChange={(e) => setTarget(e.target.value)}>
+              <Select id="ask-target" value={target} onChange={(e) => setTarget(e.target.value)}>
                 <option value="">Pick a suspect…</option>
                 {others.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="field" htmlFor="ask-slot">
                 When
               </label>
-              <select id="ask-slot" value={slot} onChange={(e) => setSlot(Number(e.target.value))}>
+              <Select id="ask-slot" value={slot} onChange={(e) => setSlot(Number(e.target.value))}>
                 {view.slots.map((s, i) => (
                   <option key={s} value={i}>
                     {s}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <Btn
               variant="danger"
@@ -436,7 +437,7 @@ function PickForm({
           <label className="field" htmlFor={`${id}-target`}>
             Who
           </label>
-          <select id={`${id}-target`} value={target} onChange={(e) => setTarget(e.target.value)}>
+          <Select id={`${id}-target`} value={target} onChange={(e) => setTarget(e.target.value)}>
             <option value="">Pick a player…</option>
             {view.players
               .filter((p) => p.id !== you)
@@ -445,19 +446,19 @@ function PickForm({
                   {p.name}
                 </option>
               ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label className="field" htmlFor={`${id}-slot`}>
             When
           </label>
-          <select id={`${id}-slot`} value={slot} onChange={(e) => setSlot(Number(e.target.value))}>
+          <Select id={`${id}-slot`} value={slot} onChange={(e) => setSlot(Number(e.target.value))}>
             {view.slots.map((s, i) => (
               <option key={s} value={i}>
                 {s}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <Btn variant={variant} disabled={!target} onClick={() => onPick(target, slot)}>
           {action}

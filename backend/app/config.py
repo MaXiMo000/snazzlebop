@@ -28,6 +28,9 @@ def normalize_database_url(url: str) -> str:
     return url
 
 
+JUMPSCARE_DEFAULT_NAMES = ("Ray", "Eazy", "Ana", "Leo", "Teng", "Sky", "Elsa")
+
+
 @dataclass(frozen=True)
 class Settings:
     env: str = "development"
@@ -82,8 +85,8 @@ class Settings:
     content_model: str = "claude-opus-5-5"
     content_calls_per_hour: int = 20
 
-    # The jump-scare prank: JUMPSCARE=on plus JUMPSCARE_NAMES (comma separated). Off by default; the
-    # names live only in the environment (e.g. the Render dashboard), never in the repo.
+    # The jump-scare prank. On unless JUMPSCARE=false; JUMPSCARE_NAMES (comma separated) replaces the
+    # built-in list. (A plain Settings() keeps it off, so unit tests stay quiet.)
     jumpscare: bool = False
     jumpscare_names: tuple[str, ...] = field(default=(), repr=False)
 
@@ -155,6 +158,6 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         anthropic_api_key=e.get("ANTHROPIC_API_KEY", "").strip(),
         content_model=e.get("CONTENT_MODEL", "").strip() or defaults.content_model,
         content_calls_per_hour=int(num("CONTENT_CALLS_PER_HOUR", defaults.content_calls_per_hour)),
-        jumpscare=e.get("JUMPSCARE", "").strip().lower() in ("on", "1", "true", "yes"),
-        jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")),
+        jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
+        jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )

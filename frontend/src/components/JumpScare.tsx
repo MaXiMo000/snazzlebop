@@ -1,12 +1,18 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { scream } from "../lib/scare";
 
+/** Real photos dropped into src/assets/scares are bundled at build time and used first. */
+const PHOTOS: string[] = Object.values(
+  import.meta.glob<string>("../assets/scares/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}", { eager: true, query: "?url", import: "default" }),
+);
+
 /** Drawn in code (no images from the internet): six kinds of ghost, every one randomised. */
 type Kind = "wraith" | "onryo" | "skull" | "grinner" | "banshee" | "hollow";
 const KINDS: Kind[] = ["wraith", "onryo", "skull", "grinner", "banshee", "hollow"];
 
 interface Look {
   kind: Kind;
+  photo: string | null;
   skin: string;
   shade: string;
   glow: string;
@@ -21,28 +27,28 @@ interface Look {
 const pick = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)]!;
 const r = (a: number, b: number) => a + Math.random() * (b - a);
 
-/** Go through every kind before any comes back (remembered on this device). */
-function nextKind(): Kind {
-  const key = "snazzlebop:ghost-bag";
-  let bag: Kind[] = [];
+/** Go through every option before any comes back (a shuffled bag, remembered on this device). */
+function fromBag<T extends string>(key: string, all: T[]): T {
+  let bag: T[] = [];
   try {
-    bag = (JSON.parse(localStorage.getItem(key) ?? "[]") as unknown[]).filter((k): k is Kind => KINDS.includes(k as Kind));
+    bag = (JSON.parse(localStorage.getItem(key) ?? "[]") as unknown[]).filter((k): k is T => all.includes(k as T));
   } catch {
     bag = [];
   }
-  if (!bag.length) bag = [...KINDS].sort(() => Math.random() - 0.5);
-  const kind = bag.shift()!;
+  if (!bag.length) bag = [...all].sort(() => Math.random() - 0.5);
+  const next = bag.shift()!;
   try {
     localStorage.setItem(key, JSON.stringify(bag));
   } catch {
     /* fine: then it is just random */
   }
-  return kind;
+  return next;
 }
 
 function roll(): Look {
   return {
-    kind: nextKind(),
+    kind: fromBag("snazzlebop:ghost-bag", KINDS),
+    photo: PHOTOS.length ? fromBag("snazzlebop:photo-bag", PHOTOS) : null,
     skin: pick(["#e8e4dc", "#c9d4c5", "#b8c2c9", "#d9cfc4", "#a9b8a6"]),
     shade: pick(["#5b6468", "#4f5a4c", "#5a4e57", "#3f4a55"]),
     glow: pick(["#ff1a1a", "#ff3b00", "#b6ff00", "#ffffff", "#ff0040"]),
@@ -303,6 +309,16 @@ export function JumpScare({ count, room, you }: { count: number; room: string; y
   }, [look]);
 
   if (!look) return null;
+  if (look.photo) {
+    // A real photo: full screen, harsh black-and-white, lunging in with a glitchy flicker.
+    return (
+      <div className="jumpscare photo" aria-hidden="true" onClick={() => setLook(null)}>
+        <img className="jumpscare-photo" src={look.photo} alt="" decoding="sync" />
+        <img className="jumpscare-photo ghost-red" src={look.photo} alt="" decoding="sync" />
+        <div className="jumpscare-grain" />
+      </div>
+    );
+  }
   return (
     <div className="jumpscare" aria-hidden="true" onClick={() => setLook(null)}>
       <div className={`jumpscare-face tilt-${Math.round(look.tilt / 3) + 3}`}>

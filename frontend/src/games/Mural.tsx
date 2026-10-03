@@ -3,6 +3,7 @@ import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { MuralView } from "../types";
+import { Select } from "../components/Select";
 
 interface Props {
   view: MuralView;
@@ -224,7 +225,7 @@ function Swap({ view, you, send }: { view: MuralView; you: string; send: Props["
         <label className="field" htmlFor="swap-target">
           Switcheroo (once): swap your hint with
         </label>
-        <select id="swap-target" value={target} onChange={(e) => setTarget(e.target.value)}>
+        <Select id="swap-target" value={target} onChange={(e) => setTarget(e.target.value)}>
           <option value="">Pick a player…</option>
           {view.players
             .filter((p) => p.id !== you)
@@ -233,7 +234,7 @@ function Swap({ view, you, send }: { view: MuralView; you: string; send: Props["
                 {p.name}
               </option>
             ))}
-        </select>
+        </Select>
       </div>
       <Btn
         variant="danger"

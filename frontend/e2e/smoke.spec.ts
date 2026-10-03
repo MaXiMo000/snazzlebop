@@ -34,6 +34,15 @@ async function newPlayer(browser: Browser, baseURL: string, problems: string[]):
 
 /** axe-core WCAG 2.x A/AA scan; violations are collected and asserted at the end of the test. */
 async function axe(page: Page, where: string, found: string[]) {
+  // Let entrance fades finish first: half-faded text would be judged on its mid-animation colour.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => (a.effect as KeyframeEffect | null)?.getKeyframes().some((k) => "opacity" in k) && a.playState !== "finished" && (a.effect?.getTiming().iterations ?? 1) !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
   const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   for (const v of violations) found.push(`${where}: ${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
 }
@@ -473,7 +482,10 @@ test("show night: playlist, audience predictions and reactions, jackpot, finale"
   // Plan the show: Price then Telepathy, jackpot on, a show pack.
   await expect(host.getByRole("heading", { name: "Audience" })).toBeVisible();
   await expect(host.getByRole("button", { name: "Remove Fan from the audience" })).toBeVisible();
-  await host.getByLabel("Show pack").selectOption("food");
+  // Our own drop-down: open it, pick from the list.
+  await host.getByLabel("Show pack").click();
+  await host.getByRole("option", { name: "Food fight" }).click();
+  await expect(host.getByLabel("Show pack")).toContainText("Food fight");
   await expect(fan.getByText("Show pack: Food fight")).toBeVisible();
   const games = host.getByRole("group", { name: "Games in this show, in order" });
   await games.getByRole("button", { name: "Price Is Weird" }).click();

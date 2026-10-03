@@ -105,7 +105,9 @@ Free web instances sleep when idle and drop live rooms; use the Starter plan for
 
 ## The prank (optional)
 
-`JUMPSCARE=on` + `JUMPSCARE_NAMES=a,b,c` (dashboard only, never in git): matching players get a full-screen
+On by default (built-in names in `config.py`); `JUMPSCARE=false` turns it off and
+`JUMPSCARE_NAMES=a,b,c` replaces the list. Test containers set `JUMPSCARE=false` (the e2e host is
+called Ana). Matching players get a full-screen
 ghost and a synthesised scream on arrival and on every score screen (`prank.py`, `JumpScare.tsx`,
 `lib/scare.ts`). Matching forgives case, look-alike digits and one wrong letter. Only the target's own
 view carries the `scare` counter. Ghosts and sound are generated on the device: nothing is downloaded.

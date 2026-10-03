@@ -3,6 +3,7 @@ import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { RouletteBet, RouletteView } from "../types";
+import { Select } from "../components/Select";
 
 interface Props {
   view: RouletteView;
@@ -172,7 +173,7 @@ function Accuse({ view, you, value, onChange }: { view: RouletteView; you: strin
       <label className="field" htmlFor="accuse">
         Who’s the House? (+100 if you’re right)
       </label>
-      <select id="accuse" value={value} onChange={(e) => onChange(e.target.value)}>
+      <Select id="accuse" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">No guess</option>
         {view.players
           .filter((p) => p.id !== you)
@@ -181,7 +182,7 @@ function Accuse({ view, you, value, onChange }: { view: RouletteView; you: strin
               {p.name}
             </option>
           ))}
-      </select>
+      </Select>
     </div>
   );
 }
@@ -264,13 +265,13 @@ function BetPanel({ view, you, send }: { view: RouletteView; you: string; send: 
           <label className="field" htmlFor="roulette-number">
             Single number (35:1)
           </label>
-          <select id="roulette-number" value={number} onChange={(e) => setNumber(Number(e.target.value))}>
+          <Select id="roulette-number" value={number} onChange={(e) => setNumber(Number(e.target.value))}>
             {Array.from({ length: 37 }, (_, n) => (
               <option key={n} value={n}>
                 {n} ({color(n)})
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <Btn variant="ghost" disabled={!canAdd} onClick={() => add({ kind: "number", value: number })}>
           Bet on {number}

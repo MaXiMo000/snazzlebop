@@ -37,6 +37,7 @@ import { Mural } from "../games/Mural";
 import { Price } from "../games/Price";
 import { Telepathy } from "../games/Telepathy";
 import type { GameCard, RoomState, Session } from "../types";
+import { Select } from "../components/Select";
 
 type Send = (m: Record<string, unknown>) => void;
 
@@ -565,11 +566,11 @@ function StartGame({ game, enough, send }: { game: GameCard; enough: boolean; se
       {options.map(([key, values]) => (
         <div key={key} className="space-top">
           <label className="field" htmlFor={`opt-${game.id}-${key}`}>
-            {key === "mode" ? "Mode" : key}
+            {key.charAt(0).toUpperCase() + key.slice(1)}
           </label>
-          <select
+          <Select
             id={`opt-${game.id}-${key}`}
-            value={picked[key]}
+            value={picked[key] ?? values[0] ?? ""}
             onChange={(e) => setChosen((c) => ({ ...c, [key]: e.target.value }))}
           >
             {values.map((v) => (
@@ -577,7 +578,7 @@ function StartGame({ game, enough, send }: { game: GameCard; enough: boolean; se
                 {OPTION_LABELS[key]?.[v] ?? v}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       ))}
       <Btn

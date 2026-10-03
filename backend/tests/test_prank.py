@@ -45,9 +45,11 @@ class MatchTests(unittest.TestCase):
     def test_settings_switch(self):
         s = load_settings({"JUMPSCARE": "on", "JUMPSCARE_NAMES": "Ray, Sky ,"})
         self.assertEqual((s.jumpscare, s.jumpscare_names), (True, ("Ray", "Sky")))
-        self.assertFalse(
-            load_settings({"JUMPSCARE_NAMES": "Ray"}).jumpscare
-        )  # names alone don't switch it on
+        on = load_settings({})  # on by default, with the built-in list
+        self.assertTrue(on.jumpscare)
+        self.assertIn("Eazy", on.jumpscare_names)
+        for off in ("false", "off", "0", "no", "FALSE"):
+            self.assertFalse(load_settings({"JUMPSCARE": off}).jumpscare, off)
         self.assertNotIn("Ray", repr(s))  # never in logs or reprs
 
 

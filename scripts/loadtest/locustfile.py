@@ -106,6 +106,9 @@ class Suite:
         for ws in socks:
             self.state(ws, lambda s: sum(p["connected"] for p in s["players"]) == 8)
         socks[0].send(json.dumps({"t": "start", "game": "price"}))
+        # Every game opens with a "how to play" screen: the host starts it straight away.
+        self.state(socks[0], lambda s: s["room"]["phase"] == "intro")
+        socks[0].send(json.dumps({"t": "skip"}))
         for i, ws in enumerate(socks):
             self.state(ws, lambda s: (s.get("game") or {}).get("phase") == "guess")
             ws.send(json.dumps({"t": "act", "a": "guess", "amount": 100 + i}))
@@ -219,10 +222,10 @@ class Suite:
             while time.perf_counter() - t0 < 120:
                 # Host flips between an Alibi deal (big per-player frames) and the lobby: every
                 # message is a broadcast the slow client's buffers have to absorb.
-                for msg in ({"t": "start", "game": "alibi"}, {"t": "lobby"}):
+                for msg in ({"t": "start", "game": "alibi"}, {"t": "skip"}, {"t": "lobby"}):
                     readers[0].send(json.dumps(msg))
                     sent += 1
-                    gevent.sleep(0.16)  # ~6 msg/s, under the 8/s per-socket limit
+                    gevent.sleep(0.16)  # ~6 msg/s, under the 8/s per-socket limit (skip ends the intro)
                 if time.perf_counter() - t0 > 2 and slow_connected() is False:
                     took = time.perf_counter() - t0
                     expect(not ended, f"a reading client was dropped too: {ended}")

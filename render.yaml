@@ -35,7 +35,8 @@ services:
       # Optional fresh content from Claude. Set the value in the Render dashboard; never in git.
       - key: ANTHROPIC_API_KEY
         sync: false
-      # The jump-scare prank. JUMPSCARE=on|off, JUMPSCARE_NAMES=comma list. Set both in the dashboard.
+      # The jump-scare prank: on by default. JUMPSCARE=false in the dashboard turns it off;
+      # JUMPSCARE_NAMES (comma list) replaces the built-in names.
       - key: JUMPSCARE
         sync: false
       - key: JUMPSCARE_NAMES

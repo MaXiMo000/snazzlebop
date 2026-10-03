@@ -75,7 +75,7 @@ jobs:
           docker run -d --name snazzlebop -p 10000:10000 \
             -e ENV=production -e SECRET_KEY=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))") \
             -e ALLOWED_HOSTS=localhost -e ALLOWED_ORIGINS=http://localhost:10000 -e TRUSTED_PROXY_HOPS=0 \
-            -e DATABASE_URL=sqlite+aiosqlite:///./ci.db snazzlebop:ci
+            -e DATABASE_URL=sqlite+aiosqlite:///./ci.db -e JUMPSCARE=false snazzlebop:ci
           for i in $(seq 1 20); do curl -fsS http://localhost:10000/healthz && break || sleep 1; done
           curl -fsSI http://localhost:10000/ | grep -i "content-security-policy"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/docs)" = 404

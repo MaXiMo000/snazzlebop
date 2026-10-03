@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Btn, Card, nameOf } from "./ui";
 import { sfx } from "../lib/sfx";
 import type { RoomState } from "../types";
+import { Select } from "./Select";
 
 type Send = (msg: Record<string, unknown>) => void;
 
@@ -39,13 +40,13 @@ export function PowerCard({ state, send }: { state: RoomState; send: Send }) {
                 <label className="field" htmlFor="steal-target">
                   Steal from
                 </label>
-                <select id="steal-target" value={chosen} onChange={(e) => setTarget(e.target.value)}>
+                <Select id="steal-target" value={chosen} onChange={(e) => setTarget(e.target.value)}>
                   {rivals.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
             <Btn

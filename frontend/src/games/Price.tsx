@@ -3,6 +3,7 @@ import { Btn, Card, ShowHead, money, nameOf } from "../components/ui";
 import { useCountUp, useOnChange, useReducedMotion, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { PriceDuelResult, PriceResult, PriceView } from "../types";
+import { Select } from "../components/Select";
 
 interface Props {
   view: PriceView;
@@ -281,14 +282,14 @@ function Tricks({ view, players, you, send }: Pick<Props, "view" | "players" | "
               <label className="field" htmlFor="sabotage-target">
                 Sabotage (1 per game)
               </label>
-              <select id="sabotage-target" value={target} onChange={(e) => setTarget(e.target.value)}>
+              <Select id="sabotage-target" value={target} onChange={(e) => setTarget(e.target.value)}>
                 <option value="">Pick a rival…</option>
                 {others.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <Btn
               variant="danger"

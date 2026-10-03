@@ -5,6 +5,7 @@ import { useShow } from "./fx";
 import { sfx } from "../lib/sfx";
 import type { GameCard, Highlight, Reaction, RoomState, ShowState } from "../types";
 import { MarketFinale } from "./market";
+import { Select } from "./Select";
 
 type Send = (msg: Record<string, unknown>) => void;
 
@@ -163,7 +164,7 @@ export function ThemePicker({ state, send }: { state: RoomState; send: Send }) {
       <label className="field" htmlFor="theme-pick">
         Show pack
       </label>
-      <select
+      <Select
         id="theme-pick"
         value={state.room.theme}
         onChange={(e) => send({ t: "theme", theme: e.target.value })}
@@ -175,7 +176,7 @@ export function ThemePicker({ state, send }: { state: RoomState; send: Send }) {
             {label}
           </option>
         ))}
-      </select>
+      </Select>
       <p id="theme-hint" className="muted">
         Themed prompts and items come first; the big general pool tops up the rest.
       </p>
