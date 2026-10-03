@@ -173,6 +173,23 @@ for _phase in ("ready", "run"):
         "started_ago",
         "cashed",
     }
+for _phase in ("answer", "bet"):
+    ALLOWED_KEYS[("wits", _phase)] = {
+        "game",
+        "phase",
+        "round",
+        "rounds",
+        "remaining",
+        "players",
+        "question",
+    } | {
+        "answered",
+        "board",
+        "bet_in",
+        "chips",
+        "chip_value",
+        "you",
+    }
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
         "game",
@@ -647,6 +664,38 @@ def chicken_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, i
     return pts
 
 
+async def play_wits(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Unique, odd, large answers (nothing else in a frame looks like them), so if one shows up in someone
+    else's frame before the board, it's a leak. Bets go on random slots; scoring is checked exactly."""
+    for rnd in range(1, 7):
+        await all_until(bots, game_is("wits", "answer", rnd), f"wits answer {rnd}")
+        # Odd bots answer 1 (at or under nearly every true answer, so real answers win too); even bots
+        # answer big unique values that the leak check below can spot unambiguously.
+        mine = {b.pid: 1 if i % 2 else 7_000_001 + 2 * (rnd * 100 + i) for i, b in enumerate(bots)}
+        for b in bots:
+            await b.send(t="act", a="answer", value=mine[b.pid])
+        await all_until(bots, game_is("wits", "bet", rnd), f"wits bet {rnd}")
+        for b in bots:
+            for raw in b.raw:
+                gg = json.loads(raw).get("game") or {}
+                if gg.get("game") == "wits" and gg.get("phase") == "answer" and gg.get("round") == rnd:
+                    others = {v for pid, v in mine.items() if pid != b.pid and v > 1}
+                    check(not (others & set(values(gg))), f"{b.name} saw another answer before the board")
+        n = len(host.state["game"]["board"])  # type: ignore[index]
+        for b in bots:
+            await b.send(t="act", a="bet", slots=[rng.randrange(n), rng.randrange(n)])
+        await all_until(bots, game_is("wits", "reveal", rnd), f"wits reveal {rnd}")
+        await skip(host)
+
+
+def wits_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    pts = dict.fromkeys(ids, 0)
+    for h in history:
+        for pid, g in h["gains"].items():
+            pts[pid] += g
+    return pts
+
+
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
@@ -975,6 +1024,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "dice",
             "split",
             "chicken",
+            "wits",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1013,6 +1063,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_split(host, bots, rng)
             elif game == "chicken":
                 await play_chicken(host, bots, rng)
+            elif game == "wits":
+                await play_wits(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1024,6 +1076,14 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = price_points(g["history"], [b.pid for b in bots], g["duels"])
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
+            elif game == "wits":
+                g = host.state["game"]  # type: ignore[index]
+                want = wits_points(g["history"], [b.pid for b in bots])
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"wits: scores {got} != revealed gains {want}")
+                for h in g["history"]:  # gains follow the rules from the revealed answers and bets
+                    under = sorted(v for v in h["answers"].values() if v <= h["answer"])
+                    check((h["slot"] == 0) == (not under), "wits: wrong winning slot")
             elif game == "chicken":
                 want = chicken_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

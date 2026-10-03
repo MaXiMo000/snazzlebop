@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "chicken" | "split" | "dice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "wits" | "chicken" | "split" | "dice";
   title: string;
   blurb: string;
   min_players: number;
@@ -313,6 +313,7 @@ export type GameView =
   | MuralView
   | BlackjackView
   | CrosswordView
+  | WitsView
   | ChickenView
   | SplitView
   | DiceView
@@ -453,4 +454,32 @@ export interface ChickenView extends GameBase {
   cashed: Record<string, { t: number; value: number }>;
   result?: ChickenRound;
   history?: ChickenRound[];
+}
+
+export interface WitsSlot {
+  slot: number;
+  /** null: the "lower than all of them" slot */
+  value: number | null;
+  by: string[];
+  odds: number;
+}
+export interface WitsResult {
+  answer: number;
+  slot: number;
+  gains: Record<string, number>;
+  bets: Record<string, number[]>;
+  answers: Record<string, number>;
+}
+export interface WitsView extends GameBase {
+  game: "wits";
+  players: { id: string; name: string }[];
+  question: { q: string; unit: string };
+  answered: string[];
+  board: WitsSlot[];
+  bet_in: string[];
+  chips: number;
+  chip_value: number;
+  you: { answer: number | null; bets: number[] | null };
+  result?: WitsResult;
+  history?: (WitsResult & { q: string })[];
 }

@@ -81,6 +81,7 @@ def test_games_catalog(client):
         "dice",
         "split",
         "chicken",
+        "wits",
     }
 
 

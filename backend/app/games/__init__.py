@@ -11,6 +11,7 @@ from .mural import MoleInTheMural
 from .price import PriceIsWeird
 from .split import SplitOrSteal
 from .telepathy import TelepathyTax
+from .wits import WagerWits
 
 REGISTRY: dict[str, type[Game]] = {
     cls.game_id: cls
@@ -25,6 +26,7 @@ REGISTRY: dict[str, type[Game]] = {
         LiarsDice,
         SplitOrSteal,
         ChickenRun,
+        WagerWits,
     )
 }
 

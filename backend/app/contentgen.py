@@ -155,6 +155,19 @@ def v_crossword(raw: Any) -> dict[str, str] | None:
     return {"word": word, "clue": clue}
 
 
+def v_wits(raw: Any) -> dict[str, Any] | None:
+    """A question with one whole-number answer (a year, a count, a measurement)."""
+    if not isinstance(raw, dict):
+        return None
+    q, unit, a = _text(raw.get("q"), 15, 120), raw.get("unit"), raw.get("a")
+    if not q or not q.endswith("?") or isinstance(a, bool) or not isinstance(a, int) or not 0 <= a <= 10**9:
+        return None
+    unit = "" if unit in (None, "") else _text(unit, 1, 14, allow_digits=False)
+    if unit is None:
+        return None
+    return {"q": q, "a": a, "unit": unit}
+
+
 _PLACEHOLDER = re.compile(r"\{([a-z]+)\}")
 
 
@@ -284,6 +297,19 @@ KINDS["quip"] = Kind(
     lambda x: f"[{x['mood']}] {x['text']}",
 )
 
+KINDS["wits"] = Kind(
+    C.WITS_QUESTIONS,
+    lambda x: _key(x["q"]),
+    v_wits,
+    _obj({"q": _S, "a": _I, "unit": _S}),
+    "Wager Wits questions: trivia whose answer is ONE whole number (a year, a count, a length...). Only "
+    "stable, well-documented facts a reference book would agree on: no populations, prices, records or "
+    "anything that changes, nothing disputed or approximate unless the question says how to round. "
+    "15-120 characters, ending in '?'. 'a' is the integer answer (0 to 1,000,000,000); 'unit' is a short "
+    "word for it ('bones', 'km') or '' for years. Mix easy and hard, small and huge numbers.",
+    lambda x: f"{x['q']} -> {x['a']} {x['unit']}",
+)
+
 GAME_KINDS = {
     "frenemy": "frenemy",
     "price": "price",
@@ -291,6 +317,7 @@ GAME_KINDS = {
     "telepathy": "telepathy",
     "mural": "mural",
     "crossword": "crossword",
+    "wits": "wits",
 }
 
 SYSTEM = (
