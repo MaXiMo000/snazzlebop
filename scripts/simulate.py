@@ -206,6 +206,14 @@ for _phase in ("set", "crack"):
         "guess_counts",
         "you",
     }
+ALLOWED_KEYS[("roulette", "bet")] = {"game", "phase", "round", "rounds", "remaining", "players", "chips"} | {
+    "stakes",
+    "max_bets",
+    "commit",
+    "locked_count",
+    "spins",
+    "you",
+}
 for _phase in ("briefing", "hint", "vote", "mole_guess"):
     ALLOWED_KEYS[("mural", _phase)] = {
         "game",
@@ -771,6 +779,43 @@ def codes_points(cracked: dict[str, list[str]], ids: list[str]) -> dict[str, int
     return pts
 
 
+async def play_roulette(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Exactly one bot is told it's the House each spin; nobody else learns who before the spin; every
+    spin matches its commitment."""
+    kinds = ["red", "black", "odd", "even", "low", "high"]
+    for rnd in range(1, 7):
+        await all_until(bots, game_is("roulette", "bet", rnd), f"roulette bet {rnd}")
+        houses = [b for b in bots if b.state["game"]["you"]["is_house"]]  # type: ignore[index]
+        check(len(houses) == 1, f"roulette: {len(houses)} bots told they're the House")
+        commit = host.state["game"]["commit"]  # type: ignore[index]
+        for b in bots:
+            chips = b.state["game"]["chips"][b.pid]  # type: ignore[index]
+            bets = []
+            if chips >= 100:
+                bets = [
+                    {"kind": rng.choice(kinds), "amount": 50},
+                    {"kind": "number", "value": rng.randrange(37), "amount": 50},
+                ]
+            others = [o.pid for o in bots if o is not b]
+            await b.send(t="act", a="lock", bets=bets, accuse=rng.choice(others))
+        await all_until(bots, game_is("roulette", "spin", rnd), f"roulette spin {rnd}")
+        r = host.state["game"]["result"]  # type: ignore[index]
+        check(r["house"] == houses[0].pid, "roulette: the revealed House isn't the one that was told")
+        proof = hashlib.sha256(f"{r['number']}:{r['nonce']}".encode()).hexdigest()
+        check(proof == commit == r["commit"], "roulette: the spin doesn't match its commitment")
+        check(
+            r["house_net"] == -sum(r["net"].values()), "roulette: the House didn't take what the table lost"
+        )
+        for b in bots:
+            for raw in b.raw:
+                gg = json.loads(raw).get("game") or {}
+                if gg.get("game") == "roulette" and gg.get("phase") == "bet" and gg.get("round") == rnd:
+                    check("result" not in gg, f"{b.name} saw the spin early")
+                    if b is not houses[0]:
+                        check(not gg["you"]["is_house"], f"{b.name} was told it's the House")
+        await skip(host)
+
+
 async def play_telepathy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     PICKS.clear()
     n = len(bots)
@@ -1101,6 +1146,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "chicken",
             "wits",
             "codes",
+            "roulette",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1143,6 +1189,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_wits(host, bots, rng)
             elif game == "codes":
                 await play_codes(host, bots, rng)
+            elif game == "roulette":
+                await play_roulette(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1154,6 +1202,12 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = price_points(g["history"], [b.pid for b in bots], g["duels"])
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
+            elif game == "roulette":
+                chips = host.state["game"]["chips"]  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(
+                    got == {pid: chips[pid] - 1000 for pid in got}, f"roulette: scores {got} != stacks - 1000"
+                )
             elif game == "codes":
                 want = codes_points(host.state["game"]["cracked"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codes" | "wits" | "chicken" | "split" | "dice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice";
   title: string;
   blurb: string;
   min_players: number;
@@ -313,6 +313,7 @@ export type GameView =
   | MuralView
   | BlackjackView
   | CrosswordView
+  | RouletteView
   | CodesView
   | WitsView
   | ChickenView
@@ -502,4 +503,35 @@ export interface CodesView extends GameBase {
   you: { code: number[]; guesses: Record<string, CodesGuess[]>; cooldown: number };
   /** every code, once it's over */
   codes?: Record<string, number[]>;
+}
+
+export interface RouletteBet {
+  kind: "red" | "black" | "odd" | "even" | "low" | "high" | "dozen" | "number";
+  value: number | null;
+  amount: number;
+}
+export interface RouletteResult {
+  number: number;
+  color: "red" | "black" | "green";
+  nonce: string;
+  commit: string;
+  house: string;
+  house_net: number;
+  bets: Record<string, RouletteBet[]>;
+  net: Record<string, number>;
+  accuse: Record<string, string>;
+  spotted: string[];
+}
+export interface RouletteView extends GameBase {
+  game: "roulette";
+  players: { id: string; name: string }[];
+  chips: Record<string, number>;
+  stakes: number[];
+  max_bets: number;
+  commit: string;
+  locked_count: number;
+  spins: number[];
+  you: { is_house: boolean; locked: boolean; bets: RouletteBet[]; accuse: string | null };
+  result?: RouletteResult;
+  history?: RouletteResult[];
 }

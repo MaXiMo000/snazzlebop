@@ -83,6 +83,7 @@ def test_games_catalog(client):
         "chicken",
         "wits",
         "codes",
+        "roulette",
     }
 
 

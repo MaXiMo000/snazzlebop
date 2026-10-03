@@ -10,6 +10,7 @@ from .dice import LiarsDice
 from .frenemy import FrenemyRadar
 from .mural import MoleInTheMural
 from .price import PriceIsWeird
+from .roulette import RouletteRoyale
 from .split import SplitOrSteal
 from .telepathy import TelepathyTax
 from .wits import WagerWits
@@ -29,6 +30,7 @@ REGISTRY: dict[str, type[Game]] = {
         ChickenRun,
         WagerWits,
         CodeCrackers,
+        RouletteRoyale,
     )
 }
 

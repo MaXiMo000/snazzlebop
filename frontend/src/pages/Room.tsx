@@ -20,6 +20,7 @@ import { Frenemy } from "../games/Frenemy";
 import { Blackjack } from "../games/Blackjack";
 import { Crossword } from "../games/Crossword";
 import { Jackpot } from "../games/Jackpot";
+import { Roulette } from "../games/Roulette";
 import { Codes } from "../games/Codes";
 import { Wits } from "../games/Wits";
 import { Chicken } from "../games/Chicken";
@@ -275,6 +276,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Wits view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "codes":
       return <Codes view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "roulette":
+      return <Roulette view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
