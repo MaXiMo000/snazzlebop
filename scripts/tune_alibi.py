@@ -10,6 +10,9 @@ The bots are deliberately simple but not dumb: they reproduce how a table of hum
 - The killer volunteers only true slots, asks questions like everyone else, and votes to deflect:
   for the most implicated innocent.
 - Humans aren't perfect: each innocent votes at random with probability NOISE.
+- Objections: from round 2 an innocent objects to their top suspect (at a slot not yet on the board)
+  with probability OBJECT; the killer objects to a random innocent with probability KILLER_OBJECT.
+- The killer plants evidence on a random innocent in round 1 with probability PLANT.
 """
 
 from __future__ import annotations
@@ -27,6 +30,9 @@ from app.games.alibi import Alibi  # noqa: E402
 from app.games.base import GameError, Player  # noqa: E402
 
 NOISE = 0.25  # share of innocent votes cast on a hunch
+OBJECT = 0.6
+KILLER_OBJECT = 0.3
+PLANT = 0.8
 
 
 def suspicion(view: dict, me: str) -> Counter[str]:
@@ -54,6 +60,23 @@ def play(n: int, rng: random.Random) -> bool:
     while g.phase == "interrogate":
         for pid in rng.sample(ids, len(ids)):
             view = g.view_for(pid)
+            others = [o for o in ids if o != pid]
+            if pid == g.killer and view["you"]["can_plant"] and rng.random() < PLANT:
+                g.handle(
+                    pid, {"a": "plant", "target": rng.choice(others), "slot": rng.randrange(len(g.slots))}
+                )
+            if view["you"]["objection_left"] and g.round >= 1:
+                known = {(c["speaker"], c["slot"]) for c in view["claims"]}
+                sus = suspicion(view, pid)
+                if pid == g.killer:
+                    target = rng.choice(others) if rng.random() < KILLER_OBJECT else None
+                else:
+                    target = sus.most_common(1)[0][0] if sus and rng.random() < OBJECT else None
+                if target is not None:
+                    slots = [s for s in range(len(g.slots)) if (target, s) not in known] or list(
+                        range(len(g.slots))
+                    )
+                    g.handle(pid, {"a": "object", "target": target, "slot": rng.choice(slots)})
             fake = set(view["you"]["fake_slots"] or [])
             unshared = [c["slot"] for c in view["you"]["card"] if not c["shared"] and c["slot"] not in fake]
             if unshared:

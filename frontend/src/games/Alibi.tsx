@@ -80,6 +80,15 @@ export function Alibi({ view, you, receivedAt, send, tv = false }: Props) {
           <p className="space-top">
             You’re the <b>killer</b>. The lies on your card are marked 🤥. Stay calm, stay consistent.
           </p>
+          {view.you.plant ? (
+            <p className="space-top">
+              🖼️ Your fake clue against <b>{nameOf(view.players, view.you.plant.target)}</b> (
+              {view.slots[view.you.plant.slot]}){" "}
+              {view.you.plant.released ? "is on the board. Act surprised." : "drops with the next camera feed."}
+            </p>
+          ) : view.you.can_plant && view.phase === "interrogate" ? (
+            <p className="space-top">🖼️ You can plant one fake camera clue on someone: see the Board tab.</p>
+          ) : null}
         </Card>
       )}
 
@@ -167,6 +176,10 @@ function Briefing({ view }: { view: AlibiView }) {
       <p>
         Everyone’s alibi for <b>{view.murder_label}</b> goes on the board when interrogation starts. Learn your timeline: you
         must stay consistent with it.
+      </p>
+      <p>
+        Everyone gets one <b>Objection!</b>: +50 if it exposes a story, −50 if it doesn’t. And watch out: the killer can plant
+        one fake camera clue.
       </p>
       {view.you.is_killer ? (
         <p>
@@ -286,6 +299,37 @@ function Board({
         </Card>
       )}
 
+      {!readOnly && view.you.objection_left && (
+        <PickForm
+          id="obj"
+          title="Objection!"
+          hint="Their story for that time goes on the board, and we pull the camera headcount for where they claim to be. +50 if it exposes them, −50 if it doesn’t. Once per game."
+          view={view}
+          you={you}
+          action="Objection!"
+          variant="gold"
+          onPick={(target, slot) => {
+            sfx.buzz();
+            send({ t: "act", a: "object", target, slot });
+          }}
+        />
+      )}
+      {!readOnly && view.you.can_plant && (
+        <PickForm
+          id="plant"
+          title="Plant evidence (killer only)"
+          hint="Fake a camera clue that contradicts someone’s story. It drops with the next real clue, worded just like one. Once per game."
+          view={view}
+          you={you}
+          action="Plant it"
+          variant="danger"
+          onPick={(target, slot) => {
+            sfx.pop();
+            send({ t: "act", a: "plant", target, slot });
+          }}
+        />
+      )}
+
       {view.flags.length > 0 && (
         <Card key={view.flags.length} className={fresh ? "shake" : ""}>
           <h3>🚨 Contradictions</h3>
@@ -359,6 +403,67 @@ function Board({
         </Card>
       )}
     </div>
+  );
+}
+
+function PickForm({
+  id,
+  title,
+  hint,
+  view,
+  you,
+  action,
+  variant,
+  onPick,
+}: {
+  id: string;
+  title: string;
+  hint: string;
+  view: AlibiView;
+  you: string;
+  action: string;
+  variant: "gold" | "danger";
+  onPick: (target: string, slot: number) => void;
+}) {
+  const [target, setTarget] = useState("");
+  const [slot, setSlot] = useState(0);
+  return (
+    <Card tone="soft" aria-labelledby={`${id}-h`}>
+      <h3 id={`${id}-h`}>{title}</h3>
+      <p className="muted">{hint}</p>
+      <div className="ask-form">
+        <div>
+          <label className="field" htmlFor={`${id}-target`}>
+            Who
+          </label>
+          <select id={`${id}-target`} value={target} onChange={(e) => setTarget(e.target.value)}>
+            <option value="">Pick a player…</option>
+            {view.players
+              .filter((p) => p.id !== you)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+          </select>
+        </div>
+        <div>
+          <label className="field" htmlFor={`${id}-slot`}>
+            When
+          </label>
+          <select id={`${id}-slot`} value={slot} onChange={(e) => setSlot(Number(e.target.value))}>
+            {view.slots.map((s, i) => (
+              <option key={s} value={i}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Btn variant={variant} disabled={!target} onClick={() => onPick(target, slot)}>
+          {action}
+        </Btn>
+      </div>
+    </Card>
   );
 }
 
@@ -449,6 +554,19 @@ function Result({ view, you, tv }: { view: AlibiView; you: string; tv: boolean }
           ))}
         </ol>
       </Card>
+      {view.objections.length > 0 && (
+        <Card>
+          <h3>Objections</h3>
+          <ul className="evidence">
+            {view.objections.map((o) => (
+              <li key={o.by}>
+                {nameOf(view.players, o.by)} → {nameOf(view.players, o.target)} at {o.label}:{" "}
+                <span className={`chip ${o.sustained ? "teal" : "cherry"}`}>{o.sustained ? "sustained +50" : "overruled −50"}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       <Card>
         <h3>Votes</h3>
         <ul className="evidence">

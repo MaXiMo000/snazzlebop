@@ -144,9 +144,11 @@ class PriceTests(unittest.TestCase):
         game.handle("p0", {"a": "guess", "amount": 5, "amount2": 6})
         self.assertEqual(game.chips["p0"], 1)
         game.handle("p1", {"a": "guess", "amount": 5})
-        game.advance()
+        game.advance()  # leave the reveal
+        game.advance()  # leave the price duel
         game.handle("p0", {"a": "guess", "amount": 5, "amount2": 6})
         game.handle("p1", {"a": "guess", "amount": 5})
+        game.advance()
         game.advance()
         with self.assertRaises(GameError):
             game.handle("p0", {"a": "guess", "amount": 5, "amount2": 6})
@@ -162,9 +164,11 @@ class PriceTests(unittest.TestCase):
 
     def test_full_game_finishes(self):
         game, _, _ = make(PriceIsWeird, 2)
-        for _ in range(PriceIsWeird.ROUNDS):
+        for r in range(PriceIsWeird.ROUNDS):
             game.advance()  # resolve guess phase
             game.advance()  # leave reveal
+            if r < PriceIsWeird.ROUNDS - 1:
+                game.advance()  # leave the price duel between items
         self.assertTrue(game.finished)
         self.assertEqual(len(game.view_for("p0")["history"]), PriceIsWeird.ROUNDS)
 

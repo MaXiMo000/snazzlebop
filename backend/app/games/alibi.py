@@ -11,6 +11,11 @@ forces that player's card entry onto the public board. The server flags
 contradictions between published claims and the camera clues it drops. Finally the
 room votes. The killer wins if they are not the single most-voted player.
 
+Twists: everyone has one *Objection!* (put a player's slot on the board and pull the camera
+headcount for where they claim to be: +50 if it exposes them, -50 if not), and the killer can
+*plant* one fake camera clue against an innocent. The fake is held back and released with the
+next real clue drop, worded identically, so nothing gives it away until the recap.
+
 There is deliberately no free text: every claim comes from a server-built card, so
 there is nothing to inject, spam, or forge, and nobody can lie differently from
 their script.
@@ -29,9 +34,12 @@ INTERROGATION_ROUNDS = 3
 ASKS_PER_ROUND = 2
 # Red herring: in most games one innocent's memory is hazy. Their card has one honest mistake
 # (they don't know which), so contradictions alone don't point straight at the killer.
-# Tuned with scripts/tune_alibi.py (5,000 games per size): the killer escapes 37-43% at 4-8
-# players (38% at 5). Without it the killer escaped only 12% at 5 players.
-HAZY_CHANCE = 0.9
+# Tuned with scripts/tune_alibi.py (5,000 games per size, bots using objections and plants): the
+# killer escapes ~40-43% at 4-8 players. Without the haze the killer escaped only 12% at 5 players;
+# the planted clue pushed it to 44-47% at 0.9, so the haze came down to 0.7.
+HAZY_CHANCE = 0.7
+OBJECTION_POINTS = 50  # won when an objection exposes the target, lost when it doesn't
+CLUE_TEXT = "New clue: a blurry camera feed was recovered."
 
 
 class Alibi(Game):
@@ -127,6 +135,9 @@ class Alibi(Game):
         self.asked: set[tuple[str, str, int]] = set()
         self.asks_used: dict[str, int] = {i: 0 for i in ids}
         self.votes: dict[str, str] = {}
+        self.objections: list[dict[str, Any]] = []  # public, resolved at once
+        self.plant: dict[str, Any] | None = None  # the killer's fake clue: {"target", "slot", "clue"}
+        self.plant_released = False
         self.round = 0
         self.result: dict[str, Any] | None = None
         self.phase = "briefing"
@@ -169,6 +180,13 @@ class Alibi(Game):
             "occupants": occupants,
         }
 
+    def _release_plant(self) -> None:
+        """A planted clue surfaces with the next clue drop, worded like a real one."""
+        if self.plant is not None and not self.plant_released:
+            self.plant_released = True
+            self.clues.append(self.plant["clue"])
+            self.log.append({"kind": "clue", "text": CLUE_TEXT})
+
     def _enter_round(self) -> None:
         self.phase = "interrogate"
         self.set_deadline(self.timings["round"])
@@ -179,15 +197,31 @@ class Alibi(Game):
                 self._publish(pid, self.murder_slot)
             self.log.append({"kind": "alibis", "text": "Everyone's alibi for the murder is on the board."})
         elif self.round == 1:
-            self.clues.append(self._blurry(self.witness_true_location, self.witness_slot))
-            self.log.append({"kind": "clue", "text": "New clue: a blurry camera feed was recovered."})
+            real = (self._blurry(self.witness_true_location, self.witness_slot), CLUE_TEXT)
+            self._drop(real)
         elif self.round == 2:
             non_scene = [x for x in self.locations if x != self.scene]
-            self.clues.append(self._camera(self.rng.choice(non_scene), self.murder_slot))
-            self.log.append({"kind": "clue", "text": "New clue: another camera feed was recovered."})
+            self._drop(
+                (
+                    self._camera(self.rng.choice(non_scene), self.murder_slot),
+                    "New clue: another camera feed was recovered.",
+                )
+            )
         self.bump()
 
+    def _drop(self, real: tuple[dict[str, Any], str]) -> None:
+        """Round clue, plus a waiting plant in random order (so "the second clue" is no tell)."""
+        drops = [real]
+        if self.plant is not None and not self.plant_released:
+            self.plant_released = True
+            drops.append((self.plant["clue"], CLUE_TEXT))
+        self.rng.shuffle(drops)
+        for clue, text in drops:
+            self.clues.append(clue)
+            self.log.append({"kind": "clue", "text": text})
+
     def _enter_vote(self) -> None:
+        self._release_plant()  # planted in the last round: it still surfaces before anyone votes
         self.phase = "vote"
         self.set_deadline(self.timings["vote"])
         self.bump()
@@ -216,6 +250,16 @@ class Alibi(Game):
             "truth": {i: list(self.truth[i]) for i in self.player_ids},
             "fake_slots": sorted(self.fake),
             "hazy": {"player": self.hazy[0], "slot": self.hazy[1]} if self.hazy else None,
+            "planted": (
+                {
+                    "target": self.plant["target"],
+                    "slot": self.plant["slot"],
+                    "location": self.plant["clue"]["location"],
+                    "released": self.plant_released,
+                }
+                if self.plant
+                else None
+            ),
             "recap": self._recap(caught, tally),
         }
         self.phase = "final"
@@ -235,6 +279,12 @@ class Alibi(Game):
             lines.append(
                 f"{self.name_of(who)} wasn't lying, just hazy: they were in the {self.truth[who][s]} at "
                 f"{self.slots[s]}, not the {self.cards[who][s]['location']}."
+            )
+        if self.plant and self.plant_released:
+            c = self.plant["clue"]
+            lines.append(
+                f"The {c['location']} feed at {c['label']} was a fake: {k} planted it to frame "
+                f"{self.name_of(self.plant['target'])}."
             )
         about_killer = [f["text"] for f in self.flags() if self.killer in f["players"]]
         if about_killer:
@@ -364,6 +414,32 @@ class Alibi(Game):
                 }
             )
             self.bump()
+        elif kind == "object":
+            self._need("interrogate")
+            if any(o["by"] == pid for o in self.objections):
+                raise GameError("objection_used", "You've already used your objection")
+            target = action.get("target")
+            if not isinstance(target, str) or target not in self.round_scores or target == pid:
+                raise GameError("bad_input", "Pick another player to object to")
+            slot = as_int(action.get("slot"), lo=0, hi=n_slots - 1, field="Slot")
+            self._object(pid, target, slot)
+        elif kind == "plant":
+            self._need("interrogate")
+            if pid != self.killer:
+                raise GameError("not_killer", "Only the killer can plant evidence")
+            if self.plant is not None:
+                raise GameError("plant_used", "You've already planted your evidence")
+            target = action.get("target")
+            if not isinstance(target, str) or target not in self.round_scores or target == pid:
+                raise GameError("bad_input", "Pick someone to frame")
+            slot = as_int(action.get("slot"), lo=0, hi=n_slots - 1, field="Slot")
+            where = self.cards[target][slot]["location"]
+            there = sum(1 for i in self.player_ids if self.truth[i][slot] == where)
+            # One head short of what their story needs: once they (and anyone with them) claim the
+            # place, the "camera" counts too few and names them.
+            clue = self._blurry(where, slot) | {"count": max(0, there - 1)}
+            self.plant = {"target": target, "slot": slot, "clue": clue}
+            self.bump()
         elif kind == "vote":
             self._need("vote")
             target = action.get("target")
@@ -375,6 +451,30 @@ class Alibi(Game):
                 self._finish()
         else:
             raise GameError("bad_action", "Unknown action")
+
+    def _object(self, pid: str, target: str, slot: int) -> None:
+        """Objection! The target's story for that slot goes on the board, and the camera headcount
+        for where they claim to be is pulled. Sustained if that names them; overruled otherwise."""
+        self._publish(target, slot)
+        where = self.cards[target][slot]["location"]
+        clue = self._blurry(where, slot)
+        if not any(
+            c["kind"] == "headcount" and c["slot"] == slot and c["location"] == where for c in self.clues
+        ):
+            self.clues.append(clue)
+        flag = self._headcount_flag(clue)
+        sustained = bool(flag and target in flag["players"])
+        self.add_points(pid, OBJECTION_POINTS if sustained else -OBJECTION_POINTS)
+        self.objections.append(
+            {"by": pid, "target": target, "slot": slot, "label": self.slots[slot], "sustained": sustained}
+        )
+        verdict = (
+            "Sustained! Their story doesn't add up." if sustained else "Overruled. Their story checks out."
+        )
+        who, whom = self.name_of(pid), self.name_of(target)
+        text = f"{who} objected to {whom}'s {self.slots[slot]} story. {verdict}"
+        self.log.append({"kind": "objection", "text": text})
+        self.bump()
 
     def _need(self, phase: str) -> None:
         if self.phase != phase:
@@ -433,7 +533,21 @@ class Alibi(Game):
                 # Only the killer is told which parts of their card are lies.
                 "fake_slots": sorted(self.fake) if is_killer else None,
                 "asks_left": max(0, ASKS_PER_ROUND - self.asks_used.get(pid, 0)),
+                "objection_left": pid in self.round_scores
+                and not any(o["by"] == pid for o in self.objections),
+                # The killer's own plant (and only theirs): who, when, and whether it has surfaced yet.
+                "plant": (
+                    {
+                        "target": self.plant["target"],
+                        "slot": self.plant["slot"],
+                        "released": self.plant_released,
+                    }
+                    if is_killer and self.plant
+                    else None
+                ),
+                "can_plant": is_killer and self.plant is None,
             },
+            "objections": [dict(o) for o in self.objections],
             "claims": [{**c} for c in sorted(self.claims.values(), key=lambda c: (c["slot"], c["speaker"]))],
             "flags": self.flags(),
             "clues": self.clues,
@@ -444,6 +558,34 @@ class Alibi(Game):
         if self.phase == "final" and self.result:
             view["result"] = self.result
         return view
+
+    def highlights(self) -> list[dict[str, str]]:
+        if not self.result:
+            return []
+        out: list[dict[str, str]] = []
+        k = self.name_of(self.killer)
+        if self.result["caught"]:
+            sharp = [self.name_of(p) for p, t in self.votes.items() if t == self.killer and p != self.killer]
+            out.append({"icon": "🔎", "title": "Case closed", "text": f"{', '.join(sharp)} caught {k}"})
+        else:
+            out.append({"icon": "🎭", "title": "Master of disguise", "text": f"{k} got away with it"})
+        tally = self.result["tally"]
+        if self.plant and self.plant_released and tally:
+            top = max(tally.values())
+            if tally.get(self.plant["target"]) == top:
+                out.append(
+                    {
+                        "icon": "🖼️",
+                        "title": "Framed!",
+                        "text": f"{k} planted evidence on {self.name_of(self.plant['target'])}",
+                    }
+                )
+        won = [o for o in self.objections if o["sustained"]]
+        if won:
+            o = won[0]
+            text = f"{self.name_of(o['by'])} caught {self.name_of(o['target'])} out at {o['label']}"
+            out.append({"icon": "⚖️", "title": "Objection sustained", "text": text})
+        return out
 
     def summary(self) -> dict[str, Any]:
         return {

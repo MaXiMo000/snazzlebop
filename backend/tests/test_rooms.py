@@ -191,7 +191,7 @@ class HubTests(HubHarness):
         await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": seen})
         self.assertEqual(room.game.phase, "reveal")  # stale tap ignored
         await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": conns[host].last["stage"]})
-        self.assertEqual(room.game.phase, "guess")
+        self.assertEqual(room.game.phase, "duel")  # the price duel between items
         await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": 7})
         self.assertIn("bad_message", conns[host].errors())
 
@@ -203,6 +203,9 @@ class HubTests(HubHarness):
         await hub.tick()
         self.assertEqual(room.game.phase, "reveal")
         self.clock.t += 3
+        await hub.tick()
+        self.assertEqual(room.game.phase, "duel")
+        self.clock.t += 13
         await hub.tick()
         self.assertEqual(room.game.phase, "guess")
 

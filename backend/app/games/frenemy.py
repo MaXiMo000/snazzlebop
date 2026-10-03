@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from itertools import combinations
 from typing import Any, ClassVar
 
-from .base import Game, GameError
+from .base import Game, GameError, as_int
 from .content import FRENEMY_PROMPTS
 
 PROMPTS = FRENEMY_PROMPTS
+MIRROR_EXACT, MIRROR_CLOSE = 50, 25  # bonus for guessing where the room ranks you (spot on / one off)
 
 
 class FrenemyRadar(Game):
@@ -31,6 +33,8 @@ class FrenemyRadar(Game):
         self.round = 0
         # rankings[round][ranker_id] = ordered list of player ids, index 0 = "most"
         self.rankings: list[dict[str, list[str]]] = [{} for _ in range(self.ROUNDS)]
+        # predictions[round][player] = where they think the room will rank them (secret until the reveal)
+        self.predictions: list[dict[str, int]] = [{} for _ in range(self.ROUNDS)]
         self.results: list[dict[str, dict[str, float]]] = []
         self.final: dict[str, Any] | None = None
         self._enter_rank()
@@ -46,7 +50,7 @@ class FrenemyRadar(Game):
         self.results.append(result)
         for pid, row in result.items():
             if row["played"]:
-                self.add_points(pid, int(round(100 - row["blind_pct"])))
+                self.add_points(pid, int(round(100 - row["blind_pct"])) + int(row["mirror"]))
         self.phase = "reveal"
         self.set_deadline(self.timings["reveal"])
         self.bump()
@@ -71,6 +75,7 @@ class FrenemyRadar(Game):
             self_rank = (own.index(p.id) + 1) if own else None
             others = [order.index(p.id) + 1 for ranker, order in self.rankings[r].items() if ranker != p.id]
             others_avg = sum(others) / len(others) if others else None
+            predicted = self.predictions[r].get(p.id)
             if self_rank is None or others_avg is None:
                 # Didn't play (or nobody else did): no signal, neutral score.
                 out[p.id] = {
@@ -79,15 +84,23 @@ class FrenemyRadar(Game):
                     "gap": 0.0,
                     "blind_pct": 50.0,
                     "played": 0.0,
+                    "predicted": float(predicted or 0),
+                    "mirror": 0.0,
                 }
                 continue
             gap = others_avg - self_rank  # >0: you rate yourself higher than they do
+            miss = abs(predicted - others_avg) if predicted else None
+            mirror = (
+                0 if miss is None else MIRROR_EXACT if miss <= 0.5 else MIRROR_CLOSE if miss <= 1.5 else 0
+            )
             out[p.id] = {
                 "self_rank": float(self_rank),
                 "others_avg": round(others_avg, 2),
                 "gap": round(gap, 2),
                 "blind_pct": round(abs(gap) / (n - 1) * 100, 1),
                 "played": 1.0,
+                "predicted": float(predicted or 0),
+                "mirror": float(mirror),
             }
         return out
 
@@ -115,7 +128,25 @@ class FrenemyRadar(Game):
             if per_player[unknown]["blind_spot"] > per_player[clear]["blind_spot"]:
                 awards.append({"award": "Unknown to Self", "player": unknown})
             awards.append({"award": "Crystal Clear", "player": clear})
-        return {"per_player": per_player, "awards": awards}
+            mirror = {i: sum(res[i]["mirror"] for res in self.results) for i in played}
+            reader = max(played, key=lambda i: mirror[i])
+            if mirror[reader] > 0:
+                awards.append({"award": "Mind Reader", "player": reader})
+        return {"per_player": per_player, "awards": awards, "pairs": self._pairs()}
+
+    def _pairs(self) -> dict[str, list[str]]:
+        """The two who kept ranking each other lowest ("total frenemies") and highest ("mutual fans").
+        Every prompt is flattering, so a low ranking is playful, never an insult."""
+        mean: dict[tuple[str, str], float] = {}
+        for a, b in combinations(self.player_ids, 2):
+            seen = [(rk[a].index(b) + rk[b].index(a)) / 2 for rk in self.rankings if a in rk and b in rk]
+            if seen:
+                mean[(a, b)] = sum(seen) / len(seen)
+        if len(mean) < 2 or max(mean.values()) == min(mean.values()):
+            return {}
+        far = max(mean, key=lambda k: mean[k])
+        near = min(mean, key=lambda k: mean[k])
+        return {"frenemies": list(far), "fans": list(near)}
 
     # -- actions ------------------------------------------------------------
     def handle(self, pid: str, action: dict[str, Any]) -> None:
@@ -126,6 +157,8 @@ class FrenemyRadar(Game):
             raise GameError("wrong_phase", "Ranking is closed")
         order = action.get("order")
         ids = self.player_ids
+        guess = action.get("predict")
+        predicted = None if guess is None else as_int(guess, lo=1, hi=len(ids), field="Prediction")
         if (
             not isinstance(order, list)
             or len(order) != len(ids)
@@ -134,6 +167,8 @@ class FrenemyRadar(Game):
         ):
             raise GameError("bad_input", "Rank every player exactly once")
         self.rankings[self.round][pid] = list(order)
+        if predicted is not None:
+            self.predictions[self.round][pid] = predicted
         self.bump()
         if len(self.rankings[self.round]) == len(ids):
             self._enter_reveal()
@@ -167,6 +202,7 @@ class FrenemyRadar(Game):
             "players": [{"id": p.id, "name": p.name} for p in self.players],
             "submitted": submitted if self.phase == "rank" else [],
             "you_submitted": pid in submitted,
+            "you_predicted": self.predictions[self.round].get(pid) if self.phase == "rank" else None,
         }
         if self.phase == "reveal":
             view["result"] = self.results[-1]
@@ -176,6 +212,39 @@ class FrenemyRadar(Game):
                 {"prompt": self.prompts[i], "result": res} for i, res in enumerate(self.results)
             ]
         return view
+
+    def highlights(self) -> list[dict[str, str]]:
+        if not self.final:
+            return []
+        out: list[dict[str, str]] = []
+        per = self.final["per_player"]
+        if per:
+            clear = min(per, key=lambda p: per[p]["blind_spot"])
+            pct = per[clear]["blind_spot"]
+            out.append(
+                {
+                    "icon": "🔮",
+                    "title": "Knows themselves",
+                    "text": f"{self.name_of(clear)}: just a {pct}% blind spot",
+                }
+            )
+        mirror = {p.id: sum(res[p.id]["mirror"] for res in self.results) for p in self.players}
+        reader = max(mirror, key=lambda p: mirror[p])
+        if mirror[reader] >= MIRROR_EXACT * 2:
+            text = f"{self.name_of(reader)} called their own ranking again and again"
+            out.append({"icon": "🪞", "title": "Mind reader", "text": text})
+        pairs = self.final.get("pairs") or {}
+        if "frenemies" in pairs:
+            a, b = (self.name_of(x) for x in pairs["frenemies"])
+            out.append(
+                {"icon": "⚔️", "title": "Total frenemies", "text": f"{a} and {b} never ranked each other high"}
+            )
+        if "fans" in pairs:
+            a, b = (self.name_of(x) for x in pairs["fans"])
+            out.append(
+                {"icon": "💞", "title": "Mutual fans", "text": f"{a} and {b} kept putting each other on top"}
+            )
+        return out
 
     def summary(self) -> dict[str, Any]:
         avg = None

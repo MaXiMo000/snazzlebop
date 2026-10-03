@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Btn, Card, ShowHead, money, nameOf } from "../components/ui";
 import { useCountUp, useOnChange, useReducedMotion, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
-import type { PriceResult, PriceView } from "../types";
+import type { PriceDuelResult, PriceResult, PriceView } from "../types";
 
 interface Props {
   view: PriceView;
@@ -39,7 +39,15 @@ export function Price({ view, you, players, receivedAt, send, tv = false }: Prop
     view.phase === "final"
       ? "Final scores"
       : `Item ${Math.min(view.round, view.rounds)} of ${view.rounds} · ${
-          view.rigged ? "Rigged round" : view.final_round ? "Double or Nothing" : view.phase === "guess" ? "Guess" : "Chaos spin"
+          view.phase === "duel"
+            ? "Price duel"
+            : view.rigged
+              ? "Rigged round"
+              : view.final_round
+                ? "The Showcase · Double or Nothing"
+                : view.phase === "guess"
+                  ? "Guess"
+                  : "Chaos spin"
         }`;
   return (
     <div className="seg-price stack">
@@ -55,8 +63,11 @@ export function Price({ view, you, players, receivedAt, send, tv = false }: Prop
       <div key={`${view.phase}-${view.round}`} className="stack enter">
         {view.phase === "final" ? (
           <FinalBoard view={view} players={players} you={you} />
+        ) : view.phase === "duel" && view.duel ? (
+          <Duel view={view} players={players} send={send} tv={tv} />
         ) : (
           <>
+            {view.phase === "guess" && view.last_duel && <LastDuel duel={view.last_duel} players={players} you={you} />}
             <Card tone="stage" className="prize">
               <span className="emoji" aria-hidden="true">
                 {view.item.emoji}
@@ -64,6 +75,20 @@ export function Price({ view, you, players, receivedAt, send, tv = false }: Prop
               <h3>{view.item.name}</h3>
               <p>{view.item.blurb}</p>
             </Card>
+            {view.showcase && (
+              <ul className="showcase" aria-label="The three Showcase prizes">
+                {view.showcase.map((x, i) => (
+                  <li key={x.name} className="card">
+                    <span className="emoji" aria-hidden="true">
+                      {x.emoji}
+                    </span>
+                    <b>{x.name}</b>
+                    <span className="muted">{x.blurb}</span>
+                    {view.showcase_prices && <span className="chip">{money(view.showcase_prices[i]!)}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
             {view.phase === "guess" &&
               (tv ? (
                 <Card tone="soft" className="center">
@@ -83,6 +108,59 @@ export function Price({ view, you, players, receivedAt, send, tv = false }: Prop
         )}
       </div>
     </div>
+  );
+}
+
+function Duel({ view, players, send, tv }: { view: PriceView; players: Props["players"]; send: Props["send"]; tv: boolean }) {
+  const duel = view.duel!;
+  return (
+    <>
+      <Card tone="soft" className="center">
+        <h3>Which costs more?</h3>
+        <p className="muted">Quick! +25 if you pick the pricier one.</p>
+      </Card>
+      <div className="duel" role="group" aria-label="Pick the pricier item">
+        {duel.items.map((x, i) => (
+          <button
+            key={x.name}
+            type="button"
+            className="duel-pick"
+            aria-pressed={duel.your_pick === i}
+            disabled={tv}
+            onClick={() => {
+              sfx.pop();
+              send({ t: "act", a: "duel", pick: i });
+            }}
+          >
+            <span className="emoji" aria-hidden="true">
+              {x.emoji}
+            </span>
+            <b>{x.name}</b>
+            <span>{x.blurb}</span>
+            {duel.your_pick === i && <span className="chip plum">Your pick</span>}
+          </button>
+        ))}
+      </div>
+      <p className="center muted" aria-live="polite">
+        {duel.locked.length} of {players.length} picked
+      </p>
+    </>
+  );
+}
+
+function LastDuel({ duel, players, you }: { duel: PriceDuelResult; players: Props["players"]; you: string }) {
+  const [a, b] = duel.items;
+  const mine = duel.picks[you];
+  return (
+    <Card tone="soft">
+      <p>
+        <b>Price duel:</b> {a!.emoji} {a!.name} {money(a!.price)} vs {b!.emoji} {b!.name} {money(b!.price)}.{" "}
+        {mine === undefined ? "" : duel.right.includes(you) ? "You got it: +25!" : "Not this time."}{" "}
+        <span className="muted">
+          {duel.right.length ? `Right: ${duel.right.map((id) => nameOf(players, id)).join(", ")}` : "Nobody got it."}
+        </span>
+      </p>
+    </Card>
   );
 }
 
@@ -405,6 +483,19 @@ function FinalBoard({ view, players, you }: { view: PriceView; players: Props["p
           ))}
         </ol>
       </Card>
+      {(view.duels ?? []).length > 0 && (
+        <Card>
+          <h3>Price duels</h3>
+          <ol className="evidence">
+            {view.duels!.map((d, i) => (
+              <li key={i}>
+                {d.items[0]!.name} {money(d.items[0]!.price)} vs {d.items[1]!.name} {money(d.items[1]!.price)}:{" "}
+                {d.right.length ? d.right.map((id) => nameOf(players, id)).join(", ") : "nobody"}
+              </li>
+            ))}
+          </ol>
+        </Card>
+      )}
     </>
   );
 }

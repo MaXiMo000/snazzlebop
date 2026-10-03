@@ -28,6 +28,10 @@ export interface FrenemyRow {
   gap: number;
   blind_pct: number;
   played: number;
+  /** where they guessed the room would rank them (0 = no guess) */
+  predicted: number;
+  /** bonus for that guess: 50 spot on, 25 one off */
+  mirror: number;
 }
 export interface FrenemyView extends GameBase {
   game: "frenemy";
@@ -35,10 +39,12 @@ export interface FrenemyView extends GameBase {
   players: { id: string; name: string }[];
   submitted: string[];
   you_submitted: boolean;
+  you_predicted: number | null;
   result?: Record<string, FrenemyRow>;
   final?: {
     per_player: Record<string, { blind_spot: number; avg_gap: number }>;
     awards: { award: string; player: string }[];
+    pairs: { frenemies?: [string, string]; fans?: [string, string] };
   };
   history?: { prompt: string; result: Record<string, FrenemyRow> }[];
 }
@@ -65,7 +71,12 @@ export interface AlibiView extends GameBase {
     is_killer: boolean;
     fake_slots: number[] | null;
     asks_left: number;
+    objection_left: boolean;
+    /** the killer's own planted clue (null for everyone else) */
+    plant: { target: string; slot: number; released: boolean } | null;
+    can_plant: boolean;
   };
+  objections: { by: string; target: string; slot: number; label: string; sustained: boolean }[];
   claims: AlibiClaim[];
   flags: { kind: string; slot: number; label: string; players: string[]; text: string }[];
   /** "camera" names who was there; "headcount" (blurry feed) only counts them */
@@ -81,6 +92,7 @@ export interface AlibiView extends GameBase {
     truth: Record<string, string[]>;
     fake_slots: number[];
     hazy: { player: string; slot: number } | null;
+    planted: { target: string; slot: number; location: string; released: boolean } | null;
     recap: string[];
   };
 }
@@ -102,8 +114,26 @@ export interface PriceResult {
   /** Double or Nothing outcomes on the final item */
   double: Record<string, "doubled" | "wiped">;
 }
+export interface PriceItem {
+  name: string;
+  blurb: string;
+  emoji: string;
+}
+export interface PriceDuelResult {
+  items: (PriceItem & { price: number })[];
+  /** index of the pricier item (null when they cost the same: every pick counts) */
+  answer: 0 | 1 | null;
+  picks: Record<string, number>;
+  right: string[];
+}
 export interface PriceView extends GameBase {
   game: "price";
+  /** the final round's three prizes (prices only from the reveal on) */
+  showcase?: PriceItem[];
+  showcase_prices?: number[];
+  duel?: { items: PriceItem[]; locked: string[]; your_pick: number | null };
+  last_duel?: PriceDuelResult;
+  duels?: PriceDuelResult[];
   item: { name: string; blurb: string; emoji: string };
   commit: string;
   chips: number;

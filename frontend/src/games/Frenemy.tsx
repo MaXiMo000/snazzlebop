@@ -68,6 +68,7 @@ function TvRank({ view }: { view: FrenemyView }) {
 
 function Rank({ view, you, send }: Pick<Props, "view" | "you" | "send">) {
   const [order, setOrder] = useState<string[]>(() => view.players.map((p) => p.id));
+  const [guess, setGuess] = useState<number | null>(null);
   const move = (i: number, d: -1 | 1) =>
     setOrder((o) => {
       const next = [...o];
@@ -122,6 +123,25 @@ function Rank({ view, you, send }: Pick<Props, "view" | "you" | "send">) {
             );
           })}
         </ol>
+        <div className="space-top" role="group" aria-labelledby="mirror-h">
+          <p id="mirror-h">
+            <b>Mirror check:</b> where will everyone else put <b>you</b>? Spot on is +50, one off is +25.
+          </p>
+          <div className="row space-top">
+            {view.players.map((_, i) => (
+              <Btn
+                key={i}
+                size="small"
+                variant="ghost"
+                aria-pressed={guess === i + 1}
+                aria-label={`The room ranks me number ${i + 1}`}
+                onClick={() => setGuess(i + 1)}
+              >
+                #{i + 1}
+              </Btn>
+            ))}
+          </div>
+        </div>
         <div className="space-top">
           <Btn
             variant="accent"
@@ -129,10 +149,10 @@ function Rank({ view, you, send }: Pick<Props, "view" | "you" | "send">) {
             block
             onClick={() => {
               sfx.pop();
-              send({ t: "act", a: "rank", order });
+              send({ t: "act", a: "rank", order, ...(guess ? { predict: guess } : {}) });
             }}
           >
-            Lock it in!
+            {guess ? "Lock it in!" : "Lock it in (no mirror guess)"}
           </Btn>
         </div>
       </Card>
@@ -184,6 +204,14 @@ function Reveal({ view, you }: { view: FrenemyView; you: string }) {
                 <p className="muted">
                   Ranked themselves #{r.self_rank}. Everyone else said #{r.others_avg}. {verdict(r.gap)}
                 </p>
+                {r.predicted > 0 && (
+                  <p>
+                    <span className={`chip ${r.mirror > 0 ? "teal" : "paper"}`}>
+                      🪞 Guessed #{r.predicted}
+                      {r.mirror > 0 ? ` · +${r.mirror}` : " · missed"}
+                    </span>
+                  </p>
+                )}
                 <Gauge pct={r.blind_pct} />
               </>
             ) : (
@@ -201,6 +229,7 @@ const CUPS: Record<string, string> = {
   "Secretly Loved": "💖",
   "Unknown to Self": "🕵️",
   "Crystal Clear": "🔮",
+  "Mind Reader": "🪞",
 };
 
 function Final({ view, you, tv }: { view: FrenemyView; you: string; tv: boolean }) {
@@ -239,6 +268,34 @@ function Final({ view, you, tv }: { view: FrenemyView; you: string; tv: boolean 
           </Card>
         ))}
       </div>
+      {(fin.pairs.frenemies || fin.pairs.fans) && (
+        <div className="grid">
+          {fin.pairs.frenemies && (
+            <Card className="trophy">
+              <div className="cup" aria-hidden="true">
+                ⚔️
+              </div>
+              <h3>Total frenemies</h3>
+              <p>
+                <b>{nameOf(view.players, fin.pairs.frenemies[0])}</b> &amp; <b>{nameOf(view.players, fin.pairs.frenemies[1])}</b>{" "}
+                never ranked each other high.
+              </p>
+            </Card>
+          )}
+          {fin.pairs.fans && (
+            <Card className="trophy">
+              <div className="cup" aria-hidden="true">
+                💞
+              </div>
+              <h3>Mutual fans</h3>
+              <p>
+                <b>{nameOf(view.players, fin.pairs.fans[0])}</b> &amp; <b>{nameOf(view.players, fin.pairs.fans[1])}</b> kept
+                putting each other on top.
+              </p>
+            </Card>
+          )}
+        </div>
+      )}
     </>
   );
 }

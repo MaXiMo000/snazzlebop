@@ -121,7 +121,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   // Frenemy Radar
   await host.locator("article.game-card.seg-frenemy").getByRole("button", { name: "Start!" }).click();
   await expect(host.getByText(/Rank\s+everyone/)).toBeVisible();
-  await expect(bo.getByRole("button", { name: "Lock it in!" })).toBeVisible();
+  await expect(bo.getByRole("button", { name: /Lock it in/ })).toBeVisible();
   await shot("04-frenemy");
   await axe(host, "frenemy rank", a11y);
   await targets(host, "frenemy rank", a11y);
@@ -314,7 +314,10 @@ test("Frenemy result card draws on the device and downloads as a PNG", async ({ 
   await expect(host.getByRole("heading", { name: /In the room \(3 online\)/ })).toBeVisible();
   await host.locator("article.game-card.seg-frenemy").getByRole("button", { name: /Start!/ }).click();
   for (let round = 0; round < 3; round++) {
-    for (const p of players) await p.getByRole("button", { name: "Lock it in!" }).click();
+    for (const p of players) {
+      await p.getByRole("button", { name: "The room ranks me number 1" }).click();
+      await p.getByRole("button", { name: "Lock it in!" }).click();
+    }
     await expect(host.getByText("The room has spoken")).toBeVisible();
     await host.getByRole("button", { name: /Skip wait/ }).click();
   }

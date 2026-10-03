@@ -38,12 +38,23 @@ EXPECTED_ERRORS = {"already_known", "no_asks", "wrong"}  # wrong: the deliberate
 
 ALLOWED_KEYS = {
     ("frenemy", "rank"): {"game", "phase", "round", "rounds", "remaining", "prompt", "players", "submitted"}
-    | {"you_submitted"},
+    | {"you_submitted", "you_predicted"},
     ("frenemy", "reveal"): {"game", "phase", "round", "rounds", "remaining", "prompt", "players", "submitted"}
-    | {"you_submitted", "result"},
+    | {"you_submitted", "you_predicted", "result"},
     ("price", "guess"): {"game", "phase", "round", "rounds", "remaining", "item", "commit", "chips", "locked"}
     | {"you_locked", "rollover", "your_guesses", "rigged", "final_round", "sabotage_left", "your_sabotage"}
-    | {"your_double"},
+    | {"your_double", "showcase", "last_duel"},
+    ("price", "duel"): {"game", "phase", "round", "rounds", "remaining", "item", "commit", "chips", "locked"}
+    | {
+        "you_locked",
+        "rollover",
+        "rigged",
+        "final_round",
+        "sabotage_left",
+        "your_sabotage",
+        "your_double",
+        "duel",
+    },
     ("alibi", "briefing"): {
         "game",
         "phase",
@@ -56,7 +67,7 @@ ALLOWED_KEYS = {
         "scene",
     }
     | {"murder_slot", "murder_label", "slots", "locations", "you", "claims", "flags", "clues", "log"}
-    | {"votes_in", "you_voted"},
+    | {"votes_in", "you_voted", "objections"},
 }
 ALLOWED_KEYS[("alibi", "interrogate")] = ALLOWED_KEYS[("alibi", "briefing")]
 ALLOWED_KEYS[("alibi", "vote")] = ALLOWED_KEYS[("alibi", "briefing")]
@@ -258,6 +269,7 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
                     killers.add(b.pid)
                 else:
                     check(you["fake_slots"] is None, f"{b.name} (innocent) was shown fake slots")
+                    check(you["plant"] is None and not you["can_plant"], f"{b.name} (innocent) saw the plant")
                 if g["phase"] != "final":
                     check("result" not in g and '"truth"' not in raw, f"{b.name} saw the solution early")
             if game == "telepathy" and g["phase"] == "pick":
@@ -453,14 +465,37 @@ async def play_frenemy(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     ids = [b.pid for b in bots]
     for rnd in (1, 2, 3):
         await all_until(bots, game_is("frenemy", "rank", rnd), f"frenemy rank {rnd}")
+        guesses = {b.pid: rng.randint(1, len(ids)) for b in bots}  # mirror check: secret until the reveal
         for b in bots:
             order = ids[:]
             rng.shuffle(order)
-            await b.send(t="act", a="rank", order=order)
+            await b.send(t="act", a="rank", order=order, predict=guesses[b.pid])
+            await b.until(
+                lambda s, b=b: (
+                    (s.get("game") or {}).get("you_predicted") is not None
+                    or (s.get("game") or {}).get("phase") != "rank"
+                ),
+                "rank applied",
+            )
+        for b in bots:
+            for raw in b.raw:
+                g = json.loads(raw).get("game") or {}
+                if g.get("game") == "frenemy" and g.get("phase") == "rank" and g.get("round") == rnd:
+                    check(
+                        g.get("you_predicted") in (None, guesses[b.pid]),
+                        f"{b.name} saw someone else's mirror guess",
+                    )
         await all_until(bots, game_is("frenemy", "reveal", rnd), f"frenemy reveal {rnd}")
         for b in bots:
             res = b.state["game"]["result"]  # type: ignore[index]
             check(set(res) == set(ids) and all(r["played"] for r in res.values()), "reveal missing players")
+            for pid, r in res.items():
+                miss = abs(guesses[pid] - r["others_avg"])
+                want = 50 if miss <= 0.5 else 25 if miss <= 1.5 else 0
+                check(
+                    r["predicted"] == guesses[pid] and r["mirror"] == want,
+                    f"frenemy: wrong mirror bonus for {pid}",
+                )
         await skip(host)
 
 
@@ -468,9 +503,24 @@ async def play_alibi(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     await all_until(bots, game_is("alibi", "briefing"), "alibi briefing")
     killer = next(b for b in bots if b.state["game"]["you"]["is_killer"])  # type: ignore[index]
     cards = {b.pid: b.state["game"]["you"]["card"] for b in bots}  # type: ignore[index]
+    killer_fakes = set(killer.state["game"]["you"]["fake_slots"])  # type: ignore[index]
+    murder_slot = killer.state["game"]["murder_slot"]  # type: ignore[index]
     await skip(host)
+    innocents = [b for b in bots if b is not killer]
     for rnd in (1, 2, 3):
         await all_until(bots, game_is("alibi", "interrogate", rnd), f"alibi round {rnd}")
+        if rnd == 1:  # the killer frames someone; it must stay invisible until the next clue drop
+            n_clues = len(host.state["game"]["clues"])  # type: ignore[index]
+            await killer.send(t="act", a="plant", target=innocents[0].pid, slot=rng.randrange(6))
+            await killer.until(lambda s: s["game"]["you"]["plant"] is not None, "plant applied")
+            check(len(host.state["game"]["clues"]) == n_clues, "a planted clue showed up early")  # type: ignore[index]
+        if rnd == 2:  # an innocent objects to the killer's lie: the server must sustain it
+            fake = next(sl for sl in sorted(set(range(6))) if sl in killer_fakes and sl != murder_slot)
+            await innocents[1].send(t="act", a="object", target=killer.pid, slot=fake)
+            await innocents[1].until(lambda s: bool(s["game"]["objections"]), "objection applied")
+            check(
+                innocents[1].state["game"]["objections"][0]["sustained"], "objection to a lie was overruled"
+            )  # type: ignore[index]
         # Each act waits until the server applied (or refused) it before the next, and the host only
         # skips after all of them: over a real network a fixed sleep let the skip overtake the last
         # bot's ask ("wrong_phase").
@@ -522,7 +572,7 @@ async def play_alibi(host: Bot, bots: list[Bot], rng: random.Random) -> None:
 MOVES: dict[str, dict[str, Any]] = {}
 
 
-async def play_price(host: Bot, bots: list[Bot], planted: dict[str, set[int]]) -> None:
+async def play_price(host: Bot, bots: list[Bot], planted: dict[str, set[int]], rng: random.Random) -> None:
     MOVES.clear()
     for rnd in range(1, 6):
         await all_until(bots, game_is("price", "guess", rnd), f"price guess {rnd}")
@@ -551,13 +601,43 @@ async def play_price(host: Bot, bots: list[Bot], planted: dict[str, set[int]]) -
             check(r["sabotage"] == {bots[1].pid: host.pid}, "sabotage missing from the reveal")
         if rnd == 5:
             check(set(r["double"]) == {bots[0].pid, bots[2].pid}, "double-or-nothing missing from the reveal")
+            check(len(host.state["game"].get("showcase", [])) == 3, "the last item isn't a 3-prize showcase")  # type: ignore[index]
+            check(
+                r["base_price"] == sum(host.state["game"]["showcase_prices"]),
+                "showcase total != sum of prizes",
+            )  # type: ignore[index]
         await skip(host)
+        if rnd < 5:  # the price duel between items: picks are secret until it resolves
+            await all_until(bots, game_is("price", "duel", rnd), f"price duel {rnd}")
+            picks = {b.pid: rng.randrange(2) for b in bots}
+            for b in bots:
+                await b.send(t="act", a="duel", pick=picks[b.pid])
+            await all_until(bots, game_is("price", "guess", rnd + 1), f"price guess {rnd + 1}")
+            for b in bots:
+                for raw in b.raw:
+                    g = json.loads(raw).get("game") or {}
+                    if g.get("game") == "price" and g.get("phase") == "duel" and g.get("round") == rnd:
+                        check(
+                            g["duel"]["your_pick"] in (None, picks[b.pid]), f"{b.name} saw another duel pick"
+                        )
+                        check('"price"' not in json.dumps(g["duel"]), f"{b.name} saw duel prices early")
+            d = host.state["game"]["last_duel"]  # type: ignore[index]
+            a, z = (x["price"] for x in d["items"])
+            answer = 0 if a > z else 1 if z > a else None
+            want = sorted(pid for pid, pk in picks.items() if answer is None or pk == answer)
+            check(d["right"] == want and d["picks"] == picks, "price duel scored the wrong players")
 
 
-def price_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
-    """Recompute Price Is Weird scoring from what was revealed: pots, sabotage steals, doubles/wipes."""
+def price_points(
+    history: list[dict[str, Any]], ids: list[str], duels: list[dict[str, Any]]
+) -> dict[str, int]:
+    """Recompute Price Is Weird scoring from what was revealed, in order: each item's pot and sabotage
+    steals (doubles/wipes on the Showcase), then the price duel that followed it (+25 per right pick)."""
     pts = dict.fromkeys(ids, 0)
-    for r in history:
+    for i, r in enumerate(history):
+        if i > 0 and i - 1 < len(duels):
+            for pid in duels[i - 1]["right"]:
+                pts[pid] += 25
         w = r["winner"]
         if w:
             pts[w] += r["pot"]
@@ -611,7 +691,7 @@ async def run(base: str, n_bots: int, seed: int) -> None:
             elif game == "alibi":
                 await play_alibi(host, bots, rng)
             elif game == "price":
-                await play_price(host, bots, planted)
+                await play_price(host, bots, planted, rng)
             elif game == "telepathy":
                 await play_telepathy(host, bots, rng)
             elif game == "blackjack":
@@ -625,7 +705,8 @@ async def run(base: str, n_bots: int, seed: int) -> None:
             if game == "price":
                 # Double or Nothing can wipe scores, so "went up" isn't a rule here. Instead every
                 # player's points must be exactly what the revealed history says they earned.
-                want = price_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
+                g = host.state["game"]  # type: ignore[index]
+                want = price_points(g["history"], [b.pid for b in bots], g["duels"])
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"price: scoreboard {got} != points from the revealed history {want}")
             elif game == "blackjack":
