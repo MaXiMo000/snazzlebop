@@ -271,10 +271,17 @@ export interface CrosswordView extends GameBase {
   players: { id: string; name: string }[];
   width: number;
   height: number;
-  cells: { row: number; col: number; num: number | null; letter: string | null }[];
+  /** bought: a letter your side paid for (only you / your team see it) */
+  cells: { row: number; col: number; num: number | null; letter: string | null; bought: boolean }[];
   clues: CrosswordClue[];
   hint_level: number;
   locked_for: number;
+  mode: "race" | "teams";
+  /** player id -> team name (team mode only) */
+  teams: Record<string, string>;
+  team_totals: Record<string, number>;
+  letters_left: number;
+  letter_cost: number;
 }
 
 export interface JackpotView {

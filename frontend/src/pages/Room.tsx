@@ -460,7 +460,12 @@ function AudienceLobby({ state }: { state: RoomState }) {
 }
 
 const OPTION_LABELS: Record<string, Record<string, string>> = {
-  mode: { classic: "Classic (5 hands)", tournament: "Tournament (knockouts, 3+ players)" },
+  mode: {
+    classic: "Classic (5 hands)",
+    tournament: "Tournament (knockouts, 3+ players)",
+    race: "Everyone for themselves",
+    teams: "Two teams (4+ players)",
+  },
 };
 
 /** Start button, plus a picker for each option the game declares (first value = default). */

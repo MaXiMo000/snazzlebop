@@ -1,4 +1,4 @@
-"""Blackjack extras: solo, side bets, the Chaos card and tournament knockouts (rigged shoes, exact chips)."""
+"""Game extras: Blackjack solo, side bets, Chaos and tournaments; Crossword letters and teams."""
 
 from __future__ import annotations
 
@@ -208,3 +208,82 @@ class OptionsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CrosswordExtrasTests(unittest.TestCase):
+    def make(self, n, **options):
+        from app.games.crossword import CrosswordRace
+
+        g = CrosswordRace(
+            [Player(id=f"p{i}", name=f"N{i}") for i in range(n)],
+            rng=random.Random(2),
+            options=options or None,
+        )
+        g.start()
+        return g
+
+    @staticmethod
+    def letters(view):
+        return {(c["row"], c["col"]) for c in view["cells"] if c["letter"]}
+
+    def test_a_bought_letter_is_private_costs_points_and_is_limited(self):
+        from app.games.crossword import LETTER_COST, LETTERS_PER_PLAYER
+
+        g = self.make(3)
+        before = {p: self.letters(g.view_for(p)) for p in ("p0", "p1", "tv:x")}
+        g.handle("p0", {"a": "buy", "clue": 0})
+        self.assertEqual(g.scores()["p0"], -LETTER_COST)
+        self.assertEqual(len(self.letters(g.view_for("p0")) - before["p0"]), 1)
+        self.assertEqual(self.letters(g.view_for("p1")), before["p1"])  # rivals see nothing new
+        self.assertEqual(self.letters(g.view_for("tv:x")), before["tv:x"])
+        self.assertEqual(self.letters(g.view_for("au:fan")), before["tv:x"])
+        for _ in range(LETTERS_PER_PLAYER - 1):
+            g.handle("p0", {"a": "buy", "clue": 1})
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "buy", "clue": 2})
+        self.assertEqual(g.view_for("p0")["letters_left"], 0)
+
+    def test_cannot_buy_into_a_solved_clue_or_a_fully_visible_one(self):
+        g = self.make(2)
+        clue = g.clues[0]
+        g.handle("p1", {"a": "guess", "clue": 0, "answer": clue["word"]})
+        with self.assertRaises(GameError):
+            g.handle("p0", {"a": "buy", "clue": 0})
+        short = min(g.clues[1:], key=lambda c: len(c["word"]))
+        idx = g.clues.index(short)
+        bought = 0
+        while True:
+            try:
+                g.handle("p0", {"a": "buy", "clue": idx})
+                bought += 1
+            except GameError:
+                break
+        self.assertLessEqual(bought, 3)
+        for bad in (-1, len(g.clues), "0", True):
+            with self.assertRaises(GameError):
+                g.handle("p1", {"a": "buy", "clue": bad})
+
+    def test_teams_share_solves_and_letters_and_the_winning_team_gets_a_bonus(self):
+        from app.games.crossword import TEAM_WIN_BONUS
+
+        with self.assertRaises(GameError):
+            self.make(3, mode="teams")
+        g = self.make(4, mode="teams")
+        teams = g.team_of
+        self.assertEqual(sorted(list(teams.values()).count(t) for t in set(teams.values())), [2, 2])
+        a = "p0"
+        mate = next(p for p in teams if p != a and teams[p] == teams[a])
+        rival = next(p for p in teams if teams[p] != teams[a])
+        g.handle(a, {"a": "buy", "clue": 1})
+        mine = self.letters(g.view_for(a))
+        self.assertEqual(self.letters(g.view_for(mate)), mine)  # shared with the team
+        self.assertNotEqual(self.letters(g.view_for(rival)), mine)
+        word = g.clues[0]["word"]
+        g.handle(a, {"a": "guess", "clue": 0, "answer": word})
+        pts = 40 + 10 * len(word)
+        self.assertEqual(g.scores()[mate], pts)  # a team solve scores for everyone on the team
+        self.assertEqual(g.scores()[rival], 0)
+        g.advance()
+        self.assertEqual(g.scores()[mate], pts + TEAM_WIN_BONUS)
+        self.assertEqual(g.scores()[rival], 0)
+        self.assertEqual(g.view_for("tv:x")["team_totals"][teams[a]], pts)

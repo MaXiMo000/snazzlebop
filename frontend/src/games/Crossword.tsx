@@ -66,8 +66,23 @@ export function Crossword({ view, you, receivedAt, send, tv = false }: Props) {
     <div className="seg-crossword stack">
       {show.node}
       <ShowHead sign={sign} title="Crossword Race" remaining={view.remaining} receivedAt={receivedAt}>
-        {view.hint_level > 0 && view.phase !== "final" && <span className="chip plum">Hint {view.hint_level} revealed</span>}
+        <div className="row">
+          {view.hint_level > 0 && view.phase !== "final" && <span className="chip plum">Hint {view.hint_level} revealed</span>}
+          {view.mode === "teams" &&
+            Object.entries(view.team_totals).map(([team, pts]) => (
+              <span key={team} className={`chip ${view.teams[you] === team ? "teal" : "paper"}`}>
+                {team}
+                {view.teams[you] === team ? " (yours)" : ""}: {pts}
+              </span>
+            ))}
+        </div>
       </ShowHead>
+      {view.mode === "teams" && view.phase === "solve" && view.teams[you] && (
+        <p className="muted">
+          Your team: {Object.entries(view.teams).filter(([, t]) => t === view.teams[you]).map(([id]) => nameOf(view.players, id)).join(", ")}.
+          Every solve scores for all of you; bought letters are shared.
+        </p>
+      )}
 
       <Card className="xw-card">
         <div className={`xw-grid cols-${view.width}`} aria-hidden="true">
@@ -78,7 +93,7 @@ export function Crossword({ view, you, receivedAt, send, tv = false }: Props) {
             return (
               <div
                 key={key}
-                className={`xw-cell ${highlight.has(key) ? "hl" : ""} ${solvedCells.has(key) ? "solved" : ""}`}
+                className={`xw-cell ${highlight.has(key) ? "hl" : ""} ${solvedCells.has(key) ? "solved" : ""} ${cell.bought ? "bought" : ""}`}
                 onClick={() => pickCell(key)}
               >
                 {cell.num && <span className="xw-num">{cell.num}</span>}
@@ -122,6 +137,16 @@ export function Crossword({ view, you, receivedAt, send, tv = false }: Props) {
             </div>
             <Btn type="submit" variant="accent" disabled={!answer}>
               Solve it
+            </Btn>
+            <Btn
+              variant="ghost"
+              disabled={view.letters_left <= 0}
+              onClick={() => {
+                sfx.pop();
+                send({ t: "act", a: "buy", clue: clue.id });
+              }}
+            >
+              Buy a letter (−{view.letter_cost}) · {view.letters_left} left
             </Btn>
           </form>
         </Card>

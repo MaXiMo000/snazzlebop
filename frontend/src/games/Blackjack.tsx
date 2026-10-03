@@ -266,7 +266,7 @@ function BetPanel({ view, you, send }: { view: BlackjackView; you: string; send:
         <div className="ask-form space-top">
           <div>
             <label className="field" htmlFor="side-on">
-              Side bet on a friend’s hand (optional)
+              Step 1 (optional): back a friend’s hand too
             </label>
             <select id="side-on" value={sideOn} onChange={(e) => setSideOn(e.target.value)}>
               <option value="">No side bet</option>
@@ -279,18 +279,21 @@ function BetPanel({ view, you, send }: { view: BlackjackView; you: string; send:
                 ))}
             </select>
           </div>
-          <div role="group" aria-label="Side bet size" className="row">
-            {view.side_sizes.map((n) => (
-              <Btn key={n} size="small" variant="ghost" aria-pressed={sideAmount === n} disabled={!sideOn} onClick={() => setSideAmount(n)}>
-                {n}
-              </Btn>
-            ))}
-          </div>
+          {sideOn && (
+            <div role="group" aria-label="Side bet amount" className="row">
+              {view.side_sizes.map((n) => (
+                <Btn key={n} size="small" variant="ghost" aria-pressed={sideAmount === n} onClick={() => setSideAmount(n)}>
+                  Side {n}
+                </Btn>
+              ))}
+            </div>
+          )}
         </div>
       )}
-      <p className="muted">
-        {sideOn ? `Pays 1:1 if ${nameOf(view.players, sideOn)}’s hand makes money, refunded on a push.` : ""}
-      </p>
+      {sideOn && (
+        <p className="muted">Pays 1:1 if {nameOf(view.players, sideOn)}’s hand makes money, refunded on a push.</p>
+      )}
+      {view.side_sizes.length > 0 && <p className="field space-top">Step 2: tap your bet to lock it in</p>}
       <div className="row center" role="group" aria-label="Bet size">
         {view.bet_sizes.map((b) => (
           <Btn

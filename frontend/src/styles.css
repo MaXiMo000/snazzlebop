@@ -1902,3 +1902,7 @@ h4 {
   outline: 4px dashed var(--mustard);
   outline-offset: -10px;
 }
+.xw-cell.bought .xw-letter {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}

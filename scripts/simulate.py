@@ -120,6 +120,11 @@ ALLOWED_KEYS[("crossword", "solve")] = {
     "remaining",
     "players",
     "width",
+    "mode",
+    "teams",
+    "team_totals",
+    "letters_left",
+    "letter_cost",
 } | {
     "height",
     "cells",
@@ -314,10 +319,14 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
                 open_clues = [c for c in g["clues"] if not c["solved_by"]]
                 check(all("answer" not in c for c in open_clues), f"{b.name} saw an unsolved answer")
                 solved_cells = sum(c["len"] for c in g["clues"] if c["solved_by"])
-                lit = sum(1 for c in g["cells"] if c["letter"])
+                lit = sum(1 for c in g["cells"] if c["letter"] and not c["bought"])
                 check(
                     lit <= solved_cells + g["hint_level"] * len(g["clues"]), f"{b.name} saw letters too early"
                 )
+                if g["mode"] == "race" and b.pid != BUYER.get("pid"):
+                    check(
+                        not any(c["bought"] for c in g["cells"]), f"{b.name} saw a letter someone else bought"
+                    )
     if game == "alibi":
         check(len(killers) == 1, f"expected exactly one bot told it is the killer, got {len(killers)}")
     if game == "mural":
@@ -330,6 +339,7 @@ def check_frames(bots: list[Bot], game: str, start: dict[str, int], planted: dic
 # -- games --------------------------------------------------------------------------------------------
 PICKS: dict[tuple[str, int], int] = {}  # (pid, round) -> the option that bot picked
 HINTS: dict[tuple[str, int], int] = {}  # (pid, round) -> the tile that bot hinted
+BUYER: dict[str, str] = {}  # the bot that buys a crossword letter (nobody else may see it)
 SWAPS: dict[str, str] = {}  # mole -> who it swapped hints with (secret until the end)
 
 
@@ -411,6 +421,11 @@ async def play_crossword(host: Bot, bots: list[Bot], rng: random.Random) -> None
     await all_until(bots, game_is("crossword", "solve"), "crossword solve")
     oracle = crossword_oracle()
     clues = host.state["game"]["clues"]  # type: ignore[index]
+    if host.state["game"]["mode"] == "race":  # type: ignore[index]
+        buyer = bots[-1]
+        BUYER["pid"] = buyer.pid
+        await buyer.send(t="act", a="buy", clue=clues[-1]["id"])
+        await buyer.until(lambda s: any(c["bought"] for c in s["game"]["cells"]), "letter bought")
     # One honest mistake first: the server must answer "wrong", then lock that bot out briefly.
     await bots[1].send(t="act", a="guess", clue=clues[0]["id"], answer="Q" * clues[0]["len"])
     try:
@@ -759,6 +774,8 @@ async def run(base: str, n_bots: int, seed: int) -> None:
         games = ["frenemy", "alibi", "price", "telepathy", "mural", "blackjack", "crossword"]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
+        if len(bots) >= 4:
+            games.append("crossword-teams")
         for name in games:
             game = name.split("-")[0]
             before = totals(host)
@@ -766,6 +783,8 @@ async def run(base: str, n_bots: int, seed: int) -> None:
             planted: dict[str, set[int]] = {}
             if name == "blackjack-tournament":
                 await host.send(t="start", game=game, options={"mode": "tournament"})
+            elif name == "crossword-teams":
+                await host.send(t="start", game=game, options={"mode": "teams"})
             else:
                 await host.send(t="start", game=game)
             if game == "frenemy":
