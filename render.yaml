@@ -15,7 +15,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: free # Free instances sleep when idle and drop live rooms. Use "starter" for real use.
+    plan: starter # always on; the free plan sleeps when idle and drops live rooms
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:

@@ -3,7 +3,7 @@
 The party game show where your friends are the contestants. 1-8 players (plus an audience), one room code, no sign-up.
 Put the show on a TV, play from your phones.
 
-**Live:** https://snazzlebop.onrender.com (free plan: the first visit can take a minute to wake up).
+**Live:** https://snazzlebop.onrender.com
 
 ![Home page](docs/screenshots/home.png)
 
@@ -77,7 +77,7 @@ Or the production image: `docker build -t snazzlebop .` then run it with `ENV=pr
    dashboard secret and never goes in git.
 4. Walk the launch checklist in [SECURITY.md](SECURITY.md) against the live URL.
 
-The free plan sleeps when idle and drops live rooms; use Starter for real game nights.
+render.yaml uses the Starter plan (always on). The free plan works too, but sleeps when idle and drops live rooms.
 
 ### Client IP, Cloudflare and custom domains
 
