@@ -722,16 +722,8 @@ async def play_chicken(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             return gg.get("phase") in ("boom", "final") or gg.get("round", 0) > rnd
 
         await host.until(over, f"chicken boom {rnd}")
-        booms = [
-            gg["result"]
-            for gg in (json.loads(raw).get("game") or {} for raw in host.raw)
-            if gg.get("game") == "chicken" and gg.get("round") == rnd and gg.get("phase") == "boom"
-        ]
-        check(bool(booms), f"chicken: no boom frame for round {rnd}")
-        r = booms[-1]
-        for pid, c in r["cashed"].items():
-            check(c["value"] == int(20 * 1.15 ** c["t"]), f"chicken: {pid} banked {c['value']} at {c['t']}s")
-            check(c["t"] <= r["bomb"], "chicken: a cash-out after the bomb was accepted")
+        # Each round's result is checked from the final history below: frames are "latest state
+        # wins", so a busy socket can legitimately skip straight from the run to the next round.
         for b in bots:
             for raw in b.raw:
                 gg = json.loads(raw).get("game") or {}
@@ -745,6 +737,13 @@ async def play_chicken(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                         check(gg["remaining"] is None, f"{b.name} got a countdown during the run")
         if host.state["game"]["phase"] == "boom":  # type: ignore[index]
             await skip(host)
+    await host.until(lambda st: (st.get("game") or {}).get("phase") == "final", "chicken final")
+    history = host.state["game"]["history"]  # type: ignore[index]
+    check(len(history) == 5, f"chicken: {len(history)} rounds in the history, expected 5")
+    for r in history:
+        for pid, c in r["cashed"].items():
+            check(c["value"] == int(20 * 1.15 ** c["t"]), f"chicken: {pid} banked {c['value']} at {c['t']}s")
+            check(c["t"] <= r["bomb"], "chicken: a cash-out after the bomb was accepted")
 
 
 def chicken_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
