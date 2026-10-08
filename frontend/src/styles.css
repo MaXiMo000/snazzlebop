@@ -5047,6 +5047,19 @@ button.cw-card:hover {
 .coin-mine b {
   font-family: var(--display);
 }
+/* Narrow phones: the price button gets its own line under the description, so names stay whole. */
+@media (max-width: 380px) {
+  .acct-item {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "icon name"
+      "text text"
+      "buy buy";
+  }
+  .acct-item .btn {
+    justify-self: end;
+  }
+}
 /* Phones: the logo keeps its star badge; the wordmark steps aside for the account, theme and sound
    buttons (the home page says the name in big letters anyway). */
 @media (max-width: 420px) {
