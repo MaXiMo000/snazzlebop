@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore, type HTMLAttributes, type ReactNode } from "react";
+import { Fragment, useEffect, useState, useSyncExternalStore, type HTMLAttributes, type ReactNode } from "react";
 import { useCountdown } from "../lib/useRoom";
 import { sfx, sound } from "../lib/sfx";
 import { theme } from "../lib/theme";
@@ -74,8 +74,15 @@ export function ShowHead({
     <Card tone="accent">
       <div className="show-head">
         <div className="grow">
+          {/* "Hand 1 of 5 · Players' turn": a narrow screen breaks between the parts, never inside one
+              or after a dangling dot. */}
           <p className="sign" aria-live="polite">
-            {sign}
+            {sign.split(" · ").map((part, i) => (
+              <Fragment key={i}>
+                {i > 0 && " "}
+                <span className="sign-part">{i > 0 ? `· ${part}` : part}</span>
+              </Fragment>
+            ))}
           </p>
           <h2>{title}</h2>
           {children}

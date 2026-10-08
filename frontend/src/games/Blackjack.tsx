@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Btn, Card, ShowHead, nameList, nameOf } from "../components/ui";
-import { useCountUp, useOnChange, useShow } from "../components/fx";
+import { useCountUp, useOnChange, useReducedMotion, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { BlackjackHand, BlackjackView } from "../types";
 import { Select } from "../components/Select";
@@ -47,6 +47,34 @@ function Hand({ hand, label }: { hand: BlackjackHand; label?: string }) {
         {hand.bet}
       </p>
     </div>
+  );
+}
+
+const OUTCOME: Record<string, string> = { win: "You win", blackjack: "Blackjack!", push: "Push", lose: "You lose", bust: "Bust" };
+
+/** Your payout this hand, big: the headline of the settle screen. */
+function MyResult({ view, you }: { view: BlackjackView; you: string }) {
+  const net = view.result!.net[you]!;
+  const outcomes = view.result!.outcomes[you] ?? [];
+  const head = outcomes.length === 1 ? (OUTCOME[outcomes[0]!] ?? outcomes[0]) : outcomes.map((o) => OUTCOME[o] ?? o).join(" · ");
+  // Bring the payout to the top of the screen when it lands (the Ready bar sits at the bottom).
+  const top = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    top.current?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+  }, []);
+  return (
+    <>
+    <div ref={top} className="bj-anchor" aria-hidden="true" />
+    <Card tone="stage" className={`center bj-my-result ${net > 0 ? "up" : net < 0 ? "down" : ""}`} role="status">
+      <p className="sign">This hand</p>
+      <p className="bj-my-head">{head}</p>
+      <p className="bj-my-net">
+        {net > 0 ? "+" : net < 0 ? "−" : "±"}
+        {Math.abs(net)}
+      </p>
+    </Card>
+    </>
   );
 }
 
@@ -121,6 +149,8 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
         </Card>
       )}
 
+      {/* the payout headline first: it's what everyone looks for */}
+      {!tv && view.phase === "settle" && view.result?.net[you] !== undefined && <MyResult view={view} you={you} />}
       {view.phase !== "final" && (
         <Card tone="stage" className="felt">
           <p className="sign">Dealer</p>
@@ -148,9 +178,14 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
 
       {!tv && view.phase === "bet" && <BetPanel view={view} you={you} send={send} />}
       {!tv && view.phase === "play" && myTurn && (
-        <Card tone="soft" className="center">
+        // Your hand sits right beside Hit and Stand; on phones this card stays pinned to the screen bottom.
+        <Card tone="soft" className="center bj-move">
           <h3>Your move{(view.hands[you]?.length ?? 0) > 1 ? ` (hand ${(view.turn?.hand ?? 0) + 1})` : ""}</h3>
-          <div className="row center">
+          {view.hands[you]?.[view.turn?.hand ?? 0] && <Hand hand={view.hands[you]![view.turn?.hand ?? 0]!} />}
+          <p className="muted bj-dealer-shows">
+            Dealer shows <b>{view.dealer.value}</b>
+          </p>
+          <div className="bj-actions">
             {view.you.actions.map((a) => (
               <Btn
                 key={a}
@@ -172,7 +207,8 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
         <Final view={view} you={you} />
       ) : (
         <div className="grid">
-          {view.players.map((p) => {
+          {/* your own seat first, so your cards are never far from the buttons */}
+          {[...view.players].sort((a, b) => (tv ? 0 : Number(b.id === you) - Number(a.id === you))).map((p) => {
             const hands = view.hands[p.id] ?? [];
             const outcomes = view.result?.outcomes[p.id] ?? [];
             const turn = view.turn?.player === p.id;
@@ -218,7 +254,7 @@ export function Blackjack({ view, you, receivedAt, send, tv = false }: Props) {
                 )}
                 {view.result && view.result.net[p.id] !== undefined && (
                   <p>
-                    <span className={`chip ${view.result.net[p.id]! > 0 ? "teal" : view.result.net[p.id]! < 0 ? "cherry" : ""}`}>
+                    <span className={`chip bj-result ${view.result.net[p.id]! > 0 ? "teal" : view.result.net[p.id]! < 0 ? "cherry" : ""}`}>
                       {outcomes.join(" / ")} · {view.result.net[p.id]! > 0 ? "+" : ""}
                       {view.result.net[p.id]}
                     </span>

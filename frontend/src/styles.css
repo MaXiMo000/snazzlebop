@@ -1424,6 +1424,71 @@ details summary {
 .bj-hand .muted {
   margin-top: 6px;
 }
+.sign-part {
+  display: inline-block;
+  max-width: 100%;
+}
+.bj-move .bj-hand {
+  display: grid;
+  justify-items: center;
+  margin: 10px 0 12px;
+}
+/* Phones and tablets: Hit / Stand (and your hand) stay pinned to the bottom of the screen on your turn. */
+.bj-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.bj-actions .btn {
+  padding-inline: 10px;
+}
+.bj-actions .btn:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+@media (max-width: 899px) {
+  .bj-move {
+    position: sticky;
+    bottom: 10px;
+    z-index: 5;
+    box-shadow:
+      var(--lift),
+      0 10px 30px rgba(43, 27, 51, 0.35);
+  }
+}
+/* Results: big enough to read across the room. */
+.bj-anchor {
+  scroll-margin-top: 12px;
+}
+.stack > .bj-anchor + * {
+  margin-top: 0;
+}
+.chip.bj-result {
+  padding: 6px 14px;
+  font-size: 1.05rem;
+}
+.bj-my-head {
+  margin: 6px 0 0;
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 7vw, 2.6rem);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.bj-my-net {
+  margin: 4px 0 0;
+  font-family: var(--display);
+  font-size: clamp(2.6rem, 14vw, 4.4rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--bulb);
+}
+.bj-my-result.up .bj-my-net {
+  color: #8ee6a0;
+}
+.bj-my-result.down .bj-my-net {
+  color: #ffb3bd;
+}
 .seat.turn {
   box-shadow:
     0 0 0 5px var(--bulb),
@@ -2702,11 +2767,16 @@ details.how-to summary {
 details.how-to[open] summary {
   margin-bottom: 10px;
 }
-/* Ready for the next round: pinned to the bottom of the screen on phones so it's always in reach. */
+/* Ready for the next round: pinned to the bottom of the screen on phones and tablets so it's always
+   in reach (laptops have the room to show it where it is). */
+@media (max-width: 899px) {
+  .ready-bar {
+    position: sticky;
+    bottom: 12px;
+    z-index: 30;
+  }
+}
 .ready-bar {
-  position: sticky;
-  bottom: 12px;
-  z-index: 30;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
