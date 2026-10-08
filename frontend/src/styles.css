@@ -432,6 +432,14 @@ a {
   transform: translateY(5px);
   box-shadow: 0 1px 0 var(--shadow);
 }
+/* A pressed button sinks 5px; this strip fills the gap above it, so a finger near the top edge still
+   lifts off on the button and the tap counts (the transform anchors the absolute strip). */
+.btn:active:not(:disabled)::before {
+  content: "";
+  position: absolute;
+  inset: -6px 0 auto;
+  height: 6px;
+}
 .btn.go {
   --bg: var(--teal);
   --fg: var(--cream);

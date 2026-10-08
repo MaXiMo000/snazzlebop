@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Btn, Card, ShowHead, nameList, nameOf } from "../components/ui";
 import { useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
@@ -11,6 +11,11 @@ interface Props {
   send: (msg: Record<string, unknown>) => void;
   /** read-only big screen */
   tv?: boolean;
+}
+
+/** Seconds into the run on this device's clock (the server credits a tap at this time, within a lag window). */
+function runTime(view: ChickenView, receivedAt: number): number {
+  return view.started_ago! + Math.max(0, performance.now() - receivedAt) / 1000;
 }
 
 /** The pot right now, computed on this device from the server's start offset (no countdown is sent). */
@@ -36,6 +41,25 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
   const show = useShow();
   const value = useLiveValue(view, receivedAt);
   const mine = view.cashed[you];
+  // The tap shows at once (the server confirms a moment later). Cleared each round, or if no
+  // confirmation comes, so a lost tap can be tried again.
+  const [tapped, setTapped] = useState<{ round: number; t: number; value: number } | null>(null);
+  const tappedAt = useRef(0);
+  const pending = tapped && tapped.round === view.round && view.phase === "run" && !mine ? tapped : null;
+  useEffect(() => {
+    if (!pending) return;
+    const id = window.setTimeout(() => setTapped(null), 2500);
+    return () => window.clearTimeout(id);
+  }, [pending]);
+  const cash = () => {
+    if (view.phase !== "run" || view.started_ago === null || mine || pending) return;
+    if (performance.now() - tappedAt.current < 300) return; // pointerdown and its click: one tap
+    tappedAt.current = performance.now();
+    const t = Math.round(runTime(view, receivedAt) * 100) / 100; // the server values hundredths too
+    setTapped({ round: view.round, t, value: Math.floor(view.base * view.growth ** t) });
+    sfx.pop();
+    send({ t: "act", a: "cash", at: t });
+  };
   useOnChange(view.phase, (_, phase) => {
     if (phase === "run") sfx.ding();
     if (phase === "boom" && view.result) {
@@ -81,15 +105,20 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
               <p className="lead">
                 You banked <b>{mine.value}</b> at {mine.t.toFixed(1)}s. Now watch the others sweat.
               </p>
+            ) : pending ? (
+              <p className="lead" role="status">
+                Cashing out <b>{pending.value}</b> at {pending.t.toFixed(1)}s…
+              </p>
             ) : (
+              // Fires on the finger going down, like a game-show buzzer (the click is for keyboards).
               <Btn
                 variant="gold"
                 size="big"
                 className="cash-out"
-                onClick={() => {
-                  sfx.pop();
-                  send({ t: "act", a: "cash" });
+                onPointerDown={(e) => {
+                  if (e.button === 0) cash();
                 }}
+                onClick={cash}
               >
                 Cash out!
               </Btn>

@@ -106,9 +106,11 @@ export function useRoom(code: string, token: string | null): RoomConnection {
     };
   }, [code, token, generation]);
 
+  // Never drop a tap silently: if the socket is down (a phone waking up, a network blip), say so.
   const send = useCallback((msg: Record<string, unknown>) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    else setError("Reconnecting… that tap didn't reach the studio. Try again in a moment.");
   }, []);
   const retry = useCallback(() => setGeneration((g) => g + 1), []);
   const clearError = useCallback(() => setError(null), []);

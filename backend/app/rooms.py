@@ -1155,7 +1155,8 @@ class Hub:
             if changed:
                 await self.broadcast(room)
 
-    async def run_ticker(self, interval: float = 0.5) -> None:
+    # 0.2 s: timers (a Chicken Run bomb, a turn clock) fire within a fifth of a second of their time.
+    async def run_ticker(self, interval: float = 0.2) -> None:
         while True:
             try:
                 await self.tick()

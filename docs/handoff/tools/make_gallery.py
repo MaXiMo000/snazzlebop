@@ -170,13 +170,14 @@ footer {{ color: var(--muted); font-size: 0.9rem; }}
 <div class="wrap">
   <header class="intro">
     <span class="sign">Preview before pushing</span>
-    <h1>The three new <span>classics</span>, every phase, every screen</h1>
-    <p>Real games played by four people at once in real browsers: Ana hosts on a laptop, Bartholomew X on a phone,
-    Zara on a tablet and Leo on a small phone, with the living-room TV screen alongside. {total} screenshots.
+    <h1>The new <span>classics</span>, every phase, every screen</h1>
+    <p>Real games played by five people at once in real browsers: Ana hosts on a laptop, Bartholomew X on a phone,
+    Zara on a tablet, Leo on a small phone and Alexandria Wood on a 320px phone, with the living-room TV screen
+    alongside. Five players means Ludo plays in teams. {total} screenshots.
     Each row is one moment of the game; swipe sideways for the other devices and tap any shot to open it full size.</p>
     <ul class="legend" aria-label="Devices">
       <li>Laptop · 1366px · light</li><li>Phone · 390px · dark</li><li>Tablet · 820px · dark</li>
-      <li>Small phone · 360px · light</li><li>TV · 1920px</li>
+      <li>Small phone · 360px · light</li><li>Tiny phone · 320px · dark</li><li>TV · 1920px</li>
     </ul>
     <nav aria-label="Games">{"".join(nav)}</nav>
   </header>
@@ -185,6 +186,6 @@ footer {{ color: var(--muted); font-size: 0.9rem; }}
 </div>
 """
 (G / "index.html").write_text(page, encoding="utf-8")
-files = sorted(p.name for p in G.glob("*.jpg"))
-(G / "files.json").write_text(json.dumps({f"shots/{f}": f for f in files}), encoding="utf-8")
+files = sorted(p.name for p in (G / "shots").glob("*.jpg"))
+(G / "files.json").write_text(json.dumps({f"shots/{f}": f"shots/{f}" for f in files}), encoding="utf-8")
 print(total, "shots,", len(files), "files")

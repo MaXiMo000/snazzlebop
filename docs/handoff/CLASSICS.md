@@ -115,6 +115,10 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
 16. **Use the empty space on wide screens**: the user spotted a TV view where the log fell off the bottom
     while the board column and the scoreboard column had room. TV shots are viewport-only (1080 tall):
     check them for anything cut at the bottom.
+17. **Taps that "didn't register"** (Chicken Run, reported by the user): `send()` dropped messages while the
+    socket was down without a word (now a toast), podium buttons sink 5px on press so a touch near the top
+    edge lifted off outside (now a hit strip fills the gap), time-critical buttons fired on click (now
+    pointerdown), and the server valued taps on arrival (now the client sends `at`, credited within 0.4 s).
 
 ## Per-game checklist (what "done" means here)
 

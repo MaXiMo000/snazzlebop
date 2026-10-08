@@ -93,6 +93,36 @@ class ChickenTests(unittest.TestCase):
         self.assertEqual(g.scores()["p1"], 0)
         self.assertEqual(g.scores()["p0"], value_at(2.0) + NERVE_BONUS)
 
+    def test_a_tap_is_credited_when_it_was_made_within_the_lag_window(self):
+        g, clock = make(3)
+        g.bomb = 6.0
+        run(g, clock)
+        clock.t += 5.0
+        g.handle("p0", {"a": "cash", "at": 4.8})  # tapped at 4.8 s, arrived at 5.0 s
+        self.assertEqual(g.cashed["p0"], {"t": 4.8, "value": value_at(4.8)})
+        g.handle("p1", {"a": "cash", "at": 1.0})  # can't claim further back than the lag window
+        self.assertEqual(g.cashed["p1"]["t"], 4.6)
+        clock.t += 1.1  # 6.1 s: the bomb went off at 6.0, but p2 tapped at 5.9 on their screen
+        g.handle("p2", {"a": "cash", "at": 5.9})
+        self.assertEqual(g.cashed["p2"]["t"], 5.9)
+        self.assertEqual(g.phase, "boom")  # and the late arrival sets the bomb off for the rest
+
+    def test_a_tap_never_claims_the_future_or_beats_the_bomb_by_more_than_lag(self):
+        g, clock = make(3)
+        g.bomb = 6.0
+        run(g, clock)
+        clock.t += 3.0
+        g.handle("p0", {"a": "cash", "at": 9.0})  # a time from the future counts as now
+        self.assertEqual(g.cashed["p0"]["t"], 3.0)
+        for bad in ("1", True, float("nan"), float("inf"), [1]):
+            with self.assertRaises(GameError):
+                g.handle("p1", {"a": "cash", "at": bad})
+        clock.t += 3.6  # 6.6 s: a claim of 5.9 is older than the lag window allows
+        with self.assertRaises(GameError):
+            g.handle("p1", {"a": "cash", "at": 5.9})
+        self.assertEqual(g.phase, "boom")
+        self.assertNotIn("p1", g.result["cashed"])
+
     def test_the_ticker_sets_off_the_bomb(self):
         g, clock = make(2)
         g.bomb = 4.5

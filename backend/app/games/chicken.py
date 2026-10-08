@@ -10,12 +10,17 @@ While everyone gets ready, two dirty tricks (paid for from this game's points):
 - Short fuse (40, once a game): pick a rival. Their personal bomb goes off at a random 40-80% of the
   real one. They're told someone did it (not who); the culprit is named at the bang.
 
+Taps are credited at the moment the player tapped (the client sends the time it showed), within a
+short window: the claim can only be up to TAP_LAG seconds before the server got it, never after. So
+phone lag doesn't cost points or turn an in-time tap into a boom, and nobody can claim more than lag.
+
 Secrecy: the bomb time lives only here until it goes off. The run phase deliberately has no public
 deadline (a countdown would give the bomb away); clients animate the value from `started_ago`.
 """
 
 from __future__ import annotations
 
+import math
 from typing import Any, ClassVar
 
 from .base import Game, GameError
@@ -27,6 +32,7 @@ NERVE_BONUS = 50
 INSURANCE_COST, INSURANCE_SHARE = 30, 0.25
 FUSE_COST = 40
 FUSE_MIN, FUSE_MAX = 0.4, 0.8
+TAP_LAG = 0.4  # seconds: how far back a tap's own time may be credited (network + screen lag)
 
 
 def value_at(t: float) -> int:
@@ -143,21 +149,31 @@ class ChickenRun(Game):
             return
         if kind != "cash":
             raise GameError("bad_action", "Unknown action")
-        if self.phase == "run" and self.elapsed() >= self.bomb:
-            self._end_round()  # the tap arrived after the bang
-            raise GameError("too_late", "BOOM! Too late")
-        if self.phase == "run" and pid not in self.cashed and self.elapsed() >= self.bomb_for(pid):
-            raise GameError("too_late", "BOOM! Your fuse was short")
         if self.phase != "run":
             raise GameError("wrong_phase", "Wait for the run")
         if pid in self.cashed:
             raise GameError("already_locked", "You already cashed out")
+        now = self.elapsed()
+        t = self._tap_time(action.get("at"), now)
+        if t >= self.bomb_for(pid):
+            if now >= self.bomb:
+                self._end_round()  # the tap came after the bang: it goes off now
+            short = pid in self.fuses and t < self.bomb
+            raise GameError("too_late", "BOOM! Your fuse was short" if short else "BOOM! Too late")
         # Value the published (rounded) time, so anyone can check the number from the time shown.
-        t = round(self.elapsed(), 2)
         self.cashed[pid] = {"t": t, "value": value_at(t)}
         self.bump()
-        if len(self.cashed) == len(self.players):
+        if len(self.cashed) == len(self.players) or now >= self.bomb:
             self._end_round()
+
+    @staticmethod
+    def _tap_time(claim: Any, now: float) -> float:
+        """When the player tapped: their own claim, kept within [now - TAP_LAG, now]; else now."""
+        if claim is None:
+            return round(now, 2)
+        if isinstance(claim, bool) or not isinstance(claim, int | float) or not math.isfinite(claim):
+            raise GameError("bad_input", "Tap time must be a number")
+        return round(min(now, max(float(claim), now - TAP_LAG)), 2)
 
     def _trick(self, pid: str, kind: str, action: dict[str, Any]) -> None:
         if self.phase != "ready":
