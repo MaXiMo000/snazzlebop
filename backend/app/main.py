@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import logging
 import re
+import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
@@ -67,7 +68,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         save=db.save_content,
         calls_per_hour=settings.content_calls_per_hour,
     )
-    hub = Hub(settings, on_game_finished=record_result, on_game_started=generator.request)
+    # Wall-clock time (not monotonic) so a room's timers still mean something after a restart.
+    hub = Hub(
+        settings,
+        clock=time.time,
+        on_game_finished=record_result,
+        on_game_started=generator.request,
+        store=db,
+    )
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -79,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 kind, theme = split_kind(name)
                 loaded += len(add_items(kind, [payload], theme))
         log.info("content: %d saved items loaded; generator %s", loaded, "on" if generator.enabled else "off")
+        await db.purge_snapshots(settings.room_max_age_seconds)
         ticker = asyncio.create_task(hub.run_ticker())
         try:
             yield
@@ -86,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ticker.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await ticker
+            await hub.flush()  # live rooms carry on on the next server
             await db.close()
 
     docs = None if settings.is_production else "/docs"
@@ -156,6 +166,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/rooms/{code}/join")
     async def join_room(code: str, body: NameBody, request: Request) -> dict[str, str]:
         try:
+            await hub.fetch(code.upper())  # back from a restart: restore it first
             room, player, token = hub.join_room(code, body.name)
         except HubError as exc:
             if exc.code == "room_not_found":
@@ -170,6 +181,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def tv_seat(code: str, request: Request) -> dict[str, str]:
         """Read-only big-screen view (TV mode). Rate limited and penalised exactly like join."""
         try:
+            await hub.fetch(code.upper())
             room, token = hub.issue_tv(code)
         except HubError as exc:
             if exc.code == "room_not_found":
@@ -183,6 +195,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def audience_seat(code: str, body: NameBody, request: Request) -> dict[str, str]:
         """A named seat in the crowd (react, predict). Rate limited and penalised exactly like join."""
         try:
+            await hub.fetch(code.upper())
             room, watcher, token = hub.join_audience(code, body.name)
         except HubError as exc:
             if exc.code == "room_not_found":

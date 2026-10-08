@@ -1,7 +1,8 @@
 # Security
 
 Snazzlebop is a small party-game server: anonymous players, short-lived rooms, no accounts, no passwords,
-no payment data, no personal data beyond a display name that lives in memory for the life of a room.
+no payment data, no personal data beyond a display name that lives for the life of a room (in memory, and in
+its database snapshot).
 That shape removes most of the usual attack surface. This document says what is defended, how, and
 what is **not** covered.
 
@@ -43,14 +44,19 @@ explicit. In particular:
 ## What is stored
 
 - **In memory, per room:** display names, scores, game state. Deleted when the room expires.
+- **Room snapshots (Postgres, `room_snapshots`):** the same room state, saved after every change so a
+  restart or deploy doesn't end a game. Deleted when the room expires (and purged at startup if older
+  than a room can live). Snapshots are pickles, so each is HMAC-signed with `SECRET_KEY` and never
+  unpickled unless the signature checks out: a row written by anyone else is ignored.
 - **In Postgres (optional):** anonymous per-game summaries (`game_id`, timestamp, player count, a score
   aggregate). No names, IPs, tokens or room codes. The app runs fine if the database is unavailable.
 
 ## Known limitations (be aware, decide, document)
 
-1. **Single instance.** Room state is in process memory, so the service runs one uvicorn worker. A
-   restart or Render free-tier sleep ends live rooms. To scale horizontally, move room state and
-   pub/sub to Redis (Render Key Value) behind the `Hub` seam.
+1. **Single instance.** Room state is in process memory (snapshotted to Postgres), so the service runs
+   one uvicorn worker. A restart or deploy resumes live rooms from their snapshots; during the few
+   seconds a deploy runs old and new servers side by side, the last save wins. To scale horizontally,
+   move room state and pub/sub to Redis (Render Key Value) behind the `Hub` seam.
 2. **In-memory rate limits** reset on restart and are per instance.
 3. **Anonymous play** means a determined user can create many identities from many IPs. Cloudflare
    Turnstile on room creation is the recommended next step if abuse appears.

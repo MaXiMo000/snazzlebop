@@ -101,8 +101,10 @@ Free web instances sleep when idle and drop live rooms; use the Starter plan for
 4. **No inline scripts or styles, no third-party requests.** CSP is `default-src 'none'` + `'self'`.
    Fonts are self-hosted via @fontsource. Do not add CDNs, analytics, or `dangerouslySetInnerHTML`.
 5. **Token in the first WebSocket message**, never in a URL. Logs never contain names, tokens, codes.
-6. **One worker.** Room state is in memory. Anything that needs scale-out goes behind `Hub`
-   (Redis) first.
+6. **One worker.** Room state lives in memory and is snapshotted to Postgres after every change
+   (`persist.py`, HMAC-signed pickles), so a restart or deploy doesn't end a game: rooms are restored on
+   first use. Anything that needs scale-out goes behind `Hub` first. A room must stay picklable (no
+   lambdas or live handles on games/shows; connections and locks are excluded in `Room.__getstate__`).
 7. Adding a game: subclass `Game`, register in `games/__init__.py`, add a React screen + type,
    write `view_for` secrecy tests (players AND a TV spectator id), give it a TV (read-only) screen,
    add it to the lobby catalog (automatic via `catalog()`). Give it `HOW_TO` (plain rules, shown on the

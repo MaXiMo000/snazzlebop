@@ -122,6 +122,7 @@ Run locally on Windows 11 + Docker Desktop against the production image (details
 - Cloudflare: the edge steps are written from documented behaviour and the edge-secret check is tested
   locally, but the hop count has not been checked through a real Cloudflare → Render chain.
 
-**Limits by design:** one instance with in-memory rooms and rate limits (a restart ends live games),
+**Limits by design:** one instance with in-memory rooms (saved to Postgres after every change, so a restart or
+deploy resumes live games) and in-memory rate limits,
 anonymous play (many IPs can make many players), and no external security review or pen test. This is
 a strong, evidenced baseline, not a guarantee.

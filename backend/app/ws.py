@@ -101,7 +101,7 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
         return
     # An unknown room is NOT refused here: it fails at auth exactly like a bad token, so the
     # socket can't be used to test which codes exist.
-    room = hub.get(code)
+    room = await hub.fetch(code)  # restored from its snapshot if the server restarted
     if counter.total >= settings.max_ws_total or counter.per_ip.get(ip, 0) >= settings.max_ws_per_ip:
         await _close(ws, 1013)
         return

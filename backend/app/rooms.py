@@ -14,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from . import prank
+from . import persist, prank
 from . import show as showlib
 from .config import Settings
 from .games import REGISTRY, Game, GameError, Player, catalog
@@ -53,6 +53,16 @@ class HubError(Exception):
 class Connection(Protocol):
     async def send_json(self, data: dict[str, Any]) -> None: ...
     async def close(self, code: int = 1000) -> None: ...
+
+
+class SnapshotStore(Protocol):
+    """Where room snapshots live (db.Database). Every call fails soft: rooms work without it."""
+
+    ready: bool
+
+    async def save_snapshot(self, code: str, data: bytes) -> None: ...
+    async def load_snapshot(self, code: str) -> bytes | None: ...
+    async def delete_snapshots(self, codes: list[str]) -> None: ...
 
 
 def clean_name(raw: object, max_len: int = 16) -> str:
@@ -132,6 +142,26 @@ class Room:
     scares: dict[str, int] = field(default_factory=dict)
     last_active: float = 0.0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    # Snapshots: this copy came from the database and nothing has changed here since (so a newer
+    # snapshot, written by the server that's shutting down during a deploy, may replace it).
+    restored: bool = False
+    touched: bool = False
+    snapshot: str = ""  # fingerprint of the snapshot this copy was loaded from
+
+    # Saved without anything live: connections and locks belong to this process only.
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        state.pop("lock", None)
+        state["conns"] = {}
+        state["viewers"] = dict.fromkeys(self.viewers)
+        state["audience"] = {k: Watcher(w.id, w.name, None, w.points) for k, w in self.audience.items()}
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        self.__dict__.update(state)
+        self.lock = asyncio.Lock()
+        for p in self.players.values():
+            p.connected = False
 
     def connected_players(self) -> list[Player]:
         return [p for p in self.players.values() if p.connected]
@@ -150,6 +180,7 @@ class Hub:
         on_game_started: Callable[[str, str], None] | None = None,  # (game id, show pack)
         timings: dict[str, dict[str, float]] | None = None,
         intro_seconds: float = INTRO_SECONDS,  # 0 = games start straight away (used by unit tests)
+        store: SnapshotStore | None = None,  # saves rooms so they survive a restart (None: memory only)
     ) -> None:
         self.settings = settings
         self.clock = clock
@@ -163,6 +194,84 @@ class Hub:
         self.send_timeout = 5.0  # a socket that can't take a frame this long is dropped
         self._mail: dict[Connection, dict[str, Any]] = {}
         self._tasks: set[asyncio.Task[None]] = set()
+        self.store = store
+        self._saving: dict[str, bool] = {}  # room code -> another save is due once this one lands
+
+    # -- snapshots: rooms survive a restart ----------------------------------------------------------
+    def _shared(self) -> dict[str, Any]:
+        return {"rng": self.rng, "clock": self.clock}
+
+    def _persist(self, room: Room) -> None:
+        """Save this room soon. Saves never overlap per room; the newest state always lands last."""
+        room.touched = True
+        if self.store is None or not self.store.ready:
+            return
+        if room.code in self._saving:
+            self._saving[room.code] = True
+            return
+        try:
+            task = asyncio.get_running_loop().create_task(self._save(room))
+        except RuntimeError:  # no event loop (a sync caller in tests): nothing to save with
+            return
+        self._saving[room.code] = False
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def _save(self, room: Room) -> None:
+        try:
+            while True:
+                self._saving[room.code] = False
+                if self.rooms.get(room.code) is not room or self.store is None:
+                    return
+                try:
+                    blob = persist.dump_room(room, self.settings.secret_key, self._shared())
+                except Exception:
+                    log.exception("could not snapshot a room")
+                    return
+                await self.store.save_snapshot(room.code, blob)
+                if not self._saving.get(room.code):
+                    return
+        finally:
+            self._saving.pop(room.code, None)
+
+    async def flush(self) -> None:
+        """Save every room now (shutdown: the next server picks them up)."""
+        if self.store is None or not self.store.ready:
+            return
+        for room in list(self.rooms.values()):
+            try:
+                blob = persist.dump_room(room, self.settings.secret_key, self._shared())
+            except Exception:
+                log.exception("could not snapshot a room")
+                continue
+            await self.store.save_snapshot(room.code, blob)
+
+    async def fetch(self, code: str) -> Room | None:
+        """The room with this code: in memory, or restored from its snapshot after a restart. A copy
+        restored here that nobody has touched yet is refreshed if a newer snapshot has landed (during a
+        deploy the old server keeps saving until it shuts down)."""
+        if not isinstance(code, str) or not ROOM_CODE_RE.match(code):
+            return None
+        room = self.rooms.get(code)
+        if room is not None and not (room.restored and not room.touched):
+            return room
+        if self.store is None or not self.store.ready:
+            return room
+        blob = await self.store.load_snapshot(code)
+        if blob is None:
+            return room
+        if room is not None and persist.fingerprint(blob) == room.snapshot:
+            return room
+        loaded = persist.load_room(blob, self.settings.secret_key, self._shared())
+        if loaded is None or self.clock() - loaded.created > self.settings.room_max_age_seconds:
+            return room
+        if self.rooms.get(code) is not room:  # someone else restored it while we waited
+            return self.rooms.get(code)
+        loaded.restored, loaded.touched, loaded.snapshot = True, False, persist.fingerprint(blob)
+        loaded.last_active = self.clock()
+        self.rooms[code] = loaded
+        log.info("room restored from its snapshot")
+        return loaded
 
     # -- rooms --------------------------------------------------------------
     def _new_code(self) -> str:
@@ -187,6 +296,7 @@ class Hub:
         room.total_scores[player.id] = 0
         self.rooms[room.code] = room
         self._scare(room, player.id, name)
+        self._persist(room)
         return room, player, self._issue(room, player)
 
     def get(self, code: str) -> Room | None:
@@ -211,6 +321,7 @@ class Hub:
         room.total_scores[player.id] = 0
         room.last_active = self.clock()
         self._scare(room, player.id, name)
+        self._persist(room)
         return room, player, self._issue(room, player)
 
     def _scare(self, room: Room, pid: str, name: str | None = None) -> None:
@@ -251,6 +362,7 @@ class Hub:
         room.audience[watcher.id] = watcher
         room.last_active = self.clock()
         self._scare(room, watcher.id, name)
+        self._persist(room)
         token = sign_token(self.settings.secret_key, watcher.id, room.code, self.settings.token_ttl_seconds)
         return room, watcher, token
 
@@ -266,6 +378,7 @@ class Hub:
             conn = room.viewers.pop(oldest)
             if conn is not None:
                 asyncio.get_running_loop().create_task(conn.close(1008))
+        self._persist(room)
         token = sign_token(self.settings.secret_key, vid, room.code, self.settings.token_ttl_seconds)
         return room, token
 
@@ -274,11 +387,18 @@ class Hub:
 
     def cleanup(self) -> None:
         now = self.clock()
+        gone = []
         for code, room in list(self.rooms.items()):
             idle = not room.conns and now - room.last_active > self.settings.room_idle_seconds
             old = now - room.created > self.settings.room_max_age_seconds
             if idle or old:
                 del self.rooms[code]
+                gone.append(code)
+        if gone and self.store is not None and self.store.ready:
+            with contextlib.suppress(RuntimeError):  # no running loop (sync tests): nothing was saved
+                task = asyncio.get_running_loop().create_task(self.store.delete_snapshots(gone))
+                self._tasks.add(task)
+                task.add_done_callback(self._tasks.discard)
 
     # -- connections --------------------------------------------------------
     async def connect(self, room: Room, pid: str, conn: Connection) -> None:
@@ -566,6 +686,7 @@ class Hub:
         self._mail.pop(conn, None)
 
     async def broadcast(self, room: Room) -> None:
+        self._persist(room)  # every change is broadcast, so every change is saved
         targets = [
             *room.conns.items(),
             *((v, c) for v, c in room.viewers.items() if c is not None),
