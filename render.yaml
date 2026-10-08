@@ -1,10 +1,12 @@
 # Render Blueprint: one Docker web service (API + WebSockets + built SPA, same origin)
-# plus a private Postgres for anonymous game stats.
+# plus a private Postgres: live-room snapshots (games survive restarts), accounts, coins, seasons, stats.
 #
 # Deploy: Render dashboard -> New -> Blueprint -> pick this repo. SECRET_KEY is generated for you.
 databases:
   - name: snazzlebop-db
-    plan: free # NOTE: Render's free Postgres expires after a while; the game keeps working without it.
+    # Paid (about $6/month, 1 GB storage included): the free Postgres expires, and accounts, coins and
+    # restart-proof rooms live here. Games still run if the database is ever unreachable.
+    plan: 0.1c-256mb
     databaseName: snazzlebop
     user: snazzlebop
     ipAllowList: [] # private network only: no public access to the database
