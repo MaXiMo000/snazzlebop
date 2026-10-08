@@ -34,7 +34,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Eighteen games. One room code. Zero sign-ups.</p>
+        <p className="lead">Nineteen games. One room code. Zero sign-ups.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -176,6 +176,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           </li>
           <li>
             <b>Word Race</b> (classic): everyone hunts the same five-letter word in six tries. Fewest guesses wins.
+          </li>
+          <li>
+            <b>Last Card</b> (classic): match colours and numbers, skip, reverse, draw four. Shout before you're caught!
           </li>
         </ul>
       </Card>

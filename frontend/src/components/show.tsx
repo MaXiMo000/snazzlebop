@@ -28,6 +28,7 @@ export const SEGMENT_ICON: Record<GameCard["id"] | "jackpot", string> = {
   codewords: "🕵️",
   truthdare: "🍾",
   wordrace: "🔤",
+  lastcard: "🎴",
   jackpot: "💎",
 };
 

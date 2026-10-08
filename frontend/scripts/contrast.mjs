@@ -124,6 +124,16 @@ const pairs = [
   ["#2e7d32", "paper", "Word Race answers list (light)"],
   ["#7fd17a", "#221530", "Word Race answers list (dark)"],
   ["cream", "#4a3760", "Word Race untried keys (dark)"],
+  ["#ffffff", "#127a3e", "Last Card green cards"],
+  ["#ffffff", "#1f5fae", "Last Card blue cards"],
+  ["#ffffff", "#c8203a", "Last Card red cards"],
+  ["plum", "#f2b705", "Last Card yellow cards"],
+  ["#9a6a00", "#ffffff", "Last Card yellow symbol in the oval"],
+  ["#127a3e", "#ffffff", "Last Card green symbol in the oval"],
+  ["#ffffff", "#241a2b", "Last Card wild cards and backs"],
+  ["bulb", "#c8203a", "Last Card back mark"],
+  ["plum", "#ffd3d8", "Last Card soft cards"],
+  ["plum-soft", "#ffd3d8", "muted in Last Card soft"],
 ];
 
 // Dark theme (the default): role tokens from :root, plus each segment's soft tint, which is

@@ -53,6 +53,7 @@ class RegistryTests(unittest.TestCase):
                 "codewords",
                 "truthdare",
                 "wordrace",
+                "lastcard",
             },
         )
 

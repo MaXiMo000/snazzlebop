@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard";
   title: string;
   blurb: string;
   min_players: number;
@@ -330,6 +330,7 @@ export type GameView =
   | DiceView
   | TruthDareView
   | WordRaceView
+  | LastCardView
   | JackpotView;
 
 export interface Highlight {
@@ -822,4 +823,51 @@ export interface WordRaceView extends GameBase {
   answer: string | null;
   wins: Record<string, number>;
   history?: WrRound[];
+}
+
+export type LcColor = "red" | "yellow" | "green" | "blue";
+export interface LcCard {
+  id: number;
+  color: LcColor | "wild";
+  /** "0"-"9", "skip", "reverse", "draw2", "wild", "wild4" */
+  value: string;
+}
+export type LcLog =
+  | { type: "start"; card: number }
+  | { type: "play"; player: string; card: number; base: LcColor | "wild"; value: string; color: LcColor }
+  | { type: "draw"; player: string; n: number; reason: string }
+  | { type: "skipped"; player: string }
+  | { type: "reverse"; direction: number }
+  | { type: "pass"; player: string }
+  | { type: "challenge"; player: string; against: string; won: boolean }
+  | { type: "last"; player: string }
+  | { type: "caught"; player: string; by: string }
+  | { type: "timeout"; player: string }
+  | { type: "reshuffle" }
+  | { type: "win"; player: string; points: number };
+export interface LastCardView extends GameBase {
+  game: "lastcard";
+  phase: "play" | "hand_over" | "final";
+  players: { id: string; name: string }[];
+  /** seating order: play goes round this list (backwards when direction is -1) */
+  order: string[];
+  turn: string | null;
+  direction: number;
+  top: LcCard;
+  /** the colour to match (a Wild's chosen colour) */
+  color: LcColor;
+  /** a draw waiting for the current player; "was" = the colour a Wild Draw Four replaced */
+  pending: { kind: "draw2" | "wild4"; n: number; by: string; was?: LcColor } | null;
+  stacking: boolean;
+  counts: Record<string, number>;
+  deck: number;
+  protected: string[];
+  /** on one card without calling LAST CARD: catch them! */
+  vulnerable: string[];
+  log: LcLog[];
+  you: { hand: (LcCard & { playable: boolean })[]; drawn: number | null; can_last: boolean } | null;
+  winner: string | null;
+  scores: Record<string, number>;
+  hands?: Record<string, LcCard[]>;
+  history?: { winner: string; points: number; left: Record<string, number> }[];
 }

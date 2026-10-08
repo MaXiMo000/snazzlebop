@@ -27,6 +27,7 @@ import { Jackpot } from "../games/Jackpot";
 import { Codewords } from "../games/Codewords";
 import { TruthDare } from "../games/TruthDare";
 import { WordRace } from "../games/WordRace";
+import { LastCard } from "../games/LastCard";
 import { Boxes } from "../games/Boxes";
 import { Lonely } from "../games/Lonely";
 import { Roulette } from "../games/Roulette";
@@ -333,6 +334,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <TruthDare view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "wordrace":
       return <WordRace view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "lastcard":
+      return <LastCard view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -557,6 +560,14 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
     teams: "Two teams (4+ players)",
     normal: "Normal",
     hard: "Hard (every hint must be used)",
+  },
+  hands: {
+    "1": "1 hand",
+    "3": "3 hands (most points wins)",
+  },
+  stacking: {
+    off: "Off (official rules)",
+    on: "On (+2 on +2, +4 on +4)",
   },
   rounds: {
     "3": "3 words",

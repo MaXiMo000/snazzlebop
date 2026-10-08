@@ -36,7 +36,7 @@ TIMEOUT = 15.0
 # Errors a bot may legitimately trigger (racing for the same question, etc.). Anything else fails.
 EXPECTED_ERRORS = {"already_known", "no_asks", "wrong"}  # wrong: the deliberate crossword miss
 # Per game: a Chicken Run tap that lands just after the bomb is refused, and that's the point.
-EXPECTED_BY_GAME = {"chicken": {"too_late", "wrong_phase"}}
+EXPECTED_BY_GAME = {"chicken": {"too_late", "wrong_phase"}, "lastcard": {"no_catch"}}
 
 ALLOWED_KEYS = {
     ("frenemy", "rank"): {"game", "phase", "round", "rounds", "remaining", "prompt", "players", "submitted"}
@@ -71,6 +71,14 @@ ALLOWED_KEYS = {
     | {"murder_slot", "murder_label", "slots", "locations", "you", "claims", "flags", "clues", "log"}
     | {"votes_in", "you_voted", "objections"},
 }
+for _phase in ("play", "hand_over", "final"):
+    ALLOWED_KEYS[("lastcard", _phase)] = (
+        {"game", "phase", "round", "rounds", "remaining", "players"}
+        | {"order", "turn", "direction", "top", "color", "pending", "stacking", "counts", "deck", "protected"}
+        | {"vulnerable", "log", "you", "winner", "scores"}
+        | ({"hands"} if _phase != "play" else set())
+        | ({"history"} if _phase == "final" else set())
+    )
 for _phase in ("play", "reveal", "final"):
     ALLOWED_KEYS[("wordrace", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
         "hard",
@@ -1082,6 +1090,88 @@ def wordrace_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, 
     return pts
 
 
+def lastcard_points(cards: list[dict[str, Any]]) -> int:
+    pts = 0
+    for c in cards:
+        v = c["value"]
+        pts += int(v) if v.isdigit() else 50 if v in ("wild", "wild4") else 20
+    return pts
+
+
+async def play_lastcard(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots play legal cards (and sometimes forget to call LAST CARD, or bluff a Wild Draw Four).
+    Nobody may ever see another hand or whether a Draw Four was legal; every hand's score must equal
+    the cards left in the others' hands."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+    hands = host.state["game"]["rounds"]  # type: ignore[index]
+
+    def token(st: dict[str, Any]) -> str:
+        g = st.get("game") or {}
+        keys = ("phase", "round", "turn", "counts", "deck", "pending", "protected", "vulnerable", "color")
+        return json.dumps([g.get(k) for k in keys] + [g.get("log", [])[-1:]], sort_keys=True)
+
+    for hand_no in range(1, hands + 1):
+        for _ in range(1500):
+            g = host.state["game"]  # type: ignore[index]
+            if g["phase"] != "play" or g["round"] != hand_no:
+                break
+            now = token(host.state)  # type: ignore[arg-type]
+            bot = by_id[g["turn"]]
+            await bot.until(lambda st, t=now: token(st) == t, f"lastcard sync {hand_no}")
+            mine = bot.state["game"]  # type: ignore[index]
+            you = mine["you"]
+            caught = [p for p in mine["vulnerable"] if p != bot.pid]
+            if caught and rng.random() < 0.5:
+                await bot.send(t="act", a="catch", target=caught[0])
+            elif mine["pending"] is not None:
+                stack = [c for c in you["hand"] if c["playable"]]
+                if stack:
+                    await bot.send(t="act", a="play", card=stack[0]["id"])
+                elif mine["pending"]["kind"] == "wild4" and rng.random() < 0.4:
+                    await bot.send(t="act", a="challenge")
+                else:
+                    await bot.send(t="act", a="draw")
+            elif you["can_last"] and rng.random() < 0.7:
+                await bot.send(t="act", a="last")
+            else:
+                playable = [c for c in you["hand"] if c["playable"]]
+                if playable:
+                    c = rng.choice(playable)
+                    colour = rng.choice(["red", "yellow", "green", "blue"])
+                    extra = {"color": colour} if c["color"] == "wild" else {}
+                    await bot.send(t="act", a="play", card=c["id"], **extra)
+                elif you["drawn"] is not None:
+                    await bot.send(t="act", a="pass")
+                else:
+                    await bot.send(t="act", a="draw")
+            await host.until(lambda st, t=now: token(st) != t, f"lastcard move {hand_no}")
+        await all_until(
+            bots, lambda st: (st.get("game") or {}).get("phase") in ("hand_over", "final"), "lastcard over"
+        )
+        g = host.state["game"]  # type: ignore[index]
+        winner = g["winner"]
+        check(g["hands"][winner] == [], f"lastcard: winner {winner} still holds cards")
+        want = sum(lastcard_points(h) for p, h in g["hands"].items() if p != winner)
+        check(g["scores"][winner] >= want, f"lastcard: the winner's score is below this hand's {want}")
+        for p, h in g["hands"].items():
+            check(len(h) == g["counts"][p], "lastcard: shown hand sizes don't match the counts")
+        if g["phase"] == "hand_over":
+            await skip(host)
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "lastcard" or gg.get("phase") != "play":
+                continue
+            check("hands" not in gg, f"{b.name} saw other hands mid-hand")
+            check(len(gg["you"]["hand"]) == gg["counts"][b.pid], f"{b.name}'s hand doesn't match their count")
+            check(not gg["pending"] or "legal" not in gg["pending"], f"{b.name} saw if a Draw Four was legal")
+
+
+def lastcard_scores(g: dict[str, Any], ids: list[str]) -> dict[str, int]:
+    return {p: g["scores"].get(p, 0) for p in ids}
+
+
 def truthdare_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
     pts = dict.fromkeys(ids, 0)
     for h in history:
@@ -1538,6 +1628,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "codewords",
             "truthdare",
             "wordrace",
+            "lastcard",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1600,6 +1691,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_truthdare(host, bots, rng)
             elif game == "wordrace":
                 await play_wordrace(host, bots, rng)
+            elif game == "lastcard":
+                await play_lastcard(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1616,6 +1709,15 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(
                     got == {pid: chips[pid] - 1000 for pid in got}, f"roulette: scores {got} != stacks - 1000"
+                )
+            elif game == "lastcard":
+                g = host.state["game"]  # type: ignore[index]
+                want = lastcard_scores(g, [b.pid for b in bots])
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"lastcard: scores {got} != hand totals {want}")
+                check(
+                    sum(h["points"] for h in g["history"]) == sum(want.values()),
+                    "lastcard: history vs scores",
                 )
             elif game == "wordrace":
                 want = wordrace_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]

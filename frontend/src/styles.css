@@ -3939,3 +3939,408 @@ button.cw-card:hover {
 :root:not([data-theme="light"]) .wr-history-word {
   color: #7fd17a;
 }
+
+/* ---- last card ---------------------------------------------------------------------------------- */
+.seg-lastcard {
+  --accent: #c8203a;
+  --accent-ink: #fff;
+  --accent-soft: #ffd3d8;
+  --lc-red: #c8203a;
+  --lc-yellow: #f2b705;
+  --lc-green: #127a3e;
+  --lc-blue: #1f5fae;
+  --lc-wild: #241a2b;
+}
+/* The header takes the colour in play. */
+.seg-lastcard.lc-now-yellow {
+  --accent: var(--lc-yellow);
+  --accent-ink: var(--plum);
+}
+.seg-lastcard.lc-now-green {
+  --accent: var(--lc-green);
+}
+.seg-lastcard.lc-now-blue {
+  --accent: var(--lc-blue);
+}
+
+/* A card: colour, a tilted white oval with the symbol, corner symbols. */
+.lc-card {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  aspect-ratio: 2 / 3;
+  font-family: var(--display);
+  color: #fff;
+  background: var(--lc-wild);
+  border: 3px solid #fff;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 var(--shadow);
+  --sym: var(--lc-wild);
+}
+.lc-card.c-red {
+  background: var(--lc-red);
+  --sym: var(--lc-red);
+}
+.lc-card.c-yellow {
+  background: var(--lc-yellow);
+  color: var(--plum);
+  --sym: #9a6a00;
+}
+.lc-card.c-green {
+  background: var(--lc-green);
+  --sym: var(--lc-green);
+}
+.lc-card.c-blue {
+  background: var(--lc-blue);
+  --sym: var(--lc-blue);
+}
+.lc-oval {
+  display: grid;
+  place-items: center;
+  width: 82%;
+  height: 64%;
+  background: #fff;
+  border-radius: 50%;
+  transform: rotate(-24deg);
+}
+.lc-sym {
+  font-size: 1.3rem;
+  color: var(--sym);
+  transform: rotate(24deg);
+}
+.c-wild .lc-oval {
+  background: conic-gradient(var(--lc-red) 0 25%, var(--lc-blue) 0 50%, var(--lc-yellow) 0 75%, var(--lc-green) 0);
+}
+.c-wild .lc-sym {
+  color: #fff;
+  text-shadow:
+    0 0 3px #000,
+    0 2px 0 #000;
+}
+.lc-corner {
+  position: absolute;
+  font-size: 0.65rem;
+  line-height: 1;
+}
+.lc-corner.tl {
+  top: 4px;
+  left: 5px;
+}
+.lc-corner.br {
+  right: 5px;
+  bottom: 4px;
+  transform: rotate(180deg);
+}
+.lc-card.big {
+  width: clamp(72px, 22vw, 92px);
+  border-width: 4px;
+  border-radius: 14px;
+}
+.lc-card.big .lc-sym {
+  font-size: 2.1rem;
+}
+.lc-card.big .lc-corner {
+  font-size: 0.9rem;
+}
+.lc-card.mini {
+  width: 30px;
+  border-width: 2px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+.lc-card.mini .lc-sym {
+  font-size: 0.75rem;
+}
+.lc-card.mini .lc-corner {
+  display: none;
+}
+.lc-card.back {
+  background: var(--lc-wild);
+}
+.lc-back-mark {
+  padding: 4px 6px;
+  font-size: 0.6rem;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--bulb);
+  background: var(--lc-red);
+  border-radius: 50%;
+  transform: rotate(-24deg);
+}
+
+/* The table */
+.lc-table {
+  display: grid;
+  gap: 18px;
+}
+/* Compact seat chips that wrap, so the table and your hand fit on a phone screen. */
+.lc-seats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lc-seat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  max-width: 100%;
+  padding: 6px 10px;
+  color: var(--bulb);
+  background: #3b2546;
+  border: 2.5px solid var(--bulb-off);
+  border-radius: 14px;
+}
+.lc-seat.you {
+  border-color: var(--teal-light);
+}
+.lc-seat.on {
+  color: var(--plum);
+  background: var(--mustard);
+  border-color: var(--bulb);
+  box-shadow: 0 0 20px rgba(242, 183, 5, 0.7);
+}
+.lc-seat-name {
+  font-weight: 700;
+  overflow-wrap: break-word;
+}
+.lc-seat-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--display);
+}
+.lc-mini-backs {
+  display: inline-flex;
+}
+.lc-mini-backs i {
+  width: 10px;
+  height: 15px;
+  margin-left: -5px;
+  background: var(--lc-wild);
+  border: 1.5px solid var(--bulb);
+  border-radius: 2px;
+}
+.lc-mini-backs i:first-child {
+  margin-left: 0;
+}
+.lc-called,
+.lc-catch {
+  width: 100%;
+  justify-content: center;
+}
+.lc-catch {
+  animation: lc-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes lc-pulse {
+  to {
+    transform: scale(1.04);
+  }
+}
+.lc-piles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px 22px;
+}
+.lc-pile {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 4px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--bulb);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.lc-pile:disabled {
+  cursor: default;
+}
+.lc-pile:not(:disabled) .lc-card {
+  box-shadow:
+    0 0 0 4px var(--bulb),
+    0 0 26px rgba(242, 183, 5, 0.6);
+}
+.lc-land {
+  display: inline-block;
+  animation: lc-land 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes lc-land {
+  from {
+    opacity: 0;
+    transform: translateY(-60px) rotate(-25deg) scale(1.2);
+  }
+}
+.lc-status {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: var(--bulb);
+}
+.lc-swatch {
+  width: 44px;
+  height: 44px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+}
+.lc-swatch.c-red {
+  background: var(--lc-red);
+}
+.lc-swatch.c-yellow {
+  background: var(--lc-yellow);
+}
+.lc-swatch.c-green {
+  background: var(--lc-green);
+}
+.lc-swatch.c-blue {
+  background: var(--lc-blue);
+}
+.lc-dir {
+  display: inline-block;
+  font-size: 1.6rem;
+  line-height: 1;
+  animation: lc-turn 3s linear infinite;
+}
+.lc-dir.ccw {
+  animation-direction: reverse;
+}
+@keyframes lc-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.lc-pending {
+  margin: 0;
+  padding: 8px 12px;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+  background: var(--cherry);
+  border-radius: 12px;
+}
+
+/* Your hand */
+.lc-hand {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 8px;
+  margin: 14px 0 0;
+  padding: 10px 0 0;
+  list-style: none;
+}
+.lc-hand-btn {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.lc-hand-btn[aria-disabled="true"] {
+  cursor: default;
+}
+.lc-hand-btn.playable {
+  transform: translateY(-8px);
+}
+.lc-hand-btn.playable .lc-card {
+  box-shadow:
+    0 0 0 3px var(--bulb),
+    0 6px 14px rgba(0, 0, 0, 0.35);
+}
+.lc-hand-btn.playable:hover {
+  transform: translateY(-12px) rotate(-2deg);
+}
+.lc-hand-btn.drawn .lc-card {
+  animation: lc-land 0.35s ease-out both;
+}
+.lc-last {
+  animation: lc-pulse 0.6s ease-in-out infinite alternate;
+}
+.lc-drawn {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--accent-soft);
+  border-radius: 12px;
+}
+.lc-drawn p {
+  margin: 0;
+}
+
+/* Wild colour picker */
+.lc-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: rgba(5, 2, 10, 0.65);
+}
+.lc-picker .card {
+  width: min(100%, 360px);
+}
+.lc-colors {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+.lc-color {
+  min-height: 72px;
+  font-family: var(--display);
+  font-size: 1.1rem;
+  color: #fff;
+  border: 3px solid #fff;
+  border-radius: 16px;
+  cursor: pointer;
+}
+.lc-color.c-red {
+  background: var(--lc-red);
+}
+.lc-color.c-yellow {
+  color: var(--plum);
+  background: var(--lc-yellow);
+}
+.lc-color.c-green {
+  background: var(--lc-green);
+}
+.lc-color.c-blue {
+  background: var(--lc-blue);
+}
+.lc-log {
+  margin: 0;
+  padding-left: 1.2em;
+}
+.lc-log li:first-child {
+  font-weight: 700;
+}
+.lc-shown {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lc-shown-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+/* 6 and 9 are underlined, as on real cards, so an upside-down corner can't be misread. */
+.lc-card.v-6 .lc-sym,
+.lc-card.v-9 .lc-sym,
+.lc-card.v-6 .lc-corner,
+.lc-card.v-9 .lc-corner {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
