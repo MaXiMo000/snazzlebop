@@ -344,12 +344,16 @@ async function ludo(players, tv, host) {
     for (const p of players) if (re.test((await p.page.locator(".stinger").first().textContent({ timeout: 200 }).catch(() => "")) || "")) return true;
     return false;
   };
-  for (let i = 0; i < 3000; i++) {
+  for (let i = 0; i < 12000; i++) {
     const s = await sign(host);
     if (s.includes("wins!")) break;
     if (!seen.has("capture") && (await stinger(/KNOCK/))) {
       seen.add("capture");
       await shot("ludo", "capture", "A capture: the rival goes back to its yard", all, { wait: 100 });
+    }
+    if (!seen.has("first") && (await stinger(/WINS/))) {
+      seen.add("first");
+      await shot("ludo", "first", "1st place is home: the medal shows and play goes on for 2nd and 3rd", all, { wait: 100 });
     }
     if (!seen.has("home") && (await stinger(/HOME/))) {
       seen.add("home");

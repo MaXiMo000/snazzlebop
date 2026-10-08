@@ -4717,8 +4717,9 @@ button.cw-card:hover {
   gap: 0 0.3em;
   font-weight: 700;
 }
+/* Names wrap only between words, and a short last word ("Bartholomew X") is glued to the one before. */
 .ludo-names span {
-  white-space: nowrap;
+  min-width: 0;
 }
 .ludo-names .nm ~ .nm::before {
   content: "& ";
@@ -4744,7 +4745,12 @@ button.cw-card:hover {
 .ludo-count span {
   white-space: nowrap;
 }
+.ludo-place {
+  font-weight: 700;
+  color: var(--ink);
+}
 .ludo-pts {
+  flex: none;
   font-family: var(--display);
   font-size: 1.3em;
 }
@@ -4755,7 +4761,7 @@ button.cw-card:hover {
     grid-template-columns: minmax(0, 1fr);
   }
   .tv .ludo-layout {
-    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 0.9fr) minmax(0, 1.1fr);
     grid-template-areas:
       "board turn teams"
       "board log teams";

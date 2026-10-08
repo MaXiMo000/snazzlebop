@@ -9,11 +9,12 @@ back to its yard, unless the square is safe: the four start squares and the four
 reach the centre by exact count.
 
 Roll again after a 6, a capture, or bringing a token home. Three 6s in a row and the turn is lost.
-The first colour with every token home wins.
+The first colour with every token home wins; play goes on for 2nd and 3rd place (finished colours are
+skipped) until only one colour is left.
 
 Players: one colour each with 2-4 (two players sit opposite). With 5-8, teams of two share a colour and
 take turns rolling for it; everything a colour scores goes to every player in it.
-Scoring: 100 per token home, 50 per capture, 500 for the winning colour.
+Scoring: 100 per token home, 50 per capture; 500 for 1st place, 300 for 2nd, 150 for 3rd.
 
 Ludo has no secrets: every view is the same apart from whose colour is yours.
 """
@@ -34,7 +35,7 @@ YARD = -1
 TURN_SECONDS = 20.0
 HOME_POINTS = 100
 CAPTURE_POINTS = 50
-WIN_POINTS = 500
+PLACE_POINTS = (500, 300, 150)  # 1st, 2nd, 3rd; the last colour home gets none
 
 
 def colors_for(n: int) -> tuple[str, ...]:
@@ -71,7 +72,8 @@ class Ludo(Game):
         "start squares and stars, which are safe.",
         "Roll again after a 6, a capture or a token reaching home. Three 6s in a row and you lose the turn.",
         "Tokens go round the board, up your colour's home column and into the centre by exact count.",
-        "First colour with every token home wins. With 5 or more players, teams of two share a colour.",
+        "First colour with every token home wins; play goes on for 2nd and 3rd place. With 5 or more "
+        "players, teams of two share a colour.",
     )
 
     @classmethod
@@ -100,6 +102,7 @@ class Ludo(Game):
         self.seq = 0
         self.log: list[dict[str, Any]] = []
         self.winner: str | None = None
+        self.places: list[str] = []  # colours in the order they got every token home
         self.phase = "play"
         self.set_deadline(self.timings["turn"])
         self.bump()
@@ -220,7 +223,9 @@ class Ludo(Game):
             self._log({"type": "home", "color": color, "player": pid, "token": token})
             bonus = True
             if all(p == HOME for p in self.tokens[color]):
-                self._finish(color)
+                self._place(color)
+                if not self.finished:
+                    self._end_turn(bonus=False)  # done: no more rolls for this colour
                 return
         self._end_turn(bonus)
 
@@ -232,15 +237,26 @@ class Ludo(Game):
             self.sixes = 0
             self.rota[self.color] += 1
             self.turn = (self.turn + 1) % len(self.colors)
+            while self.color in self.places:  # finished colours sit out
+                self.turn = (self.turn + 1) % len(self.colors)
         self.set_deadline(self.timings["turn"])
 
-    def _finish(self, color: str) -> None:
-        self._score(color, WIN_POINTS)
-        self.winner = color
-        self._log({"type": "win", "color": color})
-        self.phase = "final"
-        self.deadline = None
-        self.finished = True
+    def _place(self, color: str) -> None:
+        """Every token home: 1st, 2nd or 3rd. The game ends when one colour is left racing."""
+        self.places.append(color)
+        n = len(self.places)
+        pts = PLACE_POINTS[n - 1] if n <= len(PLACE_POINTS) else 0
+        self._score(color, pts)
+        if n == 1:
+            self.winner = color
+        self._log({"type": "place", "color": color, "place": n, "points": pts})
+        left = [c for c in self.colors if c not in self.places]
+        if len(left) <= 1:
+            self.places.extend(left)  # the last colour still racing comes last
+            self.rolled = None
+            self.phase = "final"
+            self.deadline = None
+            self.finished = True
 
     # -- clocks ---------------------------------------------------------------------------------------
     def tick(self) -> None:
@@ -286,6 +302,7 @@ class Ludo(Game):
             "log": self.log[-14:],
             "you": self.color_of.get(pid),
             "winner": self.winner,
+            "places": list(self.places),
             "scores": self.scores(),
         }
 
@@ -310,4 +327,9 @@ class Ludo(Game):
         return out
 
     def summary(self) -> dict[str, Any]:
-        return {"players": len(self.players), "colors": len(self.colors), "tokens": self.n_tokens}
+        return {
+            "players": len(self.players),
+            "colors": len(self.colors),
+            "tokens": self.n_tokens,
+            "places": len(self.places),
+        }

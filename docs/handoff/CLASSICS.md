@@ -46,9 +46,8 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
 - **Word Race**: everyone races the same word; (7 - guesses) x 100, first solver +100, second +50; hard
   mode option; letters private until the reveal (others see colours only). Word lists in content.py
   (`WORD_ANSWERS`, `WORD_GUESSES`, `WORD_STEMS` plurals) via a `_words()` helper.
-  **Open question for the user**: typing uses the device keyboard plus a display-only QWERTY colour
-  board, because a 10-key row can't meet the project's 44px tap-target rule on a phone. Offer the user a
-  tappable on-screen keyboard if they want it (it would need an exception to the 44px rule).
+  Typing uses the device keyboard plus a display-only QWERTY colour board (a 10-key row can't meet the
+  44px tap-target rule). **Settled**: the user said no to a tappable on-screen keyboard; don't ask again.
 - **Last Card**: official Uno rules (108 cards, draw-then-play, Wild Draw Four legality + challenge,
   catch window until the next player acts, 2-player Reverse = Skip), stacking off by default (option),
   1 or 3 hands, 30 s turn clock. Wild / Wild Draw Four turned at the start go back (no dealer to pick).
@@ -56,9 +55,10 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
 - **Ludo**: 15x15 board (SVG; positions are attributes, not styles, so CSP is fine), 4 tokens (option: 2
   for a quick game). 6 to come out; extra roll on a 6, a capture or a token reaching home; three 6s lose the
   turn; exact count home; starts + stars are safe; no blockades (a landing captures every rival token on
-  the square, Ludo King style). First colour home wins. 2 players sit opposite; 5-8 = teams of two per
-  colour (5: 2/2/1), teammates alternate rolls, every member gets the colour's points (100 per token
-  home, 50 per capture, 500 for the win). 20 s turn clock: it rolls and moves the furthest token. A roll
+  the square, Ludo King style; the user confirmed these over the traditional rules). First colour home wins and play goes on for 2nd and 3rd (user's choice) until one colour is left;
+  places pay 500/300/150. 2 players sit opposite; 5-8 = teams of two per
+  colour (5: 2/2/1, user confirmed), teammates alternate rolls, every member gets the colour's points (100 per token
+  home, 50 per capture, plus the place bonus). 20 s turn clock: it rolls and moves the furthest token. A roll
   with one real choice (e.g. all yard tokens) moves by itself. Phones: the roll/move card sticks to the
   bottom of the screen on your turn; laptop: board + log left, turn + teams right; TV: Ludo takes the full
   width (room scoreboard drops below) so everything fits on 1080p.

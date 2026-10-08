@@ -164,6 +164,38 @@ class MoveTests(unittest.TestCase):
         self.assertIsNotNone(g.deadline)
 
 
+class PlaceTests(unittest.TestCase):
+    def test_play_goes_on_for_second_and_third_and_finished_colours_sit_out(self):
+        g, _ = make(4, rolls=[3, 2, 1, 4, 2, 2])
+        red, green, yellow, blue = g.colors
+        g.tokens = {
+            red: [HOME, HOME, HOME, 53],
+            green: [HOME] * 3 + [54],
+            yellow: [10, YARD, YARD, YARD],
+            blue: [HOME] * 3 + [55],
+        }
+        act(g, "roll")  # red 3: home, 1st
+        self.assertEqual((g.places, g.winner, g.phase), ([red], red, "play"))
+        self.assertEqual(g.color, green)  # no bonus roll once you're done
+        act(g, "roll")  # green 2: home, 2nd
+        self.assertEqual(g.color, yellow)
+        act(g, "roll")  # yellow 1: 10 -> 11
+        self.assertEqual(g.color, blue)
+        act(g, "roll")  # blue 4: overshoots, no move
+        self.assertEqual(g.color, yellow)  # red and green are skipped
+        act(g, "roll")  # yellow 2
+        act(g, "roll")  # blue 2: no, needs exactly 1... overshoot again
+        self.assertEqual(g.color, yellow)
+        g.tokens[blue] = [HOME] * 3 + [54]
+        g.turn = g.colors.index(blue)
+        g.rng.rolls = [2]
+        act(g, "roll")  # blue home: 3rd, yellow is last and the game ends
+        self.assertEqual(g.places, [red, green, blue, yellow])
+        self.assertTrue(g.finished)
+        self.assertEqual([g.points[c] for c in (red, green, blue)], [100 + 500, 100 + 300, 100 + 150])
+        self.assertEqual(g.points[yellow], 0)
+
+
 class ViewTests(unittest.TestCase):
     def ids(self, g):
         return [*g.player_ids, *SPECTATORS]
@@ -181,9 +213,14 @@ class ViewTests(unittest.TestCase):
             g.advance()
         g.tokens = {c: [HOME, 55] for c in g.colors}
         g.turn, g.rolled = 0, None
-        g.rng.rolls = [1]
-        act(g, "roll")
+        g.rng.rolls = [1, 1]
+        act(g, "roll")  # 1st place: the game goes on for 2nd
+        self.assertEqual(g.phase, "play")
+        for p in self.ids(g):
+            self.assertEqual(g.view_for(p)["places"], [g.colors[0]])
+        act(g, "roll")  # 2nd place: one colour left, so it's over
         self.assertEqual(g.phase, "final")
+        self.assertEqual(g.places, list(g.colors))
         for p in self.ids(g):
             v = g.view_for(p)
             self.assertEqual(v["winner"], g.colors[0])

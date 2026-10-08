@@ -47,6 +47,8 @@ const CORNER: Record<LudoColor, [number, number]> = { red: [0, 0], green: [0, 9]
 // Centre of each colour's home triangle, in board units (x, y).
 const FINISH: Record<LudoColor, [number, number]> = { red: [6.55, 7.5], green: [7.5, 6.55], yellow: [8.45, 7.5], blue: [7.5, 8.45] };
 const ALL: LudoColor[] = ["red", "green", "yellow", "blue"];
+const ORDINAL: Record<number, string> = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" };
+const MEDAL: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
 function trackSquare(color: LudoColor, pos: number): number | null {
   return pos >= 0 && pos <= 50 ? (START[color] + pos) % 52 : null;
@@ -136,10 +138,13 @@ export function Ludo({ view, you, receivedAt, send, tv = false }: Props) {
       show.stinger("THREE SIXES! TURN LOST", "bad");
     } else if (e.type === "again" && rollBefore(view.log, e.n) === 6) {
       show.stinger("SIX!");
-    } else if (e.type === "win") {
+    } else if (e.type === "place" && e.place === 1) {
       sfx.fanfare();
       show.stinger(`${NAME[e.color].toUpperCase()} WINS!`);
       show.celebrate();
+    } else if (e.type === "place") {
+      sfx.ding();
+      show.stinger(`${NAME[e.color].toUpperCase()}: ${ORDINAL[e.place]?.toUpperCase()}!`);
     }
   }
   useOnChange(myTurn, (_, now) => {
@@ -224,7 +229,7 @@ export function Ludo({ view, you, receivedAt, send, tv = false }: Props) {
               <p className="ludo-names">
                 {who(view.winner).map((n, i) => (
                   <span key={i} className="nm">
-                    {n}
+                    {glue(n)}
                   </span>
                 ))}
               </p>
@@ -243,6 +248,11 @@ export function Ludo({ view, you, receivedAt, send, tv = false }: Props) {
 function choices(view: LudoView, color: LudoColor): number[] {
   const tokens = view.teams.find((t) => t.color === color)?.tokens ?? [];
   return view.movable.filter((i) => view.movable.findIndex((j) => tokens[j] === tokens[i]) === view.movable.indexOf(i));
+}
+
+/** A name that may wrap between words, but never leaves a 1-2 letter last word alone on a line. */
+function glue(name: string): string {
+  return name.replace(/ (\S{1,2})$/, "\u00a0$1");
 }
 
 function rollBefore(log: LudoLog[], n: number): number | null {
@@ -385,9 +395,12 @@ function Teams({ view, you, tv }: { view: LudoView; you: string; tv: boolean }) 
     <Card className="ludo-teams-card">
       <h3>{view.teams.some((t) => t.members.length > 1) ? "Teams" : "Players"}</h3>
       <ul className="ludo-teams">
-        {view.teams.map((t) => {
+        {/* in board order while racing; by finishing place once it's over */}
+        {(view.phase === "final" ? [...view.teams].sort((a, b) => view.places.indexOf(a.color) - view.places.indexOf(b.color)) : view.teams).map((t) => {
           const home = t.tokens.filter((p) => p === HOME).length;
           const yard = t.tokens.filter((p) => p === YARD).length;
+          const place = view.places.indexOf(t.color) + 1;
+          const done = place > 0 && home === t.tokens.length;
           return (
             <li key={t.color} className={`${t.color === view.turn_color ? "on" : ""} ${t.color === view.winner ? "won" : ""}`}>
               <span className={`ludo-dot c-${t.color}`} aria-hidden="true" />
@@ -395,7 +408,7 @@ function Teams({ view, you, tv }: { view: LudoView; you: string; tv: boolean }) 
                 <p className="ludo-names">
                   {t.members.map((p) => (
                     <span key={p} className={`nm ${p === view.turn ? "rolling" : ""}`}>
-                      {nameOf(view.players, p)}
+                      {glue(nameOf(view.players, p))}
                     </span>
                   ))}
                 </p>
@@ -404,9 +417,18 @@ function Teams({ view, you, tv }: { view: LudoView; you: string; tv: boolean }) 
                     {NAME[t.color]}
                     {t.members.includes(you) && !tv ? " (you)" : ""}
                   </span>
-                  <span>{home} home</span>
-                  <span>{t.tokens.length - home - yard} out</span>
-                  <span>{yard} in yard</span>
+                  {done ? (
+                    <span className="ludo-place">
+                      {MEDAL[place] ?? ""} {ORDINAL[place]} place
+                    </span>
+                  ) : (
+                    <>
+                      {place > 0 && <span className="ludo-place">{ORDINAL[place]} place</span>}
+                      <span>{home} home</span>
+                      <span>{t.tokens.length - home - yard} out</span>
+                      <span>{yard} in yard</span>
+                    </>
+                  )}
                 </p>
               </div>
               <b className="ludo-pts">{t.points}</b>
@@ -435,8 +457,8 @@ function logLine(e: LudoLog, who: (id: string) => string): string | null {
       return `${who(e.player)} rolled three 6s: turn lost`;
     case "timeout":
       return `${who(e.player)} ran out of time`;
-    case "win":
-      return `${NAME[e.color]} wins!`;
+    case "place":
+      return e.place === 1 ? `${NAME[e.color]} wins!` : `${NAME[e.color]} finishes ${ORDINAL[e.place]}`;
     default:
       return null;
   }

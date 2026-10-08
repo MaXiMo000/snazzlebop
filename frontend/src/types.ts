@@ -881,7 +881,7 @@ export type LudoLog =
   | (LudoTurn & { type: "capture"; victims: { color: LudoColor; token: number }[] })
   | (LudoTurn & { type: "home"; token: number })
   | (LudoTurn & { type: "again" | "bust" | "stuck" | "timeout" })
-  | { n: number; type: "win"; color: LudoColor };
+  | { n: number; type: "place"; color: LudoColor; place: number; points: number };
 export interface LudoView extends GameBase {
   game: "ludo";
   phase: "play" | "final";
@@ -898,5 +898,7 @@ export interface LudoView extends GameBase {
   /** your colour (null for the TV and the audience) */
   you: LudoColor | null;
   winner: LudoColor | null;
+  /** colours in the order they got every token home (at the end, the last one too) */
+  places: LudoColor[];
   scores: Record<string, number>;
 }

@@ -97,6 +97,7 @@ for _phase in ("play", "final"):
         "log",
         "you",
         "winner",
+        "places",
         "scores",
     }
 for _phase in ("play", "reveal", "final"):
@@ -1198,7 +1199,7 @@ async def play_ludo(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         g = st.get("game") or {}
         return json.dumps([g.get(k) for k in ("phase", "turn", "rolled", "teams")] + [g.get("log", [])[-1:]])
 
-    for _ in range(6000):
+    for _ in range(20000):  # play goes on for 2nd and 3rd place: long games
         g = host.state["game"]  # type: ignore[index]
         if g["phase"] != "play":
             break
