@@ -30,6 +30,18 @@ screenshot gallery of every phase on several devices before pushing.
 Screenshot gallery of the three done games (private to the user):
 https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
 
+## Platform work done between Ludo and Chess (user's request, 2026-10-09)
+
+- **Rooms survive restarts/deploys**: snapshots in Postgres (`persist.py`, `room_snapshots`), restored on
+  first use. Local testing needs a fixed `SECRET_KEY` (dev generates a random one per start, so old
+  snapshots and tokens can't be verified): `.claude/launch.json` sets one for the `api` server.
+- **Accounts** (`accounts.py`, `/account` page): username + password, recovery code instead of email,
+  HttpOnly cookie sessions. **Coins** (`coins.py`) for places in any game, 600/day cap; **seasons** =
+  calendar months; **shop** sells the show's power cards; signed-in players use one per game ("boost").
+- **Blackjack**: your hand + Hit/Stand pinned to the bottom on phones; big payout headline.
+- Render: the free Postgres expires; restart-proof rooms and accounts need a paid database plan.
+- Still open with the user: "more team games" (which ones).
+
 ## Decisions (and why)
 
 - **Names**: trademarked games get our own clear names (user chose "our names but better known,
