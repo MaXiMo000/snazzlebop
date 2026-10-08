@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { SoundToggle, ThemeToggle } from "./components/ui";
+import { useAccount } from "./lib/account";
+import { Account } from "./pages/Account";
 import { Home } from "./pages/Home";
 import { Room } from "./pages/Room";
 
 const ROOM_PATH = /^\/r\/([A-Za-z]{3,8})\/?$/;
+const ACCOUNT_PATH = /^\/account\/?$/;
 
 function usePath(): [string, (p: string) => void] {
   const [path, setPath] = useState(window.location.pathname);
@@ -18,6 +21,31 @@ function usePath(): [string, (p: string) => void] {
     window.scrollTo(0, 0);
   }, []);
   return [path, go];
+}
+
+/** Top bar: your coins when signed in, otherwise a way to sign in. Hidden if accounts are down. */
+function AccountButton({ go }: { go: (p: string) => void }) {
+  const { user, loaded, available } = useAccount();
+  if (!loaded || !available) return null;
+  return (
+    <a
+      className={`btn small acct-btn ${user ? "gold" : "ghost"}`}
+      href="/account"
+      onClick={(e) => {
+        e.preventDefault();
+        go("/account");
+      }}
+      aria-label={user ? `Your account: ${user.username}, ${user.coins} coins` : "Sign in"}
+    >
+      {user ? (
+        <>
+          <span aria-hidden="true">🪙</span> {user.coins}
+        </>
+      ) : (
+        "Sign in"
+      )}
+    </a>
+  );
 }
 
 export function App() {
@@ -40,11 +68,12 @@ export function App() {
           <span className="badge" aria-hidden="true">
             ★
           </span>
-          <span>
+          <span className="logo-word">
             Snazzlebop<span className="bang">!</span>
           </span>
         </a>
-        <div className="row">
+        <div className="row topbar-tools">
+          <AccountButton go={go} />
           <ThemeToggle />
           <SoundToggle />
         </div>
@@ -52,6 +81,8 @@ export function App() {
       <main id="main" className="app">
         {match ? (
           <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} tv={new URLSearchParams(window.location.search).get("tv") === "1"} />
+        ) : ACCOUNT_PATH.test(path) ? (
+          <Account go={go} />
         ) : (
           <Home go={go} />
         )}

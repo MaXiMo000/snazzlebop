@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Btn, Card, nameOf } from "./ui";
 import { sfx } from "../lib/sfx";
+import { refreshAccount, useAccount } from "../lib/account";
 import type { RoomState } from "../types";
 import { Select } from "./Select";
 
@@ -11,7 +12,7 @@ export function PowerCard({ state, send }: { state: RoomState; send: Send }) {
   const cards = state.cards;
   const g = state.game;
   const [target, setTarget] = useState("");
-  if (!cards || !g || state.room.phase !== "game" || g.game === "jackpot") return null;
+  if (!state.show || !cards || !g || state.room.phase !== "game" || g.game === "jackpot") return null;
   const me = cards.you;
   const mine = me?.card ? cards.catalog[me.card] : null;
   const rivals = state.players.filter((p) => p.id !== state.you && state.crowd.contestants.some((c) => c.id === p.id));
@@ -72,6 +73,108 @@ export function PowerCard({ state, send }: { state: RoomState; send: Send }) {
           {me.peek}
         </p>
       )}
+    </Card>
+  );
+}
+
+const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+
+/** During any game, for a signed-in player: use one power-up bought with coins. Secret until the results. */
+export function BoostPanel({ state, send }: { state: RoomState; send: Send }) {
+  const { user } = useAccount();
+  const [target, setTarget] = useState("");
+  const cards = state.cards;
+  const g = state.game;
+  const me = cards?.you;
+  if (!cards || !me?.signed_in || !user || !g || state.room.phase !== "game" || g.game === "jackpot") return null;
+  const owned = Object.entries(user.powerups).filter(([id, n]) => n > 0 && cards.catalog[id]);
+  const rivals = state.players.filter((p) => p.id !== state.you && state.crowd.contestants.some((c) => c.id === p.id));
+  const chosen = rivals.find((p) => p.id === target)?.id ?? rivals[0]?.id ?? "";
+  if (me.boost) {
+    const c = cards.catalog[me.boost];
+    return (
+      <Card tone="soft" className="boost-panel" role="status">
+        <p>
+          <span aria-hidden="true">⚡ </span>You used <b>{c?.name}</b> this game. Revealed at the results!
+        </p>
+        {me.peek && (
+          <p className="lead space-top">
+            <span aria-hidden="true">👁️ </span>
+            {me.peek}
+          </p>
+        )}
+      </Card>
+    );
+  }
+  if (!owned.length) return null;
+  return (
+    <Card tone="soft" className="boost-panel" aria-labelledby="boost-h">
+      <h3 id="boost-h">
+        <span aria-hidden="true">⚡ </span>Your power-ups
+      </h3>
+      <p className="muted">One per game. Nobody sees which until the results.</p>
+      {owned.some(([id]) => id === "steal") && rivals.length > 0 && (
+        <div className="space-top">
+          <label className="field" htmlFor="boost-target">
+            Steal from
+          </label>
+          <Select id="boost-target" value={chosen} onChange={(e) => setTarget(e.target.value)}>
+            {rivals.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+      <ul className="boost-list space-top">
+        {owned.map(([id, n]) => {
+          const c = cards.catalog[id]!;
+          return (
+            <li key={id}>
+              <Btn
+                variant="gold"
+                block
+                onClick={() => {
+                  sfx.pop();
+                  send({ t: "boost", item: id, ...(id === "steal" ? { target: chosen } : {}) });
+                  window.setTimeout(() => void refreshAccount(), 600);
+                }}
+              >
+                <span aria-hidden="true">{c.icon}</span> {c.name}
+                <small>×{n}</small>
+              </Btn>
+              <p className="muted boost-text">{c.text}</p>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+/** Results: the coins each signed-in finisher just earned. */
+export function CoinNews({ state }: { state: RoomState }) {
+  const news = Object.entries(state.cards?.coins ?? {});
+  if (!news.length) return null;
+  news.sort((a, b) => a[1].place - b[1].place);
+  const mine = state.cards?.coins[state.you];
+  return (
+    <Card tone="soft" aria-labelledby="coins-news-h">
+      <h3 id="coins-news-h">🪙 Coins</h3>
+      {mine && (
+        <p className="lead coin-mine">
+          You finished {ORDINAL[mine.place] ?? `#${mine.place}`}: <b>+{mine.coins}</b>
+          {mine.coins === 0 ? " (today's limit reached)" : ""}
+        </p>
+      )}
+      <ul className="evidence">
+        {news.map(([pid, n]) => (
+          <li key={pid}>
+            <b>{nameOf(state.players, pid)}</b> {ORDINAL[n.place] ?? `#${n.place}`} · +{n.coins}
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

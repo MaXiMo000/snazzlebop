@@ -255,6 +255,7 @@ a {
   align-items: center;
   gap: 8px;
   min-height: 44px;
+  min-width: 44px;
   font-family: var(--display);
   font-size: clamp(1.15rem, 4.5vw, 1.6rem);
   color: var(--ink);
@@ -553,6 +554,7 @@ a {
 }
 input[type="text"],
 input[type="number"],
+input[type="password"],
 .select-button {
   width: 100%;
   min-height: 52px;
@@ -571,6 +573,7 @@ input::placeholder {
 }
 input[type="text"]:focus-visible,
 input[type="number"]:focus-visible,
+input[type="password"]:focus-visible,
 .select-button:focus-visible {
   border-radius: var(--radius-sm);
 }
@@ -4898,4 +4901,161 @@ button.cw-card:hover {
 /* TV: the race cards are wide enough for a long name next to its score (no spilling into a neighbour). */
 .wr-racers.big {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+}
+
+/* ---- accounts: sign in, profile, shop, power-ups, coins --------------------------------------------- */
+.topbar-tools {
+  flex-wrap: nowrap;
+}
+.acct-btn {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.acct-title {
+  font-size: clamp(1.4rem, 5.5vw, 2rem);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.acct-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.acct-tabs .btn {
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 4px;
+  font-size: clamp(0.72rem, 3.6vw, 0.85rem);
+  white-space: nowrap;
+}
+.acct-hint {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  text-wrap: pretty;
+}
+.acct-code-input {
+  letter-spacing: 0.08em !important;
+}
+.acct-recovery p {
+  text-wrap: pretty;
+}
+.acct-code {
+  margin: 14px auto;
+  padding: 12px 16px;
+  max-width: 100%;
+  font-family: var(--display);
+  font-size: clamp(1.05rem, 5.4vw, 1.8rem);
+  letter-spacing: 0.06em;
+  color: var(--plum);
+  background: var(--bulb);
+  border: var(--line);
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.acct-coins {
+  margin: 8px 0;
+  font-family: var(--display);
+  font-size: clamp(2.6rem, 13vw, 4rem);
+  line-height: 1;
+  color: var(--bulb);
+  font-variant-numeric: tabular-nums;
+}
+.acct-shop {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* icon | name + chip | price, and the description on its own full-width line underneath */
+.acct-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon name buy"
+    "text text text";
+  align-items: center;
+  gap: 8px 14px;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 2.5px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+.acct-item-icon {
+  grid-area: icon;
+  font-size: 1.8rem;
+}
+.acct-item-text {
+  grid-area: text;
+  text-wrap: pretty;
+}
+.acct-item-name b {
+  white-space: nowrap;
+}
+.acct-owned {
+  margin-right: 8px;
+  white-space: nowrap;
+}
+.acct-item-name {
+  grid-area: name;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.acct-item .btn {
+  grid-area: buy;
+  font-variant-numeric: tabular-nums;
+}
+.acct-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-weight: 700;
+}
+.acct-totals span {
+  white-space: nowrap;
+}
+.acct-actions {
+  padding-top: 14px;
+  border-top: 2px solid var(--rule);
+}
+.acct-delete {
+  padding: 14px;
+  border: 3px dashed var(--cherry);
+  border-radius: var(--radius-sm);
+}
+.boost-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.boost-list .btn small {
+  font-family: var(--body);
+  font-weight: 700;
+}
+.boost-text {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  text-wrap: pretty;
+}
+.coin-mine b {
+  font-family: var(--display);
+}
+/* Phones: the logo keeps its star badge; the wordmark steps aside for the account, theme and sound
+   buttons (the home page says the name in big letters anyway). */
+@media (max-width: 420px) {
+  .logo-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }

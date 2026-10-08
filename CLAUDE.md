@@ -1,6 +1,7 @@
 # Snazzlebop
 
-Party games for friends in a browser (1-8 players plus an audience). One room code, no signup. Retro TV game-show UI, server-authoritative
+Party games for friends in a browser (1-8 players plus an audience). One room code, no signup needed (optional accounts: coins, stats,
+monthly seasons, a power-up shop). Retro TV game-show UI, server-authoritative
 games, security-first FastAPI backend, one Docker service on Render.
 
 Games: **Frenemy Radar**, **Alibi**, **Price Is Weird**, **Telepathy Tax**, **Mole in the Mural**,
@@ -27,7 +28,10 @@ backend/            FastAPI app (Python 3.13)
     security.py     tokens, rate limiter, client IP, ASGI middleware (host/headers/body/rate)
     rooms.py        Hub + Room: lobby, message routing, broadcast, ticker, cleanup
     ws.py           WebSocket endpoint: origin, caps, auth handshake, flood limits
-    db.py           optional anonymous stats (SQLAlchemy async; SQLite local, Postgres on Render)
+    db.py           Postgres/SQLite: anonymous stats, room snapshots, accounts/sessions/results
+    persist.py      room snapshots (HMAC-signed pickles) so live games survive restarts and deploys
+    accounts.py     sign-up/log-in/recovery (scrypt, HttpOnly cookie sessions), profile, shop routes
+    coins.py        coin rules (places, daily cap, prices, seasons), pure
     games/          base.py contract (+ Deck: per-room no-repeat dealing), content.py (all pools),
                     one module per game (pure Python), jackpot.py (show finale)
     show.py         show night: playlist, quips, awards, Friend Stock Exchange (pure)
@@ -35,7 +39,7 @@ backend/            FastAPI app (Python 3.13)
   tests/            one file per game or feature (test_games, test_upgrades, test_show, test_dice, ...),
                     test_rooms / test_security + test_api
 frontend/           Vite + React + TypeScript, hand-written CSS (game-show style), no UI library
-  src/pages         Home, Room (join gate, lobby, game router, TV mode)
+  src/pages         Home, Room (join gate, lobby, game router, TV mode), Account (sign in, profile, shop)
   src/games         one screen per game (each with a read-only TV variant)
   src/lib           api (fetch + session), useRoom (WebSocket hook + countdown), sfx (WebAudio)
   src/components    ui (cards, buttons, clock, scoreboard), fx (count-up, stingers, confetti)

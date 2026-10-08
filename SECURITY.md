@@ -50,6 +50,26 @@ explicit. In particular:
   unpickled unless the signature checks out: a row written by anyone else is ignored.
 - **In Postgres (optional):** anonymous per-game summaries (`game_id`, timestamp, player count, a score
   aggregate). No names, IPs, tokens or room codes. The app runs fine if the database is unavailable.
+- **Accounts (optional, `users` / `sessions` / `results`):** a username, an scrypt password hash, an
+  HMAC of the recovery code, coins and owned power-ups; the SHA-256 of each session token (never the
+  token); and one row per finished game (game, place, points, coins, month). No email, no IP. Deleting
+  the account deletes all of it. Room seats remember their account id in memory and in the snapshot,
+  never in any view sent to a client.
+
+## Accounts
+
+- Passwords: `hashlib.scrypt` (n=2^14, r=8, p=1, 16-byte salt), 8-128 characters, a small common-password
+  list; hashing runs in a thread so it can't stall live games.
+- Sessions: 256-bit random token in an `HttpOnly`, `SameSite=Strict` cookie (`Secure` in production),
+  30 days; stored hashed; logout deletes it; a password change or recovery deletes every session.
+- Cross-site writes: every state-changing account call needs an allowed `Origin` (required in production)
+  on top of `SameSite=Strict` and JSON-only bodies.
+- Guessing: `/api/auth/*` has its own per-IP bucket (10/min), plus a per-username lockout after 5 failures
+  that doubles each time (max an hour). Unknown usernames get the same error after the same scrypt work.
+- Recovery without email: a one-time 20-character code shown once at sign-up; using it issues a new one.
+- Coins can't be minted by clients: they're paid by the server from game results (one row per account per
+  game, 600 a day cap); buying is a single locked transaction; a power-up is spent before it's played and
+  refunded if it can't land.
 
 ## Known limitations (be aware, decide, document)
 

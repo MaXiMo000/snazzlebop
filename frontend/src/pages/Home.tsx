@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { ApiError, createRoom, joinRoom } from "../lib/api";
 import { Btn, Card } from "../components/ui";
+import { useAccount } from "../lib/account";
 
 export function Home({ go }: { go: (path: string) => void }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const { user } = useAccount();
+  useEffect(() => {
+    if (user) setName((n) => n || user.username.slice(0, 16));
+  }, [user]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +39,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Twenty games. One room code. Zero sign-ups.</p>
+        <p className="lead">Twenty games. One room code. No sign-up needed.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 

@@ -1,6 +1,7 @@
 # Snazzlebop!
 
-The party game show where your friends are the contestants. 1-8 players (plus an audience), one room code, no sign-up.
+The party game show where your friends are the contestants. 1-8 players (plus an audience), one room code, no sign-up needed (optional accounts earn coins, stats,
+monthly seasons and power-ups).
 Put the show on a TV, play from your phones.
 
 **Live:** https://snazzlebop.onrender.com

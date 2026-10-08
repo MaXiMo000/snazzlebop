@@ -16,7 +16,8 @@ import {
   ThemePicker,
 } from "../components/show";
 import { MarketFloor, MarketMoves } from "../components/market";
-import { CardReveal, MvpVote, PowerCard, Rivals } from "../components/extras";
+import { BoostPanel, CardReveal, CoinNews, MvpVote, PowerCard, Rivals } from "../components/extras";
+import { useAccount } from "../lib/account";
 import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
 import { JumpScare } from "../components/JumpScare";
 import { Alibi } from "../games/Alibi";
@@ -61,6 +62,10 @@ const CROWD_OK = new Set(["room_full", "in_progress"]);
 
 function JoinGate({ code, onJoined, go }: { code: string; onJoined: (s: Session) => void; go: (p: string) => void }) {
   const [name, setName] = useState("");
+  const { user } = useAccount();
+  useEffect(() => {
+    if (user) setName((n) => n || user.username.slice(0, 16));
+  }, [user]);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -239,12 +244,14 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
           {phase === "game" && <ReadyBar state={state} send={send} />}
           {phase === "game" && state.role === "player" && <PowerCard state={state} send={send} />}
+          {phase === "game" && state.role === "player" && <BoostPanel state={state} send={send} />}
           {phase === "game" && state.role !== "player" && <CardsDown state={state} />}
           <Rivals state={state} />
           {phase === "results" && (
             <>
               <HostLine quip={state.quip} />
               <CardReveal state={state} />
+              <CoinNews state={state} />
               <Highlights items={state.highlights} />
               {state.market && <MarketMoves m={state.market} players={state.players} you={state.you} />}
               <MvpVote state={state} send={send} />
@@ -431,6 +438,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
               <>
                 <HostLine quip={state.quip} />
                 <CardReveal state={state} />
+                <CoinNews state={state} />
                 <Highlights items={state.highlights} />
                 {state.market && <MarketMoves m={state.market} players={state.players} you="" />}
                 <MvpVote state={state} send={noop} />

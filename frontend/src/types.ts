@@ -365,7 +365,17 @@ export interface CardsState {
   in_play: number;
   /** results only: what was played and what it did */
   news: { pid: string; card: CardId; game: number; target?: string; effect: number }[];
-  you: { card: CardId | null; played: CardId | null; peek: string | null } | null;
+  /** results: coins each signed-in finisher earned (place and coins paid) */
+  coins: Record<string, { place: number; coins: number }>;
+  you: {
+    card: CardId | null;
+    played: CardId | null;
+    peek: string | null;
+    /** signed in: can use power-ups bought with coins (one per game) */
+    signed_in: boolean;
+    /** the power-up used this game */
+    boost: CardId | null;
+  } | null;
 }
 
 export interface RivalsState {
