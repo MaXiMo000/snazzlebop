@@ -101,6 +101,24 @@ for _phase in ("play", "final"):
         "partners",
         "scores",
     }
+for _phase in ("play", "final"):
+    ALLOWED_KEYS[("chess", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "board",
+        "fen",
+        "turn",
+        "sides",
+        "mover",
+        "check",
+        "last",
+        "history",
+        "captured",
+        "clocks",
+        "increment",
+        "draw_offer",
+        "result",
+        "you",
+        "scores",
+    }
 for _phase in ("play", "reveal", "final"):
     ALLOWED_KEYS[("wordrace", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
         "hard",
@@ -1240,6 +1258,54 @@ async def play_ludo(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         )  # type: ignore[index]
 
 
+async def play_chess(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots play random legal moves (teammates suggest one first) until the game ends, or resign after
+    300 moves. A side's suggestions must never reach the other side."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+
+    def token(st: dict[str, Any]) -> str:
+        g = st.get("game") or {}
+        return json.dumps([g.get("phase"), g.get("fen"), g.get("mover"), g.get("draw_offer")])
+
+    for i in range(700):
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] != "play":
+            break
+        now = token(host.state)  # type: ignore[arg-type]
+        mover = by_id[g["mover"]]
+        await mover.until(lambda st, t=now: token(st) == t, "chess sync")
+        legal = mover.state["game"]["you"]["legal"]  # type: ignore[index]
+        mates = [by_id[p] for p in g["sides"][g["turn"]] if p != mover.pid]
+        if mates and i % 3 == 0:  # a teammate suggests first
+            await mates[0].send(t="act", a="suggest", move=rng.choice(legal))
+            await mover.until(lambda st: bool(st["game"]["you"]["suggestions"]), "chess suggestion")
+        if i >= 300:
+            await mover.send(t="act", a="resign")
+        else:
+            await mover.send(t="act", a="move", move=rng.choice(legal))
+        await host.until(lambda st, t=now: token(st) != t, "chess move")
+    await all_until(bots, lambda st: (st.get("game") or {}).get("phase") == "final", "chess over")
+    g = host.state["game"]  # type: ignore[index]
+    side_of = {p: c for c, ps in g["sides"].items() for p in ps}
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "chess" or not gg.get("you"):
+                continue
+            for s in gg["you"]["suggestions"]:
+                check(side_of[s["by"]] == side_of[b.pid], f"{b.name} saw the other side's suggestion")
+
+
+def chess_scores(g: dict[str, Any], ids: list[str]) -> dict[str, int]:
+    r = g["result"]
+    out = {}
+    for c, ps in g["sides"].items():
+        for p in ps:
+            out[p] = 100 if r["winner"] is None else 300 if r["winner"] == c else 0
+    return {p: out.get(p, 0) for p in ids}
+
+
 def ludo_scores(g: dict[str, Any], ids: list[str]) -> dict[str, int]:
     pts = {t["color"]: t["points"] for t in g["teams"]}
     return {p: pts[t["color"]] for t in g["teams"] for p in t["members"] if p in ids}
@@ -1707,12 +1773,13 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "wordrace",
             "lastcard",
             "ludo",
+            "chess",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         if len(bots) >= 4:
             games.append("crossword-teams")
-            games += ["lastcard-pairs", "truthdare-pairs"]  # the Teams switch: two teams, partner rules
+            games += ["lastcard-pairs", "truthdare-pairs", "chess-pairs"]  # the Teams switch
         if len(bots) == 4:
             games.append("ludo-pairs")  # Ludo teams are exactly 2 v 2
         for name in games:
@@ -1778,6 +1845,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_lastcard(host, bots, rng)
             elif game == "ludo":
                 await play_ludo(host, bots, rng)
+            elif game == "chess":
+                await play_chess(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1804,6 +1873,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                     sum(h["points"] for h in g["history"]) == sum(want.values()),
                     "lastcard: history vs scores",
                 )
+            elif game == "chess":
+                want = chess_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"chess: scores {got} != the result's {want}")
             elif game == "ludo":
                 want = ludo_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

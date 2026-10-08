@@ -31,6 +31,7 @@ import { TruthDare } from "../games/TruthDare";
 import { WordRace } from "../games/WordRace";
 import { LastCard } from "../games/LastCard";
 import { Ludo } from "../games/Ludo";
+import { Chess } from "../games/Chess";
 import { Boxes } from "../games/Boxes";
 import { Lonely } from "../games/Lonely";
 import { Roulette } from "../games/Roulette";
@@ -350,6 +351,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <LastCard view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "ludo":
       return <Ludo view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "chess":
+      return <Chess view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -585,6 +588,12 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
   stacking: {
     off: "Off (official rules)",
     on: "On (+2 on +2, +4 on +4)",
+  },
+  clock: {
+    "10": "10 minutes each",
+    "5": "5 minutes each (blitz)",
+    "3+2": "3 minutes + 2 s a move",
+    "15+10": "15 minutes + 10 s a move",
   },
   tokens: {
     "4": "4 tokens each (classic)",

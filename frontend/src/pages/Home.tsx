@@ -39,7 +39,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Twenty games. One room code. No sign-up needed.</p>
+        <p className="lead">Twenty-one games. One room code. No sign-up needed.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -187,6 +187,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           </li>
           <li>
             <b>Ludo</b> (classic): roll a six to get out, knock rivals back to their yard, race every token home.
+          </li>
+          <li>
+            <b>Chess</b> (classic): the real rules and chess clocks. One on one, or the whole room in two teams.
           </li>
         </ul>
       </Card>

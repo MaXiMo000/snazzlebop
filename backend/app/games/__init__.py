@@ -4,6 +4,7 @@ from .alibi import Alibi
 from .base import Game, GameError, Player
 from .blackjack import BlackjackShowdown
 from .boxes import MysteryBoxes
+from .chess import Chess
 from .chicken import ChickenRun
 from .codes import CodeCrackers
 from .codewords import Codewords
@@ -45,6 +46,7 @@ REGISTRY: dict[str, type[Game]] = {
         WordRace,
         LastCard,
         Ludo,
+        Chess,
     )
 }
 

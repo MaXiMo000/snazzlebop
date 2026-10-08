@@ -22,8 +22,8 @@ screenshot gallery of every phase on several devices before pushing.
 | 3 | Last Card | Uno | done (`e48336b`) |
 | - | polish from the screenshot pass | - | done (`8a58606`) |
 | 4 | Ludo | Ludo | done (committed; push when the user says) |
-| 5 | Chess | Chess | **next** |
-| 6 | Draw & Guess | Scribble / skribbl / Pictionary | to do (needs live drawing, see below) |
+| 5 | Chess | Chess | done (committed; push when the user says) |
+| 6 | Draw & Guess | Scribble / skribbl / Pictionary | **next** (needs live drawing, see below) |
 | 7 | Draw Telephone | Gartic Phone | to do (reuses the Draw & Guess canvas) |
 | 8 | Property Tycoon | Monopoly | to do (biggest; party timer) |
 
@@ -76,10 +76,14 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
   with one real choice (e.g. all yard tokens) moves by itself. Phones: the roll/move card sticks to the
   bottom of the screen on your turn; laptop: board + log left, turn + teams right; TV: Ludo takes the full
   width (room scoreboard drops below) so everything fits on 1080p.
+- **Chess**: our own move generator (no python-chess: GPL), verified by perft against published counts
+  (start d3, Kiwipete d3, positions 3-5). Full FIDE rules; repetition and the 50-move rule end the game
+  automatically (party-friendly, no claims). Clocks: 10 / 5 / 3+2 / 15+10. 3+ players or the Teams switch =
+  consultation chess: a side's players take turns making the move, teammates suggest moves (arrows only
+  their side sees). Win 300 each, draw 100. Pieces are our own SVG shapes (Unicode chess glyphs render as
+  emoji on some Androids). Board squares are 44px at 390px, smaller on narrower phones (can't exceed the
+  screen). The host can't skip a chess move.
 - **Plans for the rest** (agreed in principle, not built):
-  - Chess: write our own move generator (do **not** add python-chess: GPL); full rules (castling, en
-    passant, promotion, check/mate/stalemate, 50-move, threefold, insufficient material) + clocks.
-    More than 2 players = two teams taking turns, teammates can suggest moves (arrows). Perft tests.
   - Draw & Guess / Draw Telephone: need live drawing. The hub sends a full snapshot per change and
     the socket limits are 2 KB per message and 8 messages/s (config.py). Plan: a new "ink" message:
     the client batches stroke points every ~200 ms; the server validates and relays deltas; the
@@ -154,6 +158,8 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
    (`--base http://localhost:8000 --only <id>`), then play it live at phone width with tools/drive.py,
    run axe in the page (load `/node_modules/axe-core/axe.min.js` via fetch + eval in the dev server)
    and the 44px target check, then the device gallery with tools/capture.cjs (extend it for the new game).
+   Smaller focused capture scripts live there too: chess_capture.cjs, teams_capture.cjs (team mode),
+   acct_capture.cjs (accounts/shop/coins; needs a bot room code), bj_capture.cjs (Blackjack on phones).
 8. Commit (attribution line from the session). Push only when the user asks.
 
 ## Useful commands (Windows, from the repo root)

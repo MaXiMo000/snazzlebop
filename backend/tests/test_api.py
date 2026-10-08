@@ -91,6 +91,7 @@ def test_games_catalog(client):
         "wordrace",
         "lastcard",
         "ludo",
+        "chess",
     }
 
 

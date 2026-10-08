@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess";
   title: string;
   blurb: string;
   min_players: number;
@@ -343,6 +343,7 @@ export type GameView =
   | WordRaceView
   | LastCardView
   | LudoView
+  | ChessView
   | JackpotView;
 
 export interface Highlight {
@@ -926,5 +927,43 @@ export interface LudoView extends GameBase {
   places: LudoColor[];
   /** 2 v 2: opposite colours are partners and win together */
   partners: boolean;
+  scores: Record<string, number>;
+}
+
+export type ChessSide = "w" | "b";
+export interface ChessView extends GameBase {
+  game: "chess";
+  phase: "play" | "final";
+  players: { id: string; name: string }[];
+  /** 64 squares, a1 = 0 ... h8 = 63: "" or colour + piece ("wK", "bP") */
+  board: string[];
+  fen: string;
+  turn: ChessSide;
+  /** who plays each side (more than one: a team taking turns) */
+  sides: Record<ChessSide, string[]>;
+  /** whose go it is to make the side's move */
+  mover: string | null;
+  /** the square of a king in check */
+  check: string | null;
+  /** the last move ("e2e4") */
+  last: string | null;
+  history: { san: string; side: ChessSide; by: string; uci: string }[];
+  /** pieces each side has taken */
+  captured: Record<ChessSide, string[]>;
+  /** seconds left on each side's clock */
+  clocks: Record<ChessSide, number>;
+  increment: number;
+  /** the side offering a draw */
+  draw_offer: ChessSide | null;
+  result: { winner: ChessSide | null; reason: string } | null;
+  you: {
+    side: ChessSide;
+    /** it's your go to make the move */
+    mover: boolean;
+    /** legal moves now (your side's turn): "e2e4", "e7e8q" */
+    legal: string[];
+    /** teammates' suggestions: only your side sees these */
+    suggestions: { by: string; move: string; san: string }[];
+  } | null;
   scores: Record<string, number>;
 }

@@ -4795,7 +4795,7 @@ button.cw-card:hover {
   min-width: 0;
 }
 .ludo-names .nm ~ .nm::before {
-  content: "& ";
+  content: "&\00a0"; /* the "&" stays with the next name */
 }
 .ludo-prev {
   font-size: 0.9em;
@@ -5167,5 +5167,471 @@ b.team-name.team-1 {
   .btn.big {
     padding-inline: 16px;
     font-size: 1rem;
+  }
+}
+
+/* ---- chess ------------------------------------------------------------------------------------------ */
+.seg-chess {
+  --accent: #1f4e45;
+  --accent-ink: #fff;
+  --accent-soft: #d3e9e3;
+  --cs-light: #f1e0bf;
+  --cs-dark: #b8875a;
+}
+.cs-sprites {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.cs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .cs-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
+  }
+  .cs-board-col {
+    max-width: max(420px, 100svh - 150px);
+  }
+}
+.cs-board-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.cs-side {
+  display: grid;
+  gap: 18px;
+}
+/* The board: a real board in both themes, in a plum frame. */
+.cs-frame {
+  position: relative;
+  padding: 4px;
+  background: var(--plum);
+  border: 3px solid var(--edge);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--lift);
+}
+/* Phones: no inner padding, so a 390px screen gets 44px squares. */
+@media (max-width: 480px) {
+  .cs-frame {
+    padding: 0;
+  }
+}
+.cs-board {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  aspect-ratio: 1;
+  max-width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.cs-sq {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  aspect-ratio: 1;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  background: var(--cs-light);
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.cs-sq.dark {
+  background: var(--cs-dark);
+}
+.cs-sq:disabled {
+  cursor: default;
+}
+.cs-sq:focus-visible {
+  z-index: 2;
+  outline: 4px solid var(--tangerine);
+  outline-offset: -4px;
+}
+.cs-sq.last {
+  background-image: linear-gradient(rgba(242, 183, 5, 0.55), rgba(242, 183, 5, 0.55));
+}
+.cs-sq.check {
+  background-image: radial-gradient(circle, #ff3b4e 0 35%, rgba(200, 32, 58, 0.55) 60%, transparent 75%);
+}
+.cs-sq.picked {
+  box-shadow: inset 0 0 0 4px var(--tangerine);
+}
+.cs-sq.target::after {
+  content: "";
+  position: absolute;
+  width: 32%;
+  height: 32%;
+  border-radius: 50%;
+  background: rgba(43, 27, 51, 0.38);
+  pointer-events: none;
+}
+.cs-sq.target.capture::after {
+  inset: 4%;
+  width: auto;
+  height: auto;
+  background: none;
+  border: 5px solid rgba(43, 27, 51, 0.38);
+}
+.cs-rank,
+.cs-file {
+  position: absolute;
+  font-family: var(--display);
+  font-size: clamp(0.5rem, 1.9vw, 0.72rem);
+  line-height: 1;
+  color: #5b3a1e;
+  pointer-events: none;
+}
+.cs-sq.dark .cs-rank,
+.cs-sq.dark .cs-file {
+  color: #2b1b33;
+}
+.cs-rank {
+  top: 3px;
+  left: 3px;
+}
+.cs-file {
+  right: 3px;
+  bottom: 2px;
+}
+.cs-piece {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 6%;
+  pointer-events: none;
+}
+.cs-piece.white {
+  fill: #fffaf1;
+  stroke: #2b1b33;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.cs-piece.black {
+  fill: #2b1b33;
+  stroke: #fff4dd;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+.cs-piece .cs-mark {
+  fill: none;
+  stroke-width: 1.8;
+}
+.cs-piece.white .cs-eye {
+  fill: #2b1b33;
+  stroke: none;
+}
+.cs-piece.black .cs-eye {
+  fill: #fff4dd;
+  stroke: none;
+}
+/* The last move slides in from its square (offsets come from the dx / dy classes: no inline styles). */
+.cs-piece.slide {
+  animation: cs-slide 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes cs-slide {
+  from {
+    transform: translate(calc(var(--dx, 0) * 100%), calc(var(--dy, 0) * 100%));
+  }
+}
+.cs-piece.dx-7 {
+  --dx: -7;
+}
+.cs-piece.dy-7 {
+  --dy: -7;
+}
+.cs-piece.dx-6 {
+  --dx: -6;
+}
+.cs-piece.dy-6 {
+  --dy: -6;
+}
+.cs-piece.dx-5 {
+  --dx: -5;
+}
+.cs-piece.dy-5 {
+  --dy: -5;
+}
+.cs-piece.dx-4 {
+  --dx: -4;
+}
+.cs-piece.dy-4 {
+  --dy: -4;
+}
+.cs-piece.dx-3 {
+  --dx: -3;
+}
+.cs-piece.dy-3 {
+  --dy: -3;
+}
+.cs-piece.dx-2 {
+  --dx: -2;
+}
+.cs-piece.dy-2 {
+  --dy: -2;
+}
+.cs-piece.dx-1 {
+  --dx: -1;
+}
+.cs-piece.dy-1 {
+  --dy: -1;
+}
+.cs-piece.dx0 {
+  --dx: 0;
+}
+.cs-piece.dy0 {
+  --dy: 0;
+}
+.cs-piece.dx1 {
+  --dx: 1;
+}
+.cs-piece.dy1 {
+  --dy: 1;
+}
+.cs-piece.dx2 {
+  --dx: 2;
+}
+.cs-piece.dy2 {
+  --dy: 2;
+}
+.cs-piece.dx3 {
+  --dx: 3;
+}
+.cs-piece.dy3 {
+  --dy: 3;
+}
+.cs-piece.dx4 {
+  --dx: 4;
+}
+.cs-piece.dy4 {
+  --dy: 4;
+}
+.cs-piece.dx5 {
+  --dx: 5;
+}
+.cs-piece.dy5 {
+  --dy: 5;
+}
+.cs-piece.dx6 {
+  --dx: 6;
+}
+.cs-piece.dy6 {
+  --dy: 6;
+}
+.cs-piece.dx7 {
+  --dx: 7;
+}
+.cs-piece.dy7 {
+  --dy: 7;
+}
+.cs-arrows {
+  position: absolute;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  pointer-events: none;
+  z-index: 3;
+}
+.cs-arrows line {
+  stroke: rgba(11, 116, 118, 0.85);
+  stroke-width: 0.18;
+  stroke-linecap: round;
+}
+.cs-arrows marker path {
+  fill: rgba(11, 116, 118, 0.85);
+}
+/* A side: who plays it, what they've taken, their clock. */
+.cs-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: var(--line);
+  border-radius: var(--radius-sm);
+}
+.cs-bar.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+.cs-dot {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid var(--edge);
+}
+.cs-dot.w {
+  background: #fffaf1;
+}
+.cs-dot.b {
+  background: #2b1b33;
+  border-color: #b8875a;
+}
+.cs-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.4em;
+  margin: 0;
+  font-weight: 700;
+}
+/* Names wrap only between words (a short last word stays with the one before); "(you)" may wrap too. */
+.cs-who .nm {
+  min-width: 0;
+}
+.cs-bar .grow {
+  min-width: 0;
+}
+.cs-who .nm ~ .nm::before {
+  content: "&\00a0"; /* the "&" stays with the next name */
+}
+.cs-who .moving {
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+.cs-taken {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 18px;
+  margin: 2px 0 0;
+}
+.cs-piece.mini {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin-right: -4px;
+}
+.cs-lead {
+  margin-left: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.cs-clock {
+  flex: none;
+  min-width: 4.4ch;
+  padding: 4px 10px;
+  font-family: var(--display);
+  font-size: 1.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  background: var(--field);
+  border: var(--line);
+  border-radius: 10px;
+}
+.cs-clock.running {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.cs-clock.low {
+  color: #fff;
+  background: var(--cherry);
+  animation: pulse 1s ease-in-out infinite;
+}
+.cs-suggest {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cs-suggest li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+/* Move names need lower case ("Bc4" is a bishop, "bc4" isn't a move): the body font, not Bungee. */
+.cs-san {
+  font-family: var(--body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cs-no {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cs-actions .btn,
+.cs-offer .btn {
+  flex: 1 1 auto;
+}
+.cs-result-head {
+  font-size: clamp(1.6rem, 7vw, 2.4rem);
+  text-wrap: balance;
+}
+.cs-names {
+  margin-top: 6px;
+  font-weight: 700;
+}
+.cs-moves {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cs-moves li {
+  display: grid;
+  grid-template-columns: 2.4ch 1fr 1fr;
+  gap: 8px;
+}
+.cs-promo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.cs-promo-btn {
+  display: grid;
+  place-items: center;
+  min-height: 64px;
+  padding: 4px;
+  background: var(--cs-light);
+  border: var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.cs-promo-btn:focus-visible {
+  outline: 4px solid var(--tangerine);
+}
+/* TV: the whole width (like Ludo): the board as tall as the screen allows, the panel beside it. */
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-chess) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tv .cs-layout {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  /* header + two player bars + the board fit a 1080p screen */
+  .tv .cs-board-col {
+    width: min(100svh - 520px, 55vw);
+    max-width: none;
+  }
+}
+@media (max-width: 480px) {
+  /* the board has no inner padding on phones: the arrows sit flush with it */
+  .cs-arrows {
+    inset: 0;
+    width: 100%;
+    height: 100%;
   }
 }
