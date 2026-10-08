@@ -833,7 +833,7 @@ export interface LcCard {
   value: string;
 }
 export type LcLog =
-  | { type: "start"; card: number }
+  | { type: "start"; card: number; base: LcColor; value: string }
   | { type: "play"; player: string; card: number; base: LcColor | "wild"; value: string; color: LcColor }
   | { type: "draw"; player: string; n: number; reason: string }
   | { type: "skipped"; player: string }

@@ -126,7 +126,7 @@ class LastCard(Game):
             self.deck.insert(0, card)
         self.discard.append(card)
         self.color = CARDS[card][0]
-        self.log.append({"type": "start", "card": card})
+        self.log.append({"type": "start", "card": card, "base": CARDS[card][0], "value": CARDS[card][1]})
         self.phase = "play"
         self._resolve_start(card)
         self.bump()

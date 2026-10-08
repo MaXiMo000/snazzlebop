@@ -220,7 +220,7 @@ export function LastCard({ view, you, receivedAt, send, tv = false }: Props) {
               </li>
             ))}
           </ul>
-          {!myTurn && <p className="muted center">Wait for your turn… Catch anyone who forgets to call LAST CARD!</p>}
+          {!myTurn && <p className="muted center space-top">Wait for your turn… Catch anyone who forgets to call LAST CARD!</p>}
         </Card>
       )}
 
@@ -308,6 +308,8 @@ function logLine(e: LcLog, who: (id: string) => string): string | null {
     }
     case "draw":
       return e.reason === "draw" ? `${who(e.player)} drew a card` : `${who(e.player)} picked up ${e.n}`;
+    case "start":
+      return `The first card: ${cardName({ color: e.base, value: e.value })}`;
     case "skipped":
       return `${who(e.player)} was skipped`;
     case "reverse":

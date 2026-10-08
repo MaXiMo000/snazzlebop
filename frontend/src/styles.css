@@ -3306,7 +3306,7 @@ button.cw-card:hover {
   max-width: 40cqw;
   padding: 4px 8px;
   font-weight: 700;
-  font-size: clamp(0.66rem, 3.5cqw, 0.95rem);
+  font-size: clamp(0.66rem, 3.5cqw, 1.2rem);
   line-height: 1.15;
   text-align: center;
   text-wrap: balance;
@@ -4343,4 +4343,39 @@ button.cw-card:hover {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 2px;
+}
+
+/* ---- the classics on bigger screens: laptops and the TV ------------------------------------------ */
+@media (min-width: 700px) {
+  .tod-ring {
+    width: min(100%, 460px);
+  }
+  .lc-card {
+    width: 72px;
+  }
+  .lc-card .lc-sym {
+    font-size: 1.6rem;
+  }
+  .lc-card.big {
+    width: 112px;
+  }
+  .lc-card.big .lc-sym {
+    font-size: 2.6rem;
+  }
+  .lc-card.mini {
+    width: 36px;
+  }
+}
+.tv .tod-ring {
+  width: min(100%, 620px);
+}
+.tv .lc-card.big {
+  width: 150px;
+}
+.tv .lc-card.big .lc-sym {
+  font-size: 3.4rem;
+}
+/* TV: the race cards are wide enough for a long name next to its score (no spilling into a neighbour). */
+.wr-racers.big {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
 }

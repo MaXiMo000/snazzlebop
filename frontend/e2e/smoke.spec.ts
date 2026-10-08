@@ -663,7 +663,7 @@ test("the newer games: first screens, a real move each, axe and targets", async 
   }
   await expect(host.getByText(/wins 100 with/)).toBeVisible();
   // Everyone taps Ready on the results to move on together, without waiting for the clock.
-  for (const p of [host, bo, cy]) await p.getByRole("button", { name: /Ready for the next round/ }).click();
+  for (const p of [host, bo, cy]) await p.getByRole("button", { name: /Next round/ }).click();
   await expect(host.getByText(/Round 2 of 8/)).toBeVisible();
   await back();
 
@@ -808,7 +808,7 @@ test("Codewords: team game from the lobby, setup, a clue, marks and a reveal", a
   await axe(host, "codewords teams", a11y);
   await targets(host, "codewords teams", a11y);
   await shot("27-codewords-teams");
-  for (const p of all) await p.getByRole("button", { name: /Teams look good/ }).click();
+  for (const p of all) await p.getByRole("button", { name: /Teams set/ }).click();
 
   // Exactly one player gets the clue box: the Spymaster of the team that starts.
   await expect(host.getByText(/Spymaster’s clue/).first()).toBeVisible();
