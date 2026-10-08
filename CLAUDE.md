@@ -10,7 +10,9 @@ Royale**, **Lowest Lonely Number**, **Mystery Box Auction**, the team game **Cod
 played on its own, never in a show playlist) and the classics (`CLASSIC = True`, their own lobby section,
 also `SHOW = False`): **Truth or Dare**, **Word Race** (Wordle-style), **Last Card** (Uno-style). More classics are
 planned in this order: Ludo, Chess, Draw & Guess, Draw Telephone, Property Tycoon (Monopoly-style).
-Trademarked originals get our own names; rules match the originals. Show nights (show.py): a playlist on one
+Trademarked originals get our own names; rules match the originals. **Work in progress: read
+[docs/handoff/CLASSICS.md](docs/handoff/CLASSICS.md) first** (status, decisions, mistakes to avoid, the
+per-game checklist and the dev tools in docs/handoff/tools/). Show nights (show.py): a playlist on one
 scoreboard, host quips, highlight reel and awards, Jackpot finale, power cards (games expose `peek()`),
 rivals, Friend Stock Exchange (shorts, dividends, insider tips), rematches and a season table, show
 packs, audience (react, predict, trade, MVP vote), live reactions.
