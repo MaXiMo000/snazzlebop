@@ -25,6 +25,7 @@ import { Blackjack } from "../games/Blackjack";
 import { Crossword } from "../games/Crossword";
 import { Jackpot } from "../games/Jackpot";
 import { Codewords } from "../games/Codewords";
+import { TruthDare } from "../games/TruthDare";
 import { Boxes } from "../games/Boxes";
 import { Lonely } from "../games/Lonely";
 import { Roulette } from "../games/Roulette";
@@ -327,6 +328,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Boxes view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "codewords":
       return <Codewords view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "truthdare":
+      return <TruthDare view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -554,6 +557,15 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
     relaxed: "Relaxed (2½ min clues, 3 min guessing)",
     speedy: "Speedy (75 s clues, 90 s guessing)",
   },
+  heat: {
+    mild: "😇 Mild (party-safe)",
+    cheeky: "😈 Cheeky (bold and embarrassing, never rude)",
+  },
+  length: {
+    standard: "Standard (2 turns each)",
+    quick: "Quick (1 turn each)",
+    marathon: "Marathon (3 turns each)",
+  },
 };
 
 /** Start button, plus a picker for each option the game declares (first value = default). */
@@ -611,7 +623,23 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
       {isHost && <HostTools state={state} send={send} />}
       {isHost && <ShowBuilder state={state} send={send} />}
 
-      {state.games.some((g) => !g.show) && (
+      {state.games.some((g) => g.classic) && (
+        <Card tone="stage" aria-labelledby="classics-h">
+          <p className="sign" id="classics-h">
+            The classics
+          </p>
+          <p className="lead space-top">The games everyone knows, with a Snazzlebop twist. Played on their own, not in a show night.</p>
+          <div className="grid space-top">
+            {state.games
+              .filter((g) => g.classic)
+              .map((g) => (
+                <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} />
+              ))}
+          </div>
+        </Card>
+      )}
+
+      {state.games.some((g) => !g.show && !g.classic) && (
         <Card tone="stage" aria-labelledby="team-games-h">
           <p className="sign" id="team-games-h">
             Team games
@@ -619,7 +647,7 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
           <p className="lead space-top">Split into teams and play head to head. Played on their own, not in a show night.</p>
           <div className="grid space-top">
             {state.games
-              .filter((g) => !g.show)
+              .filter((g) => !g.show && !g.classic)
               .map((g) => (
                 <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} />
               ))}

@@ -103,6 +103,11 @@ class QuipTests(unittest.TestCase):
         line = showlib.quip({"a": 5, "b": 5, "c": 1}, names, "the show", {}, random.Random(1), "show")
         self.assertEqual(line, "We can't split them: Ana and Bo share tonight's crown!")
 
+    def test_a_three_way_crown_reads_like_a_sentence(self):
+        names = {"a": "Ana", "b": "Bo", "c": "Cy"}
+        line = showlib.quip({"a": 5, "b": 5, "c": 5}, names, "the show", {}, random.Random(1), "show")
+        self.assertEqual(line, "We can't split them: Ana, Bo and Cy share tonight's crown!")
+
     def test_everyone_level_is_a_dead_heat_not_a_two_way_tie(self):
         names = {"a": "Ana", "b": "Bo", "c": "Cy"}
         line = showlib.quip({"a": 0, "b": 0, "c": 0}, names, "Alibi", {}, random.Random(1))

@@ -6,8 +6,11 @@ games, security-first FastAPI backend, one Docker service on Render.
 Games: **Frenemy Radar**, **Alibi**, **Price Is Weird**, **Telepathy Tax**, **Mole in the Mural**,
 **Blackjack Showdown** (solo/side bets/chaos/tournament), **Crossword Race** (teams, bought letters),
 **Liar's Dice**, **Split or Steal**, **Chicken Run**, **Wager Wits**, **Code Crackers**, **Roulette
-Royale**, **Lowest Lonely Number**, **Mystery Box Auction**, and the team game **Codewords** (`SHOW = False`:
-played on its own, never in a show playlist). Show nights (show.py): a playlist on one
+Royale**, **Lowest Lonely Number**, **Mystery Box Auction**, the team game **Codewords** (`SHOW = False`:
+played on its own, never in a show playlist) and the classics (`CLASSIC = True`, their own lobby section,
+also `SHOW = False`): **Truth or Dare**. More classics are planned in this order: Word Race (Wordle-style),
+Last Card (Uno-style), Ludo, Chess, Draw & Guess, Draw Telephone, Property Tycoon (Monopoly-style).
+Trademarked originals get our own names; rules match the originals. Show nights (show.py): a playlist on one
 scoreboard, host quips, highlight reel and awards, Jackpot finale, power cards (games expose `peek()`),
 rivals, Friend Stock Exchange (shorts, dividends, insider tips), rematches and a season table, show
 packs, audience (react, predict, trade, MVP vote), live reactions.
@@ -102,6 +105,9 @@ Free web instances sleep when idle and drop live rooms; use the Starter plan for
    write `view_for` secrecy tests (players AND a TV spectator id), give it a TV (read-only) screen,
    add it to the lobby catalog (automatic via `catalog()`). Give it `HOW_TO` (plain rules, shown on the
    intro screen before it starts) and `READING` (results phases the room can skip together with Ready).
+   Also: its `GameCard` id + view type in `types.ts`, a `SEGMENT_ICON`, a `.seg-<id>` accent (and its
+   pairs in `scripts/contrast.mjs`), the registry lists in `test_api.py` / `test_games.py`, and a
+   `play_<id>` in `scripts/simulate.py`.
 
 ## The prank (optional)
 

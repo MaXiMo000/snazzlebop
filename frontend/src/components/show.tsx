@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Season } from "./extras";
-import { Btn, Card, nameOf } from "./ui";
+import { Btn, Card, nameList, nameOf } from "./ui";
 import { useShow } from "./fx";
 import { sfx } from "../lib/sfx";
 import type { GameCard, Highlight, Reaction, RoomState, ShowState } from "../types";
@@ -26,6 +26,7 @@ export const SEGMENT_ICON: Record<GameCard["id"] | "jackpot", string> = {
   lonely: "🐺",
   boxes: "📦",
   codewords: "🕵️",
+  truthdare: "🍾",
   jackpot: "💎",
 };
 
@@ -346,11 +347,24 @@ export function ShowHostBar({ state, send }: { state: RoomState; send: Send }) {
 }
 
 // ---- the finale ----------------------------------------------------------------------------------
+/** A 1-2 letter word stays glued to the one before it ("Bartholomew X", never "X," starting a line). */
+const glueShort = (name: string) => name.replace(/ (?=\S{1,2}(?: |$))/g, " ");
+
+/** The champion's name is in the wide display face: size it by its longest unbreakable word so no word
+ * is ever split on a phone (no "BARTHOLO / MEW"). */
+function fitClass(names: string[]): string {
+  const longest = Math.max(0, ...names.flatMap((n) => n.split(" ")).map((w) => [...w].length));
+  return longest > 12 ? "fit-xs" : longest > 9 ? "fit-s" : longest > 6 ? "fit-m" : "";
+}
+
 export function Finale({ state, isHost, send }: { state: RoomState; isHost: boolean; send: Send }) {
   const show = state.show!;
   const fx = useShow();
   const ranked = [...state.players].sort((a, b) => b.total - a.total);
   const champ = ranked[0];
+  // A tie at the top crowns everyone on it (the host's line already says they share it).
+  const champs = champ ? ranked.filter((p) => p.total === champ.total) : [];
+  const champNames = champs.map((p) => glueShort(p.name));
   const { stinger, celebrate } = fx;
   useEffect(() => {
     sfx.fanfare();
@@ -361,14 +375,16 @@ export function Finale({ state, isHost, send }: { state: RoomState; isHost: bool
     <div className="stack enter finale">
       {fx.node}
       <Card tone="stage" className="center">
-        <p className="sign">{state.room.title ? `${state.room.title}: the results` : "Tonight’s champion"}</p>
+        <p className="sign">
+          {state.room.title ? `${state.room.title}: the results` : champs.length > 1 ? "Tonight’s champions" : "Tonight’s champion"}
+        </p>
         {champ && (
           <>
             <p className="trophy space-top" aria-hidden="true">
               🏆
             </p>
             <h2>
-              <span className="burst">{champ.name}</span>
+              <span className={`burst ${fitClass(champNames)}`}>{nameList(champNames)}</span>
             </h2>
             <p className="lead">{champ.total} points</p>
           </>

@@ -29,13 +29,15 @@ export function IntroScreen({ state, receivedAt, send, readOnly }: { state: Room
   const isHost = state.room.host === state.you;
   const imReady = intro.ready.includes(state.you);
   const waitingOn = state.players.filter((p) => p.connected && !intro.ready.includes(p.id));
-  const mode = Object.values(intro.options)[0];
+  const values = Object.values(intro.options);
+  const mode = values.join(" · ");
   return (
     <div className={`seg-${intro.game} stack enter`}>
       <ShowHead sign="Up next · how to play" title={intro.title} remaining={intro.closes_in} receivedAt={receivedAt}>
         {mode && (
           <span className="chip plum">
-            {mode} {"pace" in intro.options ? "pace" : "mode"}
+            {mode}
+            {values.length === 1 ? ("pace" in intro.options ? " pace" : " mode") : ""}
           </span>
         )}
       </ShowHead>

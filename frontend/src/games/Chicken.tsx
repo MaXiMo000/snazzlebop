@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Btn, Card, ShowHead, nameOf } from "../components/ui";
+import { Btn, Card, ShowHead, nameList, nameOf } from "../components/ui";
 import { useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { ChickenView } from "../types";
@@ -116,7 +116,7 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
           ))}
           {Object.entries(view.result.saboteurs).map(([target, by]) => (
             <p key={target}>
-              🧨 {by.map((p) => nameOf(view.players, p)).join(" & ")} shortened {nameOf(view.players, target)}’s fuse (it blew at{" "}
+              🧨 {nameList(by.map((p) => nameOf(view.players, p)))} shortened {nameOf(view.players, target)}’s fuse (it blew at{" "}
               {view.result!.fuses[target]?.toFixed(1)}s).
             </p>
           ))}

@@ -110,6 +110,12 @@ const pairs = [
   ["bulb", "plum", "reaction name tags"],
   ["plum", "teal-light", "done show segments"],
   ["plum", "cream", "highlight items"],
+  ["#ffffff", "#9c2a5c", "Truth or Dare segment"],
+  ["plum", "#f9dfea", "Truth or Dare soft cards"],
+  ["plum-soft", "#f9dfea", "muted in Truth or Dare soft"],
+  ["bulb", "#3b2546", "Truth or Dare seats"],
+  ["cream", "teal", "Truth door"],
+  ["#ffffff", "cherry", "Dare door"],
 ];
 
 // Dark theme (the default): role tokens from :root, plus each segment's soft tint, which is

@@ -168,6 +168,7 @@ h3 {
   line-height: 1.05;
   margin: 0 0 0.45em;
   letter-spacing: 0.01em;
+  text-wrap: balance; /* two even lines on a phone, never one word dangling on its own */
 }
 h1 {
   font-size: clamp(2.4rem, 10vw, 5.4rem);
@@ -177,6 +178,14 @@ h2 {
 }
 h3 {
   font-size: 1.2rem;
+}
+p,
+li,
+label,
+summary,
+td,
+th {
+  text-wrap: pretty; /* no lone last word ("times.") on its own line */
 }
 p {
   margin: 0 0 0.75em;
@@ -401,7 +410,9 @@ a {
   color: var(--fg);
   background: var(--bg);
   border: var(--line);
-  border-radius: 999px;
+  /* A pill on one line (half the 48px height); a rounded box, not a lozenge, if a label must wrap. */
+  border-radius: 24px;
+  text-wrap: balance;
   box-shadow: var(--lift);
   cursor: pointer;
   text-decoration: none;
@@ -442,6 +453,7 @@ a {
 }
 .btn.big {
   min-height: 60px;
+  border-radius: 30px;
   padding: 14px 30px;
   font-size: 1.2rem;
 }
@@ -475,12 +487,14 @@ a {
   font-weight: 700;
   font-size: 0.85rem;
   border: 2.5px solid var(--edge);
-  border-radius: 999px;
+  /* A pill on one line; a rounded box (not a lozenge) when a long chip wraps on a phone. */
+  border-radius: 16px;
   background: var(--bulb);
   color: var(--plum);
   /* Long chips (rules, banners) wrap on phones instead of running off the screen. */
   max-width: 100%;
   overflow-wrap: anywhere;
+  text-wrap: balance;
   --ink: var(--plum); /* lit background: dark ink in both themes */
   --muted: var(--plum-soft);
 }
@@ -517,6 +531,7 @@ a {
   background: var(--bulb);
   border: var(--line);
   border-radius: 10px;
+  text-wrap: balance;
   box-shadow: 0 0 0 4px rgba(255, 231, 161, 0.35);
   --ink: var(--plum); /* lit background: dark ink in both themes */
   --muted: var(--plum-soft);
@@ -617,7 +632,8 @@ button.alert {
   font-size: clamp(1rem, 3.6vw, 1.25rem);
   background: var(--stage);
   color: var(--bulb);
-  border-radius: 999px;
+  border-radius: 22px; /* pill on one line, a rounded box when it wraps on a phone */
+  text-wrap: balance;
 }
 .lineup li {
   margin-bottom: 8px;
@@ -748,6 +764,44 @@ button.alert {
 }
 .show-head h2 {
   margin: 6px 0 0;
+}
+/* Phones: the lit sign gets the full width on its own row (squeezed beside the clock it broke into two
+   lines); the title sits beside the clock, chips run full width below. */
+@media (max-width: 560px) {
+  .show-head {
+    display: grid;
+    /* A fixed clock column: an intrinsic one would let a long full-width chip stretch it. */
+    grid-template-columns: minmax(0, 1fr) 70px;
+    column-gap: 12px;
+  }
+  .show-head:not(:has(> .timer)) .grow > h2 {
+    grid-column: 1 / -1;
+  }
+  .show-head .grow {
+    display: contents;
+  }
+  .show-head .grow > * {
+    grid-column: 1 / -1;
+  }
+  .show-head .grow > .sign {
+    justify-self: start;
+    max-width: 100%;
+    letter-spacing: 0.05em;
+  }
+  .show-head .grow > h2 {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+  }
+  .show-head .timer {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    margin-top: 6px;
+  }
+  .show-head .grow > :nth-child(n + 3) {
+    margin-top: 8px;
+  }
 }
 
 /* Studio clock */
@@ -1003,7 +1057,8 @@ button.alert {
 .vote-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  /* Wide enough for a 16-letter name on one line: one column on phones, more on bigger screens. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
 }
 
 .table-scroll {
@@ -1221,8 +1276,12 @@ details summary {
   hyphens: auto; /* "Skate-board", not "Skateboa / rd" (needs lang="en", which index.html sets) */
   overflow-wrap: break-word;
 }
+/* Colour over kind, one per line: "brown · / sport" split at the dot on narrow tiles. */
 .tile-tags {
+  display: flex;
+  flex-direction: column;
   font-size: 0.75rem;
+  line-height: 1.2;
   color: var(--muted);
 }
 .tile-hints {
@@ -1628,23 +1687,36 @@ details summary {
   }
 }
 
-/* Spinning sunburst behind a winner */
+/* Spinning sunburst behind a winner. Always its own centred line: inside a sentence ("Bo & Cy matched
+   4 times") an inline burst made the rest of the sentence wrap around it in broken pieces on phones. */
 .burst {
   position: relative;
-  display: inline-block;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
   padding: 34px 30px;
+  overflow-wrap: break-word; /* only a word too long for any line may break, never mid-name otherwise */
+  text-wrap: balance;
   isolation: isolate;
   text-shadow:
     0 3px 0 var(--plum),
     0 0 18px rgba(20, 11, 27, 0.9);
 }
-/* Rays stay inside the burst's own padded box, so they never sit behind neighbouring text. */
+/* Rays stay inside the burst's own padded box, so they never sit behind neighbouring text. The gradient's
+   angle turns, not the box: a rotating wide box (a long name) swung its corners out of the card. */
+@property --ray-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
 .burst::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   background: repeating-conic-gradient(
+    from var(--ray-turn),
     var(--mustard) 0 12deg,
     transparent 12deg 24deg
   );
@@ -1655,7 +1727,7 @@ details summary {
 }
 @keyframes rays {
   to {
-    transform: rotate(360deg);
+    --ray-turn: 360deg;
   }
 }
 
@@ -1721,6 +1793,12 @@ details summary {
   --accent: #a3195b;
   --accent-ink: #fff;
   --accent-soft: #fbe0ec;
+}
+/* Higher / Lower: side by side when they fit, else stacked at the same full width (not two odd sizes). */
+.call-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 .price-tag.big {
   font-size: clamp(2.2rem, 11vw, 3.6rem);
@@ -1875,17 +1953,18 @@ h4 {
 }
 
 /* ---- live reactions ------------------------------------------------------------------------- */
+/* All six on one row, even on a 320px phone (wrapping left one emoji alone on a second row). */
 .react-bar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(44px, 52px));
   justify-content: center;
-  gap: 10px;
+  gap: clamp(4px, 1.4vw, 10px); /* 6 x 44px + gaps = 288px, the content width of a 320px phone */
 }
 .react-btn {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 100%;
+  aspect-ratio: 1;
   font-size: 1.6rem;
   background: var(--surface);
   border: var(--line);
@@ -2595,7 +2674,20 @@ details.how-to[open] summary {
 
 /* ---- finale ------------------------------------------------------------------------------------- */
 .finale .burst {
-  font-size: clamp(2rem, 9vw, 3.4rem);
+  padding-inline: 16px;
+  font-size: clamp(2rem, 8.6vw, 3.4rem);
+  line-height: 1.2;
+}
+/* Bungee runs up to 0.85em a letter (all Ms) and a phone leaves the name ~60% of the screen width, so a
+   word of n letters fits one line at 70vw / n: these cover up to 9, 12 and 16 letters (names max out at 16). */
+.finale .burst.fit-m {
+  font-size: clamp(0.8rem, 7.6vw, 3rem);
+}
+.finale .burst.fit-s {
+  font-size: clamp(0.8rem, 5.7vw, 2.5rem);
+}
+.finale .burst.fit-xs {
+  font-size: clamp(0.8rem, 4.3vw, 2rem);
 }
 .rematch small {
   display: block;
@@ -2650,7 +2742,7 @@ details.how-to[open] summary {
   font-weight: 700;
   color: #fff;
   border: 2.5px solid var(--edge);
-  border-radius: 999px;
+  border-radius: 16px;
   opacity: 0.85;
 }
 .cw-pill.red {
@@ -3154,4 +3246,402 @@ button.cw-card:hover {
     animation: none;
     transform: scale(var(--zoom, 1.1));
   }
+}
+
+/* ---- truth or dare ----------------------------------------------------------------------------- */
+.seg-truthdare {
+  --accent: #9c2a5c;
+  --accent-ink: #fff;
+  --accent-soft: #f9dfea;
+  --truth: var(--teal);
+  --dare: var(--cherry);
+}
+/* Everyone round the bottle. Seat angles come from the table below (no inline styles under our CSP). */
+.tod-ring {
+  position: relative;
+  container-type: inline-size;
+  width: min(100%, 340px);
+  aspect-ratio: 1;
+  margin: 8px auto 0;
+  --a: 0deg;
+}
+.tv .tod-ring {
+  width: min(100%, 520px);
+}
+.tod-ring::before {
+  /* the spotlight on the floor */
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 231, 161, 0.22), transparent 70%);
+}
+.tod-seats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tod-seat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* Wide enough for a 16-letter word at this size, so a name only ever breaks between its words. */
+  width: max-content;
+  max-width: 40cqw;
+  padding: 4px 8px;
+  font-weight: 700;
+  font-size: clamp(0.66rem, 3.5cqw, 0.95rem);
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--bulb);
+  background: #3b2546;
+  border: 2.5px solid var(--bulb-off);
+  border-radius: 14px;
+  /* out along the seat's angle, then turned back upright */
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(-36cqw) rotate(calc(-1 * var(--a)));
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.tod-seat.you {
+  border-color: var(--teal-light);
+}
+.tod-seat.on {
+  color: var(--plum);
+  background: var(--mustard);
+  border-color: var(--bulb);
+  box-shadow: 0 0 22px rgba(242, 183, 5, 0.75);
+  animation: tod-glow 1.2s ease-in-out infinite alternate;
+}
+@keyframes tod-glow {
+  to {
+    box-shadow: 0 0 36px rgba(242, 183, 5, 0.95);
+  }
+}
+.tod-bottle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14cqw;
+  height: 42cqw;
+  translate: -50% -50%;
+  transform: rotate(var(--a));
+  filter: drop-shadow(0 4px 0 rgba(5, 2, 10, 0.6));
+}
+.tod-bottle.spinning {
+  animation: tod-spin 4.2s cubic-bezier(0.12, 0.65, 0.18, 1) both;
+}
+@keyframes tod-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(calc(1440deg + var(--a)));
+  }
+}
+.tod-glass {
+  fill: #2f8f5b;
+  stroke: var(--bulb);
+  stroke-width: 2.5;
+}
+.tod-cork {
+  fill: #c8813a;
+}
+.tod-label {
+  fill: var(--bulb);
+}
+.tod-ring[data-n="2"] .tod-seat:nth-child(1),
+.tod-ring[data-n="2"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="2"] .tod-seat:nth-child(2),
+.tod-ring[data-n="2"][data-at="1"] .tod-bottle {
+  --a: 180deg;
+}
+.tod-ring[data-n="3"] .tod-seat:nth-child(1),
+.tod-ring[data-n="3"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="3"] .tod-seat:nth-child(2),
+.tod-ring[data-n="3"][data-at="1"] .tod-bottle {
+  --a: 120deg;
+}
+.tod-ring[data-n="3"] .tod-seat:nth-child(3),
+.tod-ring[data-n="3"][data-at="2"] .tod-bottle {
+  --a: 240deg;
+}
+.tod-ring[data-n="4"] .tod-seat:nth-child(1),
+.tod-ring[data-n="4"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="4"] .tod-seat:nth-child(2),
+.tod-ring[data-n="4"][data-at="1"] .tod-bottle {
+  --a: 90deg;
+}
+.tod-ring[data-n="4"] .tod-seat:nth-child(3),
+.tod-ring[data-n="4"][data-at="2"] .tod-bottle {
+  --a: 180deg;
+}
+.tod-ring[data-n="4"] .tod-seat:nth-child(4),
+.tod-ring[data-n="4"][data-at="3"] .tod-bottle {
+  --a: 270deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(1),
+.tod-ring[data-n="5"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(2),
+.tod-ring[data-n="5"][data-at="1"] .tod-bottle {
+  --a: 72deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(3),
+.tod-ring[data-n="5"][data-at="2"] .tod-bottle {
+  --a: 144deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(4),
+.tod-ring[data-n="5"][data-at="3"] .tod-bottle {
+  --a: 216deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(5),
+.tod-ring[data-n="5"][data-at="4"] .tod-bottle {
+  --a: 288deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(1),
+.tod-ring[data-n="6"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(2),
+.tod-ring[data-n="6"][data-at="1"] .tod-bottle {
+  --a: 60deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(3),
+.tod-ring[data-n="6"][data-at="2"] .tod-bottle {
+  --a: 120deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(4),
+.tod-ring[data-n="6"][data-at="3"] .tod-bottle {
+  --a: 180deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(5),
+.tod-ring[data-n="6"][data-at="4"] .tod-bottle {
+  --a: 240deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(6),
+.tod-ring[data-n="6"][data-at="5"] .tod-bottle {
+  --a: 300deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(1),
+.tod-ring[data-n="7"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(2),
+.tod-ring[data-n="7"][data-at="1"] .tod-bottle {
+  --a: 51.43deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(3),
+.tod-ring[data-n="7"][data-at="2"] .tod-bottle {
+  --a: 102.86deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(4),
+.tod-ring[data-n="7"][data-at="3"] .tod-bottle {
+  --a: 154.29deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(5),
+.tod-ring[data-n="7"][data-at="4"] .tod-bottle {
+  --a: 205.71deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(6),
+.tod-ring[data-n="7"][data-at="5"] .tod-bottle {
+  --a: 257.14deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(7),
+.tod-ring[data-n="7"][data-at="6"] .tod-bottle {
+  --a: 308.57deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(1),
+.tod-ring[data-n="8"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(2),
+.tod-ring[data-n="8"][data-at="1"] .tod-bottle {
+  --a: 45deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(3),
+.tod-ring[data-n="8"][data-at="2"] .tod-bottle {
+  --a: 90deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(4),
+.tod-ring[data-n="8"][data-at="3"] .tod-bottle {
+  --a: 135deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(5),
+.tod-ring[data-n="8"][data-at="4"] .tod-bottle {
+  --a: 180deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(6),
+.tod-ring[data-n="8"][data-at="5"] .tod-bottle {
+  --a: 225deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(7),
+.tod-ring[data-n="8"][data-at="6"] .tod-bottle {
+  --a: 270deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(8),
+.tod-ring[data-n="8"][data-at="7"] .tod-bottle {
+  --a: 315deg;
+}
+
+/* Truth or dare: two podium doors. */
+.tod-pick {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tod-door {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 170px;
+  padding: 18px 10px;
+  font: inherit;
+  color: #fff;
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  cursor: pointer;
+  animation: tod-door-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  transition: transform 0.08s ease;
+}
+.tod-door.truth {
+  background: var(--truth);
+  color: var(--cream);
+}
+.tod-door.dare {
+  background: var(--dare);
+  animation-delay: 0.08s;
+}
+.tod-door:hover {
+  transform: translateY(-3px) rotate(-1deg);
+}
+.tod-door:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--shadow);
+}
+.tod-door-icon {
+  font-size: clamp(2.2rem, 11vw, 3.4rem);
+  line-height: 1;
+}
+.tod-door-label {
+  font-family: var(--display);
+  font-size: clamp(1.4rem, 7vw, 2.2rem);
+  letter-spacing: 0.03em;
+}
+.tod-door-pays {
+  font-weight: 700;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+@keyframes tod-door-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.9);
+  }
+}
+
+/* The card: flips in, coloured by its kind. */
+.tod-card {
+  padding: 22px 20px 26px;
+  text-align: center;
+  color: var(--ink);
+  background: var(--surface);
+  border: 4px solid var(--truth);
+  border-radius: var(--radius);
+  box-shadow:
+    var(--lift),
+    0 0 0 6px color-mix(in srgb, var(--truth) 25%, transparent);
+  animation: tod-flip 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+  transform-origin: center;
+}
+.tod-card.dare {
+  border-color: var(--dare);
+  box-shadow:
+    var(--lift),
+    0 0 0 6px color-mix(in srgb, var(--dare) 25%, transparent);
+}
+.tod-prompt {
+  margin-top: 16px;
+  font-weight: 700;
+  font-size: clamp(1.25rem, 5.4vw, 1.75rem);
+  line-height: 1.3;
+  text-wrap: balance;
+}
+@keyframes tod-flip {
+  from {
+    opacity: 0;
+    transform: perspective(700px) rotateY(85deg) scale(0.9);
+  }
+}
+.tod-votes {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+}
+.tod-verdict {
+  font-size: clamp(3rem, 16vw, 4.5rem);
+  line-height: 1;
+  animation: tod-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes tod-pop {
+  from {
+    transform: scale(0.2) rotate(-20deg);
+  }
+}
+.tod-board {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The name keeps its width; the tally sits at the right, and only when both can't share a row does it
+   drop below, still right-aligned (never squeezing the name into a column of single words). */
+.tod-board li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 4px;
+  border-bottom: 2px solid var(--rule);
+}
+.tod-board li:last-child {
+  border-bottom: 0;
+}
+.tod-board li.on b {
+  color: var(--accent);
+}
+:root:not([data-theme="light"]) .tod-board li.on b {
+  color: var(--mustard);
+}
+.tod-board b {
+  flex: 1 0 auto;
+  max-width: 100%;
+}
+.tod-tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tod-pts {
+  min-width: 3.2em;
+  padding: 0 8px;
+  text-align: center;
+  color: var(--bulb);
+  background: var(--stage);
+  border-radius: 999px;
 }

@@ -71,6 +71,23 @@ ALLOWED_KEYS = {
     | {"murder_slot", "murder_label", "slots", "locations", "you", "claims", "flags", "clues", "log"}
     | {"votes_in", "you_voted", "objections"},
 }
+for _phase in ("spin", "choose", "perform", "vote", "result", "final"):
+    ALLOWED_KEYS[("truthdare", _phase)] = (
+        {"game", "phase", "round", "rounds", "remaining", "players"}
+        | {
+            "heat",
+            "target",
+            "choice",
+            "prompt",
+            "voted",
+            "voters",
+            "you_voted",
+            "rerolls",
+            "chickens",
+            "stats",
+        }
+        | {"result", "up_next", "history"}
+    )
 ALLOWED_KEYS[("alibi", "interrogate")] = ALLOWED_KEYS[("alibi", "briefing")]
 ALLOWED_KEYS[("alibi", "vote")] = ALLOWED_KEYS[("alibi", "briefing")]
 ALLOWED_KEYS[("telepathy", "pick")] = {
@@ -932,6 +949,49 @@ async def play_lonely(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                 check(gg["you"]["pick"] in (None, sent[gg["round"]][b.pid]), f"{b.name} saw another pick")
 
 
+async def play_truthdare(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Every bot plays its turns (random choice, random votes). Votes stay secret until the result,
+    and every result pays exactly what the rules say."""
+    by_id = {b.pid: b for b in bots}
+    turns = host.state["game"]["rounds"]  # type: ignore[index]
+    check(turns == 2 * len(bots), f"truthdare: {turns} turns for {len(bots)} players, expected 2 each")
+    for rnd in range(1, turns + 1):
+        await all_until(bots, game_is("truthdare", "spin", rnd), f"truthdare spin {rnd}")
+        await skip(host)
+        await all_until(bots, game_is("truthdare", "choose", rnd), f"truthdare choose {rnd}")
+        target = by_id[host.state["game"]["target"]]  # type: ignore[index]
+        await target.send(t="act", a="choose", choice=rng.choice(["truth", "dare"]))
+        await all_until(bots, game_is("truthdare", "perform", rnd), f"truthdare perform {rnd}")
+        check(bool(host.state["game"]["prompt"]), "truthdare: no prompt on the card")  # type: ignore[index]
+        await target.send(t="act", a="done")
+        await all_until(bots, game_is("truthdare", "vote", rnd), f"truthdare vote {rnd}")
+        sent = {b.pid: rng.random() < 0.7 for b in bots if b is not target}
+        for pid, like in sent.items():
+            await by_id[pid].send(t="act", a="vote", like=like)
+        await all_until(bots, game_is("truthdare", "result", rnd), f"truthdare result {rnd}")
+        r = host.state["game"]["result"]  # type: ignore[index]
+        yes = sum(sent.values())
+        check(
+            (r["yes"], r["no"]) == (yes, len(sent) - yes),
+            f"truthdare: tally {r['yes']}/{r['no']} != votes sent",
+        )
+        check(r["passed"] == (yes >= len(sent) - yes), "truthdare: a majority decides, ties pass")
+        for b in bots:
+            for raw in b.raw[-40:]:
+                gg = json.loads(raw).get("game") or {}
+                if gg.get("game") == "truthdare" and gg.get("phase") == "vote" and gg.get("round") == rnd:
+                    check(gg["you_voted"] in (None, sent.get(b.pid)), f"{b.name} saw someone else's vote")
+        await skip(host)
+
+
+def truthdare_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    pts = dict.fromkeys(ids, 0)
+    for h in history:
+        pts[h["player"]] += h["points"] + h["bonus"]
+        check(h["points"] in (0, 100 if h["kind"] == "truth" else 200), f"truthdare: odd payout {h}")
+    return pts
+
+
 def lonely_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
     pts = dict.fromkeys(ids, 0)
     for h in history:
@@ -1378,6 +1438,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "lonely",
             "boxes",
             "codewords",
+            "truthdare",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1436,6 +1497,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_boxes(host, bots, rng)
             elif game == "codewords":
                 await play_codewords(host, bots, rng)
+            elif game == "truthdare":
+                await play_truthdare(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1453,6 +1516,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 check(
                     got == {pid: chips[pid] - 1000 for pid in got}, f"roulette: scores {got} != stacks - 1000"
                 )
+            elif game == "truthdare":
+                want = truthdare_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"truthdare: scores {got} != payouts {want}")
             elif game == "lonely":
                 want = lonely_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

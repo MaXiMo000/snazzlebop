@@ -116,6 +116,11 @@ def fill(template: str, facts: dict[str, str]) -> str:
     return out
 
 
+def name_list(names: list[str], last: str = "and") -> str:
+    """Ana / Ana and Bo / Ana, Bo and Cy: a tie of any size reads like a sentence."""
+    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} {last} {names[-1]}"
+
+
 def _mood(ranked: list[tuple[str, int]], final: str | None) -> str:
     if final:
         return final
@@ -153,10 +158,10 @@ def quip(
     joint = [names.get(p, "?") for p, s in ranked if s == ranked[0][1]]
     if final is None and len(joint) >= 3:
         # A team win (or a 3+ way tie): name everyone who shares it, not just two of them.
-        return f"{', '.join(joint[:-1])} and {joint[-1]} share {game_title}. Teamwork!"
+        return f"{name_list(joint)} share {game_title}. Teamwork!"
     if final == "show" and len(ranked) >= 2 and ranked[0][1] == ranked[1][1]:
         joint = [names.get(p, "?") for p, s in ranked if s == ranked[0][1]]
-        return f"We can't split them: {' and '.join(joint)} share tonight's crown!"
+        return f"We can't split them: {name_list(joint)} share tonight's crown!"
     mood = _mood(ranked, final)
     facts = {"winner": names.get(ranked[0][0], "?"), "game": game_title}
     if len(ranked) >= 2:
@@ -192,7 +197,7 @@ def awards(show: Show, totals: dict[str, int], names: dict[str, str]) -> list[di
         {
             "icon": "👑",
             "title": "Show champion" if len(joint) == 1 else "Joint champions",
-            "text": f"{' & '.join(names.get(p, '?') for p in joint)} with {totals[champ]} points",
+            "text": f"{name_list([names.get(p, '?') for p in joint], '&')} with {totals[champ]} points",
         }
     )
     # Only games that actually separated people count: a 0-0 draw crowns nobody.

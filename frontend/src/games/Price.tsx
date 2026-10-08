@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Btn, Card, ShowHead, money, nameOf } from "../components/ui";
+import { Btn, Card, ShowHead, money, nameList, nameOf } from "../components/ui";
 import { useCountUp, useOnChange, useReducedMotion, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { PriceDuelResult, PriceResult, PriceView } from "../types";
@@ -459,6 +459,7 @@ function FinalBoard({ view, players, you }: { view: PriceView; players: Props["p
   const wins: Record<string, number> = {};
   for (const r of view.history ?? []) if (r.winner) wins[r.winner] = (wins[r.winner] ?? 0) + 1;
   const best = Object.entries(wins).sort((a, b) => b[1] - a[1])[0];
+  const leaders = best ? Object.keys(wins).filter((p) => wins[p] === best[1]) : []; // ties share the sign
   return (
     <>
       <Card tone="stage" className="center">
@@ -466,9 +467,10 @@ function FinalBoard({ view, players, you }: { view: PriceView; players: Props["p
         {best ? (
           <p className="lead space-top">
             <span className="burst">
-              <b>{nameOf(players, best[0])}</b>
+              <b>{nameList(leaders.map((p) => nameOf(players, p)))}</b>
             </span>
-            {best[0] === you ? " (you!)" : ""} won {best[1]} item{best[1] === 1 ? "" : "s"}.
+            {leaders.includes(you) ? " (you!)" : ""} won {best[1]} item{best[1] === 1 ? "" : "s"}
+            {leaders.length > 1 ? " each" : ""}.
           </p>
         ) : (
           <p className="lead space-top">Nobody won an item. Impressive chaos.</p>

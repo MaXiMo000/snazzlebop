@@ -155,7 +155,9 @@ function Board({ view, you, send, tv }: { view: MuralView; you: string; send: Pr
               </span>
               <span className="tile-name">{t.name}</span>
               <span className="tile-tags">
-                {t.color} · {t.kind}
+                <span>{t.color}</span>
+                <span className="sr-only"> · </span>
+                <span>{t.kind}</span>
               </span>
               {isTarget && <span className="sr-only"> (the painting)</span>}
               {badges(i).length > 0 && (

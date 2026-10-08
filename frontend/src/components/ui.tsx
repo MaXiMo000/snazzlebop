@@ -231,6 +231,11 @@ export function nameOf(players: { id: string; name: string }[], id: string): str
   return players.find((p) => p.id === id)?.name ?? "?";
 }
 
+/** "Ana" / "Ana & Bo" / "Ana, Bo & Cy": ties of any size read like a sentence. */
+export function nameList(names: string[]): string {
+  return names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} & ${names[names.length - 1]}`;
+}
+
 export function money(n: number): string {
   return "$" + n.toLocaleString("en-US");
 }

@@ -114,6 +114,8 @@ class Game(ABC):
     READING: ClassVar[frozenset[str]] = frozenset()
     # False for team games that are played on their own rather than in a show-night playlist.
     SHOW: ClassVar[bool] = True
+    # True for the classics (board, card and party games everyone knows): their own lobby section.
+    CLASSIC: ClassVar[bool] = False
 
     def __init__(
         self,

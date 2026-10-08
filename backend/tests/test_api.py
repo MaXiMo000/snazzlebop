@@ -87,6 +87,7 @@ def test_games_catalog(client):
         "lonely",
         "boxes",
         "codewords",
+        "truthdare",
     }
 
 

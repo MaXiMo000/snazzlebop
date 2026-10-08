@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Btn, Card, ShowHead, nameOf } from "../components/ui";
+import { Btn, Card, ShowHead, nameList, nameOf } from "../components/ui";
 import { useCountUp, useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { BlackjackHand, BlackjackView } from "../types";
@@ -352,6 +352,7 @@ function Final({ view, you }: { view: BlackjackView; you: string }) {
     );
   }
   const top = ranked[0];
+  const leaders = top ? ranked.filter((p) => view.chips[p.id] === view.chips[top.id]) : []; // ties share the sign
   return (
     <>
       <Card tone="stage" className="center felt">
@@ -359,9 +360,10 @@ function Final({ view, you }: { view: BlackjackView; you: string }) {
         {top && (
           <p className="lead space-top">
             <span className="burst">
-              <b>{nameOf(view.players, top.id)}</b>
+              <b>{nameList(leaders.map((p) => nameOf(view.players, p.id)))}</b>
             </span>
-            {top.id === you ? " (you!)" : ""} cashed out with {view.chips[top.id]} chips.
+            {leaders.some((p) => p.id === you) ? " (you!)" : ""} cashed out with {view.chips[top.id]} chips
+            {leaders.length > 1 ? " each" : ""}.
           </p>
         )}
       </Card>

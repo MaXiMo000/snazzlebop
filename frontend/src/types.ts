@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare";
   title: string;
   blurb: string;
   min_players: number;
@@ -18,6 +18,8 @@ export interface GameCard {
   how_to: string[];
   /** false for team games, which are played on their own rather than in a show */
   show: boolean;
+  /** the classics everyone knows (board, card and party games): their own lobby section */
+  classic: boolean;
 }
 
 export interface GameBase {
@@ -326,6 +328,7 @@ export type GameView =
   | ChickenView
   | SplitView
   | DiceView
+  | TruthDareView
   | JackpotView;
 
 export interface Highlight {
@@ -748,4 +751,45 @@ export interface CodewordsView extends GameBase {
   valid_teams: boolean;
   winner?: CwTeam;
   how?: "words" | "assassin";
+}
+
+export type TdKind = "truth" | "dare";
+export interface TdStats {
+  truth: number;
+  dare: number;
+  chicken: number;
+  likes: number;
+  streak: number;
+  points: number;
+}
+export interface TdResult {
+  player: string;
+  kind: TdKind;
+  prompt: string;
+  chicken: boolean;
+  yes: number;
+  no: number;
+  passed: boolean;
+  points: number;
+  bonus: number;
+}
+export interface TruthDareView extends GameBase {
+  game: "truthdare";
+  phase: "spin" | "choose" | "perform" | "vote" | "result" | "final";
+  players: { id: string; name: string }[];
+  heat: "mild" | "cheeky";
+  /** whose turn it is (null once the game is over) */
+  target: string | null;
+  choice: TdKind | null;
+  prompt: string;
+  /** how many have voted (never who, or which way, until the result) */
+  voted: number;
+  voters: number;
+  you_voted: boolean | null;
+  rerolls: Record<string, number>;
+  chickens: Record<string, number>;
+  stats: Record<string, TdStats>;
+  result: TdResult | null;
+  up_next: string | null;
+  history?: TdResult[];
 }

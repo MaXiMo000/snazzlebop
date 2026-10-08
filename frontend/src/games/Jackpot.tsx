@@ -103,7 +103,7 @@ function WagerForm({ view, send }: { view: JackpotView; send: Props["send"] }) {
           </Btn>
         ))}
       </div>
-      <div className="row center space-top" role="group" aria-label="Make your call">
+      <div className="call-row space-top" role="group" aria-label="Make your call">
         {(["higher", "lower"] as const).map((call) => (
           <Btn
             key={call}
@@ -115,8 +115,9 @@ function WagerForm({ view, send }: { view: JackpotView; send: Props["send"] }) {
               send({ t: "act", a: "wager", amount, call });
             }}
           >
-            <span aria-hidden="true">{call === "higher" ? "⬆ " : "⬇ "}</span>
-            {call === "higher" ? "Higher" : "Lower"}
+            {/* gap from .btn, not a space: the arrow never wraps onto its own line */}
+            <span aria-hidden="true">{call === "higher" ? "⬆" : "⬇"}</span>
+            <span>{call === "higher" ? "Higher" : "Lower"}</span>
           </Btn>
         ))}
       </div>

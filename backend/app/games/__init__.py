@@ -16,6 +16,7 @@ from .price import PriceIsWeird
 from .roulette import RouletteRoyale
 from .split import SplitOrSteal
 from .telepathy import TelepathyTax
+from .truthdare import TruthOrDare
 from .wits import WagerWits
 
 REGISTRY: dict[str, type[Game]] = {
@@ -37,6 +38,7 @@ REGISTRY: dict[str, type[Game]] = {
         LowestLonely,
         MysteryBoxes,
         Codewords,
+        TruthOrDare,
     )
 }
 
@@ -52,6 +54,7 @@ def catalog() -> list[dict[str, object]]:
             "options": cls.OPTIONS,
             "how_to": list(cls.HOW_TO),
             "show": cls.SHOW,
+            "classic": cls.CLASSIC,
         }
         for cls in REGISTRY.values()
     ]

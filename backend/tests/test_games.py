@@ -51,6 +51,7 @@ class RegistryTests(unittest.TestCase):
                 "lonely",
                 "boxes",
                 "codewords",
+                "truthdare",
             },
         )
 
