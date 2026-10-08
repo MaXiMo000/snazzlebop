@@ -111,7 +111,7 @@ export function WordRace({ view, you, receivedAt, send, tv = false }: Props) {
           }`;
 
   return (
-    <div className="seg-wordrace stack">
+    <div className={`seg-wordrace stack ${tv && view.phase !== "play" ? "tv-cols" : ""}`}>
       {show.node}
       <ShowHead sign={sign} title="Word Race" remaining={view.remaining} receivedAt={receivedAt}>
         <span className="chip plum">{view.hard ? "🔥 Hard mode: use every hint" : "6 tries · fewer guesses, more points"}</span>
@@ -169,7 +169,8 @@ export function WordRace({ view, you, receivedAt, send, tv = false }: Props) {
 
       {view.phase === "reveal" && <RoundScores view={view} you={you} />}
 
-      <Racers view={view} you={you} tv={tv} />
+      {/* TV final: the standings take the stage; the last word's boards are in the history */}
+      {!(tv && view.phase === "final") && <Racers view={view} you={you} tv={tv} />}
 
       {view.phase === "final" && view.history && <Words view={view} you={you} />}
     </div>
@@ -252,7 +253,7 @@ function Racers({ view, you, tv }: { view: WordRaceView; you: string; tv: boolea
   const others = view.players.filter((p) => tv || !view.you.playing || p.id !== you || view.phase !== "play");
   const rank = (id: string) => view.solved.indexOf(id);
   return (
-    <Card>
+    <Card className="tv-main">
       <h3>{view.phase === "play" ? "The race" : "Everyone’s guesses"}</h3>
       <ul className={`wr-racers ${tv ? "big" : ""}`}>
         {others.map((p) => {
@@ -280,7 +281,7 @@ function Racers({ view, you, tv }: { view: WordRaceView; you: string; tv: boolea
                 ))}
               </div>
               {view.phase !== "play" && rows.some((row) => row.word) && (
-                <p className="wr-words muted">{rows.map((row) => row.word).join(" · ")}</p>
+                <p className="wr-words muted">{rows.map((row) => row.word).join("\u00a0· ")}</p>
               )}
             </li>
           );
@@ -317,7 +318,7 @@ function Words({ view, you }: { view: WordRaceView; you: string }) {
   const top = ranked[0] ? (totals[ranked[0].id] ?? 0) : 0;
   return (
     <>
-      <Card>
+      <Card className="tv-main">
         <h3>Standings</h3>
         <ul className="score-rows">
           {ranked.map((p) => (

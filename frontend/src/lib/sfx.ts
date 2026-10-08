@@ -89,6 +89,15 @@ export const sfx = {
   spin() {
     for (let i = 0; i < 14; i++) note(700 + (i % 2) * 120, i * (0.05 + i * 0.008), 0.035, "square", 0.05);
   },
+  /** a token hopping one square */
+  hop() {
+    note(520, 0, 0.05, "triangle", 0.08, 780);
+  },
+  /** dice rattling in the cup, then landing */
+  rattle() {
+    for (let i = 0; i < 8; i++) note(380 + ((i * 97) % 260), i * 0.045, 0.03, "square", 0.05);
+    note(220, 0.4, 0.08, "triangle", 0.14);
+  },
   /** winner fanfare */
   fanfare() {
     [523.3, 659.3, 784, 1046.5].forEach((f, i) => note(f, i * 0.11, i === 3 ? 0.7 : 0.16, "triangle", 0.17));

@@ -79,6 +79,26 @@ for _phase in ("play", "hand_over", "final"):
         | ({"hands"} if _phase != "play" else set())
         | ({"history"} if _phase == "final" else set())
     )
+for _phase in ("play", "final"):
+    ALLOWED_KEYS[("ludo", _phase)] = {
+        "game",
+        "phase",
+        "round",
+        "rounds",
+        "remaining",
+        "players",
+    } | {
+        "teams",
+        "turn_color",
+        "turn",
+        "rolled",
+        "sixes",
+        "movable",
+        "log",
+        "you",
+        "winner",
+        "scores",
+    }
 for _phase in ("play", "reveal", "final"):
     ALLOWED_KEYS[("wordrace", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
         "hard",
@@ -1168,6 +1188,57 @@ async def play_lastcard(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             check(not gg["pending"] or "legal" not in gg["pending"], f"{b.name} saw if a Draw Four was legal")
 
 
+async def play_ludo(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots roll and move random legal tokens until a colour gets every token home. Ludo has no secrets:
+    every frame must be the same board for everyone, apart from their own colour."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+
+    def token(st: dict[str, Any]) -> str:
+        g = st.get("game") or {}
+        return json.dumps([g.get(k) for k in ("phase", "turn", "rolled", "teams")] + [g.get("log", [])[-1:]])
+
+    for _ in range(6000):
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] != "play":
+            break
+        now = token(host.state)  # type: ignore[arg-type]
+        bot = by_id[g["turn"]]
+        await bot.until(lambda st, t=now: token(st) == t, "ludo sync")
+        mine = bot.state["game"]  # type: ignore[index]
+        if mine["rolled"] is None:
+            await bot.send(t="act", a="roll")
+        else:
+            await bot.send(t="act", a="move", token=rng.choice(mine["movable"]))
+        await host.until(lambda st, t=now: token(st) != t, "ludo move")
+    await all_until(bots, lambda st: (st.get("game") or {}).get("phase") == "final", "ludo over")
+    g = host.state["game"]  # type: ignore[index]
+    win = next(t for t in g["teams"] if t["color"] == g["winner"])
+    check(all(p == 56 for p in win["tokens"]), "ludo: the winner still has tokens out")
+    colour_of = {p: t["color"] for t in g["teams"] for p in t["members"]}
+
+    def public(gg: dict[str, Any]) -> str:
+        return json.dumps(
+            {k: v for k, v in gg.items() if k not in ("you", "remaining")},
+            sort_keys=True,
+        )
+
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") == "ludo":
+                check(gg["you"] == colour_of[b.pid], f"{b.name} was told the wrong colour")
+        check(
+            public(b.state["game"]) == public(g),
+            f"ludo: {b.name} saw a different final board",
+        )  # type: ignore[index]
+
+
+def ludo_scores(g: dict[str, Any], ids: list[str]) -> dict[str, int]:
+    pts = {t["color"]: t["points"] for t in g["teams"]}
+    return {p: pts[t["color"]] for t in g["teams"] for p in t["members"] if p in ids}
+
+
 def lastcard_scores(g: dict[str, Any], ids: list[str]) -> dict[str, int]:
     return {p: g["scores"].get(p, 0) for p in ids}
 
@@ -1629,6 +1700,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "truthdare",
             "wordrace",
             "lastcard",
+            "ludo",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1693,6 +1765,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_wordrace(host, bots, rng)
             elif game == "lastcard":
                 await play_lastcard(host, bots, rng)
+            elif game == "ludo":
+                await play_ludo(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1718,6 +1792,14 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 check(
                     sum(h["points"] for h in g["history"]) == sum(want.values()),
                     "lastcard: history vs scores",
+                )
+            elif game == "ludo":
+                want = ludo_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"ludo: scores {got} != the colours' points {want}")
+                check(
+                    sum(1 for p in want.values() if p >= 500) >= 1,
+                    "ludo: nobody got the win bonus",
                 )
             elif game == "wordrace":
                 want = wordrace_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]

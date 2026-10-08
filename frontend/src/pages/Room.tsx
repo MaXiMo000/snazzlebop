@@ -28,6 +28,7 @@ import { Codewords } from "../games/Codewords";
 import { TruthDare } from "../games/TruthDare";
 import { WordRace } from "../games/WordRace";
 import { LastCard } from "../games/LastCard";
+import { Ludo } from "../games/Ludo";
 import { Boxes } from "../games/Boxes";
 import { Lonely } from "../games/Lonely";
 import { Roulette } from "../games/Roulette";
@@ -336,6 +337,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <WordRace view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "lastcard":
       return <LastCard view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "ludo":
+      return <Ludo view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -568,6 +571,10 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
   stacking: {
     off: "Off (official rules)",
     on: "On (+2 on +2, +4 on +4)",
+  },
+  tokens: {
+    "4": "4 tokens each (classic)",
+    "2": "2 tokens each (quick game)",
   },
   rounds: {
     "3": "3 words",

@@ -12,14 +12,23 @@ GAMES = [
     ("truthdare", "Truth or Dare", "Spin the bottle, pick a door, do it, and the room votes."),
     ("wordrace", "Word Race", "Wordle rules, but everyone races the same word."),
     ("lastcard", "Last Card", "Uno rules: match, skip, reverse, draw four, call LAST CARD!"),
+    ("ludo", "Ludo", "Roll a 6 to get out, knock rivals home, race every token in. Five players: teams."),
 ]
-ORDER = ["laptop", "phone", "tablet", "small", "tv"]
-SHORT = {"laptop": "Laptop", "phone": "Phone", "tablet": "Tablet", "small": "Small phone", "tv": "TV"}
+ORDER = ["laptop", "phone", "tablet", "small", "tiny", "tv"]
+SHORT = {
+    "laptop": "Laptop",
+    "phone": "Phone",
+    "tablet": "Tablet",
+    "small": "Small phone",
+    "tiny": "Tiny phone",
+    "tv": "TV",
+}
 DETAIL = {
     "laptop": "1366px · light",
     "phone": "390px · dark",
     "tablet": "820px · dark",
     "small": "360px · light",
+    "tiny": "320px · dark",
     "tv": "1920px",
 }
 
@@ -152,6 +161,7 @@ nav {{ display: flex; flex-wrap: wrap; gap: 10px; }}
 .d-tablet a {{ width: 250px; }}
 .d-phone a {{ width: 205px; }}
 .d-small a {{ width: 190px; }}
+.d-tiny a {{ width: 175px; }}
 figcaption {{ display: flex; flex-wrap: wrap; gap: 0 8px; font-size: 0.85rem; }}
 figcaption span {{ color: var(--muted); }}
 footer {{ color: var(--muted); font-size: 0.9rem; }}

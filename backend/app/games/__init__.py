@@ -12,6 +12,7 @@ from .dice import LiarsDice
 from .frenemy import FrenemyRadar
 from .lastcard import LastCard
 from .lonely import LowestLonely
+from .ludo import Ludo
 from .mural import MoleInTheMural
 from .price import PriceIsWeird
 from .roulette import RouletteRoyale
@@ -43,6 +44,7 @@ REGISTRY: dict[str, type[Game]] = {
         TruthOrDare,
         WordRace,
         LastCard,
+        Ludo,
     )
 }
 

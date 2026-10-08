@@ -1,5 +1,6 @@
 // Dev tool (not production). With the API on :8000 (JUMPSCARE=false) and web on :5173:
-//   cd frontend && node ../docs/handoff/tools/capture.cjs <out dir> [truthdare wordrace lastcard]
+//   cd frontend && node ../docs/handoff/tools/capture.cjs <out dir> [truthdare wordrace lastcard ludo]
+//   (FIVE=1 adds a fifth player on a 320px phone: Ludo then plays in teams)
 // Plays Truth or Dare, Word Race and Last Card with four real browser players (laptop, phone, tablet,
 // small phone) plus a TV screen, and screenshots every device at every phase.
 const fs = require("fs");
@@ -20,6 +21,9 @@ const DEVICES = [
   { key: "tablet", label: "Tablet (820px, dark)", name: "Zara", viewport: { width: 820, height: 1180 }, theme: "dark", mobile: true, dsf: 1 },
   { key: "small", label: "Small phone (360px, light)", name: "Leo", viewport: { width: 360, height: 780 }, theme: "light", mobile: true, dsf: 2 },
 ];
+// A fifth player on the smallest phone, only when asked for (Ludo: five players = teams sharing a colour).
+const TINY = { key: "tiny", label: "Tiny phone (320px, dark)", name: "Alexandria Wood", viewport: { width: 320, height: 640 }, theme: "dark", mobile: true, dsf: 2 };
+if (process.env.FIVE) DEVICES.push(TINY);
 const TV = { key: "tv", label: "TV screen (1920px)", viewport: { width: 1920, height: 1080 }, theme: "dark", dsf: 1 };
 
 const MANIFEST = path.join(OUT, "manifest.json");
@@ -327,6 +331,68 @@ async function lastCard(players, tv, host) {
 }
 
 // ---------------------------------------------------------------------------------------------------
+async function ludo(players, tv, host) {
+  const all = [...players, tv];
+  await startGame(host, "ludo");
+  await until(async () => (await sign(host)).includes("how to play"), "ludo intro");
+  await shot("ludo", "intro", "The rules before it starts", all);
+  await readyAll(players);
+  await until(async () => await has(host, ".ludo-board"), "ludo board");
+  await shot("ludo", "start", "The board: every token in its yard, whose turn it is, the teams", all, { wait: 1200 });
+  const seen = new Set();
+  const stinger = async (re) => {
+    for (const p of players) if (re.test((await p.page.locator(".stinger").first().textContent({ timeout: 200 }).catch(() => "")) || "")) return true;
+    return false;
+  };
+  for (let i = 0; i < 3000; i++) {
+    const s = await sign(host);
+    if (s.includes("wins!")) break;
+    if (!seen.has("capture") && (await stinger(/KNOCK/))) {
+      seen.add("capture");
+      await shot("ludo", "capture", "A capture: the rival goes back to its yard", all, { wait: 100 });
+    }
+    if (!seen.has("home") && (await stinger(/HOME/))) {
+      seen.add("home");
+      await shot("ludo", "home", "A token reaches home", all, { wait: 100 });
+    }
+    if (i === 160 && !seen.has("mid")) {
+      seen.add("mid");
+      await shot("ludo", "midgame", "Mid-game: tokens round the board, sharing squares, the log", all, { wait: 400 });
+    }
+    let actor = null;
+    for (const p of players) if ((await sign(p)).includes("Your turn")) actor = p;
+    if (!actor) {
+      await sleep(150);
+      continue;
+    }
+    const roll = btn(actor, /Roll!/);
+    if (await roll.isVisible().catch(() => false)) {
+      if (!seen.has("roll")) {
+        seen.add("roll");
+        await shot("ludo", "roll", `${actor.dev.name}'s turn: the Roll button`, [actor, tv], { wait: 300 });
+      }
+      await roll.click({ force: true, timeout: 3000 }).catch(() => undefined);
+      await sleep(250);
+      continue;
+    }
+    const moves = actor.page.locator(".ludo-moves .btn");
+    if ((await moves.count()) > 0) {
+      if (!seen.has("choose")) {
+        seen.add("choose");
+        await shot("ludo", "choose", `${actor.dev.name} picks a token: movable tokens glow, buttons say what each move does`, [actor, tv], { wait: 300 });
+      }
+      await moves.first().click({ force: true, timeout: 3000 }).catch(() => undefined);
+      await sleep(250);
+      continue;
+    }
+    await sleep(150);
+  }
+  await until(async () => (await sign(host)).includes("wins!"), "ludo final", 60000).catch(() => undefined);
+  await shot("ludo", "final", "A colour gets every token home: final scores and the awards", all, { wait: 3000 });
+  await toLobby(host);
+}
+
+// ---------------------------------------------------------------------------------------------------
 (async () => {
   const browser = await chromium.launch();
   const open = async (dev) => {
@@ -361,7 +427,7 @@ async function lastCard(players, tv, host) {
   await sleep(1500);
   await host.page.locator("#classics-h").scrollIntoViewIfNeeded();
   if (!ONLY.length) await shot("lobby", "classics", "The lobby: the new Classics section", [...players, tv]);
-  const games = { truthdare: truthOrDare, wordrace: wordRace, lastcard: lastCard };
+  const games = { truthdare: truthOrDare, wordrace: wordRace, lastcard: lastCard, ludo };
   for (const [id, fn] of Object.entries(games)) {
     if (ONLY.length && !ONLY.includes(id)) continue;
     const t0 = Date.now();

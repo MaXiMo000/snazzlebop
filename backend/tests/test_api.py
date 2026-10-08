@@ -90,6 +90,7 @@ def test_games_catalog(client):
         "truthdare",
         "wordrace",
         "lastcard",
+        "ludo",
     }
 
 

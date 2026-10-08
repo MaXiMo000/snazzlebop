@@ -107,14 +107,15 @@ export function LastCard({ view, you, receivedAt, send, tv = false }: Props) {
   const hand = [...(me?.hand ?? [])].sort((a, b) => ORDER[a.color]! - ORDER[b.color]! || a.value.localeCompare(b.value, "en", { numeric: true }));
 
   return (
-    <div className={`seg-lastcard stack lc-now-${view.color}`}>
+    <div className={`seg-lastcard stack lc-now-${view.color} ${tv ? "tv-cols" : ""}`}>
       {show.node}
       <ShowHead sign={sign} title="Last Card" remaining={view.phase === "play" ? view.remaining : view.remaining} receivedAt={receivedAt}>
         <span className="chip plum">{view.stacking ? "Stacking on · +2 on +2, +4 on +4" : "Match colour, number or symbol"}</span>
       </ShowHead>
 
-      {view.phase !== "final" && (
-        <Card tone="stage" className="lc-table">
+      {/* TV: once the hand is over, the revealed hands take the stage and the table steps aside */}
+      {(view.phase === "play" || (!tv && view.phase === "hand_over")) && (
+        <Card tone="stage" className={`lc-table ${view.phase === "play" ? "tv-main" : ""}`}>
           <Seats view={view} you={you} tv={tv} send={send} />
           <div className="lc-piles">
             <button
@@ -250,7 +251,7 @@ export function LastCard({ view, you, receivedAt, send, tv = false }: Props) {
         </div>
       )}
 
-      {view.phase !== "play" && view.hands && <HandsShown view={view} you={you} />}
+      {view.phase !== "play" && view.hands && <HandsShown view={view} you={you} main />}
 
       <Log view={view} you={you} tv={tv} />
     </div>
@@ -370,9 +371,9 @@ function Log({ view, you, tv }: { view: LastCardView; you: string; tv: boolean }
   );
 }
 
-function HandsShown({ view, you }: { view: LastCardView; you: string }) {
+function HandsShown({ view, you, main }: { view: LastCardView; you: string; main: boolean }) {
   return (
-    <Card>
+    <Card className={main ? "tv-main" : ""}>
       <h3>{view.phase === "final" ? "The last hand" : "Left in everyone’s hands"}</h3>
       <ul className="lc-shown">
         {view.order.map((pid) => {

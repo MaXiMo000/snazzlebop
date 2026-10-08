@@ -154,7 +154,7 @@ body {
       transparent 7deg 14deg
     );
   background-attachment: fixed;
-  overflow-x: hidden;
+  overflow-x: clip; /* clip, not hidden: hidden makes body a scroll box and breaks position: sticky */
 }
 html {
   overflow-x: clip; /* nothing may ever make the page scroll sideways */
@@ -701,6 +701,27 @@ button.alert {
 }
 .contestant.you {
   background: var(--teal-light);
+}
+.contestant .who {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.3em;
+  min-width: 0;
+}
+.contestant .nm {
+  white-space: nowrap;
+}
+@media (max-width: 360px) {
+  .contestant {
+    gap: 6px;
+    padding-left: 10px;
+    font-size: 0.92rem;
+  }
+  .contestant .pts {
+    min-width: 0;
+    padding: 2px 8px;
+  }
 }
 .contestant .lamp {
   width: 12px;
@@ -1756,6 +1777,39 @@ details summary {
 }
 .tv-split > * + * {
   margin-top: 18px;
+}
+/* TV, classics: the main stage on the left, the secondary panels stacked beside it, so nothing falls
+   below a 1080p screen while space sits empty. The last row is 1fr so the tall stage (spanning every row)
+   never stretches the gaps between the panels. */
+@media (min-width: 1100px) {
+  .tv .tv-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-rows: repeat(6, auto) 1fr;
+    column-gap: 18px;
+    align-items: start;
+  }
+  .tv .tv-cols > * {
+    grid-column: 2;
+    margin: 0 0 18px;
+  }
+  .tv .tv-cols > .card.accent {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .tv .tv-cols > .tv-main {
+    grid-column: 1;
+    grid-row: 2 / -1;
+  }
+  /* Word Race: the boards get the wider column, three across, a size down so names fit whole. */
+  .tv .tv-cols.seg-wordrace {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  }
+  .tv .tv-cols .wr-racers.big {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    font-size: 0.75em;
+  }
 }
 @media (min-width: 1100px) {
   body:has(.tv) .topbar,
@@ -4343,6 +4397,388 @@ button.cw-card:hover {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 2px;
+}
+
+/* ---- ludo ---------------------------------------------------------------------------------------- */
+.seg-ludo {
+  --accent: #c8203a;
+  --accent-ink: #fff;
+  --accent-soft: #ffd3d8;
+}
+.seg-ludo.ludo-now-green {
+  --accent: #127a3e;
+  --accent-soft: #c8ecd5;
+}
+.seg-ludo.ludo-now-yellow {
+  --accent: #f2b705;
+  --accent-ink: var(--plum);
+  --accent-soft: #ffeaa0;
+}
+.seg-ludo.ludo-now-blue {
+  --accent: #1f5fae;
+  --accent-soft: #cfe0f7;
+}
+.seg-ludo .c-red {
+  --lc: #c8203a;
+  --lc-ink: #fff;
+  --lc-soft: #ffd3d8;
+}
+.seg-ludo .c-green {
+  --lc: #127a3e;
+  --lc-ink: #fff;
+  --lc-soft: #c8ecd5;
+}
+.seg-ludo .c-yellow {
+  --lc: #f2b705;
+  --lc-ink: #2b1b33;
+  --lc-soft: #ffeaa0;
+}
+.seg-ludo .c-blue {
+  --lc: #1f5fae;
+  --lc-ink: #fff;
+  --lc-soft: #cfe0f7;
+}
+.ludo-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+/* Phones: one column (the side wrapper dissolves, so the turn card can stick to the screen bottom).
+   Laptop and TV: the board with the log under it on the left, the turn and the teams beside it. */
+.ludo-side {
+  display: contents;
+}
+@media (min-width: 900px) {
+  .ludo-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "board side"
+      "log side";
+  }
+  .ludo-layout > .ludo-frame {
+    grid-area: board;
+  }
+  .ludo-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    grid-area: side;
+  }
+  .ludo-layout > .card {
+    grid-area: log;
+  }
+  /* Small enough to see whole once the header scrolls away. */
+  .ludo-board {
+    max-width: max(420px, 100svh - 110px);
+  }
+}
+/* Phones and tablets: on your turn the roll / move card stays pinned to the bottom of the screen. */
+@media (max-width: 899px) {
+  .ludo-turn.mine {
+    position: sticky;
+    bottom: 10px;
+    z-index: 5;
+    box-shadow:
+      var(--lift),
+      0 10px 30px rgba(43, 27, 51, 0.35);
+  }
+}
+/* The board is a physical object: the same cream board in both themes, in a plum frame. */
+.ludo-frame {
+  padding: 6px;
+  background: var(--plum);
+  border: 3px solid var(--edge);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+}
+.ludo-board {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+.lb-paper {
+  fill: #fffaf1;
+}
+.lb-yard,
+.lb-start,
+.lb-lane,
+.lb-tri {
+  fill: var(--lc);
+}
+.lb-yard-in {
+  fill: #fffaf1;
+  stroke: #2b1b33;
+  stroke-width: 0.06;
+}
+.lb-nest {
+  fill: var(--lc-soft);
+  stroke: var(--lc);
+  stroke-width: 0.08;
+}
+.lb-sq {
+  fill: #fff;
+  stroke: #2b1b33;
+  stroke-width: 0.05;
+}
+.lb-sq.lb-start,
+.lb-sq.lb-lane {
+  fill: var(--lc);
+}
+.lb-tri {
+  stroke: #2b1b33;
+  stroke-width: 0.05;
+}
+.lb-star {
+  fill: #b9a6c0;
+}
+.lb-star.on-start {
+  fill: #fff;
+  opacity: 0.9;
+}
+.lb-token {
+  transition: transform 0.16s ease-out;
+}
+.lb-token.lit {
+  cursor: pointer;
+}
+.lb-hop {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: lb-hop 0.17s ease-out;
+}
+@keyframes lb-hop {
+  50% {
+    transform: translateY(-0.28px) scale(1.08);
+  }
+}
+.lb-shadow {
+  fill: rgba(43, 27, 51, 0.28);
+}
+.lb-ring {
+  fill: #fff;
+  stroke: #2b1b33;
+  stroke-width: 0.06;
+}
+.lb-body {
+  fill: var(--lc);
+}
+.lb-cap {
+  fill: rgba(255, 255, 255, 0.28);
+}
+.lb-num {
+  font-family: var(--display);
+  font-size: 0.4px;
+  text-anchor: middle;
+  fill: var(--lc-ink);
+}
+.lb-token.lit .lb-ring {
+  stroke: #f2b705;
+  stroke-width: 0.14;
+  animation: lb-lit 0.8s ease-in-out infinite alternate;
+}
+@keyframes lb-lit {
+  to {
+    stroke: #ff6b2c;
+  }
+}
+.ludo-dot {
+  display: inline-block;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  vertical-align: -4px;
+  border-radius: 50%;
+  background: var(--lc);
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px var(--plum);
+}
+.ludo-dot.small {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+.ludo-turn-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.ludo-turn-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.15em;
+}
+.ludo-turn-who b {
+  overflow-wrap: anywhere;
+}
+/* The die: pips on a 3 x 3 grid, edged in the colour whose turn it is. */
+.ludo-die {
+  flex: none;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  gap: 3px;
+  width: 68px;
+  height: 68px;
+  padding: 9px;
+  background: #fffaf1;
+  border: 4px solid var(--lc);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 3px var(--plum),
+    0 6px 0 3px var(--shadow);
+}
+.ludo-die i {
+  border-radius: 50%;
+  background: #2b1b33;
+  visibility: hidden;
+}
+.ludo-die.f-1 .p4,
+.ludo-die.f-2 :is(.p0, .p8),
+.ludo-die.f-3 :is(.p0, .p4, .p8),
+.ludo-die.f-4 :is(.p0, .p2, .p6, .p8),
+.ludo-die.f-5 :is(.p0, .p2, .p4, .p6, .p8),
+.ludo-die.f-6 :is(.p0, .p2, .p3, .p5, .p6, .p8) {
+  visibility: visible;
+}
+.ludo-die.f-6 i {
+  background: #c8203a;
+}
+.ludo-die.rolled {
+  animation: ludo-tumble 0.55s cubic-bezier(0.2, 0.7, 0.3, 1.2);
+}
+@keyframes ludo-tumble {
+  0% {
+    transform: translateY(-26px) rotate(-200deg) scale(0.6);
+  }
+  60% {
+    transform: translateY(4px) rotate(12deg) scale(1.05);
+  }
+}
+.ludo-moves {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ludo-moves .btn {
+  flex-wrap: wrap;
+  height: 100%;
+  padding: 8px 12px;
+}
+.ludo-moves small {
+  flex-basis: 100%;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.85em;
+  text-transform: none;
+  white-space: nowrap;
+}
+.ludo-roll {
+  align-self: stretch;
+  font-size: 1.4em;
+}
+.ludo-teams {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ludo-teams li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 2px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+.ludo-teams li:last-child {
+  border-bottom: 0;
+}
+.ludo-teams li.on,
+.ludo-teams li.won {
+  background: var(--accent-soft);
+}
+.ludo-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.3em;
+  font-weight: 700;
+}
+.ludo-names span {
+  white-space: nowrap;
+}
+.ludo-names .nm ~ .nm::before {
+  content: "& ";
+}
+.ludo-prev {
+  font-size: 0.9em;
+}
+.ludo-winner .ludo-names {
+  justify-content: center;
+}
+/* Whose roll it is within a team: underlined, so the names keep their order and spacing. */
+.ludo-names .rolling {
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+.ludo-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.7em;
+  font-size: 0.9em;
+}
+.ludo-count span {
+  white-space: nowrap;
+}
+.ludo-pts {
+  font-family: var(--display);
+  font-size: 1.3em;
+}
+/* TV: Ludo takes the whole width (its teams panel carries the live points; the room scoreboard moves
+   below): the board as tall as the screen allows, then the turn and the log, then the teams. */
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-ludo) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tv .ludo-layout {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "board turn teams"
+      "board log teams";
+    grid-template-rows: auto 1fr;
+  }
+  .tv .ludo-side {
+    display: contents;
+  }
+  .tv .ludo-turn,
+  .tv .ludo-winner {
+    grid-area: turn;
+  }
+  .tv .ludo-teams-card {
+    grid-area: teams;
+  }
+  .tv .ludo-frame {
+    width: min(100svh - 340px, 50vw);
+  }
+  .tv .ludo-board {
+    max-width: none;
+  }
+  /* The panels beside the board read from the sofa at a slightly smaller size than the TV default. */
+  .tv .ludo-layout > .card,
+  .tv .ludo-side > .card {
+    font-size: 0.82em;
+  }
+}
+.tv .ludo-die {
+  width: 96px;
+  height: 96px;
+  padding: 13px;
 }
 
 /* ---- the classics on bigger screens: laptops and the TV ------------------------------------------ */

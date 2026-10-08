@@ -108,7 +108,7 @@ Run locally on Windows 11 + Docker Desktop against the production image (details
 
 - 349 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
   middleware, config rules, content validation), ruff, bandit, pip-audit.
-- Simulator: bots play all nineteen games over real WebSockets, scores are recomputed from the rules, and
+- Simulator: bots play all twenty games over real WebSockets, scores are recomputed from the rules, and
   no frame ever carries another player's secret.
 - Playwright on 390 px and desktop: 26 tests including axe, keyboard, TV mode, host tools, reconnect.
 - Locust abuse suite (rate limits, socket caps, oversize/flood closes, slow reader), OWASP ZAP

@@ -102,6 +102,17 @@ async def bot_act(ws, st):
                     await ws.send(json.dumps({"t": "act", "a": "pass"}))
                 else:
                     await ws.send(json.dumps({"t": "act", "a": "draw"}))
+        if gid == "ludo" and ph == "play" and g.get("turn") == me:
+            await asyncio.sleep(random.uniform(1.6, 2.6))  # long enough to watch the hops
+            g = LATEST[id(ws)].get("game") or {}
+            if g.get("turn") != me or g.get("phase") != "play" or BUSY.get(id(ws)):
+                return
+            BUSY[id(ws)] = True
+            asyncio.get_running_loop().call_later(1.0, BUSY.pop, id(ws), None)
+            if g["rolled"] is None:
+                await ws.send(json.dumps({"t": "act", "a": "roll"}))
+            elif g["movable"]:
+                await ws.send(json.dumps({"t": "act", "a": "move", "token": random.choice(g["movable"])}))
         if gid == "truthdare":
             await asyncio.sleep(2.5)  # slow enough to watch
             if ph == "choose" and g["target"] == me:

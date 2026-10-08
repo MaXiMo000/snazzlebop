@@ -134,6 +134,14 @@ const pairs = [
   ["bulb", "#c8203a", "Last Card back mark"],
   ["plum", "#ffd3d8", "Last Card soft cards"],
   ["plum-soft", "#ffd3d8", "muted in Last Card soft"],
+  ["#ffffff", "#c8203a", "Ludo red: header, token numbers"],
+  ["#ffffff", "#127a3e", "Ludo green: header, token numbers"],
+  ["#ffffff", "#1f5fae", "Ludo blue: header, token numbers"],
+  ["plum", "#f2b705", "Ludo yellow: header, token numbers"],
+  ...["#ffd3d8", "#c8ecd5", "#ffeaa0", "#cfe0f7"].flatMap((bg) => [
+    ["plum", bg, "Ludo soft cards and the team on turn"],
+    ["plum-soft", bg, "muted in Ludo soft"],
+  ]),
 ];
 
 // Dark theme (the default): role tokens from :root, plus each segment's soft tint, which is
@@ -143,7 +151,7 @@ const mix = (a, b, t) => {
   const ch = (h, i) => parseInt(h.slice(i, i + 2), 16);
   return "#" + [1, 3, 5].map((i) => Math.round(ch(x, i) * t + ch(y, i) * (1 - t)).toString(16).padStart(2, "0")).join("");
 };
-const accents = ["cherry", "teal", "mustard", "tangerine", "#0b6e4f", "#0f5a73", "#11643f", "#14532d", "#1f5fae", "#3d4fa3", "#5b2f9e", "#5c4a1f", "#7a1f3d", "#8a3b12", "#8c2f39", "#a3195b", "#b34700"];
+const accents = ["cherry", "teal", "mustard", "tangerine", "#0b6e4f", "#0f5a73", "#11643f", "#14532d", "#1f5fae", "#3d4fa3", "#5b2f9e", "#5c4a1f", "#7a1f3d", "#8a3b12", "#8c2f39", "#a3195b", "#b34700", "#127a3e", "#f2b705"];
 pairs.push(
   ["ink", "bg", "dark: body text"],
   ["ink", "surface", "dark: cards"],

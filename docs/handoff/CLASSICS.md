@@ -21,8 +21,8 @@ screenshot gallery of every phase on several devices before pushing.
 | 2 | Word Race | Wordle | done (`638dee1`) |
 | 3 | Last Card | Uno | done (`e48336b`) |
 | - | polish from the screenshot pass | - | done (`8a58606`) |
-| 4 | Ludo | Ludo | **next** |
-| 5 | Chess | Chess | to do |
+| 4 | Ludo | Ludo | done (committed; push when the user says) |
+| 5 | Chess | Chess | **next** |
 | 6 | Draw & Guess | Scribble / skribbl / Pictionary | to do (needs live drawing, see below) |
 | 7 | Draw Telephone | Gartic Phone | to do (reuses the Draw & Guess canvas) |
 | 8 | Property Tycoon | Monopoly | to do (biggest; party timer) |
@@ -53,9 +53,16 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
   catch window until the next player acts, 2-player Reverse = Skip), stacking off by default (option),
   1 or 3 hands, 30 s turn clock. Wild / Wild Draw Four turned at the start go back (no dealer to pick).
   Played cards are public and named in the log (`base`, `value` on log entries).
+- **Ludo**: 15x15 board (SVG; positions are attributes, not styles, so CSP is fine), 4 tokens (option: 2
+  for a quick game). 6 to come out; extra roll on a 6, a capture or a token reaching home; three 6s lose the
+  turn; exact count home; starts + stars are safe; no blockades (a landing captures every rival token on
+  the square, Ludo King style). First colour home wins. 2 players sit opposite; 5-8 = teams of two per
+  colour (5: 2/2/1), teammates alternate rolls, every member gets the colour's points (100 per token
+  home, 50 per capture, 500 for the win). 20 s turn clock: it rolls and moves the furthest token. A roll
+  with one real choice (e.g. all yard tokens) moves by itself. Phones: the roll/move card sticks to the
+  bottom of the screen on your turn; laptop: board + log left, turn + teams right; TV: Ludo takes the full
+  width (room scoreboard drops below) so everything fits on 1080p.
 - **Plans for the rest** (agreed in principle, not built):
-  - Ludo: real 15x15 board, 4 tokens per colour, capture, safe squares, extra roll on 6, three 6s lose
-    the turn; 5-8 players play as teams sharing a colour. Animated dice and token moves.
   - Chess: write our own move generator (do **not** add python-chess: GPL); full rules (castling, en
     passant, promotion, check/mate/stalemate, 50-move, threefold, insufficient material) + clocks.
     More than 2 players = two teams taking turns, teammates can suggest moves (arrows). Perft tests.
@@ -101,6 +108,13 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
     data attributes, not `style=`.
 13. Errors used to show at the top of the page, off-screen on phones; they are now a fixed toast
     (`.toast` in ui.tsx/styles.css). Server error messages are what players see: keep them short.
+14. **`overflow-x: hidden` on body silently broke every `position: sticky`** (including the Ready bar):
+    body became its own scroll box. It is `clip` now; keep it that way.
+15. **Run ruff on scripts/ with `--config backend/pyproject.toml`** (110 cols). Formatting it with the
+    default 88 cols exploded hundreds of lines (magic trailing commas don't fold back).
+16. **Use the empty space on wide screens**: the user spotted a TV view where the log fell off the bottom
+    while the board column and the scoreboard column had room. TV shots are viewport-only (1080 tall):
+    check them for anything cut at the bottom.
 
 ## Per-game checklist (what "done" means here)
 

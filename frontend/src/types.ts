@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo";
   title: string;
   blurb: string;
   min_players: number;
@@ -331,6 +331,7 @@ export type GameView =
   | TruthDareView
   | WordRaceView
   | LastCardView
+  | LudoView
   | JackpotView;
 
 export interface Highlight {
@@ -870,4 +871,32 @@ export interface LastCardView extends GameBase {
   scores: Record<string, number>;
   hands?: Record<string, LcCard[]>;
   history?: { winner: string; points: number; left: Record<string, number> }[];
+}
+
+export type LudoColor = "red" | "green" | "yellow" | "blue";
+type LudoTurn = { n: number; color: LudoColor; player: string };
+export type LudoLog =
+  | (LudoTurn & { type: "roll"; value: number })
+  | (LudoTurn & { type: "move"; token: number; from: number; to: number })
+  | (LudoTurn & { type: "capture"; victims: { color: LudoColor; token: number }[] })
+  | (LudoTurn & { type: "home"; token: number })
+  | (LudoTurn & { type: "again" | "bust" | "stuck" | "timeout" })
+  | { n: number; type: "win"; color: LudoColor };
+export interface LudoView extends GameBase {
+  game: "ludo";
+  phase: "play" | "final";
+  players: { id: string; name: string }[];
+  /** token positions: -1 yard, 0-50 round the track from the colour's start, 51-55 home column, 56 home */
+  teams: { color: LudoColor; members: string[]; tokens: number[]; points: number }[];
+  turn_color: LudoColor | null;
+  turn: string | null;
+  /** the roll waiting for a move (null: roll first) */
+  rolled: number | null;
+  sixes: number;
+  movable: number[];
+  log: LudoLog[];
+  /** your colour (null for the TV and the audience) */
+  you: LudoColor | null;
+  winner: LudoColor | null;
+  scores: Record<string, number>;
 }

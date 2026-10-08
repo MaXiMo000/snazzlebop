@@ -54,6 +54,7 @@ class RegistryTests(unittest.TestCase):
                 "truthdare",
                 "wordrace",
                 "lastcard",
+                "ludo",
             },
         )
 

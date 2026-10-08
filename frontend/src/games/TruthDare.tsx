@@ -67,14 +67,14 @@ export function TruthDare({ view, you, receivedAt, send, tv = false }: Props) {
         }`;
 
   return (
-    <div className={`seg-truthdare stack ${view.choice ? `tod-${view.choice}` : ""}`}>
+    <div className={`seg-truthdare stack ${view.choice ? `tod-${view.choice}` : ""} ${tv ? "tv-cols" : ""}`}>
       {show.node}
       <ShowHead sign={sign} title="Truth or Dare" remaining={view.remaining} receivedAt={receivedAt}>
         <span className="chip plum">{view.heat === "cheeky" ? "😈 Cheeky" : "😇 Mild"} · dares pay double</span>
       </ShowHead>
 
       {view.phase !== "final" && (
-        <Card tone="stage" className="center">
+        <Card tone="stage" className="center tv-main">
           <Bottle view={view} you={you} />
           <p className="lead space-top" aria-live="polite">
             {view.phase === "spin" ? (
@@ -212,8 +212,9 @@ export function TruthDare({ view, you, receivedAt, send, tv = false }: Props) {
 
       {view.phase === "result" && view.result && <Verdict view={view} you={you} tv={tv} />}
 
-      <Standings view={view} you={you} />
-      {view.phase === "final" && view.history && <History view={view} />}
+      {/* TV: the room scoreboard beside the game already shows the points until the final */}
+      {(!tv || view.phase === "final") && <Standings view={view} you={you} />}
+      {view.phase === "final" && view.history && <History view={view} latest={tv ? 4 : undefined} />}
     </div>
   );
 }
@@ -322,12 +323,17 @@ function Standings({ view, you }: { view: TruthDareView; you: string }) {
   );
 }
 
-function History({ view }: { view: TruthDareView }) {
+/** Every turn, in order. The TV shows only the latest few, so the list never runs off the screen. */
+function History({ view, latest }: { view: TruthDareView; latest?: number }) {
+  const all = view.history!;
+  const shown = latest ? all.slice(-latest) : all;
+  const hidden = all.length - shown.length;
   return (
-    <Card>
-      <h3>Every turn</h3>
-      <ol className="evidence">
-        {view.history!.map((h, i) => (
+    <Card className="tv-main">
+      <h3>{hidden ? "The latest turns" : "Every turn"}</h3>
+      {hidden > 0 && <p className="muted">…and {hidden} earlier {hidden === 1 ? "turn" : "turns"} before these.</p>}
+      <ol className="evidence" start={hidden + 1}>
+        {shown.map((h, i) => (
           <li key={i}>
             <b>{nameOf(view.players, h.player)}</b> · {KIND[h.kind].icon} {h.prompt}{" "}
             <span className="muted">

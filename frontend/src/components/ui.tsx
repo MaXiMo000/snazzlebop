@@ -107,11 +107,12 @@ function Contestant({ p, you, leader, onKick }: { p: PlayerInfo; you: boolean; l
   return (
     <li className={`contestant ${you ? "you" : ""} ${p.connected ? "" : "away"}`}>
       <span className="lamp" aria-hidden="true" />
-      <span>
-        {leader ? "👑 " : ""}
-        {p.name}
-        {you ? " (you)" : ""}
-        {p.host ? <span title="Host"> ★</span> : null}
+      {/* The name never breaks inside; the crown, "(you)" and the host star wrap around it as pieces. */}
+      <span className="who">
+        {leader && <span aria-hidden="true">👑</span>}
+        <span className="nm">{p.name}</span>
+        {you && <span>(you)</span>}
+        {p.host ? <span title="Host">★</span> : null}
         <span className="sr-only">
           {p.host ? ", host" : ""}
           {p.connected ? "" : ", offline"}
