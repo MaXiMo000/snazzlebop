@@ -18,6 +18,7 @@ from .split import SplitOrSteal
 from .telepathy import TelepathyTax
 from .truthdare import TruthOrDare
 from .wits import WagerWits
+from .wordrace import WordRace
 
 REGISTRY: dict[str, type[Game]] = {
     cls.game_id: cls
@@ -39,6 +40,7 @@ REGISTRY: dict[str, type[Game]] = {
         MysteryBoxes,
         Codewords,
         TruthOrDare,
+        WordRace,
     )
 }
 

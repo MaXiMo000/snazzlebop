@@ -293,7 +293,7 @@ function Standings({ view, you }: { view: TruthDareView; you: string }) {
   return (
     <Card>
       <h3>{final ? "Who did what" : "Bravery board"}</h3>
-      <ul className="tod-board">
+      <ul className="score-rows">
         {rows.map((p) => {
           const s = view.stats[p.id]!;
           return (
@@ -303,12 +303,12 @@ function Standings({ view, you }: { view: TruthDareView; you: string }) {
                 {p.name}
                 {p.id === you ? " (you)" : ""}
               </b>
-              <span className="tod-tally" aria-hidden="true">
+              <span className="score-tally" aria-hidden="true">
                 {s.truth > 0 && <span>💬 {s.truth}</span>}
                 {s.dare > 0 && <span>🔥 {s.dare}</span>}
                 {s.chicken > 0 && <span>🐔 {s.chicken}</span>}
                 {!final && s.streak >= 2 && <span>⚡{s.streak}</span>}
-                <span className="tod-pts">{s.points}</span>
+                <span className="score-pts">{s.points}</span>
               </span>
               <span className="sr-only">
                 {s.points} points: {s.truth} truths, {s.dare} dares{s.chicken ? `, chickened out ${s.chicken}` : ""}

@@ -601,6 +601,22 @@ input[type="number"]:focus-visible,
   --ink: var(--plum); /* lit background: dark ink in both themes */
   --muted: var(--plum-soft);
 }
+/* Errors float at the top of the screen, so a refused move is seen wherever you've scrolled to. */
+.toast {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: 60;
+  width: min(calc(100% - 2 * var(--gutter)), 520px);
+  transform: translateX(-50%);
+  animation: toast-in 0.25s ease-out;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -16px);
+  }
+}
 button.alert {
   display: block;
   width: 100%;
@@ -3601,14 +3617,14 @@ button.cw-card:hover {
     transform: scale(0.2) rotate(-20deg);
   }
 }
-.tod-board {
+.score-rows {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 /* The name keeps its width; the tally sits at the right, and only when both can't share a row does it
    drop below, still right-aligned (never squeezing the name into a column of single words). */
-.tod-board li {
+.score-rows li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -3616,20 +3632,20 @@ button.cw-card:hover {
   padding: 8px 4px;
   border-bottom: 2px solid var(--rule);
 }
-.tod-board li:last-child {
+.score-rows li:last-child {
   border-bottom: 0;
 }
-.tod-board li.on b {
+.score-rows li.on b {
   color: var(--accent);
 }
-:root:not([data-theme="light"]) .tod-board li.on b {
+:root:not([data-theme="light"]) .score-rows li.on b {
   color: var(--mustard);
 }
-.tod-board b {
+.score-rows b {
   flex: 1 0 auto;
   max-width: 100%;
 }
-.tod-tally {
+.score-tally {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3637,11 +3653,289 @@ button.cw-card:hover {
   font-weight: 700;
   white-space: nowrap;
 }
-.tod-pts {
+.score-pts {
   min-width: 3.2em;
   padding: 0 8px;
   text-align: center;
   color: var(--bulb);
   background: var(--stage);
   border-radius: 999px;
+}
+
+/* ---- word race ----------------------------------------------------------------------------------- */
+.seg-wordrace {
+  --accent: #2e7d32;
+  --accent-ink: #fff;
+  --accent-soft: #dcefd9;
+  /* tile colours: white ink on all three passes 4.5:1 (Wordle's own lighter green doesn't) */
+  --wr-g: #2e7d32;
+  --wr-y: #9a6a00;
+  --wr-x: #57505e;
+}
+.wr-grid {
+  display: grid;
+  gap: 6px;
+  /* small enough that the grid, the letters and the guess box fit one phone screen */
+  width: min(100%, 260px, 34vh);
+  margin: 0 auto;
+}
+.wr-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.wr-tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  font-family: var(--display);
+  font-size: clamp(1.3rem, 6vw, 1.8rem);
+  color: var(--ink);
+  background: var(--field);
+  border: 3px solid var(--edge);
+  border-radius: 10px;
+}
+.wr-tile.filled {
+  border-color: var(--ink);
+  animation: wr-pop 0.12s ease-out;
+}
+.wr-tile.m-g,
+.wr-tile.m-y,
+.wr-tile.m-x {
+  color: #fff;
+  border-color: transparent;
+}
+.wr-tile.m-g {
+  background: var(--wr-g);
+}
+.wr-tile.m-y {
+  background: var(--wr-y);
+}
+.wr-tile.m-x {
+  background: var(--wr-x);
+}
+/* Each tile turns over in turn and shows its colour at the half-way point, like the original. */
+.wr-tile.flip {
+  animation: wr-flip 0.5s ease-in-out both;
+}
+.wr-row .wr-tile.flip:nth-child(2) {
+  animation-delay: 0.25s;
+}
+.wr-row .wr-tile.flip:nth-child(3) {
+  animation-delay: 0.5s;
+}
+.wr-row .wr-tile.flip:nth-child(4) {
+  animation-delay: 0.75s;
+}
+.wr-row .wr-tile.flip:nth-child(5) {
+  animation-delay: 1s;
+}
+@keyframes wr-flip {
+  0% {
+    transform: rotateX(0);
+    color: var(--ink);
+    background: var(--field);
+    border-color: var(--ink);
+  }
+  49% {
+    transform: rotateX(90deg);
+    color: var(--ink);
+    background: var(--field);
+    border-color: var(--ink);
+  }
+  51% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0);
+  }
+}
+@keyframes wr-pop {
+  50% {
+    transform: scale(1.12);
+  }
+}
+.wr-row.shake {
+  animation: wr-shake 0.45s ease-in-out;
+}
+@keyframes wr-shake {
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
+}
+.wr-answer {
+  width: min(100%, 260px);
+  margin-inline: auto;
+}
+.wr-letters {
+  margin-top: 18px;
+}
+.wr-keys {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.wr-key {
+  display: grid;
+  place-items: center;
+  width: calc((100% - 36px) / 10);
+  max-width: 34px;
+  height: 34px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  border-radius: 6px;
+}
+.wr-key.m-g,
+.wr-key.m-y,
+.wr-key.m-x {
+  color: #fff;
+}
+.wr-key.m-g {
+  background: var(--wr-g);
+}
+.wr-key.m-y {
+  background: var(--wr-y);
+}
+.wr-key.m-x {
+  background: var(--wr-x);
+}
+/* Untried keys sit a step lighter than the grey "not in the word" ones in the dark theme. */
+:root:not([data-theme="light"]) .wr-key:not(.m-g, .m-y, .m-x) {
+  background: #4a3760;
+}
+.wr-entry {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.wr-entry .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.wr-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--display);
+  font-size: 1.4rem;
+  letter-spacing: 0.25em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.wr-input::placeholder {
+  font-family: var(--body);
+  font-size: 1rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.wr-racers {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
+}
+.wr-racers li {
+  padding: 10px;
+  border: 2.5px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+.wr-racers li.solved {
+  border-color: var(--wr-g);
+}
+.wr-racers li.out {
+  border-style: dashed;
+}
+.wr-racer-name {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 8px;
+  margin-bottom: 8px;
+}
+.wr-racer-state {
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.wr-mini {
+  display: grid;
+  gap: 3px;
+  justify-content: center;
+}
+.wr-mini-row {
+  display: flex;
+  gap: 3px;
+}
+.wr-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--rule);
+  border-radius: 3px;
+}
+.wr-racers.big .wr-dot {
+  width: 22px;
+  height: 22px;
+}
+.wr-dot.m-g,
+.wr-dot.m-y,
+.wr-dot.m-x {
+  border-color: transparent;
+  animation: wr-pop 0.3s ease-out;
+}
+.wr-dot.m-g {
+  background: var(--wr-g);
+}
+.wr-dot.m-y {
+  background: var(--wr-y);
+}
+.wr-dot.m-x {
+  background: var(--wr-x);
+}
+.wr-words {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.wr-points {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wr-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wr-history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-bottom: 2px solid var(--rule);
+}
+.wr-history li:last-child {
+  border-bottom: 0;
+}
+.wr-history-word {
+  font-family: var(--display);
+  letter-spacing: 0.12em;
+  color: var(--wr-g);
+}
+:root:not([data-theme="light"]) .wr-history-word {
+  color: #7fd17a;
 }

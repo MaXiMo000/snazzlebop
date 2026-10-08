@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace";
   title: string;
   blurb: string;
   min_players: number;
@@ -329,6 +329,7 @@ export type GameView =
   | SplitView
   | DiceView
   | TruthDareView
+  | WordRaceView
   | JackpotView;
 
 export interface Highlight {
@@ -792,4 +793,33 @@ export interface TruthDareView extends GameBase {
   result: TdResult | null;
   up_next: string | null;
   history?: TdResult[];
+}
+
+/** One guess: the letters (null when it isn't yours and the word isn't revealed yet) and its colours:
+ * one of g (green), y (yellow), x (grey) per letter. */
+export interface WrRow {
+  word: string | null;
+  marks: string;
+}
+export interface WrRound {
+  answer: string;
+  solved: string[];
+  tries: Record<string, number>;
+  points: Record<string, number>;
+}
+export interface WordRaceView extends GameBase {
+  game: "wordrace";
+  phase: "play" | "reveal" | "final";
+  players: { id: string; name: string }[];
+  hard: boolean;
+  tries: number;
+  boards: Record<string, WrRow[]>;
+  /** who has solved this word, in order */
+  solved: string[];
+  /** points this round: yours while playing, everyone's at the reveal */
+  gained: Record<string, number>;
+  you: { playing: boolean; done: boolean; solved: boolean };
+  answer: string | null;
+  wins: Record<string, number>;
+  history?: WrRound[];
 }

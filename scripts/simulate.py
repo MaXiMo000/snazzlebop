@@ -71,6 +71,18 @@ ALLOWED_KEYS = {
     | {"murder_slot", "murder_label", "slots", "locations", "you", "claims", "flags", "clues", "log"}
     | {"votes_in", "you_voted", "objections"},
 }
+for _phase in ("play", "reveal", "final"):
+    ALLOWED_KEYS[("wordrace", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "hard",
+        "tries",
+        "boards",
+        "solved",
+        "gained",
+        "you",
+        "answer",
+        "wins",
+        "history",
+    }
 for _phase in ("spin", "choose", "perform", "vote", "result", "final"):
     ALLOWED_KEYS[("truthdare", _phase)] = (
         {"game", "phase", "round", "rounds", "remaining", "players"}
@@ -984,6 +996,92 @@ async def play_truthdare(host: Bot, bots: list[Bot], rng: random.Random) -> None
         await skip(host)
 
 
+def wordle_marks(guess: str, answer: str) -> str:
+    """An independent copy of the Wordle colour rule, to cross-check the server."""
+    out = ["x"] * 5
+    spare: dict[str, int] = {}
+    for i in range(5):
+        if guess[i] == answer[i]:
+            out[i] = "g"
+        else:
+            spare[answer[i]] = spare.get(answer[i], 0) + 1
+    for i in range(5):
+        if out[i] != "g" and spare.get(guess[i], 0):
+            out[i] = "y"
+            spare[guess[i]] -= 1
+    return "".join(out)
+
+
+def word_answers() -> list[str]:
+    """The answer pool, so bots can play like people who know English."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+    from app.games.content import WORD_ANSWERS
+
+    return list(WORD_ANSWERS)
+
+
+async def play_wordrace(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots solve like people: every guess fits all the colours they've seen. Letters and the answer
+    must stay hidden until the reveal; every colour and every payout is re-derived here."""
+    answers = word_answers()
+    rounds = host.state["game"]["rounds"]  # type: ignore[index]
+    for rnd in range(1, rounds + 1):
+        await all_until(bots, game_is("wordrace", "play", rnd), f"wordrace play {rnd}")
+        start = {b.pid: len(b.raw) for b in bots}
+        sent: dict[str, list[str]] = {b.pid: [] for b in bots}
+        pool = {b.pid: list(answers) for b in bots}
+        solved_order: list[str] = []
+        for turn in range(6):
+            for b in bots:
+                if b.pid in solved_order or not pool[b.pid]:
+                    continue
+                guess = rng.choice(pool[b.pid])
+                sent[b.pid].append(guess)
+                await b.send(t="act", a="guess", word=guess)
+
+                def got(n: int, pid: str = b.pid):
+                    return lambda st: len(((st.get("game") or {}).get("boards") or {}).get(pid, [])) >= n
+
+                await b.until(got(len(sent[b.pid])), f"wordrace row {rnd}/{turn}")
+                row = b.state["game"]["boards"][b.pid][-1]  # type: ignore[index]
+                check(row["word"] == guess, f"wordrace: {b.name}'s own row shows {row['word']}, not {guess}")
+                if row["marks"] == "ggggg":
+                    solved_order.append(b.pid)
+                pool[b.pid] = [w for w in pool[b.pid] if wordle_marks(guess, w) == row["marks"]]
+        await all_until(bots, game_is("wordrace", "reveal", rnd), f"wordrace reveal {rnd}")
+        g = host.state["game"]  # type: ignore[index]
+        answer = g["answer"]
+        for b in bots:
+            for want, row in zip(sent[b.pid], g["boards"][b.pid], strict=True):
+                check(row["word"] == want, "wordrace: the revealed rows don't match the guesses")
+                check(
+                    row["marks"] == wordle_marks(want, answer),
+                    f"wordrace: wrong colours for {want} vs {answer}",
+                )
+        check(g["solved"] == solved_order, f"wordrace: solve order {g['solved']} != {solved_order}")
+        for i, pid in enumerate(g["solved"]):
+            want = (7 - len(sent[pid])) * 100 + (100 if i == 0 else 50 if i == 1 else 0)
+            check(g["gained"][pid] == want, f"wordrace: {pid} got {g['gained'][pid]}, expected {want}")
+        for b in bots:
+            for raw in b.raw[start[b.pid] :]:
+                gg = json.loads(raw).get("game") or {}
+                if gg.get("game") != "wordrace" or gg.get("phase") != "play":
+                    continue
+                check(gg["answer"] is None, f"{b.name} saw the answer before the reveal")
+                for pid, rows in gg["boards"].items():
+                    if pid != b.pid:
+                        check(all(r["word"] is None for r in rows), f"{b.name} saw {pid}'s letters")
+        await skip(host)
+
+
+def wordrace_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    pts = dict.fromkeys(ids, 0)
+    for h in history:
+        for p, v in h["points"].items():
+            pts[p] += v
+    return pts
+
+
 def truthdare_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
     pts = dict.fromkeys(ids, 0)
     for h in history:
@@ -1439,6 +1537,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "boxes",
             "codewords",
             "truthdare",
+            "wordrace",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1499,6 +1598,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_codewords(host, bots, rng)
             elif game == "truthdare":
                 await play_truthdare(host, bots, rng)
+            elif game == "wordrace":
+                await play_wordrace(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1516,6 +1617,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 check(
                     got == {pid: chips[pid] - 1000 for pid in got}, f"roulette: scores {got} != stacks - 1000"
                 )
+            elif game == "wordrace":
+                want = wordrace_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"wordrace: scores {got} != the rounds' points {want}")
             elif game == "truthdare":
                 want = truthdare_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

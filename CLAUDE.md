@@ -8,8 +8,8 @@ Games: **Frenemy Radar**, **Alibi**, **Price Is Weird**, **Telepathy Tax**, **Mo
 **Liar's Dice**, **Split or Steal**, **Chicken Run**, **Wager Wits**, **Code Crackers**, **Roulette
 Royale**, **Lowest Lonely Number**, **Mystery Box Auction**, the team game **Codewords** (`SHOW = False`:
 played on its own, never in a show playlist) and the classics (`CLASSIC = True`, their own lobby section,
-also `SHOW = False`): **Truth or Dare**. More classics are planned in this order: Word Race (Wordle-style),
-Last Card (Uno-style), Ludo, Chess, Draw & Guess, Draw Telephone, Property Tycoon (Monopoly-style).
+also `SHOW = False`): **Truth or Dare**, **Word Race** (Wordle-style). More classics are planned in this
+order: Last Card (Uno-style), Ludo, Chess, Draw & Guess, Draw Telephone, Property Tycoon (Monopoly-style).
 Trademarked originals get our own names; rules match the originals. Show nights (show.py): a playlist on one
 scoreboard, host quips, highlight reel and awards, Jackpot finale, power cards (games expose `peek()`),
 rivals, Friend Stock Exchange (shorts, dividends, insider tips), rematches and a season table, show

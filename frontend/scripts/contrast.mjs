@@ -116,6 +116,14 @@ const pairs = [
   ["bulb", "#3b2546", "Truth or Dare seats"],
   ["cream", "teal", "Truth door"],
   ["#ffffff", "cherry", "Dare door"],
+  ["#ffffff", "#2e7d32", "Word Race segment, green tiles"],
+  ["#ffffff", "#9a6a00", "Word Race yellow tiles"],
+  ["#ffffff", "#57505e", "Word Race grey tiles"],
+  ["plum", "#dcefd9", "Word Race soft cards"],
+  ["plum-soft", "#dcefd9", "muted in Word Race soft"],
+  ["#2e7d32", "paper", "Word Race answers list (light)"],
+  ["#7fd17a", "#221530", "Word Race answers list (dark)"],
+  ["cream", "#4a3760", "Word Race untried keys (dark)"],
 ];
 
 // Dark theme (the default): role tokens from :root, plus each segment's soft tint, which is

@@ -94,7 +94,7 @@ export function ErrorBanner({ message, onClose }: { message: string | null; onCl
   }, [message, onClose]);
   if (!message) return null;
   return (
-    <div role="alert">
+    <div role="alert" className="toast">
       <button type="button" className="alert" onClick={onClose}>
         {message} <span className="sr-only">(dismiss)</span>
       </button>

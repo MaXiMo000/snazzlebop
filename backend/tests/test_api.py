@@ -88,6 +88,7 @@ def test_games_catalog(client):
         "boxes",
         "codewords",
         "truthdare",
+        "wordrace",
     }
 
 
