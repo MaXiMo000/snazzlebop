@@ -314,6 +314,8 @@ class HttpRateLimit:
             and path.endswith(("/join", "/tv", "/audience"))
         ):
             return "join"
+        if method == "POST" and path.startswith("/api/auth/"):
+            return "auth"
         return "default"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

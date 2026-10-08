@@ -79,6 +79,8 @@ class Settings:
     rate_create_burst: float = 5.0
     rate_join_per_min: float = 40.0
     rate_join_burst: float = 12.0
+    rate_auth_per_min: float = 10.0  # sign-up, log-in, recovery, password changes (per IP)
+    rate_auth_burst: float = 8.0
 
     # Optional: fresh game content from Claude. Unset = built-in pools only.
     anthropic_api_key: str = field(default="", repr=False)

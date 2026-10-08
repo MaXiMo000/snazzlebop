@@ -16,6 +16,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import accounts
+from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
 from .contentgen import ContentGenerator, add_items, claude_caller, known, split_kind
 from .db import Database
@@ -34,7 +36,7 @@ from .ws import ConnectionCounter, serve_socket
 
 log = logging.getLogger("snazzlebop")
 
-SPA_ROUTE = re.compile(r"(r/[A-Za-z]{3,8}/?)?")  # "/" and "/r/<CODE>", mirrors App.tsx
+SPA_ROUTE = re.compile(r"(r/[A-Za-z]{3,8}/?|account/?)?")  # "/", "/r/<CODE>", "/account" (App.tsx)
 
 
 class NameBody(BaseModel):
@@ -68,6 +70,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         save=db.save_content,
         calls_per_hour=settings.content_calls_per_hour,
     )
+
+    async def pay_coins(rows: list[dict[str, Any]]) -> dict[int, int]:
+        return await db.record_results(rows, season_of(), DAILY_COIN_CAP)
+
     # Wall-clock time (not monotonic) so a room's timers still mean something after a restart.
     hub = Hub(
         settings,
@@ -75,6 +81,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         on_game_finished=record_result,
         on_game_started=generator.request,
         store=db,
+        on_results=pay_coins,
+        spend_powerup=db.spend_powerup,
+        refund_powerup=db.refund_powerup,
     )
 
     @contextlib.asynccontextmanager
@@ -116,6 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         "default": RateLimiter(settings.rate_default_per_min / 60, settings.rate_default_burst),
         "create": RateLimiter(settings.rate_create_per_min / 60, settings.rate_create_burst),
         "join": RateLimiter(settings.rate_join_per_min / 60, settings.rate_join_burst),
+        "auth": RateLimiter(settings.rate_auth_per_min / 60, settings.rate_auth_burst),
     }
     app.state.limiters = limiters
 
@@ -158,16 +168,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def stats() -> dict[str, int]:
         return await db.stats()
 
+    app.include_router(accounts.router(settings, db, limiters["auth"]))
+
+    async def account_id(request: Request) -> int | None:
+        user = await accounts.session_user(request, db)
+        return user.id if user is not None else None
+
     @app.post("/api/rooms", status_code=201)
-    async def create_room(body: NameBody) -> dict[str, str]:
-        room, player, token = hub.create_room(body.name)
+    async def create_room(body: NameBody, request: Request) -> dict[str, str]:
+        room, player, token = hub.create_room(body.name, await account_id(request))
         return {"code": room.code, "player_id": player.id, "token": token}
 
     @app.post("/api/rooms/{code}/join")
     async def join_room(code: str, body: NameBody, request: Request) -> dict[str, str]:
         try:
             await hub.fetch(code.upper())  # back from a restart: restore it first
-            room, player, token = hub.join_room(code, body.name)
+            room, player, token = hub.join_room(code, body.name, await account_id(request))
         except HubError as exc:
             if exc.code == "room_not_found":
                 # Guessing room codes is the main enumeration vector: make it expensive.

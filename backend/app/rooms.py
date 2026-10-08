@@ -10,10 +10,11 @@ import re
 import secrets
 import time
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from . import coins as coinlib
 from . import persist, prank
 from . import show as showlib
 from .config import Settings
@@ -29,7 +30,7 @@ ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: avoids lookalikes
 ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
-    *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready"),
+    *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready", "boost"),
 }
 AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp"}
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
@@ -142,6 +143,12 @@ class Room:
     scares: dict[str, int] = field(default_factory=dict)
     last_active: float = 0.0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    # Accounts (private: never in any view): seat -> account id, for coins, stats and power-ups.
+    accounts: dict[str, int] = field(default_factory=dict)
+    game_no: int = 0  # games started in this room
+    boosts: list[dict[str, Any]] = field(default_factory=list)  # power-ups bought with coins, as plays
+    boost_peeks: dict[str, str] = field(default_factory=dict)  # what a bought Peek showed (private)
+    coin_news: dict[str, dict[str, int]] = field(default_factory=dict)  # last game: pid -> place, coins
     # Snapshots: this copy came from the database and nothing has changed here since (so a newer
     # snapshot, written by the server that's shutting down during a deploy, may replace it).
     restored: bool = False
@@ -181,6 +188,10 @@ class Hub:
         timings: dict[str, dict[str, float]] | None = None,
         intro_seconds: float = INTRO_SECONDS,  # 0 = games start straight away (used by unit tests)
         store: SnapshotStore | None = None,  # saves rooms so they survive a restart (None: memory only)
+        # Accounts: pay coins for a finished game ({account: coins} paid), spend / refund a power-up.
+        on_results: Callable[[list[dict[str, Any]]], Awaitable[dict[int, int]]] | None = None,
+        spend_powerup: Callable[[int, str], Awaitable[bool]] | None = None,
+        refund_powerup: Callable[[int, str], Awaitable[None]] | None = None,
     ) -> None:
         self.settings = settings
         self.clock = clock
@@ -195,6 +206,9 @@ class Hub:
         self._mail: dict[Connection, dict[str, Any]] = {}
         self._tasks: set[asyncio.Task[None]] = set()
         self.store = store
+        self.on_results = on_results
+        self.spend_powerup = spend_powerup
+        self.refund_powerup = refund_powerup
         self._saving: dict[str, bool] = {}  # room code -> another save is due once this one lands
 
     # -- snapshots: rooms survive a restart ----------------------------------------------------------
@@ -284,7 +298,7 @@ class Hub:
     def _issue(self, room: Room, player: Player) -> str:
         return sign_token(self.settings.secret_key, player.id, room.code, self.settings.token_ttl_seconds)
 
-    def create_room(self, name: str) -> tuple[Room, Player, str]:
+    def create_room(self, name: str, user_id: int | None = None) -> tuple[Room, Player, str]:
         self.cleanup()
         if len(self.rooms) >= self.settings.max_rooms:
             raise HubError("busy", "The party house is full right now. Try again soon.", 503)
@@ -294,6 +308,8 @@ class Hub:
         room.players[player.id] = player
         room.host_id = player.id
         room.total_scores[player.id] = 0
+        if user_id is not None:
+            room.accounts[player.id] = user_id
         self.rooms[room.code] = room
         self._scare(room, player.id, name)
         self._persist(room)
@@ -304,7 +320,7 @@ class Hub:
             return None
         return self.rooms.get(code)
 
-    def join_room(self, code: str, name: str) -> tuple[Room, Player, str]:
+    def join_room(self, code: str, name: str, user_id: int | None = None) -> tuple[Room, Player, str]:
         room = self.get(code.upper() if isinstance(code, str) else code)
         if room is None:
             raise HubError("room_not_found", "No room with that code", 404)
@@ -319,6 +335,8 @@ class Hub:
         player = Player(id=secrets.token_urlsafe(6), name=name, connected=False)
         room.players[player.id] = player
         room.total_scores[player.id] = 0
+        if user_id is not None:
+            room.accounts[player.id] = user_id
         room.last_active = self.clock()
         self._scare(room, player.id, name)
         self._persist(room)
@@ -560,23 +578,125 @@ class Hub:
 
     def _cards_view(self, room: Room, pid: str) -> dict[str, Any] | None:
         s = room.show
-        if s is None:
+        if s is None and not room.accounts:
             return None
-        idx = len(s.games)  # the game being played now
-        this_game = [p for p in s.plays if p["game"] == idx] if room.phase == "game" else []
-        played = next((p for p in s.plays if p["pid"] == pid), None)
+        this_game = self._plays(room) if room.phase == "game" else []
+        played = next((p for p in s.plays if p["pid"] == pid), None) if s else None
+        boost = next((p for p in this_game if p.get("bought") and p["pid"] == pid), None)
         return {
             "catalog": showlib.CARDS,
             "in_play": len(this_game),  # how many cards are down this game: never whose or which
             "news": room.card_news if room.phase == "results" else [],  # the reveal
+            "coins": room.coin_news if room.phase in ("results", "finale") else {},
             "you": {
-                "card": s.cards.get(pid),
+                "card": s.cards.get(pid) if s else None,
                 "played": played["card"] if played else None,
-                "peek": s.peeks.get(pid),
+                "peek": (s.peeks.get(pid) if s else None) or room.boost_peeks.get(pid),
+                "signed_in": pid in room.accounts,  # can use power-ups bought with coins
+                "boost": boost["card"] if boost else None,  # the one used this game
             }
             if pid in room.players
             else None,
         }
+
+    def _plays(self, room: Room) -> list[dict[str, Any]]:
+        """Every card and power-up played on the current game."""
+        s = room.show
+        shown = [p for p in s.plays if p["game"] == len(s.games)] if s is not None else []
+        return shown + [b for b in room.boosts if b["game"] == room.game_no]
+
+    async def _use_boost(self, room: Room, pid: str, msg: dict[str, Any]) -> None:
+        """Use a power-up bought with coins on the game being played: one per player per game."""
+        item = msg.get("item")
+        target = msg.get("target")
+        async with room.lock:
+            game_no = self._check_boost(room, pid, item, target)
+        user_id = room.accounts[pid]
+        if self.spend_powerup is None or not await self.spend_powerup(user_id, str(item)):
+            raise HubError("no_powerup", "You don't have that power-up. Buy one in the shop")
+        async with room.lock:
+            try:
+                if room.game_no != game_no:
+                    raise HubError("too_late", "That game has finished")
+                self._check_boost(room, pid, item, target)
+                play: dict[str, Any] = {"pid": pid, "card": item, "game": game_no, "bought": True}
+                if item == "steal":
+                    play["target"] = target
+                if item == "peek":
+                    seen = room.game.peek(pid) if room.game is not None else None
+                    if not seen:
+                        raise HubError("nothing_to_peek", "Nothing to peek at in this game right now")
+                    room.boost_peeks[pid] = seen
+                room.boosts = [b for b in room.boosts if b["game"] == game_no] + [play]
+            except Exception:
+                if self.refund_powerup is not None:
+                    await self.refund_powerup(user_id, str(item))
+                raise
+
+    def _check_boost(self, room: Room, pid: str, item: Any, target: Any) -> int:
+        game = room.game
+        if pid not in room.accounts:
+            raise HubError("signed_out", "Sign in to use power-ups")
+        if room.phase != "game" or game is None or game.finished or game.game_id == "jackpot":
+            raise HubError("no_card", "Power-ups are used during a game")
+        if pid not in game.player_ids:
+            raise HubError("no_card", "You're not in this game")
+        if item not in coinlib.POWERUP_PRICES:
+            raise HubError("bad_item", "That's not a power-up")
+        if any(b["pid"] == pid and b["game"] == room.game_no for b in room.boosts):
+            raise HubError("already_used", "One power-up per game")
+        if item in showlib.EARLY_CARDS and not self._predict_open(room):
+            raise HubError("too_late", "That one only works before the first round is over")
+        if item == "steal" and (
+            not isinstance(target, str) or target == pid or target not in game.player_ids
+        ):
+            raise HubError("bad_target", "Pick a rival in this game")
+        return room.game_no
+
+    def _pay_coins(self, room: Room, game: Game, scores: dict[str, int]) -> None:
+        """Coins for every signed-in finisher (one result per account), paid in the background."""
+        if self.on_results is None or game.game_id == "jackpot" or not room.accounts:
+            return
+        placed = coinlib.places(scores)
+        best: dict[int, dict[str, Any]] = {}
+        for pid, place in placed.items():
+            uid = room.accounts.get(pid)
+            if uid is None:
+                continue
+            row = {
+                "user_id": uid,
+                "pid": pid,
+                "game_id": game.game_id,
+                "place": place,
+                "players": len(scores),
+                "points": scores[pid],
+                "coins": coinlib.coins_for(place, len(scores)),
+            }
+            if uid not in best or place < best[uid]["place"]:
+                best[uid] = row
+        if not best:
+            return
+        try:
+            task = asyncio.get_running_loop().create_task(
+                self._coins_landed(room, room.game_no, list(best.values()))
+            )
+        except RuntimeError:
+            return
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def _coins_landed(self, room: Room, game_no: int, rows: list[dict[str, Any]]) -> None:
+        if self.on_results is None:
+            return
+        try:
+            paid = await self.on_results(rows)
+        except Exception:
+            log.exception("could not pay coins")
+            return
+        if room.game_no != game_no:
+            return
+        room.coin_news = {r["pid"]: {"place": r["place"], "coins": paid.get(r["user_id"], 0)} for r in rows}
+        await self.broadcast(room)
 
     def _market_view(self, room: Room, pid: str) -> dict[str, Any] | None:
         m = room.show.market if room.show else None
@@ -725,6 +845,9 @@ class Hub:
         if kind == "ping":
             return
         try:
+            if kind == "boost":
+                await self._use_boost(room, pid, msg)
+                return await self.broadcast(room)
             async with room.lock:
                 changed = self._apply(room, pid, kind, msg)
             if changed:
@@ -764,6 +887,8 @@ class Hub:
         room.ready, room.ready_stage, room.last_standings = set(), "", []
         room.predictions, room.highlights, room.quip = {}, [], ""
         room.card_news, room.rival_news, room.rivals, room.mvp_votes = [], [], [], {}
+        room.game_no += 1
+        room.boost_peeks, room.coin_news = {}, {}
         s = room.show
         if s is not None:
             s.peeks.clear()
@@ -1211,9 +1336,9 @@ class Hub:
             return
         scores = game.scores()
         s = room.show
+        if game.game_id != "jackpot":
+            scores, room.card_news = showlib.apply_cards(self._plays(room), scores)
         if s is not None and game.game_id != "jackpot":
-            idx = len(s.games)
-            scores, room.card_news = showlib.apply_cards([p for p in s.plays if p["game"] == idx], scores)
             room.rival_news = showlib.settle_rivals(room.rivals, scores)
             for r in room.rival_news:
                 if r["winner"] is not None:
@@ -1251,6 +1376,7 @@ class Hub:
                 self.on_game_finished(game.game_id, game.summary())
             except Exception:
                 log.exception("failed to record game result")
+        self._pay_coins(room, game, scores)
 
     # -- timers -------------------------------------------------------------
     async def tick(self) -> None:
