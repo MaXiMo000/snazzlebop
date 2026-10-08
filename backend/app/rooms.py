@@ -31,7 +31,9 @@ ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
     *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready", "boost"),
+    "shuffle",
 }
+TEAM_MIN_PLAYERS = 4  # two teams of at least two
 AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp"}
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
 MAX_TV_PER_ROOM = 2  # big-screen viewers; issuing a third evicts the oldest
@@ -149,6 +151,8 @@ class Room:
     boosts: list[dict[str, Any]] = field(default_factory=list)  # power-ups bought with coins, as plays
     boost_peeks: dict[str, str] = field(default_factory=dict)  # what a bought Peek showed (private)
     coin_news: dict[str, dict[str, int]] = field(default_factory=dict)  # last game: pid -> place, coins
+    teams: dict[str, int] = field(default_factory=dict)  # this game's teams (player -> 0/1); {} = no teams
+    team_news: dict[str, Any] = field(default_factory=dict)  # last game: team totals and the winner
     # Snapshots: this copy came from the database and nothing has changed here since (so a newer
     # snapshot, written by the server that's shutting down during a deploy, may replace it).
     restored: bool = False
@@ -509,6 +513,7 @@ class Hub:
             },
             "season": {"number": room.season_no, "table": room.season} if room.season_no else None,
             "intro": self._intro_view(room) if room.phase == "intro" else None,
+            "teams": self._teams_view(room, pid),
             "ready": self._ready_view(room),
             "last_standings": room.last_standings if room.phase == "lobby" else [],
             "scare": room.scares.get(pid, 0),  # only ever this viewer's own count
@@ -545,6 +550,26 @@ class Hub:
             "awards": s.awards if s.finished else [],
             "market": s.market is not None,
             "can_rematch": bool(room.last_show),
+        }
+
+    def _split_teams(self, room: Room, cls: type[Game]) -> dict[str, int]:
+        """Everyone online, shuffled into two teams as even as can be."""
+        if not cls.TEAMS:
+            raise HubError("no_teams", f"{cls.title} has no team mode")
+        online = [p.id for p in room.connected_players()]
+        if len(online) < TEAM_MIN_PLAYERS:
+            raise HubError("too_few", f"Teams need {TEAM_MIN_PLAYERS} or more players online")
+        self.rng.shuffle(online)
+        return {pid: i % 2 for i, pid in enumerate(online)}
+
+    def _teams_view(self, room: Room, pid: str) -> dict[str, Any] | None:
+        teams = room.intro.get("teams") if room.phase == "intro" else room.teams
+        if not teams:
+            return None
+        return {
+            "members": [[p for p, t in teams.items() if t == side] for side in (0, 1)],
+            "you": teams.get(pid),
+            "news": room.team_news if room.phase in ("results", "finale") else None,
         }
 
     def _intro_view(self, room: Room) -> dict[str, Any]:
@@ -657,7 +682,12 @@ class Hub:
         """Coins for every signed-in finisher (one result per account), paid in the background."""
         if self.on_results is None or game.game_id == "jackpot" or not room.accounts:
             return
-        placed = coinlib.places(scores)
+        if room.teams:  # teams: everyone finishes where their team does
+            totals = {t: sum(v for p, v in scores.items() if room.teams.get(p) == t) for t in (0, 1)}
+            team_place = coinlib.places({str(t): v for t, v in totals.items()})
+            placed = {p: team_place[str(room.teams[p])] for p in scores if p in room.teams}
+        else:
+            placed = coinlib.places(scores)
         best: dict[int, dict[str, Any]] = {}
         for pid, place in placed.items():
             uid = room.accounts.get(pid)
@@ -888,7 +918,7 @@ class Hub:
         room.predictions, room.highlights, room.quip = {}, [], ""
         room.card_news, room.rival_news, room.rivals, room.mvp_votes = [], [], [], {}
         room.game_no += 1
-        room.boost_peeks, room.coin_news = {}, {}
+        room.boost_peeks, room.coin_news, room.team_news = {}, {}, {}
         s = room.show
         if s is not None:
             s.peeks.clear()
@@ -937,10 +967,20 @@ class Hub:
             self._finale(room, s)
 
     def _open_intro(
-        self, room: Room, game_id: str, options: dict[str, str] | None = None, slot: str = ""
+        self,
+        room: Room,
+        game_id: str,
+        options: dict[str, str] | None = None,
+        slot: str = "",
+        teams: dict[str, int] | None = None,
     ) -> None:
         """The "how to play" screen. The game is built (and its clocks start) only when it ends."""
-        room.intro = {"game": game_id, "options": dict(options or {}), "slot": slot}
+        room.intro = {
+            "game": game_id,
+            "options": dict(options or {}),
+            "slot": slot,
+            "teams": dict(teams or {}),
+        }
         room.ready = set()
         room.predictions, room.highlights, room.quip = {}, [], ""
         if self.intro_seconds <= 0:
@@ -959,7 +999,8 @@ class Hub:
                 stakes = {p.id: room.total_scores.get(p.id, 0) for p in room.players.values()}
                 game = self._make_game(room, Jackpot, stakes=stakes)
             else:
-                game = self._make_game(room, REGISTRY[i["game"]], options=i["options"])
+                teams = i.get("teams") or {}
+                game = self._make_game(room, REGISTRY[i["game"]], options=i["options"], teams=teams)
         except (GameError, HubError):
             # Someone left during the intro and the game can't run.
             if s is not None and i["slot"] == "playlist":
@@ -973,6 +1014,7 @@ class Hub:
             else:
                 room.game, room.phase = None, "lobby"
             return
+        room.teams = dict(game.teams)
         self._begin(room, game)
         if s is not None and i["slot"] == "playlist":
             s.started += 1
@@ -1144,9 +1186,23 @@ class Hub:
             if cls is None:
                 raise HubError("bad_game", "Unknown game")
             options = self._options(cls, msg.get("options"))
-            self._make_game(room, cls, options=options)  # raises (too few players) before anything changes
+            want_teams = msg.get("teams", False)
+            if not isinstance(want_teams, bool):
+                raise HubError("bad_message", "Unknown message")
+            teams = self._split_teams(room, cls) if want_teams else {}
+            # raises (too few players, a team rule) before anything changes
+            self._make_game(room, cls, options=options, teams=teams)
             room.show = None  # a one-off game outside any show
-            self._open_intro(room, cls.game_id, options)
+            self._open_intro(room, cls.game_id, options, teams=teams)
+            return True
+        if kind == "shuffle":
+            if not is_host:
+                raise HubError("not_host", "Only the host can shuffle the teams", 403)
+            if room.phase != "intro" or not room.intro.get("teams"):
+                raise HubError("no_teams", "Teams are shuffled before a team game starts")
+            cls = REGISTRY[room.intro["game"]]
+            room.intro["teams"] = self._split_teams(room, cls)
+            room.ready = set()
             return True
         if kind == "ready":
             return self._ready(room, pid, msg)
@@ -1345,6 +1401,12 @@ class Hub:
                     scores[r["winner"]] = scores.get(r["winner"], 0) + showlib.RIVAL_BONUS
         for pid, pts in scores.items():
             room.total_scores[pid] = room.total_scores.get(pid, 0) + pts
+        if room.teams:
+            totals = [sum(v for p, v in scores.items() if room.teams.get(p) == t) for t in (0, 1)]
+            room.team_news = {
+                "scores": totals,
+                "winner": 0 if totals[0] > totals[1] else 1 if totals[1] > totals[0] else None,
+            }
         room.phase = "results"
         self._scare_everyone_matched(room)  # the scores are up: boo
         names = room.names()

@@ -22,6 +22,9 @@ The hand ends when someone plays their last card (a final Draw Two or Draw Four 
 score every card left in the others' hands: number cards at face value, action cards 20, Wilds 50.
 1 or 3 hands. A 30-second turn clock keeps the party moving: time out and you draw.
 
+Teams (the official partner rule): partners sit opposite each other; when anyone goes out, their team
+wins the hand and scores only the cards left in the other team's hands.
+
 Secrecy: your hand and the draw pile are yours and the server's alone; everyone sees how many cards each
 player holds. Whether a Wild Draw Four was legal stays hidden until it is challenged. Hands are shown to
 everyone once the hand is over.
@@ -72,6 +75,7 @@ class LastCard(Game):
     max_players: ClassVar[int] = 8
     SHOW: ClassVar[bool] = False
     CLASSIC: ClassVar[bool] = True
+    TEAMS: ClassVar[bool] = True
     OPTIONS: ClassVar[dict[str, list[str]]] = {"hands": ["1", "3"], "stacking": ["off", "on"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Match the top card by colour, number or symbol, or play a Wild and pick the colour.",
@@ -94,6 +98,10 @@ class LastCard(Game):
         self.stacking = self.options.get("stacking") == "on"
         self.order: list[str] = list(self.player_ids)
         self.rng.shuffle(self.order)
+        if self.teams:  # partners sit opposite: the seats alternate between the teams
+            sides = [[p for p in self.order if self.teams.get(p) == t] for t in (0, 1)]
+            self.order = [p for pair in zip(*sides, strict=False) for p in pair]
+            self.order += [p for side in sides for p in side[min(map(len, sides)) :]]
         self.hand_no = 0
         self.history: list[dict[str, Any]] = []
         self.stats: dict[str, dict[str, int]] = {
@@ -197,6 +205,9 @@ class LastCard(Game):
             return True
         top_color, top_value = CARDS[self._top()]
         return color == self.color or value == top_value
+
+    def _partners(self, a: str, b: str) -> bool:
+        return bool(self.teams) and self.teams.get(a) == self.teams.get(b)
 
     def _actor(self, pid: str) -> None:
         if self.phase != "play":
@@ -372,7 +383,8 @@ class LastCard(Game):
         if last_value in ("draw2", "wild4"):
             self._next(0)
             self._give(self.current, 2 if last_value == "draw2" else 4, reason=last_value)
-        points = sum(card_points(c) for p, h in self.hands.items() if p != winner for c in h)
+        rivals = [p for p in self.hands if p != winner and not self._partners(p, winner)]
+        points = sum(card_points(c) for p in rivals for c in self.hands[p])
         self.add_points(winner, points)
         self.stats[winner]["won"] += 1
         self.winner = winner

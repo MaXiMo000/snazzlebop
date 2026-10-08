@@ -20,6 +20,17 @@ export interface GameCard {
   show: boolean;
   /** the classics everyone knows (board, card and party games): their own lobby section */
   classic: boolean;
+  /** the host can switch on Teams: two teams, the combined score wins */
+  teams: boolean;
+}
+
+export interface TeamsState {
+  /** team 0 (Tangerine) and team 1 (Teal) */
+  members: string[][];
+  /** your team, or null (TV, audience) */
+  you: number | null;
+  /** results: each team's combined score and the winner (null on a draw) */
+  news: { scores: number[]; winner: number | null } | null;
 }
 
 export interface GameBase {
@@ -450,6 +461,8 @@ export interface RoomState {
   crowd: Crowd;
   market: MarketState | null;
   cards: CardsState | null;
+  /** a team game: the two teams (also on the intro screen before it starts) */
+  teams: TeamsState | null;
   rivals: RivalsState;
   season: SeasonState | null;
   /** the "how to play" screen before a game */
@@ -891,7 +904,8 @@ export type LudoLog =
   | (LudoTurn & { type: "capture"; victims: { color: LudoColor; token: number }[] })
   | (LudoTurn & { type: "home"; token: number })
   | (LudoTurn & { type: "again" | "bust" | "stuck" | "timeout" })
-  | { n: number; type: "place"; color: LudoColor; place: number; points: number };
+  | { n: number; type: "place"; color: LudoColor; place: number; points: number }
+  | { n: number; type: "partner"; color: LudoColor };
 export interface LudoView extends GameBase {
   game: "ludo";
   phase: "play" | "final";
@@ -910,5 +924,7 @@ export interface LudoView extends GameBase {
   winner: LudoColor | null;
   /** colours in the order they got every token home (at the end, the last one too) */
   places: LudoColor[];
+  /** 2 v 2: opposite colours are partners and win together */
+  partners: boolean;
   scores: Record<string, number>;
 }

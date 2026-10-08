@@ -16,6 +16,9 @@ Players: one colour each with 2-4 (two players sit opposite). With 5-8, teams of
 take turns rolling for it; everything a colour scores goes to every player in it.
 Scoring: 100 per token home, 50 per capture; 500 for 1st place, 300 for 2nd, 150 for 3rd.
 
+Teams (2 v 2, exactly 4 players): partners play opposite colours (red + yellow, green + blue) and win
+together when both their colours are home.
+
 Ludo has no secrets: every view is the same apart from whose colour is yours.
 """
 
@@ -65,6 +68,7 @@ class Ludo(Game):
     max_players: ClassVar[int] = 8
     SHOW: ClassVar[bool] = False
     CLASSIC: ClassVar[bool] = True
+    TEAMS: ClassVar[bool] = True
     OPTIONS: ClassVar[dict[str, list[str]]] = {"tokens": ["4", "2"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Roll the die. You need a 6 to bring a token out of your yard onto your start square.",
@@ -85,6 +89,13 @@ class Ludo(Game):
         self.n_tokens = 2 if self.options.get("tokens") == "2" else 4
         ids = list(self.player_ids)
         self.rng.shuffle(ids)
+        if self.teams:
+            if len(ids) != 4:
+                raise GameError("bad_player_count", "Ludo teams are 2 v 2: exactly 4 players")
+            sides = [[p for p in ids if self.teams.get(p) == t] for t in (0, 1)]
+            if sorted(map(len, sides)) != [2, 2]:
+                raise GameError("bad_teams", "Ludo teams need two players each")
+            ids = [sides[0][0], sides[1][0], sides[0][1], sides[1][1]]  # red, green, yellow, blue
         self.colors: tuple[str, ...] = colors_for(len(ids))
         self.members: dict[str, list[str]] = {c: [] for c in self.colors}
         for i, pid in enumerate(ids):
@@ -244,6 +255,9 @@ class Ludo(Game):
     def _place(self, color: str) -> None:
         """Every token home: 1st, 2nd or 3rd. The game ends when one colour is left racing."""
         self.places.append(color)
+        if self.teams:
+            self._team_place(color)
+            return
         n = len(self.places)
         pts = PLACE_POINTS[n - 1] if n <= len(PLACE_POINTS) else 0
         self._score(color, pts)
@@ -253,10 +267,31 @@ class Ludo(Game):
         left = [c for c in self.colors if c not in self.places]
         if len(left) <= 1:
             self.places.extend(left)  # the last colour still racing comes last
-            self.rolled = None
-            self.phase = "final"
-            self.deadline = None
-            self.finished = True
+            self._finish_game()
+
+    def _finish_game(self) -> None:
+        self.rolled = None
+        self.phase = "final"
+        self.deadline = None
+        self.finished = True
+
+    def _team_place(self, color: str) -> None:
+        """Partners: a colour home waits for its partner; the pair home together wins (+500 each colour).
+        The winners take 1st and 2nd in the order they got home, the rest follow in board order."""
+        partner = self._partner_color(color)
+        if partner not in self.places:
+            self._log({"type": "partner", "color": color})  # home; the partner's still racing
+            return
+        pair = [c for c in self.places if c in (color, partner)]
+        for c in pair:
+            self._score(c, PLACE_POINTS[0])
+        self.winner = pair[0]
+        self.places = pair + [c for c in self.colors if c not in pair]
+        self._log({"type": "place", "color": pair[0], "place": 1, "points": PLACE_POINTS[0] * 2})
+        self._finish_game()
+
+    def _partner_color(self, color: str) -> str:
+        return self.colors[(self.colors.index(color) + 2) % len(self.colors)]
 
     # -- clocks ---------------------------------------------------------------------------------------
     def tick(self) -> None:
@@ -303,6 +338,7 @@ class Ludo(Game):
             "you": self.color_of.get(pid),
             "winner": self.winner,
             "places": list(self.places),
+            "partners": bool(self.teams),  # 2 v 2: opposite colours are a team
             "scores": self.scores(),
         }
 

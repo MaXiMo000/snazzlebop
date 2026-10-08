@@ -61,6 +61,7 @@ def catalog() -> list[dict[str, object]]:
             "how_to": list(cls.HOW_TO),
             "show": cls.SHOW,
             "classic": cls.CLASSIC,
+            "teams": cls.TEAMS,
         }
         for cls in REGISTRY.values()
     ]

@@ -66,6 +66,7 @@ class BlackjackShowdown(Game):
     )
     min_players: ClassVar[int] = 1
     max_players: ClassVar[int] = 8
+    TEAMS: ClassVar[bool] = True
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Everyone plays the dealer (not each other). Get closer to 21 than the dealer without going over.",
         "Bet, then hit, stand, double or split. Blackjack pays 3:2. Dealer stands on soft 17.",

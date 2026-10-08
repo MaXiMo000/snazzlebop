@@ -138,9 +138,12 @@ export function Ludo({ view, you, receivedAt, send, tv = false }: Props) {
       show.stinger("THREE SIXES! TURN LOST", "bad");
     } else if (e.type === "again" && rollBefore(view.log, e.n) === 6) {
       show.stinger("SIX!");
+    } else if (e.type === "partner") {
+      sfx.ding();
+      show.stinger(`${NAME[e.color].toUpperCase()} IS HOME!`);
     } else if (e.type === "place" && e.place === 1) {
       sfx.fanfare();
-      show.stinger(`${NAME[e.color].toUpperCase()} WINS!`);
+      show.stinger(view.partners ? `${NAME[e.color].toUpperCase()} & ${NAME[partnerOf(view, e.color)].toUpperCase()} WIN!` : `${NAME[e.color].toUpperCase()} WINS!`);
       show.celebrate();
     } else if (e.type === "place") {
       sfx.ding();
@@ -248,6 +251,12 @@ export function Ludo({ view, you, receivedAt, send, tv = false }: Props) {
 function choices(view: LudoView, color: LudoColor): number[] {
   const tokens = view.teams.find((t) => t.color === color)?.tokens ?? [];
   return view.movable.filter((i) => view.movable.findIndex((j) => tokens[j] === tokens[i]) === view.movable.indexOf(i));
+}
+
+/** 2 v 2: the colour opposite is the partner. */
+function partnerOf(view: LudoView, color: LudoColor): LudoColor {
+  const order = view.teams.map((t) => t.color);
+  return order[(order.indexOf(color) + 2) % order.length] ?? color;
 }
 
 /** A name that may wrap between words, but never leaves a 1-2 letter last word alone on a line. */
@@ -459,6 +468,8 @@ function logLine(e: LudoLog, who: (id: string) => string): string | null {
       return `${who(e.player)} ran out of time`;
     case "place":
       return e.place === 1 ? `${NAME[e.color]} wins!` : `${NAME[e.color]} finishes ${ORDINAL[e.place]}`;
+    case "partner":
+      return `${NAME[e.color]} is home: waiting for its partner`;
     default:
       return null;
   }

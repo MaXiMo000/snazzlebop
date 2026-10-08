@@ -18,6 +18,7 @@ import {
 import { MarketFloor, MarketMoves } from "../components/market";
 import { BoostPanel, CardReveal, CoinNews, MvpVote, PowerCard, Rivals } from "../components/extras";
 import { useAccount } from "../lib/account";
+import { TeamBadge, TeamResult } from "../components/teams";
 import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
 import { JumpScare } from "../components/JumpScare";
 import { Alibi } from "../games/Alibi";
@@ -241,6 +242,9 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       {(phase === "game" || phase === "results") && state.game && (
         <>
           <HowToPlay lines={state.how_to} />
+          {/* a team game: your team above the game; at the results, the team score is the headline */}
+          <TeamBadge state={state} />
+          {phase === "results" && <TeamResult state={state} />}
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
           {phase === "game" && <ReadyBar state={state} send={send} />}
           {phase === "game" && state.role === "player" && <PowerCard state={state} send={send} />}
@@ -432,6 +436,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
       ) : (
         <div className="tv-split">
           <div className="stack">
+            <TeamBadge state={state} tv />
             <GameRouter state={state} receivedAt={receivedAt} send={noop} />
             {phase === "game" && <CardsDown state={state} />}
             {phase === "results" && (
@@ -446,6 +451,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
             )}
           </div>
           <div className="stack">
+            {phase === "results" && <TeamResult state={state} />}
             <Contestants players={state.players} you="" title={state.show ? "Show scoreboard" : "Scoreboard"} />
             <Rivals state={state} />
             {watching > 0 && <p className="chip plum">🎟️ {watching} in the audience</p>}
@@ -605,19 +611,21 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
 };
 
 /** Start button, plus a picker for each option the game declares (first value = default). */
-function StartGame({ game, enough, send }: { game: GameCard; enough: boolean; send: Send }) {
+function StartGame({ game, enough, online, send, prefix, teamsFirst }: { game: GameCard; enough: boolean; online: number; send: Send; prefix: string; teamsFirst: boolean }) {
   const [chosen, setChosen] = useState<Record<string, string>>({});
+  const [teams, setTeams] = useState(teamsFirst);
+  const teamsOk = online >= 4;
   const options = Object.entries(game.options ?? {});
   const picked = Object.fromEntries(options.map(([k, vals]) => [k, chosen[k] ?? vals[0]!]));
   return (
     <>
       {options.map(([key, values]) => (
         <div key={key} className="space-top">
-          <label className="field" htmlFor={`opt-${game.id}-${key}`}>
+          <label className="field" htmlFor={`${prefix}opt-${game.id}-${key}`}>
             {key.charAt(0).toUpperCase() + key.slice(1)}
           </label>
           <Select
-            id={`opt-${game.id}-${key}`}
+            id={`${prefix}opt-${game.id}-${key}`}
             value={picked[key] ?? values[0] ?? ""}
             onChange={(e) => setChosen((c) => ({ ...c, [key]: e.target.value }))}
           >
@@ -629,14 +637,25 @@ function StartGame({ game, enough, send }: { game: GameCard; enough: boolean; se
           </Select>
         </div>
       ))}
+      {game.teams && (
+        <div className="space-top">
+          <label className="field" htmlFor={`${prefix}teams-${game.id}`}>
+            Play
+          </label>
+          <Select id={`${prefix}teams-${game.id}`} value={teams ? "teams" : "solo"} onChange={(e) => setTeams(e.target.value === "teams")}>
+            <option value="solo">Everyone for themselves</option>
+            <option value="teams">{game.id === "ludo" ? "Two teams (exactly 4: 2 v 2)" : "Two teams (4+ players)"}</option>
+          </Select>
+        </div>
+      )}
       <Btn
         className="space-top"
         variant="accent"
         block
-        disabled={!enough}
-        onClick={() => send({ t: "start", game: game.id, ...(options.length ? { options: picked } : {}) })}
+        disabled={!enough || (teams && !teamsOk)}
+        onClick={() => send({ t: "start", game: game.id, ...(options.length ? { options: picked } : {}), ...(teams ? { teams: true } : {}) })}
       >
-        {enough ? "Start!" : `Need ${game.min_players}+ online`}
+        {!enough ? `Need ${game.min_players}+ online` : teams && !teamsOk ? "Teams need 4+ online" : teams ? "Start in teams!" : "Start!"}
         <span className="sr-only"> {game.title}</span>
       </Btn>
     </>
@@ -675,17 +694,17 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
         </Card>
       )}
 
-      {state.games.some((g) => !g.show && !g.classic) && (
+      {state.games.some((g) => (!g.show && !g.classic) || g.teams) && (
         <Card tone="stage" aria-labelledby="team-games-h">
           <p className="sign" id="team-games-h">
             Team games
           </p>
-          <p className="lead space-top">Split into teams and play head to head. Played on their own, not in a show night.</p>
+          <p className="lead space-top">Split into two teams and play head to head: the bigger combined score wins. Played on their own, not in a show night.</p>
           <div className="grid space-top">
             {state.games
-              .filter((g) => !g.show && !g.classic)
+              .filter((g) => (!g.show && !g.classic) || g.teams)
               .map((g) => (
-                <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} />
+                <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} prefix="team-" teamsFirst={g.teams} />
               ))}
           </div>
         </Card>
@@ -703,22 +722,22 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
   );
 }
 
-function GameCardTile({ g, online, isHost, send }: { g: GameCard; online: number; isHost: boolean; send: Send }) {
+function GameCardTile({ g, online, isHost, send, prefix = "", teamsFirst = false }: { g: GameCard; online: number; isHost: boolean; send: Send; prefix?: string; teamsFirst?: boolean }) {
   const enough = online >= g.min_players && online <= g.max_players;
   return (
-    <Card as="article" key={g.id} className={`segment-card seg-${g.id} game-card`} aria-labelledby={`seg-${g.id}`}>
+    <Card as="article" key={g.id} className={`segment-card seg-${g.id} game-card`} aria-labelledby={`${prefix}seg-${g.id}`}>
       <div className="band">
         <span className="chip plum">
           {g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`} players
         </span>
-        <h3 id={`seg-${g.id}`}>
+        <h3 id={`${prefix}seg-${g.id}`}>
           <span aria-hidden="true">{SEGMENT_ICON[g.id]} </span>
           {g.title}
         </h3>
       </div>
       <div className="body">
         <p>{g.blurb}</p>
-        {isHost && <StartGame game={g} enough={enough} send={send} />}
+        {isHost && <StartGame game={g} enough={enough} online={online} send={send} prefix={prefix} teamsFirst={teamsFirst} />}
       </div>
     </Card>
   );

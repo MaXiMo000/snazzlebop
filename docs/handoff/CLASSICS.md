@@ -40,7 +40,9 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
   calendar months; **shop** sells the show's power cards; signed-in players use one per game ("boost").
 - **Blackjack**: your hand + Hit/Stand pinned to the bottom on phones; big payout headline.
 - Render: the free Postgres expires; restart-proof rooms and accounts need a paid database plan.
-- Still open with the user: "more team games" (which ones).
+- **Team mode** (user's choice): a Teams switch for Ludo, Truth or Dare, Last Card, Blackjack and every new
+  classic: two teams (4+ players), shuffled on the intro screen, combined scores win, coins by team place;
+  partner rules where the original has one. Simulator runs `<game>-pairs`.
 
 ## Decisions (and why)
 
@@ -135,7 +137,8 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
 ## Per-game checklist (what "done" means here)
 
 1. Engine `backend/app/games/<id>.py` (pure; `HOW_TO`, `READING`, `OPTIONS`, `CLASSIC = True`,
-   `SHOW = False`, highlights, summary) + content in content.py if needed.
+   `SHOW = False`, `TEAMS = True` (the user wants every classic playable in teams; use the original's
+   partner rule via `self.teams` if it has one), highlights, summary) + content in content.py if needed.
 2. `backend/tests/test_<id>.py`: rules, edge cases, timers/`advance()`, and secrecy for players + a
    `tv:` id + an `au:` id in every phase including final.
 3. Register in `games/__init__.py`; add the id to the lists in `tests/test_api.py` and `tests/test_games.py`.

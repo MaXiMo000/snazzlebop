@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Btn, Card, ShowHead, nameOf } from "./ui";
 import { SEGMENT_ICON } from "./show";
 import { sfx } from "../lib/sfx";
+import { TeamsCard } from "./teams";
 import type { GameCard, RoomState } from "../types";
 
 type Send = (msg: Record<string, unknown>) => void;
@@ -51,6 +52,7 @@ export function IntroScreen({ state, receivedAt, send, readOnly }: { state: Room
           ))}
         </ol>
       </Card>
+      <TeamsCard state={state} send={send} readOnly={readOnly} />
       {!readOnly && (
         <Card tone="soft" className="center">
           {imReady ? (

@@ -116,6 +116,9 @@ class Game(ABC):
     SHOW: ClassVar[bool] = True
     # True for the classics (board, card and party games everyone knows): their own lobby section.
     CLASSIC: ClassVar[bool] = False
+    # True when the host may switch on Teams: two teams, the team's combined score wins. A game with an
+    # official partner rule plays it (self.teams); the rest play as usual and the hub adds up the teams.
+    TEAMS: ClassVar[bool] = False
 
     def __init__(
         self,
@@ -126,6 +129,7 @@ class Game(ABC):
         decks: dict[str, Deck] | None = None,
         theme: str = "",
         options: dict[str, str] | None = None,
+        teams: dict[str, int] | None = None,
     ) -> None:
         if not self.min_players <= len(players) <= self.max_players:
             raise GameError(
@@ -139,6 +143,8 @@ class Game(ABC):
         self.decks = decks if decks is not None else {}
         self.theme = theme  # a show pack (content.THEMES); "" = everything
         self.options = dict(options or {})
+        ids = {p.id for p in players}
+        self.teams: dict[str, int] = {p: t for p, t in (teams or {}).items() if p in ids}  # player -> 0/1
         self.version = 0
         self.phase = "init"
         self.round = 0

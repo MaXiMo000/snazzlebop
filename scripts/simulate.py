@@ -98,6 +98,7 @@ for _phase in ("play", "final"):
         "you",
         "winner",
         "places",
+        "partners",
         "scores",
     }
 for _phase in ("play", "reveal", "final"):
@@ -1173,7 +1174,11 @@ async def play_lastcard(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         g = host.state["game"]  # type: ignore[index]
         winner = g["winner"]
         check(g["hands"][winner] == [], f"lastcard: winner {winner} still holds cards")
-        want = sum(lastcard_points(h) for p, h in g["hands"].items() if p != winner)
+        teams = host.state.get("teams")  # type: ignore[union-attr]
+        side = {p: i for i, ids in enumerate(teams["members"]) for p in ids} if teams else {}
+        # Partners (the Teams switch): the winner scores only the other team's cards.
+        rivals = [p for p in g["hands"] if p != winner and (not side or side[p] != side[winner])]
+        want = sum(lastcard_points(g["hands"][p]) for p in rivals)
         check(g["scores"][winner] >= want, f"lastcard: the winner's score is below this hand's {want}")
         for p, h in g["hands"].items():
             check(len(h) == g["counts"][p], "lastcard: shown hand sizes don't match the counts")
@@ -1707,6 +1712,9 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             games.insert(6, "blackjack-tournament")
         if len(bots) >= 4:
             games.append("crossword-teams")
+            games += ["lastcard-pairs", "truthdare-pairs"]  # the Teams switch: two teams, partner rules
+        if len(bots) == 4:
+            games.append("ludo-pairs")  # Ludo teams are exactly 2 v 2
         for name in games:
             if only and name not in only and name.split("-")[0] not in only:
                 continue
@@ -1720,6 +1728,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await host.send(t="start", game=game, options={"mode": "tournament"})
             elif name == "crossword-teams":
                 await host.send(t="start", game=game, options={"mode": "teams"})
+            elif name.endswith("-pairs"):
+                await host.send(t="start", game=game, teams=True)
             else:
                 await host.send(t="start", game=game)
             # Every game opens with a "how to play" screen; it starts once every player taps Ready.

@@ -42,6 +42,7 @@ class TruthOrDare(Game):
         "heat": ["mild", "cheeky"],
         "length": ["standard", "quick", "marathon"],
     }
+    TEAMS: ClassVar[bool] = True
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "The bottle spins and picks whose turn it is. Everyone gets the same number of turns.",
         "Pick TRUTH (answer honestly, out loud) or DARE (do it right now). Everyone sees the card.",
