@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CallHost, CallStrip } from "../components/call";
 import { ChatDock, ChatTicker } from "../components/chat";
 import { ApiError, audienceSeat, clearSession, joinRoom, loadSession, tvSeat } from "../lib/api";
 import { useRoom } from "../lib/useRoom";
@@ -208,6 +209,8 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       <JumpScare count={state.scare} room={code} you={state.you} />
       <ReactionOverlay reactions={state.reactions} />
       {state.chat && <ChatDock chat={state.chat} you={state.you} send={send} />}
+      <CallHost available={!!state.call?.available} send={send} />
+      <CallStrip />
       {status === "reconnecting" && (
         <div className="alert calm row between" role="status">
           <span>Signal lost. Reconnecting{attempt > 1 ? ` (try ${attempt})` : ""}…</span>
@@ -376,7 +379,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
   const noop = () => undefined;
   // The TV only watches, but it may ask for a drawing (a reconnect mid-drawing, an album page).
   const watch = (msg: Record<string, unknown>) => {
-    if (msg.t === "inksync") send(msg);
+    if (msg.t === "inksync" || msg.t === "call") send(msg); // a drawing, or a watch-only call pass
   };
   useScrollToTopOn(`${state?.room.phase}:${state?.stage}:${state?.intro?.game ?? ""}`);
 
@@ -412,6 +415,8 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
       <h1 className="sr-only">Snazzlebop TV, room {code}</h1>
       <ReactionOverlay reactions={state.reactions} />
       {state.chat && <ChatTicker chat={state.chat} />}
+      <CallHost available={!!state.call?.available} send={watch} auto />
+      <CallStrip tv />
       {status !== "open" && (
         <p className="alert calm" role="status">
           Signal lost. Reconnecting…

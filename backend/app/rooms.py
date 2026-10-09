@@ -14,8 +14,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from . import calls, persist, prank
 from . import coins as coinlib
-from . import persist, prank
 from . import show as showlib
 from .config import Settings
 from .games import REGISTRY, Game, GameError, Player, catalog
@@ -31,10 +31,11 @@ ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
     *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready", "boost"),
-    *("shuffle", "ink", "inksync", "chat"),
+    *("shuffle", "ink", "inksync", "chat", "call"),
 }
 TEAM_MIN_PLAYERS = 4  # two teams of at least two
-AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync", "chat"}
+AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync", "chat", "call"}
+CALL_GAP = 5.0  # seconds between call passes for one person
 # Chat: plain text, short, rate-limited per person and per room; only the latest messages are kept (in
 # memory and the room's snapshot, gone with the room). Logs never contain chat text.
 CHAT_MAX = 200
@@ -151,6 +152,7 @@ class Room:
     chat_seq: int = 0
     chat_last: dict[str, float] = field(default_factory=dict)
     chat_window: list[float] = field(default_factory=list)
+    call_last: dict[str, float] = field(default_factory=dict)
     market_next: str = ""  # the game the open market is waiting for
     market_until: float = 0.0
     market_moves: dict[str, float] = field(default_factory=dict)  # price changes after the last game
@@ -533,6 +535,7 @@ class Hub:
             "quip": room.quip if room.phase in ("results", "finale") else "",
             "reactions": room.reactions,
             "chat": self._chat_view(room, pid),
+            "call": {"available": calls.enabled(self.settings)},
             "crowd": self._crowd_view(room, pid),
             "market": self._market_view(room, pid),
             "cards": self._cards_view(room, pid),
@@ -940,6 +943,8 @@ class Hub:
             # TV screens only watch: no actions, and their keep-alive pings don't keep a room alive.
             if kind == "inksync":
                 return self._ink_sync(room, pid, conn, msg)
+            if kind == "call":
+                return await self._call(room, pid, conn)
             if kind != "ping":
                 await self.send_error(conn, "read_only", "TV mode is read-only")
             return
@@ -951,6 +956,8 @@ class Hub:
         try:
             if kind == "inksync":
                 return self._ink_sync(room, pid, conn, msg)
+            if kind == "call":
+                return await self._call(room, pid, conn)
             if kind == "ink":
                 return await self._ink(room, pid, conn, msg)
             if kind == "boost":
@@ -1482,6 +1489,7 @@ class Hub:
         if isinstance(target, str) and target in room.audience:  # the crowd can go at any time
             watcher = room.audience.pop(target)
             room.predictions.pop(target, None)
+            self._drop_from_call(room, target)
             if watcher.conn is not None:
                 asyncio.get_running_loop().create_task(watcher.conn.close(KICKED))
             return True
@@ -1491,10 +1499,21 @@ class Hub:
             raise HubError("in_progress", "Remove players between games")
         del room.players[target]
         room.total_scores.pop(target, None)
+        self._drop_from_call(room, target)
         conn = room.conns.pop(target, None)
         if conn is not None:
             asyncio.get_running_loop().create_task(conn.close(KICKED))
         return True
+
+    def _drop_from_call(self, room: Room, pid: str) -> None:
+        """The host removed someone: take them out of the call too (their pass expires on its own)."""
+        if calls.enabled(self.settings):
+            call_room = calls.room_name(self.settings, room.code, room.created)
+            task = asyncio.get_running_loop().create_task(
+                calls.remove_participant(self.settings, call_room, pid)
+            )
+            self._tasks.add(task)
+            task.add_done_callback(self._tasks.discard)
 
     def _react(self, room: Room, pid: str, msg: dict[str, Any]) -> bool:
         emoji = msg.get("e")
@@ -1515,6 +1534,25 @@ class Hub:
             {"id": room.react_seq, "e": emoji, "by": who.name if who else "?"},
         ]
         return True
+
+    # -- calls (LiveKit) ------------------------------------------------------------------------------
+    async def _call(self, room: Room, pid: str, conn: Connection) -> None:
+        """A pass for the room's voice/video call, sent only to the asking connection."""
+        if not calls.enabled(self.settings):
+            raise HubError("no_calls", "Calls aren't set up on this server")
+        now = self.clock()
+        if now - room.call_last.get(pid, -1e9) < CALL_GAP:
+            raise HubError("slow_down", "Joining the call already: give it a moment")
+        room.call_last[pid] = now
+        who = room.players.get(pid) or room.audience.get(pid)
+        tv = pid in room.viewers
+        name = "TV" if tv else who.name if who else "?"
+        call_room = calls.room_name(self.settings, room.code, room.created)
+        token = calls.join_token(self.settings, call_room, pid, name, can_publish=not tv)
+        with contextlib.suppress(Exception):
+            await asyncio.wait_for(
+                conn.send_json({"t": "call", "url": self.settings.livekit_url, "token": token, "tv": tv}), 5
+            )
 
     # -- chat -----------------------------------------------------------------------------------------
     @staticmethod

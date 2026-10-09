@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { CallButton } from "./components/call";
 import { ChatButton } from "./components/chat";
 import { SoundToggle, ThemeToggle } from "./components/ui";
 import { useAccount } from "./lib/account";
@@ -79,6 +80,7 @@ export function App() {
           </span>
         </a>
         <div className="row topbar-tools">
+          <CallButton />
           <ChatButton />
           <AccountButton go={go} />
           <ThemeToggle />

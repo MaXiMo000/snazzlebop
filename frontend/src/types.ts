@@ -480,6 +480,8 @@ export interface RoomState {
   quip: string;
   reactions: Reaction[];
   chat: ChatState;
+  /** voice/video calls are set up on this server */
+  call: { available: boolean };
   crowd: Crowd;
   market: MarketState | null;
   cards: CardsState | null;

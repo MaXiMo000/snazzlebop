@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RoomState } from "../types";
 import { emitInk, type InkFrame } from "./ink";
+import { emitCallPass, type CallPass } from "./callPass";
 
 /**
  * connecting -> open, then on a drop: reconnecting (with backoff) -> open again,
@@ -73,6 +74,8 @@ export function useRoom(code: string, token: string | null): RoomConnection {
             setStatus("open");
             setState(msg as unknown as RoomState);
             setReceivedAt(performance.now());
+          } else if (msg.t === "call") {
+            emitCallPass(msg as unknown as CallPass);
           } else if (msg.t === "ink") {
             emitInk(msg as unknown as InkFrame);
           } else if (msg.t === "error") {

@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import accounts
+from . import accounts, calls
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
 from .contentgen import ContentGenerator, add_items, claude_caller, known, split_kind
@@ -138,7 +138,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ip_header=settings.client_ip_header,
     )
     app.add_middleware(BodyLimit, max_bytes=settings.max_body_bytes)
-    app.add_middleware(SecurityHeaders, ws_hosts=settings.ws_hosts, production=settings.is_production)
+    app.add_middleware(
+        SecurityHeaders,
+        ws_hosts=settings.ws_hosts,
+        production=settings.is_production,
+        call_hosts=calls.csp_hosts(settings),
+    )
     app.add_middleware(HostGuard, allowed_hosts=settings.allowed_hosts, edge_secret=settings.edge_secret)
 
     # -- error handling: never leak internals or echo input -----------------

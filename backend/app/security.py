@@ -210,9 +210,17 @@ class HostGuard:
 
 
 class SecurityHeaders:
-    def __init__(self, app: ASGIApp, ws_hosts: tuple[str, ...], production: bool) -> None:
+    def __init__(
+        self, app: ASGIApp, ws_hosts: tuple[str, ...], production: bool, call_hosts: tuple[str, ...] = ()
+    ) -> None:
         self.app = app
-        connect = " ".join(["'self'", *[f"wss://{h}" for h in ws_hosts if h not in ("testserver",)]])
+        # call_hosts: the LiveKit server, only when calls are configured (the one exception to "self").
+        connect = " ".join(
+            ["'self'", *[f"wss://{h}" for h in ws_hosts if h not in ("testserver",)], *call_hosts]
+        )
+        # Camera and microphone are allowed for this site only, and only when calls are on.
+        media = "(self)" if call_hosts else "()"
+        self.permissions = f"camera={media}, microphone={media}, geolocation=(), payment=(), usb=()".encode()
         if not production:
             connect += " ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:*"
         self.csp = "; ".join(
@@ -245,7 +253,7 @@ class SecurityHeaders:
                     b"x-content-type-options": b"nosniff",
                     b"x-frame-options": b"DENY",
                     b"referrer-policy": b"no-referrer",
-                    b"permissions-policy": b"camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+                    b"permissions-policy": self.permissions,
                     b"cross-origin-opener-policy": b"same-origin",
                     b"cross-origin-resource-policy": b"same-origin",
                     b"cross-origin-embedder-policy": b"require-corp",  # everything is same-origin

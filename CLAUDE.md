@@ -16,7 +16,7 @@ Trademarked originals get our own names; rules match the originals. **Work in pr
 per-game checklist and the dev tools in docs/handoff/tools/). Show nights (show.py): a playlist on one
 scoreboard, host quips, highlight reel and awards, Jackpot finale, power cards (games expose `peek()`),
 rivals, Friend Stock Exchange (shorts, dividends, insider tips), rematches and a season table, show
-packs, audience (react, predict, trade, MVP vote), live reactions. **Chat**: everyone's channel plus a private team channel whenever a game has teams (`Game.chat_team`, `Game.chat_muted` let a game restrict it); the TV shows the latest messages like live comments. **Team mode** (`Game.TEAMS`): the host
+packs, audience (react, predict, trade, MVP vote), live reactions. **Chat**: everyone's channel plus a private team channel whenever a game has teams (`Game.chat_team`, `Game.chat_muted` let a game restrict it); the TV shows the latest messages like live comments. **Calls**: voice and video through LiveKit (`calls.py` signs join passes; `components/call.tsx`), off unless the three `LIVEKIT_*` settings are set; everyone can talk, the TV shows faces without sound. **Team mode** (`Game.TEAMS`): the host
 switches on Teams for Ludo, Truth or Dare, Last Card and Blackjack (and new classics): two teams shuffled
 on the intro screen, combined scores win, coins by team place; official partner rules where they exist
 (`self.teams`: Last Card partners opposite, Ludo 2 v 2 opposite colours).
@@ -105,7 +105,7 @@ Free web instances sleep when idle and drop live rooms; use the Starter plan for
 2. **Game engines are pure** (no FastAPI, no I/O, injected `clock` and `rng`) so they stay testable.
 3. **Every client input is validated** (`as_int`, strict list/str checks) and raises `GameError`.
    Never `eval`, never string-build SQL, never trust field names.
-4. **No inline scripts or styles, no third-party requests.** CSP is `default-src 'none'` + `'self'`.
+4. **No inline scripts or styles, no third-party requests.** CSP is `default-src 'none'` + `'self'`. (The one exception: when calls are configured, `connect-src` adds the LiveKit host; see SECURITY.md.)
    Fonts are self-hosted via @fontsource. Do not add CDNs, analytics, or `dangerouslySetInnerHTML`.
 5. **Token in the first WebSocket message**, never in a URL. Logs never contain names, tokens, codes.
 6. **One worker.** Room state lives in memory and is snapshotted to Postgres after every change

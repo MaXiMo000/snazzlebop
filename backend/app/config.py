@@ -87,6 +87,11 @@ class Settings:
     content_model: str = "claude-opus-5-5"
     content_calls_per_hour: int = 20
 
+    # Optional: voice and video calls through LiveKit (see calls.py). Unset = no calls.
+    livekit_url: str = ""  # wss://<project>.livekit.cloud
+    livekit_api_key: str = field(default="", repr=False)
+    livekit_api_secret: str = field(default="", repr=False)
+
     # The jump-scare prank. On unless JUMPSCARE=false; JUMPSCARE_NAMES (comma separated) replaces the
     # built-in list. (A plain Settings() keeps it off, so unit tests stay quiet.)
     jumpscare: bool = False
@@ -110,6 +115,11 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     production = env == "production"
 
     secret = e.get("SECRET_KEY", "")
+    livekit_url = e.get("LIVEKIT_URL", "").strip().rstrip("/")
+    if livekit_url and not (
+        livekit_url.startswith("wss://") or (not production and livekit_url.startswith("ws://"))
+    ):
+        raise ValueError("LIVEKIT_URL must start with wss:// (ws:// only outside production)")
     if production and len(secret) < 32:
         raise RuntimeError("SECRET_KEY must be set to at least 32 characters in production")
     if not secret:
@@ -160,6 +170,9 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         anthropic_api_key=e.get("ANTHROPIC_API_KEY", "").strip(),
         content_model=e.get("CONTENT_MODEL", "").strip() or defaults.content_model,
         content_calls_per_hour=int(num("CONTENT_CALLS_PER_HOUR", defaults.content_calls_per_hour)),
+        livekit_url=livekit_url,
+        livekit_api_key=e.get("LIVEKIT_API_KEY", "").strip(),
+        livekit_api_secret=e.get("LIVEKIT_API_SECRET", "").strip(),
         jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
         jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )
