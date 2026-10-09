@@ -5766,11 +5766,6 @@ b.team-name.team-1 {
   display: grid;
   gap: 10px;
 }
-@media (min-width: 700px) {
-  .dg-choices {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
 .dg-choices .btn {
   text-wrap: balance;
 }
