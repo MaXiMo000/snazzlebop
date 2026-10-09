@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Btn, Card, ShowHead, nameOf } from "../components/ui";
-import { useOnChange, useShow } from "../components/fx";
+import { useRef, useState } from "react";
+import { Btn, Card, ShowHead, initials, nameOf } from "../components/ui";
+import { useOnChange, useReducedMotion, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { LastCardView, LcCard, LcColor, LcLog } from "../types";
 
@@ -16,7 +16,13 @@ interface Props {
 const COLORS: LcColor[] = ["red", "yellow", "green", "blue"];
 const COLOR_NAME: Record<string, string> = { red: "Red", yellow: "Yellow", green: "Green", blue: "Blue", wild: "Wild" };
 const SYMBOL: Record<string, string> = { skip: "⊘", reverse: "⇄", draw2: "+2", wild: "★", wild4: "+4" };
-const VALUE_NAME: Record<string, string> = { skip: "Skip", reverse: "Reverse", draw2: "Draw Two", wild: "Wild", wild4: "Wild Draw Four" };
+const VALUE_NAME: Record<string, string> = {
+  skip: "Skip",
+  reverse: "Reverse",
+  draw2: "Draw Two",
+  wild: "Wild",
+  wild4: "Wild Draw Four",
+};
 const ORDER: Record<string, number> = { red: 0, yellow: 1, green: 2, blue: 3, wild: 4 };
 
 export function cardName(c: Pick<LcCard, "color" | "value">): string {
@@ -104,62 +110,34 @@ export function LastCard({ view, you, receivedAt, send, tv = false }: Props) {
         ? `Hand ${view.round} of ${view.rounds} · ${name(view.winner ?? "")} went out`
         : `Hand ${view.round} of ${view.rounds} · ${myTurn ? "Your turn" : `${nameOf(view.players, view.turn ?? "")}’s turn`}`;
 
-  const hand = [...(me?.hand ?? [])].sort((a, b) => ORDER[a.color]! - ORDER[b.color]! || a.value.localeCompare(b.value, "en", { numeric: true }));
+  const hand = [...(me?.hand ?? [])].sort(
+    (a, b) => ORDER[a.color]! - ORDER[b.color]! || a.value.localeCompare(b.value, "en", { numeric: true }),
+  );
 
   return (
     <div className={`seg-lastcard stack lc-now-${view.color} ${tv ? "tv-cols" : ""}`}>
       {show.node}
-      <ShowHead sign={sign} title="Last Card" remaining={view.phase === "play" ? view.remaining : view.remaining} receivedAt={receivedAt}>
-        <span className="chip plum">{view.stacking ? "Stacking on · +2 on +2, +4 on +4" : "Match colour, number or symbol"}</span>
+      <ShowHead
+        sign={sign}
+        title="Last Card"
+        remaining={view.phase === "play" ? view.remaining : view.remaining}
+        receivedAt={receivedAt}
+      >
+        <span className="chip plum">
+          {view.stacking ? "Stacking on · +2 on +2, +4 on +4" : "Match colour, number or symbol"}
+        </span>
       </ShowHead>
 
       {/* TV: once the hand is over, the revealed hands take the stage and the table steps aside */}
       {(view.phase === "play" || (!tv && view.phase === "hand_over")) && (
-        <Card tone="stage" className={`lc-table ${view.phase === "play" ? "tv-main" : ""}`}>
-          <Seats view={view} you={you} tv={tv} send={send} />
-          <div className="lc-piles">
-            <button
-              type="button"
-              className="lc-pile"
-              disabled={!myTurn || me?.drawn != null}
-              onClick={() => {
-                sfx.pop();
-                send({ t: "act", a: "draw" });
-              }}
-            >
-              <span className="lc-card back big" aria-hidden="true">
-                <span className="lc-back-mark">LAST CARD</span>
-              </span>
-              <span className="lc-pile-label">
-                {myTurn && view.pending ? `Take ${view.pending.n}` : myTurn && me?.drawn == null ? "Draw" : `${view.deck} left`}
-              </span>
-            </button>
-            <div className="lc-discard" aria-live="polite">
-              <span key={view.top.id} className="lc-land">
-                <Face card={view.top} size="big" />
-              </span>
-              <span className="sr-only">Top card: {cardName(view.top)}. Colour to match: {COLOR_NAME[view.color]}.</span>
-            </div>
-            <div className="lc-status">
-              <span className={`lc-swatch c-${view.color}`} aria-hidden="true" />
-              <b>{COLOR_NAME[view.color]}</b>
-              <span className={`lc-dir ${view.direction < 0 ? "ccw" : ""}`} aria-label={view.direction < 0 ? "Play goes anticlockwise" : "Play goes clockwise"}>
-                ↻
-              </span>
-            </div>
-          </div>
-          {view.pending && (
-            <p className="lc-pending" role="status">
-              {view.pending.kind === "wild4" ? "Wild Draw Four" : "Draw Two"}: {nameOf(view.players, view.turn ?? "")} takes {view.pending.n}
-              {view.stacking ? " unless they stack" : ""}
-            </p>
-          )}
-        </Card>
+        <Table view={view} you={you} tv={tv} myTurn={myTurn} send={send} />
       )}
 
       {myTurn && view.pending && (
         <Card tone="soft" className="center">
-          <h3>{view.pending.kind === "wild4" ? "A Wild Draw Four hits you!" : `+${view.pending.n} coming your way!`}</h3>
+          <h3>
+            {view.pending.kind === "wild4" ? "A Wild Draw Four hits you!" : `+${view.pending.n} coming your way!`}
+          </h3>
           <div className="row center space-top">
             <Btn variant="danger" size="big" onClick={() => send({ t: "act", a: "draw" })}>
               Take {view.pending.n}
@@ -172,8 +150,9 @@ export function LastCard({ view, you, receivedAt, send, tv = false }: Props) {
           </div>
           {view.pending.kind === "wild4" && (
             <p className="muted space-top">
-              Challenge if you think {nameOf(view.players, view.pending.by)} still had a {COLOR_NAME[view.pending.was ?? ""] ?? "matching"} card. Right: they take 4. Wrong:
-              you take {view.pending.n + 2}.
+              Challenge if you think {nameOf(view.players, view.pending.by)} still had a{" "}
+              {COLOR_NAME[view.pending.was ?? ""] ?? "matching"} card. Right: they take 4. Wrong: you take{" "}
+              {view.pending.n + 2}.
             </p>
           )}
           {view.stacking && <p className="muted">Or stack a matching draw card from your hand.</p>}
@@ -221,7 +200,9 @@ export function LastCard({ view, you, receivedAt, send, tv = false }: Props) {
               </li>
             ))}
           </ul>
-          {!myTurn && <p className="muted center space-top">Wait for your turn… Catch anyone who forgets to call LAST CARD!</p>}
+          {!myTurn && (
+            <p className="muted center space-top">Wait for your turn… Catch anyone who forgets to call LAST CARD!</p>
+          )}
         </Card>
       )}
 
@@ -258,46 +239,203 @@ export function LastCard({ view, you, receivedAt, send, tv = false }: Props) {
   );
 }
 
-/** Everyone round the table: card counts, whose turn, LAST CARD calls and Catch buttons. */
-function Seats({ view, you, tv, send }: { view: LastCardView; you: string; tv: boolean; send: Props["send"] }) {
+/** Who's next after `pid` in play order (direction -1 goes the other way round). */
+function nextOf(view: LastCardView, pid: string | null): string | null {
+  if (!pid) return null;
+  const n = view.order.length;
+  const k = view.order.indexOf(pid);
+  return k < 0 ? null : (view.order[(k + (view.direction < 0 ? -1 : 1) + n) % n] ?? null);
+}
+
+const AVATAR_TONES = 8;
+type Fx = {
+  id: number;
+  kind: "play" | "draw" | "skip" | "burst";
+  seat: number;
+  card?: Pick<LcCard, "color" | "value">;
+  n?: number;
+};
+
+/**
+ * The table, like the real thing: everyone seated round an oval in play order (you at the bottom), the
+ * draw pile and the discard pile (the last few cards scattered underneath) in the middle, a colour ring
+ * and a direction ring that spins the way play goes. Cards fly from a seat to the pile and back, skips
+ * stamp the skipped seat, +2/+4 burst on whoever takes them.
+ */
+function Table({
+  view,
+  you,
+  tv,
+  myTurn,
+  send,
+}: {
+  view: LastCardView;
+  you: string;
+  tv: boolean;
+  myTurn: boolean;
+  send: Props["send"];
+}) {
+  const me = !tv ? view.you : null;
+  const n = view.order.length;
+  const start = !tv && view.order.includes(you) ? view.order.indexOf(you) : 0;
+  const seats = view.order.map((_, k) => view.order[(start + k) % n]!);
+  const seatOf = (pid: string) => seats.indexOf(pid);
+  const next = nextOf(view, view.turn);
+  const [fx, setFx] = useState<Fx[]>([]);
+  const fxId = useRef(0);
+  const reduced = useReducedMotion();
+
+  useOnChange(view.log.length, (prev, cur) => {
+    if (reduced || cur <= prev) return;
+    const fresh = view.log.slice(Math.max(0, view.log.length - (cur - prev)));
+    const add: Fx[] = [];
+    for (const e of fresh) {
+      const id = ++fxId.current;
+      if (e.type === "play")
+        add.push({ id, kind: "play", seat: seatOf(e.player), card: { color: e.base, value: e.value } });
+      else if (e.type === "draw") add.push({ id, kind: "draw", seat: seatOf(e.player), n: e.n });
+      else if (e.type === "skipped") add.push({ id, kind: "skip", seat: seatOf(e.player) });
+    }
+    if (view.pending && view.turn)
+      add.push({ id: ++fxId.current, kind: "burst", seat: seatOf(view.turn), n: view.pending.n });
+    if (!add.length) return;
+    setFx((f) => [...f, ...add].slice(-8));
+    const ids = new Set(add.map((a) => a.id));
+    window.setTimeout(() => setFx((f) => f.filter((a) => !ids.has(a.id))), 1100);
+  });
+
+  // The cards under the top one: the last few plays, scattered.
+  const under = view.log
+    .filter((e): e is Extract<LcLog, { type: "play" }> => e.type === "play")
+    .slice(-4, -1)
+    .map((e) => ({ color: e.base, value: e.value }));
+  const catchable = view.vulnerable.filter((pid) => pid !== you && !tv);
+
   return (
-    <ul className="lc-seats">
-      {view.order.map((pid) => {
-        const n = view.counts[pid] ?? 0;
-        const catchable = view.vulnerable.includes(pid) && pid !== you && !tv;
-        return (
-          <li key={pid} className={`lc-seat ${pid === view.turn ? "on" : ""} ${pid === you ? "you" : ""}`}>
-            <span className="lc-seat-name">
-              {nameOf(view.players, pid)}
-              {pid === you && !tv ? " (you)" : ""}
-            </span>
-            <span className="lc-seat-count" aria-label={`${n} cards`}>
-              <span className="lc-mini-backs" aria-hidden="true">
-                {Array.from({ length: Math.min(n, 7) }, (_, i) => (
-                  <i key={i} />
-                ))}
-              </span>
-              {n}
-            </span>
-            {view.protected.includes(pid) && n === 1 && <span className="chip lc-called">LAST CARD!</span>}
-            {catchable && (
-              <Btn
-                size="small"
-                variant="danger"
-                className="lc-catch"
-                onClick={() => {
-                  sfx.buzz();
-                  send({ t: "act", a: "catch", target: pid });
-                }}
+    <Card tone="stage" className={`lc-table ${view.phase === "play" ? "tv-main" : ""}`}>
+      <div className={`lc-felt seats-${n}`}>
+        <span className={`lc-dir-ring ${view.direction < 0 ? "ccw" : ""}`} aria-hidden="true" />
+        <span className={`lc-color-ring c-${view.color}`} aria-hidden="true" />
+        <ol className="lc-ring">
+          {seats.map((pid, k) => {
+            const count = view.counts[pid] ?? 0;
+            const on = pid === view.turn && view.phase === "play";
+            return (
+              <li
+                key={pid}
+                className={`lc-seat2 lc-pos-${n}-${k} ${on ? "on" : ""} ${pid === you && !tv ? "you" : ""}`}
               >
-                Catch {nameOf(view.players, pid)}!
-              </Btn>
-            )}
-            {view.vulnerable.includes(pid) && (tv || pid === you) && <span className="chip cherry">No call yet!</span>}
-          </li>
-        );
-      })}
-    </ul>
+                <span className={`lc-avatar tone-${view.order.indexOf(pid) % AVATAR_TONES}`} aria-hidden="true">
+                  {initials(nameOf(view.players, pid))}
+                </span>
+                <span className="lc-seat-who">
+                  {pid === you && !tv ? "You" : (nameOf(view.players, pid).split(/\s+/)[0] ?? "")}
+                </span>
+                <span className="sr-only">{nameOf(view.players, pid)}</span>
+                <span className="lc-seat-cards" aria-hidden="true">
+                  <span className="lc-fan">
+                    {Array.from({ length: Math.min(count, 6) }, (_, i) => (
+                      <i key={i} />
+                    ))}
+                  </span>
+                  <b>{count}</b>
+                </span>
+                <span className="sr-only">
+                  {`, ${count} ${count === 1 ? "card" : "cards"}`}
+                  {on ? ", their turn" : ""}
+                  {pid === next && view.phase === "play" ? ", next" : ""}
+                </span>
+                {pid === next && view.phase === "play" && !on && <span className="lc-next">next</span>}
+                {view.protected.includes(pid) && count === 1 && <span className="lc-badge">LAST CARD!</span>}
+                {view.vulnerable.includes(pid) && <span className="lc-badge warn">No call!</span>}
+              </li>
+            );
+          })}
+        </ol>
+        <div className="lc-middle">
+          <button
+            type="button"
+            className="lc-deck"
+            disabled={!myTurn || me?.drawn != null}
+            onClick={() => {
+              sfx.pop();
+              send({ t: "act", a: "draw" });
+            }}
+          >
+            <span className="lc-card back" aria-hidden="true">
+              <span className="lc-back-mark">LAST CARD</span>
+            </span>
+            <span className="lc-deck-label">
+              {myTurn && view.pending
+                ? `Take ${view.pending.n}`
+                : myTurn && me?.drawn == null
+                  ? "Draw"
+                  : `${view.deck}`}
+            </span>
+          </button>
+          <div className="lc-discard2" aria-live="polite">
+            {under.map((c, i) => (
+              <span key={i} className={`lc-under u${i}`} aria-hidden="true">
+                <Face card={c} />
+              </span>
+            ))}
+            <span key={view.top.id} className="lc-top">
+              <Face card={view.top} />
+            </span>
+            <span className="sr-only">
+              Top card: {cardName(view.top)}. Colour to match: {COLOR_NAME[view.color]}. Play goes{" "}
+              {view.direction < 0 ? "anticlockwise" : "clockwise"}.
+            </span>
+          </div>
+        </div>
+        {fx.map((f) =>
+          f.seat < 0 ? null : f.kind === "play" && f.card ? (
+            <span key={f.id} className={`lc-fly to-pile lc-from-${n}-${f.seat}`} aria-hidden="true">
+              <Face card={f.card} />
+            </span>
+          ) : f.kind === "draw" ? (
+            <span key={f.id} className={`lc-fly to-seat lc-from-${n}-${f.seat}`} aria-hidden="true">
+              <span className="lc-card back">
+                <span className="lc-back-mark">LAST CARD</span>
+              </span>
+              {f.n && f.n > 1 ? <b className="lc-fly-n">+{f.n}</b> : null}
+            </span>
+          ) : f.kind === "skip" ? (
+            <span key={f.id} className={`lc-stamp lc-pos-${n}-${f.seat}`} aria-hidden="true">
+              ⊘
+            </span>
+          ) : (
+            <span key={f.id} className={`lc-stamp burst lc-pos-${n}-${f.seat}`} aria-hidden="true">
+              +{f.n}
+            </span>
+          ),
+        )}
+      </div>
+      {view.pending && (
+        <p className="lc-pending" role="status">
+          {view.pending.kind === "wild4" ? "Wild Draw Four" : "Draw Two"}: {nameOf(view.players, view.turn ?? "")} takes{" "}
+          {view.pending.n}
+          {view.stacking ? " unless they stack" : ""}
+        </p>
+      )}
+      {catchable.length > 0 && (
+        <div className="lc-catches">
+          {catchable.map((pid) => (
+            <Btn
+              key={pid}
+              size="small"
+              variant="danger"
+              onClick={() => {
+                sfx.buzz();
+                send({ t: "act", a: "catch", target: pid });
+              }}
+            >
+              Catch {nameOf(view.players, pid)}!
+            </Btn>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -305,7 +443,9 @@ function logLine(e: LcLog, who: (id: string) => string): string | null {
   switch (e.type) {
     case "play": {
       const c = { color: e.base, value: e.value };
-      return c.color === "wild" ? `${who(e.player)} played ${cardName(c)} → ${COLOR_NAME[e.color]}` : `${who(e.player)} played ${cardName(c)}`;
+      return c.color === "wild"
+        ? `${who(e.player)} played ${cardName(c)} → ${COLOR_NAME[e.color]}`
+        : `${who(e.player)} played ${cardName(c)}`;
     }
     case "draw":
       return e.reason === "draw" ? `${who(e.player)} drew a card` : `${who(e.player)} picked up ${e.n}`;

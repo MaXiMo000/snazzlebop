@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Btn, Card, ShowHead, nameOf } from "../components/ui";
-import { useOnChange, useShow } from "../components/fx";
+import { useOnChange, useReducedMotion, useShow } from "../components/fx";
 import { Select } from "../components/Select";
 import { useCountdown } from "../lib/useRoom";
 import { sfx } from "../lib/sfx";
@@ -133,24 +133,109 @@ const SHORT: Record<string, string> = {
 };
 const KIND_ICON: Record<string, string> = { station: "🚂", utility: "💡", chance: "❓", fund: "💰", tax: "🧾" };
 
+/** Tokens walk the board square by square (back a few for "go back 3"; straight to jail when sent). */
+function useHops(view: TycoonView): Record<string, number> {
+  const reduced = useReducedMotion();
+  const target = view.pos;
+  const key = JSON.stringify(target) + JSON.stringify(Object.keys(view.jail));
+  const [shown, setShown] = useState<Record<string, number>>(target);
+  useEffect(() => {
+    if (reduced) {
+      setShown(target);
+      return;
+    }
+    const step = () =>
+      setShown((prev) => {
+        const next: Record<string, number> = {};
+        let changed = false;
+        let far = false;
+        for (const [pid, want] of Object.entries(target)) {
+          const at = prev[pid] ?? want;
+          if (at === want) {
+            next[pid] = at;
+            continue;
+          }
+          changed = true;
+          const ahead = (want - at + 40) % 40;
+          if (pid in view.jail && want === 10 && ahead > 12)
+            next[pid] = want; // straight to jail
+          else if (40 - ahead <= 3)
+            next[pid] = (at + 39) % 40; // "go back 3 spaces"
+          else {
+            next[pid] = (at + 1) % 40;
+            far ||= ahead > 12;
+          }
+        }
+        if (changed) sfx.hop();
+        if (!changed) window.clearInterval(id);
+        if (far !== fast) {
+          fast = far;
+          window.clearInterval(id);
+          id = window.setInterval(step, far ? 60 : 150);
+        }
+        return changed ? next : prev;
+      });
+    let fast = false;
+    let id = window.setInterval(step, 150);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, reduced]);
+  return shown;
+}
+
+/** Rent someone would pay on this square right now (for the spotlight). */
+function rentNow(view: TycoonView, sq: number, t: ReturnType<typeof useTycoon>): string {
+  const sp = view.board[sq]!;
+  const who = t.owner(sq);
+  if (!who) return "";
+  if (t.mortgaged.has(sq)) return "Mortgaged: no rent";
+  if (sp.kind === "street" && sp.rents) {
+    const level = t.houses(sq);
+    if (level) return `Rent ${money(sp.rents[level]!)}`;
+    const full = (t.groups[sp.group ?? ""] ?? []).every((s) => t.owner(s) === who);
+    return `Rent ${money(sp.rents[0]! * (full ? 2 : 1))}${full ? " (full set)" : ""}`;
+  }
+  if (sp.kind === "station") {
+    const n = [5, 15, 25, 35].filter((s) => t.owner(s) === who).length;
+    return `Rent ${money(25 * 2 ** (n - 1))}`;
+  }
+  const both = [12, 28].every((s) => t.owner(s) === who);
+  return `Rent ${both ? 10 : 4}x the dice`;
+}
+
 function Board({ view, you }: { view: TycoonView; you: string }) {
   const t = useTycoon(view, you);
-  const last = [...view.log].reverse().find((e) => e.type === "card" || e.type === "roll");
+  const shown = useHops(view);
+  const [picked, setPicked] = useState<number | null>(null);
+  useEffect(() => {
+    if (picked === null) return;
+    const id = window.setTimeout(() => setPicked(null), 6000);
+    return () => window.clearTimeout(id);
+  }, [picked]);
+  const last = [...view.log].reverse().find((e) => describe(e, view, t.name));
+  const mover = view.current;
+  const spot = picked ?? view.offer ?? view.auction?.square ?? (mover ? (shown[mover] ?? view.pos[mover]) : 0) ?? 0;
+  const sp = view.board[spot]!;
+  const owner = t.owner(spot);
+  const settled = mover ? shown[mover] === view.pos[mover] : true;
   return (
     <div className="ty-frame">
       <div className="ty-board" aria-hidden="true">
-        {view.board.map((sp, sq) => {
+        {view.board.map((square, sq) => {
           const who = t.owner(sq);
           const level = t.houses(sq);
-          const here = view.order.filter((p) => !view.out.includes(p) && view.pos[p] === sq);
+          const here = view.order.filter((p) => !view.out.includes(p) && (shown[p] ?? view.pos[p]) === sq);
           return (
             <div
               key={sq}
-              className={`ty-sq ty-at-${sq} ty-side-${side(sq)} ${sp.group ? `ty-g-${sp.group}` : ""} ${
+              className={`ty-sq ty-at-${sq} ty-side-${side(sq)} ${square.group ? `ty-g-${square.group}` : ""} ${
                 t.mortgaged.has(sq) ? "mortgaged" : ""
-              } ${who ? `owned ty-own-${t.seat(who)}` : ""} ${sq === view.offer || sq === view.auction?.square ? "lit" : ""}`}
+              } ${who ? `owned ty-own-${t.seat(who)}` : ""} ${sq === view.offer || sq === view.auction?.square ? "lit" : ""} ${
+                sq === picked ? "picked" : ""
+              }`}
+              onClick={() => setPicked(sq === picked ? null : sq)}
             >
-              {sp.kind === "street" && (
+              {square.kind === "street" && (
                 <span className="ty-band">
                   {level === 5 ? (
                     <i className="ty-hotel" />
@@ -163,22 +248,33 @@ function Board({ view, you }: { view: TycoonView; you: string }) {
                 <span className="ty-corner">{CORNER_ICON[sq]}</span>
               ) : (
                 <>
-                  {KIND_ICON[sp.kind] && <span className="ty-icon">{KIND_ICON[sp.kind]}</span>}
-                  <span className="ty-name">{SHORT[sp.name] ?? sp.name}</span>
+                  {KIND_ICON[square.kind] && <span className="ty-icon">{KIND_ICON[square.kind]}</span>}
+                  <span className="ty-name">{SHORT[square.name] ?? square.name}</span>
                 </>
               )}
               {here.length > 0 && (
                 <span className="ty-tokens">
                   {here.map((p) => (
-                    <i key={p} className={`ty-token ty-p${t.seat(p)} ${p === view.current ? "now" : ""}`} />
+                    <i
+                      key={p}
+                      className={`ty-token ty-p${t.seat(p)} ${p === mover ? "now" : ""} ${
+                        p === mover && settled ? "landed" : ""
+                      }`}
+                    />
                   ))}
                 </span>
               )}
             </div>
           );
         })}
+        {/* The middle of the board: the dice, the square in play (or the one you tapped), what just happened. */}
         <div className="ty-center">
-          <p className="ty-logo">Property Tycoon</p>
+          {mover && (
+            <p className="ty-turn">
+              <i className={`ty-token ty-p${t.seat(mover)}`} />{" "}
+              {mover === you ? "Your turn" : `${t.name(mover)}’s turn`}
+            </p>
+          )}
           {view.dice && (
             <div className="ty-dice">
               {view.dice.map((d, i) => (
@@ -190,7 +286,29 @@ function Board({ view, you }: { view: TycoonView; you: string }) {
               ))}
             </div>
           )}
-          {last?.type === "card" && <p className="ty-card-text">“{last.text}”</p>}
+          <div key={spot} className={`ty-spot ${sp.group ? `ty-g-${sp.group}` : ""} ${sp.kind}`}>
+            {sp.kind === "street" && <span className="ty-spot-band" />}
+            <p className="ty-spot-name">
+              {KIND_ICON[sp.kind] ?? ""} {sp.name}
+            </p>
+            {sp.price ? (
+              <p className="ty-spot-line">
+                {owner ? (
+                  <>
+                    <i className={`ty-token ty-p${t.seat(owner)}`} /> {owner === you ? "Yours" : t.name(owner)} ·{" "}
+                    {rentNow(view, spot, t)}
+                  </>
+                ) : (
+                  `For sale: ${money(sp.price)}`
+                )}
+              </p>
+            ) : sp.tax ? (
+              <p className="ty-spot-line">Pay {money(sp.tax)}</p>
+            ) : (
+              <p className="ty-spot-line">{SPOT_NOTE[sp.kind] ?? ""}</p>
+            )}
+          </div>
+          {last && <p className="ty-news">{describe(last, view, t.name)}</p>}
         </div>
       </div>
       <p className="sr-only">
@@ -203,6 +321,15 @@ function Board({ view, you }: { view: TycoonView; you: string }) {
     </div>
   );
 }
+
+const SPOT_NOTE: Record<string, string> = {
+  go: "Collect $200 as you pass",
+  jail: "Just visiting (or doing time)",
+  parking: "A free rest",
+  gotojail: "Straight to jail!",
+  chance: "Draw a Surprise card",
+  fund: "Draw a Community Fund card",
+};
 
 // -- what to do now -----------------------------------------------------------------------------------
 function Action({ view, you, send, playing }: { view: TycoonView; you: string; send: Send; playing: boolean }) {

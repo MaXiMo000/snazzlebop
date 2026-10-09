@@ -203,7 +203,6 @@ export function Sketch({
   ];
   const down = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!drawing || (e.pointerType === "mouse" && e.button !== 0)) return;
-    e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     flush();
     settle();
@@ -272,7 +271,29 @@ export interface PenProps {
   setSize: (s: number) => void;
 }
 
+/**
+ * Tool buttons act the moment a finger or mouse goes down. Phones sometimes never send the click for the
+ * first tap after a stroke (the button gets every touch and pointer event, then no click), which made a
+ * colour "not take" right after drawing. Keyboard presses (Enter/Space) still arrive as clicks; a click
+ * that follows a pointer press is ignored, so Undo and Clear never fire twice.
+ */
+export function usePress() {
+  const last = useRef(0);
+  return (fn: () => void) => ({
+    onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
+      if (e.button !== 0) return;
+      last.current = performance.now();
+      fn();
+    },
+    onClick: () => {
+      if (performance.now() - last.current < 800) return;
+      fn();
+    },
+  });
+}
+
 function Tools({ colour, size, setColour, setSize, tool }: PenProps & { tool: (op: "undo" | "clear") => void }) {
+  const press = usePress();
   return (
     <Card className="dg-tools">
       <div className="dg-swatches" role="group" aria-label="Colour">
@@ -284,7 +305,7 @@ function Tools({ colour, size, setColour, setSize, tool }: PenProps & { tool: (o
               className={`dg-swatch dg-c${i}`}
               aria-label={COLOUR_NAMES[i]}
               aria-pressed={colour === i}
-              onClick={() => setColour(i)}
+              {...press(() => setColour(i))}
             />
           ),
         )}
@@ -298,19 +319,19 @@ function Tools({ colour, size, setColour, setSize, tool }: PenProps & { tool: (o
               className="dg-size"
               aria-label={SIZE_NAMES[i]}
               aria-pressed={size === i}
-              onClick={() => setSize(i)}
+              {...press(() => setSize(i))}
             >
               <span className={`dg-dot dg-w${i}`} aria-hidden="true" />
             </button>
           ))}
         </div>
-        <button type="button" className="dg-tool" aria-pressed={colour === ERASER} onClick={() => setColour(ERASER)}>
+        <button type="button" className="dg-tool" aria-pressed={colour === ERASER} {...press(() => setColour(ERASER))}>
           <span aria-hidden="true">🧽</span> Eraser
         </button>
-        <button type="button" className="dg-tool" onClick={() => tool("undo")}>
+        <button type="button" className="dg-tool" {...press(() => tool("undo"))}>
           <span aria-hidden="true">↩</span> Undo
         </button>
-        <button type="button" className="dg-tool" onClick={() => tool("clear")}>
+        <button type="button" className="dg-tool" {...press(() => tool("clear"))}>
           <span aria-hidden="true">🗑</span> Clear
         </button>
       </div>

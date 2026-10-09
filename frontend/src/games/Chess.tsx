@@ -221,6 +221,7 @@ export function Chess({ view, you, receivedAt, send, tv = false }: Props) {
                   >
                     {col === 0 && <span className="cs-rank" aria-hidden="true">{Math.floor(i / 8) + 1}</span>}
                     {row === 7 && <span className="cs-file" aria-hidden="true">{FILES[i % 8]}</span>}
+                    {i === lastTo && last?.san.includes("x") && <span key={view.last} className="cs-hit" aria-hidden="true" />}
                     {code && <Piece key={moving ? view.last : i} code={code} className={moving ? `slide dx${slide.dx} dy${slide.dy}` : ""} />}
                   </button>
                 );

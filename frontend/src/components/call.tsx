@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { LocalVideoTrack, Participant, Room as LkRoom, Track } from "livekit-client";
 import { onCallPass, type CallPass } from "../lib/callPass";
+import { initials } from "./ui";
 
 type Send = (msg: Record<string, unknown>) => void;
 type Phase = "off" | "joining" | "live" | "error";
@@ -143,17 +144,6 @@ function people(): { p: Participant; local: boolean }[] {
     { p: room.localParticipant as Participant, local: true },
     ...[...room.remoteParticipants.values()].map((p) => ({ p: p as Participant, local: false })),
   ].filter(({ p }) => !p.identity.startsWith("tv:")); // TV screens watch; they aren't people in the call
-}
-
-function initials(name: string) {
-  return (
-    name
-      .split(/\s+/)
-      .map((w) => [...w][0] ?? "")
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "?"
-  );
 }
 
 function Tile({ p, local, tv, big }: { p: Participant; local: boolean; tv: boolean; big: boolean }) {

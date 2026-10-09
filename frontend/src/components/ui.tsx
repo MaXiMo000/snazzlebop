@@ -235,6 +235,17 @@ export function ThemeToggle() {
   );
 }
 
+/** Up to two initials for an avatar: "Ana Bo" -> "AB". */
+export function initials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .map((w) => [...w][0] ?? "")
+      .join("")
+      .slice(0, 2) || "?"
+  ).toUpperCase();
+}
+
 export function nameOf(players: { id: string; name: string }[], id: string): string {
   return players.find((p) => p.id === id)?.name ?? "?";
 }

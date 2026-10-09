@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Btn, Card, ShowHead, nameOf } from "../components/ui";
+import { Btn, Card, ShowHead, initials, nameOf } from "../components/ui";
 import { useOnChange, useReducedMotion, useShow } from "../components/fx";
-import { Drawing, ERASER, Sketch } from "../components/sketch";
+import { Drawing, ERASER, Sketch, usePress } from "../components/sketch";
 import { useCountdown } from "../lib/useRoom";
 import { sfx } from "../lib/sfx";
 import type { TelephoneView, TpPage } from "../types";
@@ -146,6 +146,7 @@ function TextTask({ view, send, receivedAt }: { view: TelephoneView; send: Send;
 
 function DrawTask({ view, send }: { view: TelephoneView; send: Send }) {
   const task = view.task!;
+  const press = usePress(); // the first tap after a stroke can lose its click on phones
   const [colour, setColour] = useState(0);
   const [size, setSize] = useState(1);
   useEffect(() => setColour((c) => (c === ERASER ? 0 : c)), [view.round]);
@@ -170,14 +171,14 @@ function DrawTask({ view, send }: { view: TelephoneView; send: Send }) {
           {task.done ? (
             <>
               <p className="lead">✅ Done! Waiting for the others…</p>
-              <Btn variant="ghost" className="space-top" onClick={() => send({ t: "act", a: "done", done: false })}>
+              <Btn variant="ghost" className="space-top" {...press(() => send({ t: "act", a: "done", done: false }))}>
                 ✏️ Keep drawing
               </Btn>
             </>
           ) : (
             <>
               <p className="muted">No letters or numbers!</p>
-              <Btn variant="go" size="big" className="space-top" onClick={() => send({ t: "act", a: "done" })}>
+              <Btn variant="go" size="big" className="space-top" {...press(() => send({ t: "act", a: "done" }))}>
                 I’m done ✓
               </Btn>
             </>
@@ -247,6 +248,8 @@ function Page({
   tv,
   where,
   replay,
+  tone,
+  fresh = false,
 }: {
   page: TpPage;
   players: TelephoneView["players"];
@@ -255,14 +258,21 @@ function Page({
   tv: boolean;
   where: { book: number; entry: number };
   replay: boolean;
+  tone: number;
+  fresh?: boolean;
 }) {
   const who = nameOf(players, page.by);
   const mine = page.by === you;
   const what = page.kind === "drawing" ? `${who}’s drawing` : `${who}’s words`;
   return (
-    <li className={`tp-page ${page.kind}`}>
+    <li className={`tp-page ${page.kind} ${where.entry % 2 ? "right" : "left"} ${fresh ? "fresh" : ""}`}>
       <p className="tp-who">
-        <b>{who}</b> {page.kind === "drawing" ? "drew" : where.entry === 0 ? "wrote" : "thought it was"}
+        <span className={`tp-avatar tone-${tone % 8}`} aria-hidden="true">
+          {initials(who)}
+        </span>
+        <span className="tp-who-text">
+          <b>{who}</b> {page.kind === "drawing" ? "drew" : where.entry === 0 ? "wrote" : "thought it was"}
+        </span>
       </p>
       {page.kind === "drawing" && page.drawing ? (
         <Drawing id={page.drawing} send={send} label={what} replay={replay} />
@@ -294,24 +304,35 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
   const album = view.album!;
   const reduced = useReducedMotion();
   const newest = useRef<HTMLDivElement>(null);
+  const n = view.order.length;
+  const done = album.entry === n - 1;
+  const first = album.pages[0];
+  const last = album.pages[album.pages.length - 1];
   useOnChange(album.pages.length, (prev, next) => {
     if (next > prev) sfx.pop();
+  });
+  useOnChange(done, (was, now) => {
+    if (now && !was) sfx.fanfare();
   });
   useEffect(() => {
     if (!tv) newest.current?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
   }, [album.pages.length, album.book, tv, reduced]);
   return (
-    <Card className="tp-album">
-      <h3>
-        {nameOf(view.players, album.owner)}’s book
-        {tv && (
-          <span className="muted tp-page-no">
-            {" "}
-            · page {album.entry + 1} of {view.order.length}
-          </span>
-        )}
-      </h3>
-      <ol className={`tp-pages ${tv ? "big" : ""}`}>
+    <Card className={`tp-album ${tv ? "big" : ""}`}>
+      <div className="tp-cover">
+        <span className={`tp-avatar big tone-${view.order.indexOf(album.owner) % 8}`} aria-hidden="true">
+          {initials(nameOf(view.players, album.owner))}
+        </span>
+        <div className="tp-cover-text">
+          <h3>{nameOf(view.players, album.owner)}’s book</h3>
+          <ol className="tp-dots" aria-label={`Page ${album.entry + 1} of ${n}`}>
+            {view.order.map((_, i) => (
+              <li key={i} className={i < album.entry ? "seen" : i === album.entry ? "now" : ""} />
+            ))}
+          </ol>
+        </div>
+      </div>
+      <ol className={`tp-pages tp-thread ${tv ? "big" : ""}`}>
         {album.pages
           .map((pg, i) => ({ pg, i }))
           .slice(tv ? -2 : 0)
@@ -325,9 +346,16 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
               tv={tv}
               where={{ book: album.book, entry: i }}
               replay={i === album.pages.length - 1}
+              tone={view.order.indexOf(pg.by)}
+              fresh={i === album.pages.length - 1}
             />
           ))}
       </ol>
+      {done && first?.kind === "text" && last?.kind === "text" && album.pages.length > 1 && (
+        <p className="tp-punch" role="status">
+          From <q>{first.text}</q> to <q>{last.text}</q>
+        </p>
+      )}
       <div ref={newest} />
     </Card>
   );
@@ -367,7 +395,7 @@ function Final({ view, you, send, tv }: { view: TelephoneView; you: string; send
           ))}
         </div>
         {shown && (
-          <ol className="tp-pages space-top">
+          <ol className="tp-pages tp-thread space-top">
             {shown.pages.map((pg, i) => (
               <Page
                 key={`${book}:${i}`}
@@ -378,6 +406,7 @@ function Final({ view, you, send, tv }: { view: TelephoneView; you: string; send
                 tv={tv}
                 where={{ book, entry: i }}
                 replay={false}
+                tone={view.order.indexOf(pg.by)}
               />
             ))}
           </ol>
