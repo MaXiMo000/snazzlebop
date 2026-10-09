@@ -1,7 +1,7 @@
 """The jump-scare prank: a private list of names (from the environment, never the repo) whose owners get a
 ghost and a scream when they join and when scores come up. Matching is deliberately forgiving: any
-capitalisation, accents, look-alike digits (Ea7y, 3azy), doubled letters (Rayyy) and one slip of a
-letter (Eazi, Elza), on any single word of the name.
+capitalisation, accents, look-alike digits (Z0ey, 7heo), doubled letters (Maxxx) and one slip of a
+letter (Zoei, Nyna), on any single word of the name.
 
 Pure functions only. Names are compared, never stored or logged.
 """
@@ -30,7 +30,7 @@ LEET = str.maketrans(
 
 def fold(text: str) -> str:
     """Lower-case letters only: accents dropped, look-alike digits turned back into letters, doubled
-    letters collapsed (so 'RAYYY' and 'Ray' meet)."""
+    letters collapsed (so 'MAXXX' and 'Max' meet)."""
     text = unicodedata.normalize("NFKD", unicodedata.normalize("NFKC", text)).casefold().translate(LEET)
     letters = "".join(ch for ch in text if ch.isalpha() and not unicodedata.combining(ch))
     return re.sub(r"(.)\1+", r"\1", letters)

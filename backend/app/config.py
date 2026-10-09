@@ -28,7 +28,7 @@ def normalize_database_url(url: str) -> str:
     return url
 
 
-JUMPSCARE_DEFAULT_NAMES = ("Ray", "Eazy", "Ana", "Leo", "Teng", "Sky", "Elsa")
+JUMPSCARE_DEFAULT_NAMES: tuple[str, ...] = ()  # names come only from JUMPSCARE_NAMES (never the repo)
 
 
 @dataclass(frozen=True)

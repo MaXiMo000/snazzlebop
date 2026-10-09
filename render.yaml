@@ -31,7 +31,7 @@ services:
           property: connectionString
       # Render's edge is Cloudflare, which overwrites cf-connecting-ip with the real client address
       # on every request. X-Forwarded-For there ends in a shared Cloudflare edge IP, so it must not
-      # be used for rate limits (verified live, see docs/SECURITY-EVIDENCE.md).
+      # be used for rate limits.
       - key: CLIENT_IP_HEADER
         value: cf-connecting-ip
       # Optional fresh content from Claude. Set the value in the Render dashboard; never in git.
@@ -44,8 +44,8 @@ services:
         sync: false
       - key: LIVEKIT_API_SECRET
         sync: false
-      # The jump-scare prank: on by default. JUMPSCARE=false in the dashboard turns it off;
-      # JUMPSCARE_NAMES (comma list) replaces the built-in names.
+      # The jump-scare prank: only the names in JUMPSCARE_NAMES (comma list, dashboard only) are
+      # pranked; with none set nobody is. JUMPSCARE=false turns it off entirely.
       - key: JUMPSCARE
         sync: false
       - key: JUMPSCARE_NAMES

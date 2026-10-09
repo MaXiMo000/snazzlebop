@@ -27,3 +27,9 @@ frontend/lighthouse/
 # keys and certs never belong here
 *.pem
 *.key
+
+# local notes, dev tools and AI-assistant instructions: never published
+.dev/
+CLAUDE.md
+CLAUDE.local.md
+.claude/

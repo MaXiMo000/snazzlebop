@@ -110,7 +110,7 @@ jobs:
       - name: Lighthouse gate (a11y / best practices / SEO >= 95, mobile + desktop)
         working-directory: frontend
         run: bash scripts/lighthouse.sh snazzlebop
-      - name: OWASP ZAP baseline (fails on any FAIL; informational warnings documented in SECURITY-EVIDENCE.md)
+      - name: OWASP ZAP baseline (fails on any FAIL)
         run: |
           docker run --rm --network host \
             ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \

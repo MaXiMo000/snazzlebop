@@ -9,7 +9,7 @@ from app.config import load_settings
 from tests.test_rooms import FakeConn, HubHarness
 from tests.test_show import finish
 
-LIST = ("Ray", "Eazy", "Ana", "Leo", "Teng", "Sky", "Elsa")
+LIST = ("Max", "Zoey", "Nina", "Theo", "Kai", "Iris", "Omar")
 
 
 class MatchTests(unittest.TestCase):
@@ -18,8 +18,8 @@ class MatchTests(unittest.TestCase):
 
     def test_variants_match(self):
         for name in (
-            "Ray", "ray", "RAY", "Rayyy", "Ray B", "Eazy", "eazy", "Ea7y", "3azy", "Eazi", "Easy", "EAZY🔥",
-            "ana", "Anna", "Leo", "le0", "Teng", "tenng", "Sky", "Skye", "Elsa", "Elza", "ÉLSA", "elsa_99",
+            "Max", "max", "MAX", "Maxxx", "Max B", "M4x", "Mex", "Zoey", "zoey", "Z0ey", "Zoeyy", "Zoei", "ZOEY🔥",
+            "nina", "N1na", "Ninna", "Nyna", "7heo", "Th3o", "Thea", "Kaii", "K4i", "1ris", "ÍRIS", "omar_99",
         ):  # fmt: skip
             self.assertTrue(prank.matches(name, self.want), name)
 
@@ -29,7 +29,7 @@ class MatchTests(unittest.TestCase):
             "Cy",
             "Maximo",
             "Sam",
-            "Raymond",
+            "Theodore",
             "Bob Rider",
             "Teddy",
             "Elephant",
@@ -39,18 +39,18 @@ class MatchTests(unittest.TestCase):
             self.assertFalse(prank.matches(name, self.want), name)
 
     def test_empty_list_matches_nobody(self):
-        self.assertFalse(prank.matches("Ray", ()))
+        self.assertFalse(prank.matches("Max", ()))
         self.assertEqual(prank.targets(()), ())
 
     def test_settings_switch(self):
-        s = load_settings({"JUMPSCARE": "on", "JUMPSCARE_NAMES": "Ray, Sky ,"})
-        self.assertEqual((s.jumpscare, s.jumpscare_names), (True, ("Ray", "Sky")))
-        on = load_settings({})  # on by default, with the built-in list
+        s = load_settings({"JUMPSCARE": "on", "JUMPSCARE_NAMES": "Max, Kai ,"})
+        self.assertEqual((s.jumpscare, s.jumpscare_names), (True, ("Max", "Kai")))
+        on = load_settings({})  # on by default, but no names ship with the code: nobody is pranked
         self.assertTrue(on.jumpscare)
-        self.assertIn("Eazy", on.jumpscare_names)
+        self.assertEqual(on.jumpscare_names, ())
         for off in ("false", "off", "0", "no", "FALSE"):
             self.assertFalse(load_settings({"JUMPSCARE": off}).jumpscare, off)
-        self.assertNotIn("Ray", repr(s))  # never in logs or reprs
+        self.assertNotIn("Max", repr(s))  # never in logs or reprs
 
 
 class ScareFlowTests(HubHarness):
@@ -62,7 +62,7 @@ class ScareFlowTests(HubHarness):
         room, host, _ = hub.create_room("Host")
         conns = {host.id: FakeConn()}
         await hub.connect(room, host.id, conns[host.id])
-        _, ray, _ = hub.join_room(room.code, "Ea7y")
+        _, ray, _ = hub.join_room(room.code, "Z0ey")
         _, bo, _ = hub.join_room(room.code, "Bo")
         for p in (ray, bo):
             conns[p.id] = FakeConn()
@@ -83,14 +83,14 @@ class ScareFlowTests(HubHarness):
     async def test_audience_members_too(self):
         hub = self.hub()
         room, host, _ = hub.create_room("Host")
-        _, fan, _ = hub.join_audience(room.code, "skye")
+        _, fan, _ = hub.join_audience(room.code, "irys")
         f = FakeConn()
         await hub.connect(room, fan.id, f)
         self.assertEqual(f.last["scare"], 1)
 
     async def test_off_switch(self):
         hub = self.hub(on=False)
-        room, host, _ = hub.create_room("Ray")
+        room, host, _ = hub.create_room("Max")
         c = FakeConn()
         await hub.connect(room, host.id, c)
         self.assertEqual(c.last["scare"], 0)

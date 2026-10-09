@@ -1,72 +1,80 @@
 # Snazzlebop!
 
-The party game show where your friends are the contestants. 1-8 players (plus an audience), one room code, no sign-up needed (optional accounts earn coins, stats,
-monthly seasons and power-ups).
-Put the show on a TV, play from your phones.
+The party game show where your friends are the contestants. 1-8 players plus an audience, one room
+code, no sign-up needed. Put the show on a TV and play from your phones.
 
 **Live:** https://snazzlebop.onrender.com
 
 ![Home page](docs/screenshots/home.png)
 
+## Games
+
+**Game-show games**, playable on their own or as a show night:
+
 | Game | Players | What happens |
 | --- | --- | --- |
-| **Frenemy Radar** | 3-8 | Secretly rank everyone (yourself too) on flattering traits; see your *blind spot*. Guess where the room puts you (mirror check). Finale: total frenemies, mutual fans, a shareable card. |
-| **Alibi** | 4-8 | A killer with a partly fake alibi hides among innocents. Grill each other, watch contradictions light up, one **Objection!** each, and the killer can plant one fake camera clue. Vote. |
-| **Price Is Weird** | 2-8 | Closest guess without going over wins, then the sealed chaos spin. Sabotage, a rigged round, price duels between items, and a 3-prize **Showcase** with double or nothing. |
-| **Telepathy Tax** | 3-8 | Score for every mind that matches yours, unless over half the room does (taxed!). Streak bonuses and a contrarian round. |
-| **Mole in the Mural** | 4-8 | Everyone knows the secret tile except the Mole (two Moles at 7-8). Hint by colour or kind, spot the bluffer; Moles get one sneaky hint **Switcheroo**. |
-| **Blackjack Showdown** | 1-8 | Solo or the whole room against the dealer: split, double, side bets on friends, a secret **Chaos hand**, and a knockout tournament mode. |
-| **Crossword Race** | 2-8 | A fresh grid every game. First right answer takes the clue; buy a private letter; or play in two teams. |
-| **Liar's Dice** | 2-8 | Secret dice, public bids on the whole table (ones wild). Raise, call **Liar!** or **Spot on!** Down to your last die? A **Palifico** round. Last one rolling wins. |
-| **Split or Steal** | 2-8 | Paired every round over a pot: both split, share; one steals, they take it; both steal, nobody does. Trash talk first, public records, and a **Golden Pot** finale with everyone in. |
-| **Chicken Run** | 2-8 | The pot climbs every second; cash out before the hidden bomb goes off. Buy insurance, or shorten a rival's fuse. |
-| **Wager Wits** | 2-8 | Answer a number question, then bet chips on whose answer is closest without going over. The last question is **all in**. |
-| **Code Crackers** | 2-8 | Hide a 4-fruit code, then race to crack everyone else's with Mastermind clues. Buy hints; arm a decoy. |
-| **Roulette Royale** | 3-8 | Bet on the wheel while one of you is secretly the House, winning what the table loses. The House can rig one spin; call an **audit**. |
-| **Lowest Lonely Number** | 2-8 | Everyone secretly picks 1-20; the lowest number nobody else picked takes the pot. Nobody lonely? It rolls over. |
-| **Codewords** (team game) | 4-8 | Red vs Blue over 25 words. Spymasters give one-word clues, guessers mark and reveal, and nobody touches the assassin. Played on its own from the lobby's Team games, not in show nights. |
-| **Mystery Box Auction** | 3-8 | Six sealed boxes (prizes, a dud, two bombs). You peeked inside one; bid live, bluff, and let a friend buy the bomb. |
+| **Frenemy Radar** | 3-8 | Secretly rank everyone on flattering traits, then see your blind spot. |
+| **Alibi** | 4-8 | A killer with a partly fake alibi hides among innocents. Question, object, vote. |
+| **Price Is Weird** | 2-8 | Closest without going over, a sealed chaos spin, sabotage and a Showcase finale. |
+| **Telepathy Tax** | 3-8 | Score for every mind that matches yours, unless too many do. |
+| **Mole in the Mural** | 4-8 | Everyone knows the secret tile except the Mole. Hint, bluff, catch them. |
+| **Blackjack Showdown** | 1-8 | The room against the dealer: side bets, a chaos hand and a tournament mode. |
+| **Crossword Race** | 2-8 | A fresh grid every game. Race solo or in teams; buy a private letter. |
+| **Liar's Dice** | 2-8 | Secret dice, public bids. Call "Liar!" or "Spot on!" |
+| **Split or Steal** | 2-8 | Pair up over a pot: split, steal, and a Golden Pot finale. |
+| **Chicken Run** | 2-8 | The pot climbs until a hidden bomb goes off. Cash out in time. |
+| **Wager Wits** | 2-8 | Answer a number question, then bet on whose guess is closest. |
+| **Code Crackers** | 2-8 | Hide a code, crack everyone else's with Mastermind clues. |
+| **Roulette Royale** | 3-8 | One of you is secretly the House. Rig a spin, or call an audit. |
+| **Lowest Lonely Number** | 2-8 | The lowest number nobody else picked takes the pot. |
+| **Mystery Box Auction** | 3-8 | Bid on sealed boxes. One is a prize, two are bombs. |
 
-**Show night.** Pick 2-6 games for one scoreboard: the host's one-liners after every game, a highlight
-reel and awards at the finale, an optional **Jackpot** finale (everyone wagers their score on higher or
-lower), and themed show packs. Also:
+**Classics**, with their original rules and our own names:
 
-- **Power cards:** one secret card each per show (Double Down, Shield, Steal 50, Peek), revealed at the
-  results.
-- **Rivals:** every game pairs the closest scores; beat yours for +50.
-- **Friend Stock Exchange** (optional): before every game everyone trades shares in each other (long or
-  short). Prices move with how people actually do, winners pay dividends, one player gets an insider
-  tip, and net worth turns into points at the end.
-- **Rematch:** rerun the lineup from the finale; a season table tracks shows won.
-- **Audience:** up to 30 more people react, predict winners, trade on the exchange and vote an MVP
-  (+50).
+| Game | Like | Players |
+| --- | --- | --- |
+| **Truth or Dare** | Truth or Dare | 2-8 |
+| **Word Race** | Wordle | 1-8 |
+| **Last Card** | Uno | 2-8 |
+| **Ludo** | Ludo | 2-8 |
+| **Chess** | Chess (clocks, consultation teams) | 2-8 |
+| **Draw & Guess** | Pictionary-style drawing (live canvas) | 2-8 |
+| **Draw Telephone** | The drawing telephone game | 3-8 |
+| **Property Tycoon** | The property-trading board game | 2-8 |
+| **Codewords** | Two-team word association | 4-8 |
+
+Many games have a **Teams** switch: two teams, combined scores, with official partner rules where the
+original has them.
+
+## Show nights and the room
+
+- **Show night:** pick 2-6 games for one scoreboard, with the host's one-liners, a highlight reel,
+  awards and an optional Jackpot finale.
+- **Extras:** secret power cards, rivals, and a Friend Stock Exchange where everyone trades shares in
+  each other.
+- **Audience:** up to 30 more people can react, predict winners, trade and vote an MVP.
+- **Chat:** an everyone channel plus a private team channel when there are teams.
+- **Voice and video calls:** optional, through LiveKit.
+- **TV mode:** a read-only big-screen view, with faces from the call and the latest chat.
+- **Optional accounts:** coins for top places, a power-up shop, stats and monthly seasons.
+- **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced
+  motion, keyboard play, screen readers and 4.5:1 contrast are supported.
 
 | Lobby | Blackjack | Crossword |
 | --- | --- | --- |
 | ![Lobby](docs/screenshots/lobby.png) | ![Blackjack](docs/screenshots/blackjack.png) | ![Crossword](docs/screenshots/crossword.png) |
 
-| Mole in the Mural (390 px) | Alibi (390 px) | TV mode |
+| Mole in the Mural (phone) | Alibi (phone) | TV mode |
 | --- | --- | --- |
 | ![Mural on a phone](docs/screenshots/mural-mobile.png) | ![Alibi on a phone](docs/screenshots/alibi-mobile.png) | ![TV mode](docs/screenshots/tv.png) |
 
-Every game opens with a short "how to play" screen that starts once everyone taps Ready, results
-screens move on as soon as everyone is ready, and the rules stay one tap away during play.
+## Tech
 
-Also: a dark theme by default ("after hours" neon studio) with a light toggle, TV mode (read-only big-screen view), host tools (rename the show, lock the room, remove a player),
-reconnect into the same seat, generated sound effects (off by default), reduced-motion support, and a web app manifest
-so phones can add it to the home screen (no service worker: the game needs a live connection anyway).
-
-**Content.** Every game deals from a large pool without repeats inside a room until the pool runs out.
-With `ANTHROPIC_API_KEY` set, the server also asks Claude for fresh items when a game starts, validates
-and de-duplicates them, stores them, and adds them to the pool. Without a key, or when the API is rate
-limited or down, games use the built-in pools as normal.
-
-Backend: FastAPI + WebSockets (Python 3.13). Frontend: Vite + React + TypeScript, hand-written CSS.
-One Docker service serves both from the same origin.
-
-- Developer guide and architecture rules: [CLAUDE.md](CLAUDE.md)
-- Threat model, controls, limits, launch checklist: [SECURITY.md](SECURITY.md)
-- What was actually tested and the results: [docs/SECURITY-EVIDENCE.md](docs/SECURITY-EVIDENCE.md)
+- **Backend:** FastAPI and WebSockets on Python 3.13. Game engines are pure Python and
+  server-authoritative.
+- **Frontend:** Vite, React and TypeScript, with hand-written CSS.
+- **Hosting:** one Docker service serves both from the same origin, with Postgres (or SQLite locally)
+  for accounts and room snapshots, so a restart or deploy doesn't end a game.
 
 ## Quick start
 
@@ -75,55 +83,60 @@ One Docker service serves both from the same origin.
 cd backend && python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 uvicorn app.main:create_app --factory --reload --port 8000
-# UI (new terminal)
+
+# UI (another terminal)
 cd frontend && npm install && npm run dev      # http://localhost:5173
 ```
 
-Or the production image: `docker build -t snazzlebop .` then run it with `ENV=production`,
-`SECRET_KEY`, `ALLOWED_HOSTS` and `ALLOWED_ORIGINS` (see [.env.example](.env.example)).
+Open the page in several browser windows (private windows count as different players).
+
+## Configuration
+
+Everything is read from the environment; [.env.example](.env.example) lists every setting with notes.
+
+| Setting | Needed | What it does |
+| --- | --- | --- |
+| `ENV` | yes in production | `production` turns on the strict checks and headers |
+| `SECRET_KEY` | yes in production | signs tokens and snapshots (long and random) |
+| `ALLOWED_HOSTS`, `ALLOWED_ORIGINS` | yes in production | your domain(s) |
+| `DATABASE_URL` | no | Postgres in production; SQLite by default |
+| `CLIENT_IP_HEADER` / `TRUSTED_PROXY_HOPS` | behind a proxy | how to find the client's IP for rate limits |
+| `ANTHROPIC_API_KEY` | no | grows the content pools with fresh, validated items |
+| `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | no | turns on voice and video calls |
+| `JUMPSCARE_NAMES` | no | a private, comma-separated list of friends to prank with a jump scare |
 
 ## Deploy
 
-1. Push this repo to GitHub.
-2. Render → **New → Blueprint** → pick the repo. [render.yaml](render.yaml) creates the web service
-   (Docker) and a private Postgres. `SECRET_KEY` is generated; host and origin allowlists come from
-   `RENDER_EXTERNAL_HOSTNAME`.
-3. Optional: in the service's Environment tab set `ANTHROPIC_API_KEY` for fresh content. It's a
-   dashboard secret and never goes in git.
-4. Walk the launch checklist in [SECURITY.md](SECURITY.md) against the live URL.
+1. Push the repo to GitHub.
+2. On Render, choose **New → Blueprint** and pick the repo. [render.yaml](render.yaml) creates the web
+   service and a Postgres database, generates `SECRET_KEY` and sets the host allowlists.
+3. Optional: in the service's **Environment** tab, add the optional settings above. They're
+   dashboard secrets and never go in git.
 
-render.yaml uses the Starter plan (always on). The free plan works too, but sleeps when idle and drops live rooms.
+Render sits behind Cloudflare, so `render.yaml` reads the client IP from `cf-connecting-ip`. On another
+host, set `CLIENT_IP_HEADER` or `TRUSTED_PROXY_HOPS` to match your proxy.
 
-### Client IP, Cloudflare and custom domains
+## Development
 
-Render already sits behind Cloudflare, so render.yaml sets `CLIENT_IP_HEADER=cf-connecting-ip`.
-Without it the app rate-limited on a shared Cloudflare edge address that clients could steer with a
-forged `X-Forwarded-For`. That was found on the live deploy and fixed (see
-[docs/SECURITY-EVIDENCE.md](docs/SECURITY-EVIDENCE.md)). For your own Cloudflare zone and custom
-domain, follow "Client IP and Cloudflare" in [SECURITY.md](SECURITY.md).
+```bash
+cd backend && pytest && ruff check . && ruff format --check . && bandit -q -r app -c pyproject.toml
+cd frontend && npm run typecheck && npm run build && npm run contrast
+cd frontend && npm run e2e                 # Playwright against a running container on :10000
+python scripts/simulate.py                 # bots play every game over real WebSockets
+```
 
-## What is verified, and what isn't
+CI runs all of this on every push, plus:
 
-Run locally on Windows 11 + Docker Desktop against the production image (details and output in
-[docs/SECURITY-EVIDENCE.md](docs/SECURITY-EVIDENCE.md)):
+- container, dependency and secret scans
+- CodeQL
+- Lighthouse
+- an OWASP ZAP baseline
+- an abuse and load suite
 
-- 349 backend tests (engines, `view_for` secrecy per game incl. TV spectators, rate limits, tokens,
-  middleware, config rules, content validation), ruff, bandit, pip-audit.
-- Simulator: bots play all twenty-four games over real WebSockets, scores are recomputed from the rules, and
-  no frame ever carries another player's secret.
-- Playwright on 390 px and desktop: 26 tests including axe, keyboard, TV mode, host tools, reconnect.
-- Locust abuse suite (rate limits, socket caps, oversize/flood closes, slow reader), OWASP ZAP
-  baseline, Lighthouse (home 100 a11y/best practices/SEO), colour contrast for every pair.
-- Image: Trivy CRITICAL/HIGH (fixable) clean, gitleaks over full history clean.
-- CI on GitHub Actions green (backend, frontend, docker incl. Trivy/simulator/Playwright/Lighthouse/ZAP,
-  abuse, gitleaks, CodeQL); every action pinned to a commit SHA, read-only default token.
+## Security
 
-**Not verified yet:**
+See [SECURITY.md](SECURITY.md) for how to report a vulnerability and how the app protects players.
 
-- Cloudflare: the edge steps are written from documented behaviour and the edge-secret check is tested
-  locally, but the hop count has not been checked through a real Cloudflare → Render chain.
+## License
 
-**Limits by design:** one instance with in-memory rooms (saved to Postgres after every change, so a restart or
-deploy resumes live games) and in-memory rate limits,
-anonymous play (many IPs can make many players), and no external security review or pen test. This is
-a strong, evidenced baseline, not a guarantee.
+[MIT](LICENSE)

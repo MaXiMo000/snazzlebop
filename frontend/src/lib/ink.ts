@@ -26,7 +26,7 @@ export function emitInk(frame: InkFrame) {
 }
 
 // Whole drawings sent on request (album pages, the drawing to describe): kept for the page's life.
-// ponytail: never evicted; a game holds at most 32 drawings.
+// Simplification: never evicted; a game holds at most 32 drawings.
 const finished = new Map<string, InkOp[]>();
 const drawingListeners = new Set<(id: string) => void>();
 export function drawingOps(id: string): InkOp[] | null {
