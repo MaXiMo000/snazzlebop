@@ -55,6 +55,23 @@ class ValidationTests(unittest.TestCase):
         for bad in ("ICE CREAM", "R2D2", "AB", "A" * 13, "café", 5, None, "ÉCLAIR"):
             self.assertIsNone(v_codeword(bad), bad)
 
+    def test_classics_kinds(self):
+        from app.contentgen import GAME_KINDS, v_dare, v_drawword, v_idea, v_truth
+
+        self.assertEqual(v_truth("What's your favourite cereal?"), "What's your favourite cereal?")
+        self.assertIsNone(v_truth("Sing a song."))  # a dare, not a truth
+        self.assertIsNone(v_truth("Have you ever been drunk at a party?"))  # the deny list
+        self.assertEqual(v_dare("Hop like a frog across the room."), "Hop like a frog across the room.")
+        self.assertIsNone(v_dare("What's your secret?"))
+        self.assertEqual(v_drawword(" Hot Air Balloon "), "hot air balloon")
+        for bad in ("a1", "four words are here", "x", "café au lait!"):
+            self.assertIsNone(v_drawword(bad), bad)
+        self.assertEqual(v_idea("A llama on a jet ski"), "A llama on a jet ski")
+        self.assertIsNone(v_idea("Draw a cat."))
+        self.assertEqual(len(GAME_KINDS["truthdare"]), 4)
+        for kind in (*GAME_KINDS["truthdare"], "drawword", "telephone"):
+            self.assertIn(kind, KINDS)
+
     def test_crossword_never_gives_the_answer_away(self):
         self.assertEqual(v_crossword({"word": "otter", "clue": "Playful river swimmer"})["word"], "OTTER")
         for bad in (

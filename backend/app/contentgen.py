@@ -332,7 +332,86 @@ KINDS["codewords"] = Kind(
     lambda x: x,
 )
 
-GAME_KINDS = {
+
+def v_truth(raw: Any) -> str | None:
+    s = _text(raw, 15, 110)
+    return s if s and s.endswith("?") else None
+
+
+def v_dare(raw: Any) -> str | None:
+    s = _text(raw, 15, 110)
+    return s if s and s.endswith(".") else None
+
+
+def v_drawword(raw: Any) -> str | None:
+    """Draw & Guess answers: lower-case words a friend could draw in a minute (1-3 words)."""
+    s = _text(raw, 3, 20, allow_digits=False)
+    if not s:
+        return None
+    s = s.lower()
+    return s if re.fullmatch(r"[a-z]+( [a-z]+){0,2}", s) else None
+
+
+def v_idea(raw: Any) -> str | None:
+    s = _text(raw, 10, 60)
+    return s if s and not s.endswith(("?", ".")) else None
+
+
+_TOD = (
+    "for a Truth or Dare party game between friends, read aloud to the whole group. {heat} Keep every "
+    "one kind: tease, never humiliate; nothing about bodies, weight, money, sexuality, religion or "
+    "anything that singles someone out; no alcohol, drugs, kissing or touching. "
+)
+_MILD = "Mild: family-friendly, silly and warm, fine for any group."
+_CHEEKY = (
+    "Cheeky: bolder and more embarrassing (crushes, cringe moments, phones and group chats), still never "
+    "rude or explicit, and every dare involving a phone lets the player keep private things private."
+)
+for _heat, _blurb in (("mild", _MILD), ("cheeky", _CHEEKY)):
+    KINDS[f"truth_{_heat}"] = Kind(
+        C.TOD_TRUTHS[_heat],
+        _key,
+        v_truth,
+        _S,
+        "truth questions "
+        + _TOD.format(heat=_blurb)
+        + "One question each, 15-110 characters, ending in '?'.",
+        lambda x: x,
+    )
+    KINDS[f"dare_{_heat}"] = Kind(
+        C.TOD_DARES[_heat],
+        _key,
+        v_dare,
+        _S,
+        "dares "
+        + _TOD.format(heat=_blurb)
+        + "Each must be safe to do right there in a living room in under a minute, with nothing that could "
+        "break or hurt. One dare each, 15-110 characters, ending in '.'.",
+        lambda x: x,
+    )
+
+KINDS["drawword"] = Kind(
+    C.DRAW_WORDS,
+    _key,
+    v_drawword,
+    _S,
+    "Draw & Guess answers (a Pictionary-style party game): concrete things a friend could draw in a minute "
+    "and others could guess: objects, animals, foods, places, jobs, simple actions. One to three lower-case "
+    "words, 3-20 letters, no proper names or brands. Mix easy and tricky.",
+    lambda x: x,
+)
+KINDS["telephone"] = Kind(
+    C.TELEPHONE_IDEAS,
+    _key,
+    v_idea,
+    _S,
+    "Draw Telephone starting sentences (a Gartic Phone-style game: the next player draws the sentence, "
+    "the next describes the drawing): silly, vivid, easy-to-draw scenes like 'A penguin with a jetpack'. "
+    "10-60 characters, no full stop, no names of real people or brands.",
+    lambda x: x,
+)
+
+GAME_KINDS: dict[str, str | tuple[str, ...]] = {
     "frenemy": "frenemy",
     "price": "price",
     "alibi": "alibi",
@@ -341,6 +420,9 @@ GAME_KINDS = {
     "crossword": "crossword",
     "wits": "wits",
     "codewords": "codewords",
+    "truthdare": ("truth_mild", "truth_cheeky", "dare_mild", "dare_cheeky"),
+    "drawguess": "drawword",
+    "telephone": "telephone",
 }
 
 SYSTEM = (
@@ -458,7 +540,8 @@ class ContentGenerator:
     def request(self, game_id: str, theme: str = "") -> None:
         """Called when a game starts (with the room's show pack, if any). Never blocks; quietly does
         nothing when not allowed. Every so often it tops up the host's one-liners instead."""
-        kind = GAME_KINDS.get(game_id)
+        kinds = GAME_KINDS.get(game_id)
+        kind = self.rng.choice(kinds) if isinstance(kinds, tuple) else kinds  # a game with several pools
         self.requests += 1
         if kind is not None and self.requests % QUIP_EVERY == 0:
             kind, theme = "quip", ""
