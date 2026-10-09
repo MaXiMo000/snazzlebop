@@ -6672,13 +6672,48 @@ b.team-name.team-1 {
   font-family: var(--display);
   font-size: 3.2cqw;
 }
-/* Small boards (phones): colours and icons only; the names live in the lists below. */
+/* Small boards (phones): one word per square, running along the square like the printed board. */
+.ty-name-s {
+  display: none;
+}
 @container (max-width: 599px) {
   .ty-name {
     display: none;
   }
+  .ty-name-s {
+    display: block;
+    margin: auto;
+    font-weight: 700;
+    padding: 0.5cqw;
+    font-size: 2.75cqw;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+  }
+  .ty-name-s.long {
+    font-size: 2.1cqw;
+    padding: 0;
+  }
+  .ty-side-b .ty-band,
+  .ty-side-t .ty-band {
+    height: 17%;
+  }
+  .ty-side-l .ty-band,
+  .ty-side-r .ty-band {
+    width: 17%;
+  }
+  .ty-name-s:empty {
+    display: none;
+  }
+  .ty-side-b .ty-name-s,
+  .ty-side-t .ty-name-s {
+    writing-mode: vertical-rl;
+  }
+  .ty-side-t .ty-name-s {
+    transform: rotate(180deg);
+  }
   .ty-icon {
     margin: auto;
+    font-size: 2cqw;
   }
 }
 .ty-sq.owned {

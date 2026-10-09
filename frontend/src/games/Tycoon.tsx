@@ -131,6 +131,9 @@ const SHORT: Record<string, string> = {
   "Marigold Avenue": "Marigold Ave",
   "Sunflower Street": "Sunflower St",
 };
+/** Phone boards: one word per square (the full name is on the card in the middle). */
+const TINY: Record<string, string> = { chance: "", fund: "", tax: "Tax" };
+const tiny = (sq: { kind: string; name: string }) => TINY[sq.kind] ?? sq.name.split(" ")[0]!;
 const KIND_ICON: Record<string, string> = { station: "🚂", utility: "💡", chance: "❓", fund: "💰", tax: "🧾" };
 
 /** Tokens walk the board square by square (back a few for "go back 3"; straight to jail when sent). */
@@ -250,6 +253,7 @@ function Board({ view, you }: { view: TycoonView; you: string }) {
                 <>
                   {KIND_ICON[square.kind] && <span className="ty-icon">{KIND_ICON[square.kind]}</span>}
                   <span className="ty-name">{SHORT[square.name] ?? square.name}</span>
+                  <span className={`ty-name-s ${tiny(square).length > 6 ? "long" : ""}`}>{tiny(square)}</span>
                 </>
               )}
               {here.length > 0 && (
