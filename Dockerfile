@@ -1,7 +1,5 @@
-# syntax=docker/dockerfile:1.7
-
 # ---- 1. build the frontend --------------------------------------------------
-FROM node:22-alpine AS web
+FROM public.ecr.aws/docker/library/node:22-alpine AS web
 WORKDIR /web
 COPY frontend/package*.json ./
 RUN npm ci --ignore-scripts
@@ -9,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # ---- 2. runtime: FastAPI serves the API, the WebSockets and the built SPA ---------
-FROM python:3.13-slim AS runtime
+FROM public.ecr.aws/docker/library/python:3.13-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \

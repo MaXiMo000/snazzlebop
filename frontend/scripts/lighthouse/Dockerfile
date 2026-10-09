@@ -1,6 +1,6 @@
 # Lighthouse in a box: Debian's Chromium + a pinned Lighthouse. Run it inside the app container's
 # network namespace (--network container:<app>) so the app is http://localhost, a secure context.
-FROM node:22-bookworm-slim
+FROM public.ecr.aws/docker/library/node:22-bookworm-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends chromium \
  && rm -rf /var/lib/apt/lists/* \

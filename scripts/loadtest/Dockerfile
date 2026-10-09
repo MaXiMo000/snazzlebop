@@ -1,6 +1,6 @@
 # Abuse-suite runner. Runs on the same Docker network as the app so the slow-reader test sees real
 # TCP backpressure (Docker Desktop's host port proxy would buffer on the client's behalf).
-FROM python:3.13-slim
+FROM public.ecr.aws/docker/library/python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /suite
 COPY requirements.txt .
