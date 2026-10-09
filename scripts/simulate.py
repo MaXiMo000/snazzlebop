@@ -135,6 +135,18 @@ for _phase in ("choose", "draw", "reveal", "final"):
         "scores",
         "history",
     }
+for _phase in ("write", "draw", "describe", "album", "final"):
+    ALLOWED_KEYS[("telephone", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "order",
+        "seconds",
+        "done",
+        "task",
+        "ink",
+        "you",
+        "scores",
+        "album",
+        "books",
+    }
 for _phase in ("play", "reveal", "final"):
     ALLOWED_KEYS[("wordrace", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
         "hard",
@@ -1214,6 +1226,109 @@ async def play_drawguess(host: Bot, bots: list[Bot], rng: random.Random) -> None
     await all_until(bots, phase_is("final"), "drawguess over")
 
 
+async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Every step, each bot works from the page the previous player made: the sentence to draw must be
+    exactly what they wrote, the drawing to describe exactly what they drew (fetched by id). Nobody may
+    receive a stroke while drawings are made, or see another book before the album. In the album the
+    bots like pages; the scores must equal 100 per like."""
+    by_id = {b.pid: b for b in bots}
+    order = host.state["game"]["order"]  # type: ignore[index]
+    n = len(order)
+    start = {b.pid: len(b.raw) for b in bots}
+    ink_start = {b.pid: len(b.ink) for b in bots}
+    made: dict[tuple[int, int], Any] = {}  # (book, step) -> text or drawing ops
+    for step in range(n):
+        phase = "write" if step == 0 else "draw" if step % 2 else "describe"
+        await all_until(bots, phase_is(phase), f"telephone {phase} {step}")
+        for j, pid in enumerate(order):
+            b = by_id[pid]
+            book = (j - step) % n
+            task = b.state["game"]["task"]  # type: ignore[index]
+            if step:
+                check(task["from"] == order[(j - 1) % n], "telephone: the page came from the wrong player")
+            if phase == "draw":
+                check(task["prompt"] == made[(book, step - 1)], f"telephone: {b.name} got the wrong sentence")
+                ops = [
+                    {
+                        "op": "line",
+                        "c": rng.randrange(14),
+                        "w": rng.randrange(4),
+                        "p": [rng.randrange(801), 300, 5, 5],
+                    },
+                    {"op": "more", "p": [rng.randrange(801), rng.randrange(601)] * 5},
+                ]
+                for op in ops:
+                    await b.send(t="ink", **op)
+                made[(book, step)] = ops
+                await b.send(t="act", a="done")
+            else:
+                if phase == "describe":
+                    drawing = task["drawing"]
+                    await b.send(t="inksync", id=drawing)
+
+                    def got(_st: dict[str, Any], b: Bot = b, d: str = drawing) -> bool:
+                        return any(f.get("id") == d and f.get("full") for f in b.ink)
+
+                    await b.until(got, "telephone drawing")
+                    frame = next(f for f in reversed(b.ink) if f.get("id") == drawing and f.get("full"))
+                    check(
+                        frame["ops"] == made[(book, step - 1)], f"telephone: {b.name} got the wrong drawing"
+                    )
+                text = f"{'start' if step == 0 else 'saw'} {rng.randrange(10**6)} by {b.name}"
+                made[(book, step)] = text
+                await b.send(t="act", a="text", text=text)
+    await all_until(bots, phase_is("album"), "telephone album")
+    for b in bots:
+        relayed = [f for f in b.ink[ink_start[b.pid] :] if not f.get("full")]
+        check(not relayed, f"telephone: {b.name} received someone's strokes while they drew")
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "telephone" or gg.get("phase") not in ("write", "draw", "describe"):
+                continue
+            mine = gg["task"] or {}
+            for (_book, _step), page in made.items():
+                if isinstance(page, str) and page not in (mine.get("prompt"), mine.get("text")):
+                    check(page not in raw, f"telephone: {b.name} saw a page of another book")
+    # The album: every page, in order; bots like a few (never their own).
+    likes: dict[str, int] = dict.fromkeys(order, 0)
+    for book in range(n):
+        for entry in range(n):
+            await host.until(
+                lambda st, bk=book, e=entry: (
+                    (st["game"].get("album") or {}).get("book") == bk and st["game"]["album"]["entry"] == e
+                ),
+                "telephone page",
+            )
+            page = host.state["game"]["album"]["pages"][entry]  # type: ignore[index]
+            want = made[(book, entry)]
+            if isinstance(want, str):
+                check(page["text"] == want, "telephone: the album shows the wrong words")
+            fans = [b for b in bots if b.pid != page["by"] and rng.random() < 0.4]
+            for b in fans:
+                await b.send(t="act", a="like", book=book, entry=entry)
+            likes[page["by"]] += len(fans)
+            await host.until(
+                lambda st, e=entry, k=len(fans): st["game"]["album"]["pages"][e]["likes"] == k,
+                "telephone likes",
+            )
+            await skip(host)
+    await all_until(bots, phase_is("final"), "telephone over")
+    got = host.state["game"]["books"]  # type: ignore[index]
+    total = {p: 0 for p in order}
+    for bk in got:
+        for pg in bk["pages"]:
+            total[pg["by"]] += pg["likes"]
+    check(total == likes, f"telephone: likes {total} != sent {likes}")
+
+
+def telephone_points(books: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    out = dict.fromkeys(ids, 0)
+    for bk in books:
+        for pg in bk["pages"]:
+            out[pg["by"]] += 100 * pg["likes"]
+    return out
+
+
 def drawguess_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
     out = dict.fromkeys(ids, 0)
     for h in history:
@@ -1875,6 +1990,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "ludo",
             "chess",
             "drawguess",
+            "telephone",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -1885,6 +2001,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 "truthdare-pairs",
                 "chess-pairs",
                 "drawguess-pairs",
+                "telephone-pairs",
             ]  # the Teams switch
         if len(bots) == 4:
             games.append("ludo-pairs")  # Ludo teams are exactly 2 v 2
@@ -1955,6 +2072,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_chess(host, bots, rng)
             elif game == "drawguess":
                 await play_drawguess(host, bots, rng)
+            elif game == "telephone":
+                await play_telephone(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1993,6 +2112,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                     sum(1 for p in want.values() if p >= 500) >= 1,
                     "ludo: nobody got the win bonus",
                 )
+            elif game == "telephone":
+                want = telephone_points(host.state["game"]["books"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"telephone: scores {got} != the likes' points {want}")
             elif game == "drawguess":
                 want = drawguess_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

@@ -142,6 +142,9 @@ const pairs = [
   ["#ffffff", "#c2185b", "Draw & Guess segment"],
   ["plum", "#fbd5e5", "Draw & Guess soft cards"],
   ["plum-soft", "#fbd5e5", "muted in Draw & Guess soft"],
+  ["#ffffff", "#1d6fa5", "Draw Telephone segment, liked pages"],
+  ["plum", "#d4e8f5", "Draw Telephone soft cards"],
+  ["plum-soft", "#d4e8f5", "muted in Draw Telephone soft"],
   ["plum", "tangerine", "Team Tangerine chips and labels"],
   ["#ffffff", "teal", "Team Teal chips and labels"],
   ["#ff8f5c", "#221530", "Team Tangerine name (dark cards)"],
@@ -169,7 +172,7 @@ const mix = (a, b, t) => {
   const ch = (h, i) => parseInt(h.slice(i, i + 2), 16);
   return "#" + [1, 3, 5].map((i) => Math.round(ch(x, i) * t + ch(y, i) * (1 - t)).toString(16).padStart(2, "0")).join("");
 };
-const accents = ["cherry", "teal", "mustard", "tangerine", "#0b6e4f", "#0f5a73", "#11643f", "#14532d", "#1f5fae", "#3d4fa3", "#5b2f9e", "#5c4a1f", "#7a1f3d", "#8a3b12", "#8c2f39", "#a3195b", "#b34700", "#127a3e", "#f2b705", "#1f4e45", "#c2185b"];
+const accents = ["cherry", "teal", "mustard", "tangerine", "#0b6e4f", "#0f5a73", "#11643f", "#14532d", "#1f5fae", "#3d4fa3", "#5b2f9e", "#5c4a1f", "#7a1f3d", "#8a3b12", "#8c2f39", "#a3195b", "#b34700", "#127a3e", "#f2b705", "#1f4e45", "#c2185b", "#1d6fa5"];
 pairs.push(
   ["ink", "bg", "dark: body text"],
   ["ink", "surface", "dark: cards"],

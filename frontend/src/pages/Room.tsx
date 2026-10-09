@@ -30,6 +30,7 @@ import { Codewords } from "../games/Codewords";
 import { TruthDare } from "../games/TruthDare";
 import { WordRace } from "../games/WordRace";
 import { DrawGuess } from "../games/DrawGuess";
+import { Telephone } from "../games/Telephone";
 import { LastCard } from "../games/LastCard";
 import { Ludo } from "../games/Ludo";
 import { Chess } from "../games/Chess";
@@ -356,6 +357,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Chess view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "drawguess":
       return <DrawGuess view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "telephone":
+      return <Telephone view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -371,8 +374,12 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
       .then(setSession)
       .catch((e: unknown) => setError(e instanceof ApiError ? e.message : "Something went wrong"));
   }, [code]);
-  const { state, receivedAt, status } = useRoom(code, session?.token ?? null);
+  const { state, receivedAt, status, send } = useRoom(code, session?.token ?? null);
   const noop = () => undefined;
+  // The TV only watches, but it may ask for a drawing (a reconnect mid-drawing, an album page).
+  const watch = (msg: Record<string, unknown>) => {
+    if (msg.t === "inksync") send(msg);
+  };
   useScrollToTopOn(`${state?.room.phase}:${state?.stage}:${state?.intro?.game ?? ""}`);
 
   if (error || status === "closed" || status === "lost" || status === "kicked") {
@@ -443,7 +450,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
         <div className="tv-split">
           <div className="stack">
             <TeamBadge state={state} tv />
-            <GameRouter state={state} receivedAt={receivedAt} send={noop} />
+            <GameRouter state={state} receivedAt={receivedAt} send={watch} />
             {phase === "game" && <CardsDown state={state} />}
             {phase === "results" && (
               <>
@@ -616,6 +623,8 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
     "80": "80 seconds to draw",
     "60": "60 seconds (quick)",
     "100": "100 seconds (relaxed)",
+    "90": "90 seconds to draw",
+    "120": "2 minutes (relaxed)",
   },
   pace: {
     relaxed: "Relaxed (2½ min clues, 3 min guessing)",

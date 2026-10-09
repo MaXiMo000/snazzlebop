@@ -62,7 +62,7 @@ class SwitchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(room.phase, "lobby")
         self.assertEqual(
             {g for g, cls in REGISTRY.items() if cls.TEAMS},
-            {"ludo", "truthdare", "lastcard", "blackjack", "chess", "drawguess"},
+            {"ludo", "truthdare", "lastcard", "blackjack", "chess", "drawguess", "telephone"},
         )
 
     async def test_the_intro_shows_two_even_teams_and_the_host_can_shuffle(self):

@@ -836,16 +836,30 @@ class Hub:
 
     @staticmethod
     def _ink_frames(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Consecutive strokes on one canvas share a frame: {"t": "ink", "id", "n": first, "ops"}."""
+        """Consecutive strokes on one canvas share a frame: {"t": "ink", "id", "n": first, "ops"}. A whole
+        drawing sent on request is marked "full" (an empty one has no ops)."""
         frames: list[dict[str, Any]] = []
         for it in items:
             last = frames[-1] if frames else None
             if "resync" in it:
                 frames.append({"t": "ink", "resync": True})
-            elif last and last.get("id") == it["id"] and last["n"] + len(last["ops"]) == it["n"]:
+            elif (
+                last
+                and last.get("id") == it["id"]
+                and last["n"] + len(last["ops"]) == it["n"]
+                and it.get("full") == last.get("full")
+            ):
                 last["ops"].append(it["op"])
             else:
-                frames.append({"t": "ink", "id": it["id"], "n": it["n"], "ops": [it["op"]]})
+                frame = {
+                    "t": "ink",
+                    "id": it["id"],
+                    "n": it["n"],
+                    "ops": [] if it.get("empty") else [it["op"]],
+                }
+                if it.get("full") or it.get("empty"):
+                    frame["full"] = True
+                frames.append(frame)
         return frames
 
     async def _drain(self, room: Room, pid: str, conn: Connection) -> None:
@@ -896,7 +910,7 @@ class Hub:
         if pid in room.viewers:
             # TV screens only watch: no actions, and their keep-alive pings don't keep a room alive.
             if kind == "inksync":
-                return self._ink_sync(room, pid, conn)
+                return self._ink_sync(room, pid, conn, msg)
             if kind != "ping":
                 await self.send_error(conn, "read_only", "TV mode is read-only")
             return
@@ -907,7 +921,7 @@ class Hub:
             return
         try:
             if kind == "inksync":
-                return self._ink_sync(room, pid, conn)
+                return self._ink_sync(room, pid, conn, msg)
             if kind == "ink":
                 return await self._ink(room, pid, conn, msg)
             if kind == "boost":
@@ -920,27 +934,44 @@ class Hub:
         except (GameError, HubError) as exc:
             await self.send_error(conn, exc.code, exc.message)
 
+    # Drawing games expose: ink(pid, msg) -> the canvas the stroke went on; canvas_for(pid) -> the live
+    # canvas a screen shows (strokes are relayed only to screens showing that canvas, so a secret drawing
+    # stays secret); and optionally drawing(pid, id) -> a finished drawing that screen may look at.
     async def _ink(self, room: Room, pid: str, conn: Connection, msg: dict[str, Any]) -> None:
-        """A pen stroke from the artist: checked by the game, then relayed to every other screen."""
+        """A pen stroke from the artist: checked by the game, then relayed to the screens watching it."""
         async with room.lock:
-            draw = getattr(room.game, "ink", None)
-            if room.phase != "game" or draw is None:
+            game = room.game
+            draw = getattr(game, "ink", None)
+            if room.phase != "game" or game is None or draw is None:
                 raise HubError("no_canvas", "Nothing to draw on")
             canvas = draw(pid, msg)
             item = {"id": canvas.id, "n": len(canvas.ops) - 1, "op": canvas.ops[-1]}
             for to, c in self._targets(room):
-                if c is not conn:
+                if c is not conn and game.canvas_for(to) is canvas:  # type: ignore[attr-defined]
                     self._post_ink(room, to, c, [item])
         self._persist(room)
         await asyncio.sleep(0)
 
-    def _ink_sync(self, room: Room, pid: str, conn: Connection) -> None:
-        """A screen that missed strokes (or just arrived) gets the whole drawing again."""
-        canvas = getattr(room.game, "canvas", None) if room.phase == "game" else None
+    def _ink_sync(self, room: Room, pid: str, conn: Connection, msg: dict[str, Any]) -> None:
+        """A screen that missed strokes (or just arrived) gets the whole drawing again; with an id, a
+        finished drawing it is allowed to see (e.g. a page of the Draw Telephone album)."""
+        game = room.game if room.phase == "game" else None
+        if game is None or not hasattr(game, "canvas_for"):
+            return
+        want = msg.get("id")
+        if want is None:
+            canvas = game.canvas_for(pid)
+        elif isinstance(want, str) and len(want) <= 16 and hasattr(game, "drawing"):
+            canvas = game.drawing(pid, want)
+        else:
+            return
         if canvas is None:
             return
         box, _ = self._box(room, pid, conn)
-        box["ink"] = [{"id": canvas.id, "n": i, "op": op} for i, op in enumerate(canvas.ops)]
+        full = [{"id": canvas.id, "n": i, "op": op, "full": True} for i, op in enumerate(canvas.ops)]
+        if not full:
+            full = [{"id": canvas.id, "n": 0, "empty": True}]
+        box["ink"] = [it for it in box["ink"] if it.get("id") != canvas.id] + full
 
     @staticmethod
     def _targets(room: Room) -> list[tuple[str, Connection]]:

@@ -23,8 +23,8 @@ screenshot gallery of every phase on several devices before pushing.
 | - | polish from the screenshot pass | - | done (`8a58606`) |
 | 4 | Ludo | Ludo | done (committed; push when the user says) |
 | 5 | Chess | Chess | done (committed; push when the user says) |
-| 6 | Draw & Guess | Scribble / skribbl / Pictionary | done (committed; push when the user says) |
-| 7 | Draw Telephone | Gartic Phone | **next** (reuses the Draw & Guess canvas: games/ink.py) |
+| 6 | Draw & Guess | Scribble / skribbl / Pictionary | done (pushed) |
+| 7 | Draw Telephone | Gartic Phone | done (committed; push when the user says) |
 | 8 | Property Tycoon | Monopoly | to do (biggest; party timer) |
 
 Screenshot gallery of the three done games (private to the user):
@@ -100,6 +100,19 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
   frames (a big catch-up appears at once); the pen reads coalesced pointer events. Measured with
   tools/ink_smoothness.cjs (viewer at 4x slower CPU: ~30 updates/s, no frame over 50 ms) and
   tools/ink_touch.cjs (finger drawing: the page doesn't scroll, the other screen gets the same line).
+- **Draw Telephone** (Gartic Phone rules): 3-8 players; everyone writes a sentence (45 s; the
+  suggested idea if they run out of time), then the books pass round: draw the sentence (60/90/120 s),
+  describe the drawing (40 s, "???" if empty; the screen auto-sends whatever is typed at 1 s), and so on
+  until every book has been through everyone. Then the album, page by page (5 s text / 9 s drawing, the
+  newest drawing replays like a time-lapse; Ready = "Next page" or the host skips), then the final books.
+  **Scoring is our addition** (Gartic has none): likes on anyone else's pages, 100 points each, during
+  the album and after. TEAMS = True. 143 starter ideas (TELEPHONE_IDEAS).
+- **Secret drawings**: the hub relays a stroke only to screens whose `game.canvas_for(pid)` is that
+  canvas (Telephone: only the artist; Draw & Guess: everyone). Finished drawings are fetched by id
+  (`{"t": "inksync", "id"}` -> `game.drawing(pid, id)` decides who may see it; the reply is marked
+  `full`); the client caches them (lib/ink.ts) and shows them with `<Drawing>` (components/sketch.tsx,
+  which also holds the live `<Sketch>` and its tools). Telephone drawings are capped at 20k points (a
+  room holds up to 32 and every change is snapshotted).
 - **Plans for the rest** (agreed in principle, not built):
   - Property Tycoon: our own board/space names and card text (no Monopoly text or art), full rules
     (buy, rent, sets, houses/hotels, mortgages, auctions, trading, jail, cards, bankruptcy) and a
@@ -151,6 +164,9 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
 18. **requestAnimationFrame + React StrictMode**: an unmount cleanup that cancels a pending frame must
     also reset the stored id, or every later "is a frame pending?" check skips forever (the canvas never
     painted). And a debounce timestamp must start at -Infinity: `performance.now()` is ~0 on a fresh page.
+20. **The TV screen passed a no-op `send` to every game**, so it could never ask for a drawing (album
+    pages stayed "Loading", and a TV reconnecting mid-drawing stayed blank). It now forwards only
+    `inksync`.
 19. **Drawing tools on laptops**: canvas + palette + tools didn't fit 768px, so the artist had to scroll.
     On wide screens the tools sit beside the canvas and the canvas is capped by the screen height.
 
@@ -174,7 +190,8 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
    (`--base http://localhost:8000 --only <id>`), then play it live at phone width with tools/drive.py,
    run axe in the page (load `/node_modules/axe-core/axe.min.js` via fetch + eval in the dev server)
    and the 44px target check, then the device gallery with tools/capture.cjs (extend it for the new game).
-   Smaller focused capture scripts live there too: drawguess_capture.cjs (draws, guesses, reloads
+   Smaller focused capture scripts live there too: telephone_capture.cjs (a whole game on 5 screens
+   + TV, an artist reloading mid-drawing), drawguess_capture.cjs (draws, guesses, reloads
    mid-drawing, checks the laptop fit), chess_capture.cjs, teams_capture.cjs (team mode),
    acct_capture.cjs (accounts/shop/coins; needs a bot room code), bj_capture.cjs (Blackjack on phones).
 8. Commit (attribution line from the session). Push only when the user asks.

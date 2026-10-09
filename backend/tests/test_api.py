@@ -93,6 +93,7 @@ def test_games_catalog(client):
         "ludo",
         "chess",
         "drawguess",
+        "telephone",
     }
 
 

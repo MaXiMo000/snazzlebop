@@ -179,6 +179,10 @@ class DrawGuess(Game):
         self.canvas.add(msg)
         return self.canvas
 
+    def canvas_for(self, pid: str) -> InkLog | None:
+        """Everyone (TV and audience too) watches the same drawing."""
+        return self.canvas
+
     # -- clocks ---------------------------------------------------------------------------------------
     def tick(self) -> None:
         if self.finished:

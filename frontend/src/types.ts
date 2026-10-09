@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone";
   title: string;
   blurb: string;
   min_players: number;
@@ -342,6 +342,7 @@ export type GameView =
   | TruthDareView
   | WordRaceView
   | DrawGuessView
+  | TelephoneView
   | LastCardView
   | LudoView
   | ChessView
@@ -892,6 +893,43 @@ export interface DrawGuessView extends GameBase {
   you: { drawer: boolean; guessed: boolean; playing: boolean };
   scores: Record<string, number>;
   history?: DgTurn[];
+}
+
+export interface TpPage {
+  by: string;
+  kind: "text" | "drawing";
+  text: string | null;
+  /** a finished drawing's id (fetch it with an "inksync" message) */
+  drawing: string | null;
+  likes: number;
+  liked: boolean;
+}
+export interface TelephoneView extends GameBase {
+  game: "telephone";
+  phase: "write" | "draw" | "describe" | "album" | "final";
+  players: { id: string; name: string }[];
+  order: string[];
+  seconds: number;
+  /** who has finished this step */
+  done: string[];
+  /** your job this step (players only) */
+  task: {
+    kind: "write" | "draw" | "describe";
+    done: boolean;
+    /** what you sent (you can change it until the step ends) */
+    text: string | null;
+    idea?: string;
+    /** whose page you're working from */
+    from?: string;
+    prompt?: string;
+    drawing?: string;
+  } | null;
+  /** your canvas while you draw */
+  ink: { id: string; count: number } | null;
+  you: { playing: boolean };
+  scores: Record<string, number>;
+  album?: { book: number; books: number; owner: string; entry: number; pages: TpPage[] };
+  books?: { owner: string; pages: TpPage[] }[];
 }
 
 export type LcColor = "red" | "yellow" | "green" | "blue";

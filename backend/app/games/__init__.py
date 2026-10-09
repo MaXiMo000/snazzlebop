@@ -20,6 +20,7 @@ from .price import PriceIsWeird
 from .roulette import RouletteRoyale
 from .split import SplitOrSteal
 from .telepathy import TelepathyTax
+from .telephone import DrawTelephone
 from .truthdare import TruthOrDare
 from .wits import WagerWits
 from .wordrace import WordRace
@@ -49,6 +50,7 @@ REGISTRY: dict[str, type[Game]] = {
         Ludo,
         Chess,
         DrawGuess,
+        DrawTelephone,
     )
 }
 

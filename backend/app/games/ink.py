@@ -28,7 +28,8 @@ MAX_POINTS = 60000
 
 
 class InkLog:
-    def __init__(self) -> None:
+    def __init__(self, max_points: int = MAX_POINTS) -> None:
+        self.max_points = max_points
         self.id = secrets.token_hex(4)  # a fresh canvas gets a fresh id (screens clear theirs)
         self.ops: list[dict[str, Any]] = []
         self.points = 0
@@ -37,7 +38,7 @@ class InkLog:
     def add(self, msg: dict[str, Any]) -> dict[str, Any]:
         """Validate one operation from the drawer and append it. Returns the stored operation."""
         kind = msg.get("op")
-        if len(self.ops) >= MAX_OPS or self.points >= MAX_POINTS:
+        if len(self.ops) >= MAX_OPS or self.points >= self.max_points:
             raise GameError("canvas_full", "The canvas is full: clear it to keep drawing")
         if kind == "line":
             c, w = msg.get("c"), msg.get("w")

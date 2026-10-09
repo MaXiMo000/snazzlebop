@@ -7,6 +7,8 @@ export interface InkFrame {
   n?: number;
   ops?: InkOp[];
   resync?: boolean;
+  /** the whole drawing, sent on request */
+  full?: boolean;
 }
 
 // Strokes come over the room's socket but never touch the room state: the canvas listens here.
@@ -16,7 +18,23 @@ export function onInk(fn: (f: InkFrame) => void): () => void {
   return () => void listeners.delete(fn);
 }
 export function emitInk(frame: InkFrame) {
+  if (frame.full && frame.id && frame.ops) {
+    finished.set(frame.id, frame.ops);
+    for (const fn of drawingListeners) fn(frame.id);
+  }
   for (const fn of listeners) fn(frame);
+}
+
+// Whole drawings sent on request (album pages, the drawing to describe): kept for the page's life.
+// ponytail: never evicted; a game holds at most 32 drawings.
+const finished = new Map<string, InkOp[]>();
+const drawingListeners = new Set<(id: string) => void>();
+export function drawingOps(id: string): InkOp[] | null {
+  return finished.get(id) ?? null;
+}
+export function onDrawing(fn: (id: string) => void): () => void {
+  drawingListeners.add(fn);
+  return () => void drawingListeners.delete(fn);
 }
 
 export const W = 800;

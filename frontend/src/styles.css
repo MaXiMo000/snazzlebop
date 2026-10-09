@@ -5972,3 +5972,205 @@ b.team-name.team-1 {
 .dg-c13 {
   background: #f2c39a;
 }
+
+/* ---- draw telephone ------------------------------------------------------------------------------------ */
+.seg-telephone {
+  --accent: #1d6fa5;
+  --accent-ink: #fff;
+  --accent-soft: #d4e8f5;
+}
+.dg-paper {
+  position: relative;
+}
+.dg-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+}
+/* The text box gets the whole width (an 80-character sentence), Done sits under it on the right. */
+.tp-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.tp-entry .btn {
+  white-space: nowrap;
+}
+.tp-input {
+  min-width: 0;
+  font-size: 1.1rem;
+}
+@media (max-width: 520px) {
+  .tp-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tp-entry .btn {
+    justify-self: end;
+  }
+}
+.tp-idea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+}
+.tp-idea p {
+  margin: 0;
+  text-wrap: balance;
+}
+.tp-tv-icon {
+  margin: 0;
+  font-size: 4rem;
+}
+.tp-tv-text {
+  margin: 8px 0;
+  font-family: var(--display);
+  font-size: clamp(1.4rem, 3vw, 2.6rem);
+  text-wrap: balance;
+}
+/* Wide screens: the sentence to draw sits beside the canvas, above the tools, so all of it fits. */
+@media (min-width: 900px) {
+  .dg-layout.tp-draw {
+    grid-template-rows: auto auto 1fr;
+  }
+  .tp-draw .dg-stage > * {
+    grid-row: 1 / span 3;
+  }
+  .tp-draw .dg-stage > .tp-prompt {
+    grid-column: 2;
+    grid-row: 1;
+    margin-bottom: 18px;
+  }
+  .tp-draw .dg-stage > .dg-tools {
+    grid-row: 2;
+  }
+  .tp-draw .dg-side {
+    grid-row: 3;
+  }
+}
+.tp-prompt-text {
+  margin: 10px 0 4px;
+  font-family: var(--display);
+  font-size: clamp(1.2rem, 4.5vw, 1.9rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.tp-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tp-people li {
+  padding: 6px 12px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tp-people li.done {
+  background: var(--teal-light);
+}
+.tp-progress.big {
+  font-size: 1.4rem;
+}
+.tp-pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  align-items: start;
+}
+.tp-page {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.tp-who {
+  margin: 0;
+}
+.tp-bubble {
+  margin: 0;
+  padding: 14px 16px;
+  border: 3px solid var(--edge);
+  border-radius: 18px 18px 18px 4px;
+  background: var(--field);
+  font-size: 1.15rem;
+  font-weight: 700;
+  overflow-wrap: anywhere; /* typed text can be anything */
+}
+.tp-like-row {
+  display: flex;
+  justify-content: flex-end;
+}
+.tp-like,
+.tp-tab {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 3px solid var(--edge);
+  border-radius: 999px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tp-like[aria-pressed="true"],
+.tp-tab[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.tp-like:focus-visible,
+.tp-tab:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.tp-likes {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+}
+.tp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.tp-final {
+  display: grid;
+  gap: 18px;
+}
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-telephone) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* TV album: the newest two pages side by side, as big as a 1080p screen allows */
+  .tv .tp-pages.big {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    font-size: 1.3rem;
+  }
+  .tv .tp-pages.big > .tp-page {
+    width: 100%;
+    max-width: calc((100svh - 470px) * 4 / 3);
+    justify-self: center;
+  }
+  .tv .tp-final {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+}
+@media (min-width: 1100px) {
+  .tv .tp-pages.big .tp-bubble {
+    font-size: 2.2rem;
+    text-wrap: balance;
+  }
+}

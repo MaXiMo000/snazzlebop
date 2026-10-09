@@ -96,6 +96,7 @@ const READY_LABEL: Record<string, string> = {
   ready: "Ready to run ▶",
   peek: "Seen it, bid ▶",
   teams: "Teams set, deal ▶",
+  album: "Next page ▶",
 };
 
 /** On results screens: everyone taps Ready to move on together instead of waiting for the clock. */
