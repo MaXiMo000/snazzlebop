@@ -94,7 +94,12 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
   and appends to an InkLog; the hub relays each op to every other screen through the mailbox's ordered
   ink queue (sent before the next snapshot, batched per canvas, >300 queued = "resync"). Snapshots carry
   only `{id, count}`; a screen with a different id or a smaller count sends `{"t": "inksync"}` and gets the
-  whole log (TV and audience may sync too). Client: lib/ink.ts (bus, palette, replay, paint).
+  whole log (TV and audience may sync too). Client: lib/ink.ts (bus, palette, replay, Painter).
+  Smoothness: strokes are drawn as curves through midpoints; finished strokes are cached offscreen
+  (each frame = one image copy + the stroke in progress); viewers play each 200 ms batch back over ~10
+  frames (a big catch-up appears at once); the pen reads coalesced pointer events. Measured with
+  tools/ink_smoothness.cjs (viewer at 4x slower CPU: ~30 updates/s, no frame over 50 ms) and
+  tools/ink_touch.cjs (finger drawing: the page doesn't scroll, the other screen gets the same line).
 - **Plans for the rest** (agreed in principle, not built):
   - Property Tycoon: our own board/space names and card text (no Monopoly text or art), full rules
     (buy, rent, sets, houses/hotels, mortgages, auctions, trading, jail, cards, bankruptcy) and a

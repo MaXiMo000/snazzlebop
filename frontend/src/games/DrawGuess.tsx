@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Btn, Card, ShowHead, nameList, nameOf } from "../components/ui";
 import { useOnChange, useShow } from "../components/fx";
-import { COLOURS, COLOUR_NAMES, H, SIZES, W, apply, onInk, paint, type Stroke } from "../lib/ink";
+import { COLOURS, COLOUR_NAMES, H, Painter, SIZES, W, apply, onInk, type Stroke } from "../lib/ink";
 import { sfx } from "../lib/sfx";
-import type { DrawGuessView } from "../types";
+import type { DrawGuessView, InkOp } from "../types";
 
 interface Props {
   view: DrawGuessView;
@@ -19,6 +19,8 @@ const SIZE_NAMES = ["Fine", "Medium", "Thick", "Huge"];
 const ERASER = 1; // the paper colour
 const FLUSH_MS = 200; // strokes go out in small batches (well under the socket's message rate)
 const MAX_NUMS = 120; // numbers per message, as the server allows
+const PLAYBACK_FRAMES = 10; // a received batch plays back over ~1/6 s (about one batch interval)
+const MAX_PLAYBACK = 1200; // numbers; beyond this (catching up) the drawing appears at once
 
 export function DrawGuess({ view, you, receivedAt, send, tv = false }: Props) {
   const show = useShow();
@@ -187,7 +189,9 @@ function Sketch({
   const { colour, size } = tools;
   const canvas = useRef<HTMLCanvasElement>(null);
   const strokes = useRef<Stroke[]>([]);
+  const painter = useRef<Painter | null>(null);
   const log = useRef({ id: "", n: 0 }); // the canvas we hold and how many operations of it
+  const backlog = useRef<InkOp[]>([]); // received strokes still being played back
   const frame = useRef(0);
   const lastSync = useRef(-Infinity); // performance.now() starts near 0 on a fresh page
   const pen = useRef<{
@@ -198,18 +202,49 @@ function Sketch({
     last: [number, number];
   } | null>(null);
 
-  // ponytail: a full repaint per animation frame; incremental drawing if very long drawings lag.
+  const draw = useCallback((op: InkOp) => {
+    apply(strokes.current, op);
+    if (op.op === "undo" || op.op === "clear") painter.current?.invalidate();
+  }, []);
+  const settle = useCallback(() => {
+    for (const op of backlog.current) draw(op);
+    backlog.current = [];
+  }, [draw]);
+  // Strokes from the artist arrive in batches (every 200 ms): play each batch back over the next few
+  // frames, so other screens see the line flow rather than jump.
+  const step = useCallback(() => {
+    const queue = backlog.current;
+    let left = 0;
+    for (const op of queue) left += "p" in op ? op.p.length : 2;
+    let budget = Math.max(2, Math.ceil(left / PLAYBACK_FRAMES / 2) * 2);
+    while (budget > 0 && queue.length) {
+      const op = queue[0]!;
+      if (!("p" in op) || op.p.length <= budget) {
+        draw(op);
+        queue.shift();
+        budget -= "p" in op ? op.p.length : 2;
+      } else {
+        draw({ ...op, p: op.p.slice(0, budget) });
+        queue[0] = { op: "more", p: op.p.slice(budget) };
+        budget = 0;
+      }
+    }
+  }, [draw]);
   const redraw = useCallback(() => {
     if (frame.current) return;
     frame.current = requestAnimationFrame(() => {
       frame.current = 0;
+      if (backlog.current.length) step();
       const ctx = canvas.current?.getContext("2d");
-      if (ctx) paint(ctx, strokes.current);
+      if (ctx) (painter.current ??= new Painter()).paint(ctx, strokes.current);
+      if (backlog.current.length) redraw();
     });
-  }, []);
+  }, [step]);
   const reset = useCallback(
     (id: string) => {
       strokes.current = [];
+      backlog.current = [];
+      painter.current?.invalidate();
       log.current = { id, n: 0 };
       redraw();
     },
@@ -239,15 +274,14 @@ function Sketch({
       if (w > 0 && w !== c.width) {
         c.width = w;
         c.height = Math.round((w * H) / W);
-        const ctx = c.getContext("2d");
-        if (ctx) paint(ctx, strokes.current);
+        redraw();
       }
     };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(c);
     return () => ro.disconnect();
-  }, []);
+  }, [redraw]);
 
   // Strokes from the server.
   useEffect(
@@ -259,11 +293,15 @@ function Sketch({
         else if (f.id !== log.current.id) return askSync();
         const skip = log.current.n - f.n;
         if (skip < 0) return askSync();
-        for (const op of f.ops.slice(skip)) apply(strokes.current, op);
         log.current.n = Math.max(log.current.n, f.n + f.ops.length);
+        backlog.current.push(...f.ops.slice(skip));
+        // A whole drawing (catching up) or a long backlog appears at once rather than replaying slowly.
+        let queued = 0;
+        for (const op of backlog.current) queued += "p" in op ? op.p.length : 2;
+        if (queued > MAX_PLAYBACK) settle();
         redraw();
       }),
-    [askSync, redraw, reset],
+    [askSync, redraw, reset, settle],
   );
 
   // Snapshots carry the canvas's id and length: a new canvas starts blank, a longer one means a gap.
@@ -298,17 +336,17 @@ function Sketch({
     };
   }, [drawing, flush]);
 
-  const at = (e: ReactPointerEvent<HTMLCanvasElement>): [number, number] => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - r.left) / r.width) * W);
-    const y = Math.round(((e.clientY - r.top) / r.height) * H);
-    return [Math.min(W, Math.max(0, x)), Math.min(H, Math.max(0, y))];
-  };
+  const at = (x: number, y: number, r: DOMRect): [number, number] => [
+    Math.min(W, Math.max(0, Math.round(((x - r.left) / r.width) * W))),
+    Math.min(H, Math.max(0, Math.round(((y - r.top) / r.height) * H))),
+  ];
   const down = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!drawing || (e.pointerType === "mouse" && e.button !== 0)) return;
+    e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     flush();
-    const pt = at(e);
+    settle();
+    const pt = at(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect());
     pen.current = { c: colour, w: size, sent: false, queue: [...pt], last: pt };
     strokes.current.push({ c: colour, w: size, p: [...pt] });
     redraw();
@@ -316,11 +354,18 @@ function Sketch({
   const move = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const p = pen.current;
     if (!drawing || !p || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
-    const pt = at(e);
-    if (Math.abs(pt[0] - p.last[0]) + Math.abs(pt[1] - p.last[1]) < 3) return;
-    p.last = pt;
-    p.queue.push(...pt);
-    strokes.current[strokes.current.length - 1]?.p.push(...pt);
+    const r = e.currentTarget.getBoundingClientRect();
+    // Every position the device reported since the last event, not just the latest: fast strokes keep
+    // their shape.
+    const events = e.nativeEvent.getCoalescedEvents?.() ?? [];
+    const stroke = strokes.current[strokes.current.length - 1];
+    for (const ev of events.length ? events : [e.nativeEvent]) {
+      const pt = at(ev.clientX, ev.clientY, r);
+      if (Math.abs(pt[0] - p.last[0]) + Math.abs(pt[1] - p.last[1]) < 3) continue;
+      p.last = pt;
+      p.queue.push(...pt);
+      stroke?.p.push(...pt);
+    }
     redraw();
   };
   const up = () => {
@@ -333,7 +378,8 @@ function Sketch({
     pen.current = null;
     send({ t: "ink", op });
     log.current.n += 1;
-    apply(strokes.current, { op });
+    settle();
+    draw({ op });
     redraw();
   };
 

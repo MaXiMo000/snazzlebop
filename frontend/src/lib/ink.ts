@@ -70,29 +70,73 @@ export function apply(strokes: Stroke[], op: InkOp): void {
   else strokes.length = 0;
 }
 
-export function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[]): void {
+/** One stroke, as a smooth curve through its points (quadratic pieces between midpoints). */
+function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke): void {
+  const colour = COLOURS[s.c] ?? COLOURS[0]!;
+  const size = SIZES[s.w] ?? SIZES[0]!;
+  const p = s.p;
+  if (p.length === 2) {
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.arc(p[0]!, p[1]!, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = size;
+  ctx.beginPath();
+  ctx.moveTo(p[0]!, p[1]!);
+  for (let i = 2; i < p.length - 2; i += 2) {
+    ctx.quadraticCurveTo(p[i]!, p[i + 1]!, (p[i]! + p[i + 2]!) / 2, (p[i + 1]! + p[i + 3]!) / 2);
+  }
+  ctx.lineTo(p[p.length - 2]!, p[p.length - 1]!);
+  ctx.stroke();
+}
+
+function prepare(ctx: CanvasRenderingContext2D, blank: boolean): void {
   const { width, height } = ctx.canvas;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = COLOURS[1]!;
-  ctx.fillRect(0, 0, width, height);
+  if (blank) {
+    ctx.fillStyle = COLOURS[1]!;
+    ctx.fillRect(0, 0, width, height);
+  }
   ctx.setTransform(width / W, 0, 0, height / H, 0, 0);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  for (const s of strokes) {
-    const colour = COLOURS[s.c] ?? COLOURS[0]!;
-    const size = SIZES[s.w] ?? SIZES[0]!;
-    if (s.p.length === 2) {
-      ctx.fillStyle = colour;
-      ctx.beginPath();
-      ctx.arc(s.p[0]!, s.p[1]!, size / 2, 0, Math.PI * 2);
-      ctx.fill();
-      continue;
+}
+
+/**
+ * Paints the strokes onto a canvas. Finished strokes (all but the last) are kept on an offscreen
+ * bitmap, so each frame costs one image copy plus the stroke being drawn, however big the drawing gets.
+ * Call `invalidate()` after an undo or clear (the finished strokes changed).
+ */
+export class Painter {
+  private cache = document.createElement("canvas");
+  private baked = -1; // how many strokes the cache holds (-1: rebuild)
+
+  invalidate(): void {
+    this.baked = -1;
+  }
+
+  paint(ctx: CanvasRenderingContext2D, strokes: Stroke[]): void {
+    const { width, height } = ctx.canvas;
+    const cache = this.cache.getContext("2d");
+    if (!cache) return;
+    if (this.cache.width !== width || this.cache.height !== height) {
+      this.cache.width = width;
+      this.cache.height = height;
+      this.baked = -1;
     }
-    ctx.strokeStyle = colour;
-    ctx.lineWidth = size;
-    ctx.beginPath();
-    ctx.moveTo(s.p[0]!, s.p[1]!);
-    for (let i = 2; i < s.p.length; i += 2) ctx.lineTo(s.p[i]!, s.p[i + 1]!);
-    ctx.stroke();
+    const done = Math.max(0, strokes.length - 1);
+    if (this.baked < 0 || this.baked > done) {
+      prepare(cache, true);
+      this.baked = 0;
+    } else prepare(cache, false);
+    for (; this.baked < done; this.baked++) drawStroke(cache, strokes[this.baked]!);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.cache, 0, 0);
+    prepare(ctx, false);
+    const last = strokes[strokes.length - 1];
+    if (last) drawStroke(ctx, last);
   }
 }
