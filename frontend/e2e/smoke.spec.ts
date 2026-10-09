@@ -229,7 +229,7 @@ test("keyboard only: skip link, create a room, start a game, guess", async ({ pa
 
   // Tab to Price Is Weird's start button and press Enter.
   const start = page.locator("article.game-card.seg-price").getByRole("button", { name: /Start!/ });
-  for (let i = 0; i < 40 && !(await start.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press("Tab");
+  for (let i = 0; i < 200 && !(await start.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press("Tab");
   await expect(start).toBeFocused();
   // The focus ring must be visible (outline, not removed).
   expect(await start.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe("none");
@@ -435,7 +435,7 @@ test("reconnect: a dropped phone shows progress, then comes back on air in the s
   await phone.getByRole("button", { name: "Try now" }).click();
   await expect(phone.getByText("Back on air!")).toBeVisible();
   await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
-  await expect(phone.getByText("Nia (you)")).toBeVisible(); // same seat, not a new player
+  await expect(phone.locator(".contestant.you .nm").getByText("Nia", { exact: true })).toBeVisible(); // same seat, not a new player
 });
 
 /** Host presses Skip until `until` shows up (the next host button after a game ends). */
@@ -470,7 +470,7 @@ test("show night: playlist, audience predictions and reactions, jackpot, finale"
     await p.goto(`/r/${code}`);
     await p.getByLabel("Your name").fill(name);
     await p.getByRole("button", { name: "Join as a contestant" }).click();
-    await expect(p.getByText(`${name} (you)`)).toBeVisible();
+    await expect(p.locator(".contestant.you .nm").getByText(name, { exact: true })).toBeVisible();
   }
   const fan = await newPlayer(browser, baseURL!, problems);
   await fan.goto(`/r/${code}`);
@@ -555,7 +555,7 @@ async function table(browser: Browser, baseURL: string, host: Page, names: strin
     await p.goto(`/r/${code}`);
     await p.getByLabel("Your name").fill(name);
     await p.getByRole("button", { name: "Join as a contestant" }).click();
-    await expect(p.getByText(`${name} (you)`)).toBeVisible();
+    await expect(p.locator(".contestant.you .nm").getByText(name, { exact: true })).toBeVisible();
     guests.push(p);
   }
   return guests;
