@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon";
   title: string;
   blurb: string;
   min_players: number;
@@ -343,6 +343,7 @@ export type GameView =
   | WordRaceView
   | DrawGuessView
   | TelephoneView
+  | TycoonView
   | LastCardView
   | LudoView
   | ChessView
@@ -930,6 +931,58 @@ export interface TelephoneView extends GameBase {
   scores: Record<string, number>;
   album?: { book: number; books: number; owner: string; entry: number; pages: TpPage[] };
   books?: { owner: string; pages: TpPage[] }[];
+}
+
+export interface TySpace {
+  kind: "street" | "station" | "utility" | "go" | "fund" | "tax" | "chance" | "jail" | "parking" | "gotojail";
+  name: string;
+  group?: string;
+  price?: number;
+  house?: number;
+  /** base, 1-4 houses, hotel */
+  rents?: number[];
+  tax?: number;
+}
+export interface TySide {
+  cash: number;
+  squares: number[];
+  cards: number;
+}
+export type TyLog = { type: string; player?: string; to?: string | null; amount?: number; square?: number; why?: string; dice?: number[]; text?: string; deck?: string; how?: string; level?: number };
+export interface TycoonView extends GameBase {
+  game: "tycoon";
+  phase: "roll" | "buy" | "auction" | "manage" | "debt" | "final";
+  players: { id: string; name: string }[];
+  board: TySpace[];
+  order: string[];
+  current: string | null;
+  dice: number[] | null;
+  doubles: number;
+  cash: Record<string, number>;
+  worth: Record<string, number>;
+  pos: Record<string, number>;
+  /** in jail: failed tries so far */
+  jail: Record<string, number>;
+  /** Get Out of Jail Free cards held */
+  cards: Record<string, number>;
+  out: string[];
+  /** square (as a string key) -> owner */
+  owner: Record<string, string>;
+  /** square -> 1-4 houses, 5 = hotel */
+  houses: Record<string, number>;
+  mortgaged: number[];
+  offer: number | null;
+  auction: { square: number; bid: number; bidder: string | null } | null;
+  debt: { pid: string; amount: number; to: string | null; why: string } | null;
+  raisable: Record<string, number>;
+  trades: ({ id: number; from: string; to: string; give: TySide; get: TySide })[];
+  bank: { houses: number; hotels: number };
+  call_it: string[];
+  /** seconds until the party clock runs out (null: no limit) */
+  ends_in: number | null;
+  log: TyLog[];
+  you: { playing: boolean; out: boolean };
+  scores: Record<string, number>;
 }
 
 export type LcColor = "red" | "yellow" | "green" | "blue";

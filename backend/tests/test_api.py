@@ -94,6 +94,7 @@ def test_games_catalog(client):
         "chess",
         "drawguess",
         "telephone",
+        "tycoon",
     }
 
 

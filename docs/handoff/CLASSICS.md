@@ -24,8 +24,8 @@ screenshot gallery of every phase on several devices before pushing.
 | 4 | Ludo | Ludo | done (committed; push when the user says) |
 | 5 | Chess | Chess | done (committed; push when the user says) |
 | 6 | Draw & Guess | Scribble / skribbl / Pictionary | done (pushed) |
-| 7 | Draw Telephone | Gartic Phone | done (committed; push when the user says) |
-| 8 | Property Tycoon | Monopoly | to do (biggest; party timer) |
+| 7 | Draw Telephone | Gartic Phone | done (pushed) |
+| 8 | Property Tycoon | Monopoly | done (committed; push when the user says) |
 
 Screenshot gallery of the three done games (private to the user):
 https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
@@ -113,6 +113,22 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
   `full`); the client caches them (lib/ink.ts) and shows them with `<Drawing>` (components/sketch.tsx,
   which also holds the live `<Sketch>` and its tools). Telephone drawings are capped at 20k points (a
   room holds up to 32 and every change is snapshotted).
+- **Property Tycoon** (Monopoly rules, our own board names and card text, US-edition numbers): $1,500
+  start, $200 for GO, doubles roll again (three = jail), buy or auction (anyone bids; each bid restarts an
+  8 s clock), rent (double on an unbuilt full set; houses/hotel; stations 25-200; utilities 4x/10x),
+  even building with a 32-house / 12-hotel bank, half-price sales, mortgages (+10% to lift), jail ($50,
+  card, or three tries for doubles), 16 Surprise + 16 Community Fund cards, Income Tax $200, Luxury $100.
+  Debts: raise the money (sell/mortgage) or go bankrupt (assets to the creditor, or back to the bank).
+  Trades any time (streets, cash, jail cards; a set's buildings must be sold first; taking a mortgaged
+  street costs the 10% interest). **Party length** (the only change): 30/45/60 minutes or no limit; the
+  game ends after the turn in which time runs out, richest net worth wins. **"Call it a night"**: when
+  everyone still in votes, the game ends now (also how the simulator ends games). Every wait has a clock
+  (roll 30 s, buy 20 s -> auction, manage 30 s, raise money 45 s -> automatic sell/mortgage or bankrupt).
+  Scores: survivors' net worth in dollars; bankrupt players 1, 2, ... in the order they went out.
+  TEAMS = True. Screen: a CSS-grid board sized in container units (names from 600 px wide, short labels
+  so no word splits; tools/tycoon_capture.cjs checks every word fits), sticky on laptops; action card
+  pinned to the bottom on phones on your turn; your properties with build/sell/mortgage buttons; a trade
+  builder; the log; the TV shows the board and the panels beside it.
 - **Plans for the rest** (agreed in principle, not built):
   - Property Tycoon: our own board/space names and card text (no Monopoly text or art), full rules
     (buy, rent, sets, houses/hotels, mortgages, auctions, trading, jail, cards, bankruptcy) and a
@@ -190,7 +206,8 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
    (`--base http://localhost:8000 --only <id>`), then play it live at phone width with tools/drive.py,
    run axe in the page (load `/node_modules/axe-core/axe.min.js` via fetch + eval in the dev server)
    and the 44px target check, then the device gallery with tools/capture.cjs (extend it for the new game).
-   Smaller focused capture scripts live there too: telephone_capture.cjs (a whole game on 5 screens
+   Smaller focused capture scripts live there too: tycoon_capture.cjs (5 screens + TV, auctions, a
+   trade, a 2-player run until someone builds houses), telephone_capture.cjs (a whole game on 5 screens
    + TV, an artist reloading mid-drawing), drawguess_capture.cjs (draws, guesses, reloads
    mid-drawing, checks the laptop fit), chess_capture.cjs, teams_capture.cjs (team mode),
    acct_capture.cjs (accounts/shop/coins; needs a bot room code), bj_capture.cjs (Blackjack on phones).

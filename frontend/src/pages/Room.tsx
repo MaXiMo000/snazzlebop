@@ -31,6 +31,7 @@ import { TruthDare } from "../games/TruthDare";
 import { WordRace } from "../games/WordRace";
 import { DrawGuess } from "../games/DrawGuess";
 import { Telephone } from "../games/Telephone";
+import { Tycoon } from "../games/Tycoon";
 import { LastCard } from "../games/LastCard";
 import { Ludo } from "../games/Ludo";
 import { Chess } from "../games/Chess";
@@ -359,6 +360,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <DrawGuess view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "telephone":
       return <Telephone view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "tycoon":
+      return <Tycoon view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -638,6 +641,10 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
     standard: "Standard (2 turns each)",
     quick: "Quick (1 turn each)",
     marathon: "Marathon (3 turns each)",
+    "45": "45 minutes (then the richest wins)",
+    "30": "30 minutes",
+    "60": "1 hour",
+    "0": "No limit (until one is left)",
   },
 };
 

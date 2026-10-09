@@ -147,6 +147,34 @@ for _phase in ("write", "draw", "describe", "album", "final"):
         "album",
         "books",
     }
+for _phase in ("roll", "buy", "auction", "manage", "debt", "final"):
+    ALLOWED_KEYS[("tycoon", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "board",
+        "order",
+        "current",
+        "dice",
+        "doubles",
+        "cash",
+        "worth",
+        "pos",
+        "jail",
+        "cards",
+        "out",
+        "owner",
+        "houses",
+        "mortgaged",
+        "offer",
+        "auction",
+        "debt",
+        "raisable",
+        "trades",
+        "bank",
+        "call_it",
+        "ends_in",
+        "log",
+        "you",
+        "scores",
+    }
 for _phase in ("play", "reveal", "final"):
     ALLOWED_KEYS[("wordrace", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
         "hard",
@@ -1321,6 +1349,169 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
     check(total == likes, f"telephone: likes {total} != sent {likes}")
 
 
+def tycoon_check(g: dict[str, Any]) -> None:
+    """The rules every Property Tycoon frame must keep."""
+    board = g["board"]
+    owner = {int(k): v for k, v in g["owner"].items()}
+    houses = {int(k): v for k, v in g["houses"].items()}
+    groups: dict[str, list[int]] = {}
+    for sq, sp in enumerate(board):
+        if sp["kind"] == "street":
+            groups.setdefault(sp["group"], []).append(sq)
+    for p in g["order"]:
+        check(g["cash"][p] >= 0, f"tycoon: {p} has negative cash")
+        worth = g["cash"][p]
+        for sq, who in owner.items():
+            if who == p:
+                price = board[sq]["price"]
+                worth += price // 2 if sq in g["mortgaged"] else price
+                worth += houses.get(sq, 0) * board[sq].get("house", 0)
+        check(g["worth"][p] == worth, f"tycoon: {p}'s worth {g['worth'][p]} != {worth}")
+    check(all(v not in g["out"] for v in owner.values()), "tycoon: a bankrupt player still owns property")
+    for sq in houses:
+        group = groups[board[sq]["group"]]
+        check(all(owner.get(s) == owner.get(sq) for s in group), "tycoon: houses without the full set")
+        levels = [houses.get(s, 0) for s in group]
+        check(max(levels) - min(levels) <= 1, "tycoon: uneven building")
+        check(not any(s in g["mortgaged"] for s in group), "tycoon: buildings in a mortgaged set")
+    check(sum(h for h in houses.values() if h < 5) <= 32, "tycoon: more than 32 houses")
+
+
+async def play_tycoon(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots play properly: roll, buy what they can afford, bid, build on full sets, trade now and then,
+    raise money or go bankrupt. Every frame is checked against the rules; after 45 turns everyone votes
+    to call it a night (or the game ends sooner by bankruptcy)."""
+    by_id = {b.pid: b for b in bots}
+
+    def token(st: dict[str, Any]) -> str:
+        g = st.get("game") or {}
+        keys = (
+            "phase",
+            "current",
+            "cash",
+            "owner",
+            "houses",
+            "mortgaged",
+            "auction",
+            "debt",
+            "trades",
+            "call_it",
+        )
+        return json.dumps([g.get(k) for k in keys] + [len(g.get("log") or []), (g.get("log") or [None])[-1]])
+
+    async def act(b: Bot, **msg: Any) -> None:
+        before, errors = token(b.state), len(b.errors)  # type: ignore[arg-type]
+        await b.send(t="act", **msg)
+        await b.until(lambda st: token(st) != before or len(b.errors) > errors, f"tycoon {msg.get('a')}")
+        now = token(b.state)  # type: ignore[arg-type]
+        if now != before:
+            await all_until(bots, lambda st, t=now: token(st) == t, "tycoon sync")
+
+    async def host_skip() -> None:
+        before = token(host.state)  # type: ignore[arg-type]
+        await skip(host)
+        await host.until(lambda st: token(st) != before, "tycoon skip")
+        now = token(host.state)  # type: ignore[arg-type]
+        await all_until(bots, lambda st, t=now: token(st) == t, "tycoon sync")
+
+    seen = 0
+    for _ in range(3000):
+        g = host.state["game"]  # type: ignore[index]
+        tycoon_check(g)
+        seen += 1
+        phase = g["phase"]
+        if phase == "final":
+            break
+        board, owner = g["board"], {int(k): v for k, v in g["owner"].items()}
+        alive = [p for p in g["order"] if p not in g["out"]]
+        cur = by_id[g["current"]]
+        if g["round"] >= 45 and not all(p in g["call_it"] for p in alive):
+            for p in alive:
+                if p not in g["call_it"]:
+                    await act(by_id[p], a="call_it")
+                    break
+            continue
+        if phase == "debt":
+            debt, debtor = g["debt"], by_id[g["debt"]["pid"]]
+            if g["cash"][debtor.pid] >= debt["amount"]:
+                await act(debtor, a="pay_debt")
+                continue
+            mine = sorted(
+                (sq for sq, w in owner.items() if w == debtor.pid), key=lambda sq: board[sq]["price"]
+            )
+            built = [sq for sq in mine if g["houses"].get(str(sq))]
+            if built:
+                top = max(built, key=lambda sq: g["houses"][str(sq)])
+                await act(debtor, a="sell", square=top)
+            elif [sq for sq in mine if sq not in g["mortgaged"]]:
+                await act(debtor, a="mortgage", square=next(sq for sq in mine if sq not in g["mortgaged"]))
+            else:
+                await act(debtor, a="bankrupt")
+            continue
+        if phase == "auction":
+            a = g["auction"]
+            bidder = by_id[rng.choice(alive)]
+            if a["bid"] < 150 and g["cash"][bidder.pid] > a["bid"] + 100 and rng.random() < 0.6:
+                await act(bidder, a="bid", amount=a["bid"] + rng.choice((10, 20, 50)))
+            else:
+                await host_skip()
+            continue
+        if phase == "buy":
+            price = board[g["offer"]]["price"]
+            await act(cur, a="buy" if g["cash"][cur.pid] >= price + 50 and rng.random() < 0.85 else "decline")
+            continue
+        if phase == "roll":
+            if cur.pid in g["jail"] and g["cards"][cur.pid]:
+                await act(cur, a="use_card")
+            elif cur.pid in g["jail"] and g["cash"][cur.pid] >= 100 and rng.random() < 0.3:
+                await act(cur, a="pay_fine")
+            else:
+                await act(cur, a="roll")
+            continue
+        # manage: build where possible, sometimes trade, then end the turn
+        groups: dict[str, list[int]] = {}
+        for sq, sp in enumerate(board):
+            if sp["kind"] == "street":
+                groups.setdefault(sp["group"], []).append(sq)
+        target = None
+        for group in groups.values():
+            if all(owner.get(sq) == cur.pid for sq in group) and not any(
+                sq in g["mortgaged"] for sq in group
+            ):
+                low = min(group, key=lambda sq: g["houses"].get(str(sq), 0))
+                level = g["houses"].get(str(low), 0)
+                if level < 5 and g["cash"][cur.pid] > board[low]["house"] + 150:
+                    target = low
+                    break
+        if target is not None:
+            await act(cur, a="build", square=target)
+            continue
+        if rng.random() < 0.15 and len(alive) > 1:
+            other = rng.choice([p for p in alive if p != cur.pid])
+            theirs = [sq for sq, w in owner.items() if w == other and not g["houses"].get(str(sq))]
+            if theirs:
+                sq = rng.choice(theirs)
+                await act(
+                    cur,
+                    a="offer",
+                    to=other,
+                    give={"cash": min(board[sq]["price"], g["cash"][cur.pid])},
+                    get={"squares": [sq]},
+                )
+                tid = next((t["id"] for t in cur.state["game"]["trades"] if t["from"] == cur.pid), None)  # type: ignore[index]
+                if tid is not None:
+                    await act(by_id[other], a="accept" if rng.random() < 0.5 else "reject", trade=tid)
+                continue
+        await act(cur, a="end")
+    await all_until(bots, phase_is("final"), "tycoon over")
+    tycoon_check(host.state["game"])  # type: ignore[index]
+    check(seen > 50, "tycoon: the game hardly started")
+
+
+def tycoon_scores(g: dict[str, Any], ids: list[str]) -> dict[str, int]:
+    return {p: g["worth"][p] if p not in g["out"] else g["out"].index(p) + 1 for p in ids}
+
+
 def telephone_points(books: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
     out = dict.fromkeys(ids, 0)
     for bk in books:
@@ -1991,6 +2182,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "chess",
             "drawguess",
             "telephone",
+            "tycoon",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
@@ -2002,6 +2194,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 "chess-pairs",
                 "drawguess-pairs",
                 "telephone-pairs",
+                "tycoon-pairs",
             ]  # the Teams switch
         if len(bots) == 4:
             games.append("ludo-pairs")  # Ludo teams are exactly 2 v 2
@@ -2074,6 +2267,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_drawguess(host, bots, rng)
             elif game == "telephone":
                 await play_telephone(host, bots, rng)
+            elif game == "tycoon":
+                await play_tycoon(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2112,6 +2307,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                     sum(1 for p in want.values() if p >= 500) >= 1,
                     "ludo: nobody got the win bonus",
                 )
+            elif game == "tycoon":
+                want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"tycoon: scores {got} != net worth {want}")
             elif game == "telephone":
                 want = telephone_points(host.state["game"]["books"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

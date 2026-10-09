@@ -10,7 +10,7 @@ Games: **Frenemy Radar**, **Alibi**, **Price Is Weird**, **Telepathy Tax**, **Mo
 Royale**, **Lowest Lonely Number**, **Mystery Box Auction**, the team game **Codewords** (`SHOW = False`:
 played on its own, never in a show playlist) and the classics (`CLASSIC = True`, their own lobby section,
 also `SHOW = False`): **Truth or Dare**, **Word Race** (Wordle-style), **Last Card** (Uno-style), **Ludo**, **Chess**, **Draw & Guess** (Scribble-style, live drawing: `games/ink.py`), **Draw Telephone** (Gartic
-Phone-style). One more classic is planned: Property Tycoon (Monopoly-style).
+Phone-style), **Property Tycoon** (Monopoly-style; all eight planned classics are done).
 Trademarked originals get our own names; rules match the originals. **Work in progress: read
 [docs/handoff/CLASSICS.md](docs/handoff/CLASSICS.md) first** (status, decisions, mistakes to avoid, the
 per-game checklist and the dev tools in docs/handoff/tools/). Show nights (show.py): a playlist on one
