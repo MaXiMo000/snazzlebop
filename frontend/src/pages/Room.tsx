@@ -29,6 +29,7 @@ import { Jackpot } from "../games/Jackpot";
 import { Codewords } from "../games/Codewords";
 import { TruthDare } from "../games/TruthDare";
 import { WordRace } from "../games/WordRace";
+import { DrawGuess } from "../games/DrawGuess";
 import { LastCard } from "../games/LastCard";
 import { Ludo } from "../games/Ludo";
 import { Chess } from "../games/Chess";
@@ -353,6 +354,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Ludo view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "chess":
       return <Chess view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "drawguess":
+      return <DrawGuess view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -603,6 +606,16 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
     "3": "3 words",
     "5": "5 words",
     "1": "1 word",
+  },
+  turns: {
+    "2": "Everyone draws twice",
+    "1": "Everyone draws once",
+    "3": "Everyone draws 3 times",
+  },
+  time: {
+    "80": "80 seconds to draw",
+    "60": "60 seconds (quick)",
+    "100": "100 seconds (relaxed)",
   },
   pace: {
     relaxed: "Relaxed (2½ min clues, 3 min guessing)",

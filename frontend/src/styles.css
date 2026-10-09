@@ -5635,3 +5635,340 @@ b.team-name.team-1 {
     height: 100%;
   }
 }
+
+/* ---- draw & guess ----------------------------------------------------------------------------------- */
+.seg-drawguess {
+  --accent: #c2185b;
+  --accent-ink: #fff;
+  --accent-soft: #fbd5e5;
+}
+/* The blanks: each word stays in one piece; a long answer wraps between words, never inside one. */
+.dg-word {
+  padding-block: 12px;
+}
+.dg-word > .dg-blanks {
+  margin: 0;
+}
+.dg-blanks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px 18px;
+  font-family: var(--display);
+  font-size: clamp(1.05rem, 4.4vw, 1.7rem);
+  line-height: 1;
+}
+.dg-blank-word {
+  display: inline-flex;
+  gap: 3px;
+  white-space: nowrap;
+}
+.dg-slot {
+  display: inline-block;
+  width: 1.05em;
+  padding-bottom: 3px;
+  border-bottom: 3px solid currentColor;
+  text-align: center;
+  min-height: 1.2em;
+}
+.dg-count {
+  font-family: var(--body);
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.dg-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.dg-stage,
+.dg-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+.dg-side {
+  gap: 18px;
+}
+/* Wide screens: the artist's tools sit beside the canvas (above the guesses), so the whole canvas and
+   every tool fit a laptop screen at once; the canvas is as big as the screen's height allows. */
+@media (min-width: 900px) {
+  .dg-layout {
+    grid-template-columns: minmax(0, max(400px, (100svh - 440px) * 4 / 3)) minmax(280px, 1fr);
+    grid-template-rows: auto 1fr;
+    row-gap: 0;
+  }
+  .dg-stage {
+    display: contents;
+  }
+  .dg-stage > * {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .dg-stage > .dg-tools {
+    grid-column: 2;
+    grid-row: 1;
+    max-width: none;
+    margin-bottom: 18px;
+  }
+  .dg-side {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+.dg-paper {
+  border: 4px solid var(--plum);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  overflow: hidden;
+  box-shadow: var(--lift);
+}
+.dg-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+.dg-canvas.drawing {
+  touch-action: none;
+  cursor: crosshair;
+}
+.dg-waiting,
+.dg-stage > .card.stage {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  align-content: center;
+}
+.dg-pencil {
+  font-size: 3rem;
+  margin: 0;
+}
+.dg-choices {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 700px) {
+  .dg-choices {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.dg-choices .btn {
+  text-wrap: balance;
+}
+.dg-tools {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+.dg-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+.dg-swatch {
+  min-height: 44px;
+  border: 3px solid var(--edge);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.dg-swatch[aria-pressed="true"],
+.dg-size[aria-pressed="true"],
+.dg-tool[aria-pressed="true"] {
+  outline: 4px solid var(--accent);
+  outline-offset: 1px;
+}
+.dg-swatch:focus-visible,
+.dg-size:focus-visible,
+.dg-tool:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+/* The sizes get a row of their own, the three tools share the next (the tools card is narrow on every
+   screen: full width on phones, beside the canvas on wide ones). */
+.dg-pens {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.dg-sizes {
+  display: flex;
+  gap: 6px;
+}
+.dg-size,
+.dg-tool {
+  min-width: 44px;
+  min-height: 44px;
+  border: 3px solid var(--edge);
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dg-size {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.dg-tool {
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.dg-dot {
+  display: block;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.dg-w0 {
+  width: 5px;
+  height: 5px;
+}
+.dg-w1 {
+  width: 10px;
+  height: 10px;
+}
+.dg-w2 {
+  width: 17px;
+  height: 17px;
+}
+.dg-w3 {
+  width: 26px;
+  height: 26px;
+}
+.dg-sizes {
+  grid-column: 1 / -1;
+}
+.dg-size {
+  flex: 1 1 0;
+}
+@media (max-width: 360px) {
+  .dg-tool {
+    font-size: 0.9rem;
+  }
+}
+.dg-guess {
+  display: flex;
+  gap: 10px;
+}
+.dg-guess .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.dg-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 1.1rem;
+}
+.dg-feed {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dg-feed li {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.dg-feed li.ok {
+  background: var(--teal-light);
+}
+.dg-said {
+  overflow-wrap: anywhere; /* typed guesses can be anything */
+}
+.dg-close {
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.dg-gain {
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* The live scores keep the points on the name's row: a long name wraps between its words instead. */
+.dg-scores li {
+  flex-wrap: nowrap;
+}
+.dg-scores b {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dg-history {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dg-history li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+.dg-history-word {
+  white-space: nowrap;
+}
+.dg-final {
+  display: grid;
+  gap: 18px;
+}
+/* TV: the canvas as big as the screen allows, the guesses and scores beside it. */
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-drawguess) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tv .dg-layout {
+    grid-template-columns: minmax(0, (100svh - 330px) * 4 / 3) minmax(320px, 1fr);
+  }
+  .tv .dg-final {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.dg-c0 {
+  background: #1b1b1f;
+}
+.dg-c1 {
+  background: #ffffff;
+}
+.dg-c2 {
+  background: #8a8a93;
+}
+.dg-c3 {
+  background: #7a4a2a;
+}
+.dg-c4 {
+  background: #e0312f;
+}
+.dg-c5 {
+  background: #f28a1a;
+}
+.dg-c6 {
+  background: #f5cf1f;
+}
+.dg-c7 {
+  background: #3cb043;
+}
+.dg-c8 {
+  background: #1e6b35;
+}
+.dg-c9 {
+  background: #5ec8f2;
+}
+.dg-c10 {
+  background: #2f5fd0;
+}
+.dg-c11 {
+  background: #8a3fc4;
+}
+.dg-c12 {
+  background: #f07ab8;
+}
+.dg-c13 {
+  background: #f2c39a;
+}

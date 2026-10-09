@@ -119,6 +119,22 @@ for _phase in ("play", "final"):
         "you",
         "scores",
     }
+for _phase in ("choose", "draw", "reveal", "final"):
+    ALLOWED_KEYS[("drawguess", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "order",
+        "drawer",
+        "seconds",
+        "word",
+        "pattern",
+        "choices",
+        "guessed",
+        "gained",
+        "feed",
+        "ink",
+        "you",
+        "scores",
+        "history",
+    }
 for _phase in ("play", "reveal", "final"):
     ALLOWED_KEYS[("wordrace", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
         "hard",
@@ -371,6 +387,7 @@ class Bot:
     def __init__(self, name: str, pid: str, token: str, ws: Any) -> None:
         self.name, self.pid, self.token, self.ws = name, pid, token, ws
         self.raw: list[str] = []
+        self.ink: list[dict[str, Any]] = []  # drawing frames (Draw & Guess)
         self.state: dict[str, Any] | None = None
         self.errors: list[str] = []
         self.closed: int | None = None
@@ -384,6 +401,8 @@ class Bot:
                 if msg.get("t") == "state":
                     self.raw.append(raw)
                     self.state = msg
+                elif msg.get("t") == "ink":
+                    self.ink.append(msg)
                 elif msg.get("t") == "error":
                     self.errors.append(msg.get("code", "?"))
                 async with self.cond:
@@ -1122,6 +1141,87 @@ async def play_wordrace(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         await skip(host)
 
 
+def canvas_ops(frames: list[dict[str, Any]], canvas: str) -> list[Any]:
+    """The operations a screen has received for one canvas, in order (a full redraw starts over)."""
+    ops: list[Any] = []
+    for f in frames:
+        if f.get("id") != canvas:
+            continue
+        check(f["n"] <= len(ops), "drawguess: an ink frame skipped ahead")
+        ops = ops[: f["n"]] + f["ops"]
+    return ops
+
+
+def phase_is(phase: str):
+    return lambda st: (st.get("game") or {}).get("phase") == phase
+
+
+async def play_drawguess(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Every turn: the artist picks a word and draws a few strokes (which must reach every other screen,
+    in order); the others guess, some wrong, some right. The word must stay with the artist (and whoever
+    has guessed it) until the reveal, and the three choices with the artist."""
+    by_id = {b.pid: b for b in bots}
+    g = host.state["game"]  # type: ignore[index]
+    for turn in range(g["rounds"] * len(g["order"])):
+        await all_until(bots, phase_is("choose"), f"drawguess choose {turn}")
+        artist = by_id[host.state["game"]["drawer"]]  # type: ignore[index]
+        await artist.until(lambda st: bool(st["game"]["choices"]), "drawguess choices")
+        choices = artist.state["game"]["choices"]  # type: ignore[index]
+        for b in bots:
+            if b is not artist:
+                check(b.state["game"]["choices"] is None, f"{b.name} saw the artist's choices")  # type: ignore[index]
+        await artist.send(t="act", a="pick", i=rng.randrange(3))
+        await all_until(bots, phase_is("draw"), f"drawguess draw {turn}")
+        word = artist.state["game"]["word"]  # type: ignore[index]
+        check(word in choices, "drawguess: the word isn't one of the choices")
+        canvas = artist.state["game"]["ink"]["id"]  # type: ignore[index]
+        strokes: list[dict[str, Any]] = [
+            {"op": "line", "c": rng.randrange(14), "w": rng.randrange(4), "p": [10, 10, 200, 150]},
+            {"op": "more", "p": [rng.randrange(801), rng.randrange(601)] * 30},
+            {"op": "undo"},
+            {"op": "line", "c": 0, "w": 1, "p": [400, 300]},
+        ]
+        for op in strokes:
+            await artist.send(t="ink", **op)
+        guessers = [b for b in bots if b is not artist]
+        for b in guessers:
+            await b.until(
+                lambda st, b=b, c=canvas, n=len(strokes): len(canvas_ops(b.ink, c)) >= n, "drawguess ink"
+            )
+            check(
+                canvas_ops(b.ink, canvas) == strokes,
+                f"drawguess: {b.name}'s canvas differs from the artist's",
+            )
+            check(b.state["game"]["word"] is None, f"{b.name} saw the word before guessing")  # type: ignore[index]
+        right = [b for b in guessers if rng.random() < 0.7]
+        for b in guessers:
+            await b.send(t="act", a="guess", text="definitely not it")
+            if b in right:
+                await b.send(t="act", a="guess", text=word.upper())
+                await b.until(lambda st, b=b: b.pid in st["game"]["guessed"], "drawguess got it")
+                check(b.state["game"]["word"] == word, f"{b.name} got it but can't see the word")  # type: ignore[index]
+        if len(right) < len(guessers):
+            await host.until(lambda st, n=len(right): len(st["game"]["guessed"]) == n, "drawguess guesses in")
+            await skip(host)
+        await all_until(bots, phase_is("reveal"), f"drawguess reveal {turn}")
+        g = host.state["game"]  # type: ignore[index]
+        check(g["word"] == word, "drawguess: the reveal shows a different word")
+        check(set(g["guessed"]) == {b.pid for b in right}, "drawguess: wrong guessers")
+        check(g["gained"].get(artist.pid, 0) == 75 * len(right), "drawguess: the artist's points are off")
+        for b in right:
+            check(100 <= g["gained"][b.pid] <= 400, f"drawguess: {b.name} got {g['gained'][b.pid]}")
+        await skip(host)
+    await all_until(bots, phase_is("final"), "drawguess over")
+
+
+def drawguess_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
+    out = dict.fromkeys(ids, 0)
+    for h in history:
+        for p, v in h["points"].items():
+            out[p] += v
+    return out
+
+
 def wordrace_points(history: list[dict[str, Any]], ids: list[str]) -> dict[str, int]:
     pts = dict.fromkeys(ids, 0)
     for h in history:
@@ -1774,12 +1874,18 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
             "lastcard",
             "ludo",
             "chess",
+            "drawguess",
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         if len(bots) >= 4:
             games.append("crossword-teams")
-            games += ["lastcard-pairs", "truthdare-pairs", "chess-pairs"]  # the Teams switch
+            games += [
+                "lastcard-pairs",
+                "truthdare-pairs",
+                "chess-pairs",
+                "drawguess-pairs",
+            ]  # the Teams switch
         if len(bots) == 4:
             games.append("ludo-pairs")  # Ludo teams are exactly 2 v 2
         for name in games:
@@ -1847,6 +1953,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_ludo(host, bots, rng)
             elif game == "chess":
                 await play_chess(host, bots, rng)
+            elif game == "drawguess":
+                await play_drawguess(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -1885,6 +1993,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                     sum(1 for p in want.values() if p >= 500) >= 1,
                     "ludo: nobody got the win bonus",
                 )
+            elif game == "drawguess":
+                want = drawguess_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"drawguess: scores {got} != the turns' points {want}")
             elif game == "wordrace":
                 want = wordrace_points(host.state["game"]["history"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

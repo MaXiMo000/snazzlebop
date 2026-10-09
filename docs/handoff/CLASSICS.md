@@ -23,8 +23,8 @@ screenshot gallery of every phase on several devices before pushing.
 | - | polish from the screenshot pass | - | done (`8a58606`) |
 | 4 | Ludo | Ludo | done (committed; push when the user says) |
 | 5 | Chess | Chess | done (committed; push when the user says) |
-| 6 | Draw & Guess | Scribble / skribbl / Pictionary | **next** (needs live drawing, see below) |
-| 7 | Draw Telephone | Gartic Phone | to do (reuses the Draw & Guess canvas) |
+| 6 | Draw & Guess | Scribble / skribbl / Pictionary | done (committed; push when the user says) |
+| 7 | Draw Telephone | Gartic Phone | **next** (reuses the Draw & Guess canvas: games/ink.py) |
 | 8 | Property Tycoon | Monopoly | to do (biggest; party timer) |
 
 Screenshot gallery of the three done games (private to the user):
@@ -83,13 +83,19 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
   their side sees). Win 300 each, draw 100. Pieces are our own SVG shapes (Unicode chess glyphs render as
   emoji on some Androids). Board squares are 44px at 390px, smaller on narrower phones (can't exceed the
   screen). The host can't skip a chess move.
+- **Draw & Guess** (Skribbl rules): everyone draws once per round (1/2/3 turns each, 60/80/100 s);
+  the artist picks one of three words (15 s, else random); letters appear at half and three-quarter time
+  (never more than 2, fewer for short words); a right guess pays 100 + up to 300 for speed, the artist 75
+  per right guesser; wrong guesses show for everyone, "so close" (one letter off) only to the guesser.
+  438 drawable words (DRAW_WORDS, "_" joins two-word answers). TEAMS = True (team totals, no partner rule).
+- **Live drawing (games/ink.py, reused by Draw Telephone)**: the artist's screen sends `{"t": "ink"}`
+  operations (line / more / undo / clear; ints on an 800 x 600 canvas, <= 60 points each, batched every
+  200 ms: well under 2 KB and 8 msgs/s). The game validates (`game.ink(pid, msg)`, artist only, draw phase)
+  and appends to an InkLog; the hub relays each op to every other screen through the mailbox's ordered
+  ink queue (sent before the next snapshot, batched per canvas, >300 queued = "resync"). Snapshots carry
+  only `{id, count}`; a screen with a different id or a smaller count sends `{"t": "inksync"}` and gets the
+  whole log (TV and audience may sync too). Client: lib/ink.ts (bus, palette, replay, paint).
 - **Plans for the rest** (agreed in principle, not built):
-  - Draw & Guess / Draw Telephone: need live drawing. The hub sends a full snapshot per change and
-    the socket limits are 2 KB per message and 8 messages/s (config.py). Plan: a new "ink" message:
-    the client batches stroke points every ~200 ms; the server validates and relays deltas; the
-    per-connection mailbox (rooms.py `_post`) must keep a pending snapshot plus queued ink deltas
-    (a snapshot clears older deltas) so deltas are never dropped; snapshots still carry the full
-    drawing for reconnects. Guesses are free text: validate like names (clean_name style).
   - Property Tycoon: our own board/space names and card text (no Monopoly text or art), full rules
     (buy, rent, sets, houses/hotels, mortgages, auctions, trading, jail, cards, bankruptcy) and a
     party-length timer (ends after N rounds or minutes, richest wins).
@@ -137,6 +143,11 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
     socket was down without a word (now a toast), podium buttons sink 5px on press so a touch near the top
     edge lifted off outside (now a hit strip fills the gap), time-critical buttons fired on click (now
     pointerdown), and the server valued taps on arrival (now the client sends `at`, credited within 0.4 s).
+18. **requestAnimationFrame + React StrictMode**: an unmount cleanup that cancels a pending frame must
+    also reset the stored id, or every later "is a frame pending?" check skips forever (the canvas never
+    painted). And a debounce timestamp must start at -Infinity: `performance.now()` is ~0 on a fresh page.
+19. **Drawing tools on laptops**: canvas + palette + tools didn't fit 768px, so the artist had to scroll.
+    On wide screens the tools sit beside the canvas and the canvas is capped by the screen height.
 
 ## Per-game checklist (what "done" means here)
 
@@ -158,7 +169,8 @@ https://claude.ai/artifact/VqZwALznGDnYX4HzjH3TeD
    (`--base http://localhost:8000 --only <id>`), then play it live at phone width with tools/drive.py,
    run axe in the page (load `/node_modules/axe-core/axe.min.js` via fetch + eval in the dev server)
    and the 44px target check, then the device gallery with tools/capture.cjs (extend it for the new game).
-   Smaller focused capture scripts live there too: chess_capture.cjs, teams_capture.cjs (team mode),
+   Smaller focused capture scripts live there too: drawguess_capture.cjs (draws, guesses, reloads
+   mid-drawing, checks the laptop fit), chess_capture.cjs, teams_capture.cjs (team mode),
    acct_capture.cjs (accounts/shop/coins; needs a bot room code), bj_capture.cjs (Blackjack on phones).
 8. Commit (attribution line from the session). Push only when the user asks.
 

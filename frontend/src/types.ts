@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess";
   title: string;
   blurb: string;
   min_players: number;
@@ -341,6 +341,7 @@ export type GameView =
   | DiceView
   | TruthDareView
   | WordRaceView
+  | DrawGuessView
   | LastCardView
   | LudoView
   | ChessView
@@ -848,6 +849,49 @@ export interface WordRaceView extends GameBase {
   answer: string | null;
   wins: Record<string, number>;
   history?: WrRound[];
+}
+
+/** One pen operation on the shared 800 x 600 canvas (see backend games/ink.py). */
+export type InkOp =
+  | { op: "line"; c: number; w: number; p: number[] }
+  | { op: "more"; p: number[] }
+  | { op: "undo" }
+  | { op: "clear" };
+export interface DgFeed {
+  by: string;
+  /** a wrong guess (right guesses are never shown) */
+  text?: string;
+  ok?: boolean;
+  /** one letter off: only ever set on your own guesses */
+  close?: boolean;
+}
+export interface DgTurn {
+  drawer: string;
+  word: string;
+  guessed: string[];
+  points: Record<string, number>;
+}
+export interface DrawGuessView extends GameBase {
+  game: "drawguess";
+  phase: "choose" | "draw" | "reveal" | "final";
+  players: { id: string; name: string }[];
+  order: string[];
+  drawer: string | null;
+  seconds: number;
+  /** the word: for the artist, for you once you've got it, and for everyone at the reveal */
+  word: string | null;
+  /** one entry per character: "" hidden, a letter (a hint), or a space/dash as-is */
+  pattern: string[];
+  /** the three words to pick from: the artist only */
+  choices: string[] | null;
+  guessed: string[];
+  gained: Record<string, number>;
+  feed: DgFeed[];
+  /** the canvas's id and length (the strokes themselves arrive as "ink" messages) */
+  ink: { id: string; count: number } | null;
+  you: { drawer: boolean; guessed: boolean; playing: boolean };
+  scores: Record<string, number>;
+  history?: DgTurn[];
 }
 
 export type LcColor = "red" | "yellow" | "green" | "blue";

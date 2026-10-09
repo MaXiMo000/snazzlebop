@@ -2807,3 +2807,55 @@ VINE VOTE WALK WALL WAND WAVE WEED WEEK WELL WHIP WIND WING WISH WOLF WORD WORK 
 """
     )
 )
+
+
+# ---------------------------------------------------------------------------------------------------
+# Draw & Guess (Scribble-style): things anyone can draw in a minute. "_" joins two-word answers.
+# ---------------------------------------------------------------------------------------------------
+DRAW_WORDS: list[str] = list(
+    dict.fromkeys(  # repeats in the block below are dropped
+        w.replace("_", " ")
+        for w in _words(
+            """
+apple banana cherry grapes lemon pineapple strawberry watermelon carrot broccoli mushroom pumpkin
+corn potato tomato onion pizza burger hot_dog sandwich taco donut cupcake cake cookie pancake waffle
+ice_cream popcorn pretzel sushi noodles egg cheese bread toast candy lollipop chocolate milkshake
+coffee teapot cup bottle fork spoon knife plate bowl frying_pan oven fridge toaster blender kettle
+cat dog fish bird horse cow pig sheep goat chicken duck owl penguin parrot flamingo eagle crow swan
+frog snake turtle lizard crocodile dinosaur dragon unicorn shark whale dolphin octopus crab lobster
+jellyfish starfish snail bee butterfly spider ant ladybug mosquito worm bat mouse rabbit squirrel
+hedgehog fox wolf bear panda koala kangaroo monkey gorilla giraffe elephant zebra lion tiger camel
+hippo rhino deer moose seal walrus sloth peacock hamster
+house castle tent igloo lighthouse bridge tower skyscraper church pyramid windmill barn garage
+fence door window stairs ladder chimney roof mailbox fountain swing slide sandcastle treehouse
+car bus truck train bicycle motorbike scooter skateboard airplane helicopter rocket boat ship
+submarine sailboat canoe tractor ambulance taxi fire_truck police_car hot_air_balloon parachute
+traffic_light road map compass anchor
+sun moon star cloud rain rainbow snowflake snowman lightning tornado volcano mountain island beach
+wave river waterfall desert cactus tree palm_tree flower rose sunflower tulip leaf mushroom forest
+cave planet comet earth fire campfire
+hat cap crown helmet glasses sunglasses scarf glove sock shoe boot sandal dress shirt tie bow_tie
+jacket hoodie pyjamas belt watch ring necklace earring backpack handbag wallet umbrella mask
+toothbrush comb mirror soap towel bathtub shower toilet bed pillow blanket lamp candle clock
+alarm_clock sofa chair table desk bookshelf book newspaper envelope letter stamp pencil pen
+crayon paintbrush scissors ruler eraser stapler paperclip calculator computer laptop keyboard
+mouse_trap phone camera television radio headphones microphone speaker robot battery light_bulb
+plug magnet key lock door_bell hammer saw screwdriver wrench nail drill axe shovel rake bucket
+broom vacuum wheelbarrow watering_can hose ladder
+guitar piano drum violin trumpet saxophone harp flute bell whistle
+football basketball tennis golf bowling skiing surfing boxing karate trophy medal whistle dice
+cards chess kite yoyo balloon puzzle teddy_bear doll jigsaw frisbee hula_hoop trampoline
+pirate ninja wizard witch ghost vampire zombie mummy alien astronaut knight princess king queen
+clown cowboy mermaid fairy angel devil superhero chef doctor nurse farmer firefighter police
+teacher painter singer dancer magician detective
+heart smile tear eye nose mouth ear hand foot tooth brain skeleton skull beard moustache
+muscle fingerprint shadow
+birthday wedding party fireworks christmas_tree present snowball sandwich picnic
+treasure map flag pirate_ship castle ghost_house haunted_house roller_coaster ferris_wheel
+carousel circus zoo aquarium museum library hospital school farm airport
+spaceship ufo satellite telescope microscope globe hourglass sword shield bow arrow cannon
+bomb dynamite wand potion cauldron broomstick
+"""
+        )
+    )
+)

@@ -10,6 +10,7 @@ from .codes import CodeCrackers
 from .codewords import Codewords
 from .crossword import CrosswordRace
 from .dice import LiarsDice
+from .drawguess import DrawGuess
 from .frenemy import FrenemyRadar
 from .lastcard import LastCard
 from .lonely import LowestLonely
@@ -47,6 +48,7 @@ REGISTRY: dict[str, type[Game]] = {
         LastCard,
         Ludo,
         Chess,
+        DrawGuess,
     )
 }
 

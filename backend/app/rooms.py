@@ -31,10 +31,11 @@ ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
     *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready", "boost"),
-    "shuffle",
+    *("shuffle", "ink", "inksync"),
 }
 TEAM_MIN_PLAYERS = 4  # two teams of at least two
-AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp"}
+AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync"}
+INK_BACKLOG = 300  # queued pen strokes per screen; past this it just gets told to redraw from scratch
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
 MAX_TV_PER_ROOM = 2  # big-screen viewers; issuing a third evicts the oldest
 MAX_AUDIENCE = 30  # named watchers who can react and predict, beyond the 8 seats
@@ -806,23 +807,56 @@ class Hub:
     # Every frame is a full snapshot, so a connection only ever needs the newest one. If a send is
     # already in flight (slow or non-reading client), the next state just replaces the pending one
     # and the broadcaster moves on: a stuck socket can never stall the players who are acting.
-    def _post(
-        self, room: Room, pid: str, conn: Connection, data: dict[str, Any]
-    ) -> asyncio.Task[None] | None:
+    # Pen strokes (drawing games) are the exception: they queue in order and go out before the next
+    # snapshot, batched into one frame per canvas. A screen too far behind is told to redraw instead.
+    def _box(
+        self, room: Room, pid: str, conn: Connection
+    ) -> tuple[dict[str, Any], asyncio.Task[None] | None]:
         box = self._mail.get(conn)
         if box is not None:
-            box["pending"] = data
-            return None
-        self._mail[conn] = {"pending": data}
+            return box, None
+        box = self._mail[conn] = {"pending": None, "ink": []}
         task = asyncio.get_running_loop().create_task(self._drain(room, pid, conn))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+        return box, task
+
+    def _post(
+        self, room: Room, pid: str, conn: Connection, data: dict[str, Any]
+    ) -> asyncio.Task[None] | None:
+        box, task = self._box(room, pid, conn)
+        box["pending"] = data
         return task
+
+    def _post_ink(self, room: Room, pid: str, conn: Connection, items: list[dict[str, Any]]) -> None:
+        box, _ = self._box(room, pid, conn)
+        box["ink"].extend(items)
+        if len(box["ink"]) > INK_BACKLOG:
+            box["ink"] = [{"resync": True}]
+
+    @staticmethod
+    def _ink_frames(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Consecutive strokes on one canvas share a frame: {"t": "ink", "id", "n": first, "ops"}."""
+        frames: list[dict[str, Any]] = []
+        for it in items:
+            last = frames[-1] if frames else None
+            if "resync" in it:
+                frames.append({"t": "ink", "resync": True})
+            elif last and last.get("id") == it["id"] and last["n"] + len(last["ops"]) == it["n"]:
+                last["ops"].append(it["op"])
+            else:
+                frames.append({"t": "ink", "id": it["id"], "n": it["n"], "ops": [it["op"]]})
+        return frames
 
     async def _drain(self, room: Room, pid: str, conn: Connection) -> None:
         box = self._mail[conn]
         try:
-            while box["pending"] is not None:
+            while box["pending"] is not None or box["ink"]:
+                if box["ink"]:
+                    items, box["ink"] = box["ink"], []
+                    for frame in self._ink_frames(items):
+                        await asyncio.wait_for(conn.send_json(frame), timeout=self.send_timeout)
+                    continue
                 data, box["pending"] = box["pending"], None
                 await asyncio.wait_for(conn.send_json(data), timeout=self.send_timeout)
         except Exception:
@@ -837,14 +871,9 @@ class Hub:
 
     async def broadcast(self, room: Room) -> None:
         self._persist(room)  # every change is broadcast, so every change is saved
-        targets = [
-            *room.conns.items(),
-            *((v, c) for v, c in room.viewers.items() if c is not None),
-            *((w.id, w.conn) for w in room.audience.values() if w.conn is not None),
-        ]
         tasks = [
             task
-            for pid, conn in targets
+            for pid, conn in self._targets(room)
             if (task := self._post(room, pid, conn, self.view_for(room, pid))) is not None
         ]
         if tasks:
@@ -866,6 +895,8 @@ class Hub:
         kind = msg["t"]
         if pid in room.viewers:
             # TV screens only watch: no actions, and their keep-alive pings don't keep a room alive.
+            if kind == "inksync":
+                return self._ink_sync(room, pid, conn)
             if kind != "ping":
                 await self.send_error(conn, "read_only", "TV mode is read-only")
             return
@@ -875,6 +906,10 @@ class Hub:
         if kind == "ping":
             return
         try:
+            if kind == "inksync":
+                return self._ink_sync(room, pid, conn)
+            if kind == "ink":
+                return await self._ink(room, pid, conn, msg)
             if kind == "boost":
                 await self._use_boost(room, pid, msg)
                 return await self.broadcast(room)
@@ -884,6 +919,36 @@ class Hub:
                 await self.broadcast(room)
         except (GameError, HubError) as exc:
             await self.send_error(conn, exc.code, exc.message)
+
+    async def _ink(self, room: Room, pid: str, conn: Connection, msg: dict[str, Any]) -> None:
+        """A pen stroke from the artist: checked by the game, then relayed to every other screen."""
+        async with room.lock:
+            draw = getattr(room.game, "ink", None)
+            if room.phase != "game" or draw is None:
+                raise HubError("no_canvas", "Nothing to draw on")
+            canvas = draw(pid, msg)
+            item = {"id": canvas.id, "n": len(canvas.ops) - 1, "op": canvas.ops[-1]}
+            for to, c in self._targets(room):
+                if c is not conn:
+                    self._post_ink(room, to, c, [item])
+        self._persist(room)
+        await asyncio.sleep(0)
+
+    def _ink_sync(self, room: Room, pid: str, conn: Connection) -> None:
+        """A screen that missed strokes (or just arrived) gets the whole drawing again."""
+        canvas = getattr(room.game, "canvas", None) if room.phase == "game" else None
+        if canvas is None:
+            return
+        box, _ = self._box(room, pid, conn)
+        box["ink"] = [{"id": canvas.id, "n": i, "op": op} for i, op in enumerate(canvas.ops)]
+
+    @staticmethod
+    def _targets(room: Room) -> list[tuple[str, Connection]]:
+        return [
+            *room.conns.items(),
+            *((v, c) for v, c in room.viewers.items() if c is not None),
+            *((w.id, w.conn) for w in room.audience.values() if w.conn is not None),
+        ]
 
     def _make_game(self, room: Room, cls: type[Game], **extra: Any) -> Game:
         """Build and start a game for everyone online. Raises (and changes nothing) if it can't start."""
