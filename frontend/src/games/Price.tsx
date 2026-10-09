@@ -277,7 +277,7 @@ function Tricks({ view, players, you, send }: Pick<Props, "view" | "players" | "
         </p>
       ) : (
         canSabotage && (
-          <div className="ask-form space-top">
+          <div className="ask-form pick-and-go space-top">
             <div>
               <label className="field" htmlFor="sabotage-target">
                 Sabotage (1 per game)

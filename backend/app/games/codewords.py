@@ -277,6 +277,14 @@ class Codewords(Game):
             self._end_turn()
 
     # -- views ----------------------------------------------------------------
+    def chat_team(self, pid: str) -> tuple[str, str] | None:
+        team = self.teams.get(pid)
+        return None if team is None else (f"team:{team}", f"{team.capitalize()} team")
+
+    def chat_muted(self, pid: str) -> bool:
+        """Spymasters say nothing but their clue (the official rule), in any chat."""
+        return self.phase in ("clue", "guess") and pid in self.spymasters.values()
+
     def view_for(self, pid: str) -> dict[str, Any]:
         team = self.teams.get(pid)
         spy = team is not None and self.spymasters.get(team) == pid

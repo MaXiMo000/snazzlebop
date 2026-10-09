@@ -16,7 +16,7 @@ Trademarked originals get our own names; rules match the originals. **Work in pr
 per-game checklist and the dev tools in docs/handoff/tools/). Show nights (show.py): a playlist on one
 scoreboard, host quips, highlight reel and awards, Jackpot finale, power cards (games expose `peek()`),
 rivals, Friend Stock Exchange (shorts, dividends, insider tips), rematches and a season table, show
-packs, audience (react, predict, trade, MVP vote), live reactions. **Team mode** (`Game.TEAMS`): the host
+packs, audience (react, predict, trade, MVP vote), live reactions. **Chat**: everyone's channel plus a private team channel whenever a game has teams (`Game.chat_team`, `Game.chat_muted` let a game restrict it); the TV shows the latest messages like live comments. **Team mode** (`Game.TEAMS`): the host
 switches on Teams for Ludo, Truth or Dare, Last Card and Blackjack (and new classics): two teams shuffled
 on the intro screen, combined scores win, coins by team place; official partner rules where they exist
 (`self.teams`: Last Card partners opposite, Ludo 2 v 2 opposite colours).

@@ -500,6 +500,13 @@ class Chess(Game):
         """The host can't skip a chess move: the clocks decide."""
 
     # -- views -----------------------------------------------------------------------------------------
+    def chat_team(self, pid: str) -> tuple[str, str] | None:
+        """Consultation chess: each side talks moves over privately (a side of one has no team chat)."""
+        side = self.side_of.get(pid)
+        if side is None or len(self.sides[side]) < 2:
+            return None
+        return f"side:{side}", "White" if side == "w" else "Black"
+
     def view_for(self, pid: str) -> dict[str, Any]:
         playing = self.phase == "play"
         mine = self.side_of.get(pid)

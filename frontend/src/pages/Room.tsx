@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChatDock, ChatTicker } from "../components/chat";
 import { ApiError, audienceSeat, clearSession, joinRoom, loadSession, tvSeat } from "../lib/api";
 import { useRoom } from "../lib/useRoom";
 import { Btn, Card, Contestants, CopyButton, ErrorBanner, FlapCode } from "../components/ui";
@@ -206,6 +207,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
     <div className="stack">
       <JumpScare count={state.scare} room={code} you={state.you} />
       <ReactionOverlay reactions={state.reactions} />
+      {state.chat && <ChatDock chat={state.chat} you={state.you} send={send} />}
       {status === "reconnecting" && (
         <div className="alert calm row between" role="status">
           <span>Signal lost. Reconnecting{attempt > 1 ? ` (try ${attempt})` : ""}…</span>
@@ -270,14 +272,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
           <Contestants players={state.players} you={state.you} title={state.show ? "Show scoreboard" : "Scoreboard"} />
           {isHost ? (
             phase === "game" ? (
-              <Card tone="soft">
-                <div className="row between">
-                  <p className="muted">You’re the host.</p>
-                  <Btn variant="ghost" onClick={() => send({ t: "skip", stage: state.stage })}>
-                    Skip wait <span aria-hidden="true">⏭</span>
-                  </Btn>
-                </div>
-              </Card>
+              <HostGameBar state={state} send={send} />
             ) : state.show && !state.show.finished ? (
               <ShowHostBar state={state} send={send} />
             ) : (
@@ -416,6 +411,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
     <div className="tv stack">
       <h1 className="sr-only">Snazzlebop TV, room {code}</h1>
       <ReactionOverlay reactions={state.reactions} />
+      {state.chat && <ChatTicker chat={state.chat} />}
       {status !== "open" && (
         <p className="alert calm" role="status">
           Signal lost. Reconnecting…
@@ -647,6 +643,32 @@ const OPTION_LABELS: Record<string, Record<string, string>> = {
     "0": "No limit (until one is left)",
   },
 };
+
+/** The host during a game: skip the current wait, or end the game (two taps) and go back to the lobby. */
+function HostGameBar({ state, send }: { state: RoomState; send: Send }) {
+  const [sure, setSure] = useState(false);
+  useEffect(() => {
+    if (!sure) return;
+    const id = window.setTimeout(() => setSure(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [sure]);
+  const what = state.show ? "the show" : "the game";
+  return (
+    <Card tone="soft">
+      <div className="row between">
+        <p className="muted">You’re the host.</p>
+        <div className="row">
+          <Btn variant="ghost" onClick={() => send({ t: "skip", stage: state.stage })}>
+            Skip wait <span aria-hidden="true">⏭</span>
+          </Btn>
+          <Btn variant={sure ? "danger" : "ghost"} onClick={() => (sure ? send({ t: "lobby" }) : setSure(true))}>
+            {sure ? `Tap again to end ${what}` : `End ${what}`}
+          </Btn>
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 /** Start button, plus a picker for each option the game declares (first value = default). */
 function StartGame({ game, enough, online, send, prefix, teamsFirst }: { game: GameCard; enough: boolean; online: number; send: Send; prefix: string; teamsFirst: boolean }) {

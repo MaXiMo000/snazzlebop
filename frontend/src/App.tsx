@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ChatButton } from "./components/chat";
 import { SoundToggle, ThemeToggle } from "./components/ui";
 import { useAccount } from "./lib/account";
 import { Account } from "./pages/Account";
@@ -42,7 +43,12 @@ function AccountButton({ go }: { go: (p: string) => void }) {
           <span aria-hidden="true">🪙</span> {user.coins}
         </>
       ) : (
-        "Sign in"
+        <>
+          <span className="acct-icon" aria-hidden="true">
+            👤
+          </span>
+          <span className="account-label">Sign in</span>
+        </>
       )}
     </a>
   );
@@ -73,6 +79,7 @@ export function App() {
           </span>
         </a>
         <div className="row topbar-tools">
+          <ChatButton />
           <AccountButton go={go} />
           <ThemeToggle />
           <SoundToggle />

@@ -206,6 +206,10 @@ class LastCard(Game):
         top_color, top_value = CARDS[self._top()]
         return color == self.color or value == top_value
 
+    def chat_team(self, pid: str) -> tuple[str, str] | None:
+        """No private partner chat: talking about your hands is against the rules."""
+        return None
+
     def _partners(self, a: str, b: str) -> bool:
         return bool(self.teams) and self.teams.get(a) == self.teams.get(b)
 

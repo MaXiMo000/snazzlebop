@@ -24,6 +24,23 @@ export interface GameCard {
   teams: boolean;
 }
 
+export interface ChatMessage {
+  id: number;
+  by: string;
+  name: string;
+  text: string;
+  /** a team-channel message (only your team ever receives these) */
+  team: boolean;
+}
+export interface ChatState {
+  messages: ChatMessage[];
+  /** your team channel's name, or null when there's no team chat */
+  team: string | null;
+  /** the game says you must stay silent (a Codewords Spymaster mid-game) */
+  muted: boolean;
+  can_send: boolean;
+}
+
 export interface TeamsState {
   /** team 0 (Tangerine) and team 1 (Teal) */
   members: string[][];
@@ -462,6 +479,7 @@ export interface RoomState {
   highlights: Highlight[];
   quip: string;
   reactions: Reaction[];
+  chat: ChatState;
   crowd: Crowd;
   market: MarketState | null;
   cards: CardsState | null;

@@ -31,10 +31,17 @@ ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
     *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready", "boost"),
-    *("shuffle", "ink", "inksync"),
+    *("shuffle", "ink", "inksync", "chat"),
 }
 TEAM_MIN_PLAYERS = 4  # two teams of at least two
-AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync"}
+AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync", "chat"}
+# Chat: plain text, short, rate-limited per person and per room; only the latest messages are kept (in
+# memory and the room's snapshot, gone with the room). Logs never contain chat text.
+CHAT_MAX = 200
+CHAT_KEEP = 80
+CHAT_SHOWN = 40
+CHAT_GAP = 0.9  # seconds between messages from one person
+CHAT_ROOM_BURST = (12, 5.0)  # at most 12 messages per 5 seconds room-wide
 INK_BACKLOG = 300  # queued pen strokes per screen; past this it just gets told to redraw from scratch
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
 MAX_TV_PER_ROOM = 2  # big-screen viewers; issuing a third evicts the oldest
@@ -67,6 +74,23 @@ class SnapshotStore(Protocol):
     async def save_snapshot(self, code: str, data: bytes) -> None: ...
     async def load_snapshot(self, code: str) -> bytes | None: ...
     async def delete_snapshots(self, codes: list[str]) -> None: ...
+
+
+def clean_chat(raw: Any) -> str:
+    """A chat message: one line of plain text. Emoji are fine (including joined ones); control and
+    invisible formatting characters (bidi overrides, zero-width tricks) are not."""
+    if not isinstance(raw, str):
+        raise HubError("bad_message", "Type a message")
+    text = " ".join(raw.split())
+    if not text:
+        raise HubError("bad_message", "Type a message")
+    if len(text) > CHAT_MAX:
+        raise HubError("too_long", f"Messages are up to {CHAT_MAX} characters")
+    for ch in text:
+        cat = unicodedata.category(ch)
+        if cat[0] == "C" and ch != "\u200d":  # keep the zero-width joiner that builds family and flag emoji
+            raise HubError("bad_message", "That message has characters we can't show")
+    return text
 
 
 def clean_name(raw: object, max_len: int = 16) -> str:
@@ -123,6 +147,10 @@ class Room:
     react_seq: int = 0
     react_last: dict[str, float] = field(default_factory=dict)
     react_window: list[float] = field(default_factory=list)
+    chat: list[dict[str, Any]] = field(default_factory=list)  # {"id", "by", "name", "text", "team"}
+    chat_seq: int = 0
+    chat_last: dict[str, float] = field(default_factory=dict)
+    chat_window: list[float] = field(default_factory=list)
     market_next: str = ""  # the game the open market is waiting for
     market_until: float = 0.0
     market_moves: dict[str, float] = field(default_factory=dict)  # price changes after the last game
@@ -504,6 +532,7 @@ class Hub:
             "highlights": room.highlights if room.phase == "results" else [],
             "quip": room.quip if room.phase in ("results", "finale") else "",
             "reactions": room.reactions,
+            "chat": self._chat_view(room, pid),
             "crowd": self._crowd_view(room, pid),
             "market": self._market_view(room, pid),
             "cards": self._cards_view(room, pid),
@@ -1015,6 +1044,7 @@ class Hub:
         room.card_news, room.rival_news, room.rivals, room.mvp_votes = [], [], [], {}
         room.game_no += 1
         room.boost_peeks, room.coin_news, room.team_news = {}, {}, {}
+        room.chat = [m for m in room.chat if m["team"] is None]  # new game, new teams: old team talk goes
         s = room.show
         if s is not None:
             s.peeks.clear()
@@ -1090,6 +1120,7 @@ class Hub:
         if not i:
             return
         room.intro, room.ready = {}, set()
+        teams: dict[str, int] = {}
         try:
             if i["game"] == "jackpot":
                 stakes = {p.id: room.total_scores.get(p.id, 0) for p in room.players.values()}
@@ -1110,7 +1141,8 @@ class Hub:
             else:
                 room.game, room.phase = None, "lobby"
             return
-        room.teams = dict(game.teams)
+        # Only the host's Teams switch makes room teams (Codewords keeps its own red/blue in game.teams).
+        room.teams = {p: t for p, t in teams.items() if p in game.round_scores}
         self._begin(room, game)
         if s is not None and i["slot"] == "playlist":
             s.started += 1
@@ -1263,6 +1295,8 @@ class Hub:
         is_host = pid == room.host_id
         if kind == "react":
             return self._react(room, pid, msg)
+        if kind == "chat":
+            return self._chat(room, pid, msg)
         if kind == "predict":
             if pid not in room.audience:
                 raise HubError("audience_only", "Only the audience predicts")
@@ -1481,6 +1515,68 @@ class Hub:
             {"id": room.react_seq, "e": emoji, "by": who.name if who else "?"},
         ]
         return True
+
+    # -- chat -----------------------------------------------------------------------------------------
+    @staticmethod
+    def _chat_game(room: Room) -> Game | None:
+        return room.game if room.game is not None and room.phase in ("game", "results") else None
+
+    def _chat(self, room: Room, pid: str, msg: dict[str, Any]) -> bool:
+        to = msg.get("to", "all")
+        if to not in ("all", "team"):
+            raise HubError("bad_message", "Unknown chat channel")
+        text = clean_chat(msg.get("text"))
+        game = self._chat_game(room)
+        seated = pid in room.players
+        if game is not None and seated and pid in game.round_scores and game.chat_muted(pid):
+            raise HubError("muted", "Spymasters stay silent until the game is over")
+        team = None
+        if to == "team":
+            channel = (
+                game.chat_team(pid) if game is not None and seated and pid in game.round_scores else None
+            )
+            if channel is None:
+                raise HubError("no_team", "There's no team chat right now")
+            team = channel[0]
+        now = self.clock()
+        if now - room.chat_last.get(pid, -1e9) < CHAT_GAP:
+            raise HubError("slow_down", "Slow down a little")
+        burst, window = CHAT_ROOM_BURST
+        room.chat_window = [t for t in room.chat_window if now - t < window]
+        if len(room.chat_window) >= burst:
+            raise HubError("slow_down", "The chat is busy: try again in a moment")
+        room.chat_last[pid] = now
+        room.chat_window.append(now)
+        who = room.players.get(pid) or room.audience.get(pid)
+        room.chat_seq += 1
+        room.chat = [
+            *room.chat[-(CHAT_KEEP - 1) :],
+            {"id": room.chat_seq, "by": pid, "name": who.name if who else "?", "text": text, "team": team},
+        ]
+        return True
+
+    def _chat_view(self, room: Room, pid: str) -> dict[str, Any]:
+        """Everyone sees the room's messages; team messages only reach that team's current members."""
+        game = self._chat_game(room)
+        playing = game is not None and pid in room.players and pid in game.round_scores
+        channel = game.chat_team(pid) if game is not None and playing else None
+        mine = channel[0] if channel else None
+        shown = [m for m in room.chat if m["team"] is None or (mine is not None and m["team"] == mine)]
+        return {
+            "messages": [
+                {
+                    "id": m["id"],
+                    "by": m["by"],
+                    "name": m["name"],
+                    "text": m["text"],
+                    "team": m["team"] is not None,
+                }
+                for m in shown[-CHAT_SHOWN * 2 :]
+            ],
+            "team": channel[1] if channel else None,
+            "muted": bool(game is not None and playing and game.chat_muted(pid)),
+            "can_send": pid not in room.viewers,
+        }
 
     def _maybe_finish(self, room: Room) -> None:
         game = room.game

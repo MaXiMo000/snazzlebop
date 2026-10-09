@@ -1076,6 +1076,15 @@ button.alert {
     align-items: end;
   }
 }
+/* A picker and its button side by side, the explanation underneath (Price's sabotage). */
+@media (min-width: 640px) {
+  .ask-form.pick-and-go {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ask-form.pick-and-go > p {
+    grid-column: 1 / -1;
+  }
+}
 
 .evidence {
   list-style: none;
@@ -1291,6 +1300,12 @@ details summary {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+/* Narrow phones: three tiles a row, so names like "Elephant" and tags like "transport" fit whole. */
+@media (max-width: 374px) {
+  .mural {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .tile {
   position: relative;
@@ -6777,5 +6792,243 @@ b.team-name.team-1 {
   .tv .ty-board-col {
     width: min(100svh - 290px, 58vw);
     max-width: none;
+  }
+}
+
+/* ---- chat ------------------------------------------------------------------------------------------- */
+.chat-button {
+  position: relative;
+}
+.chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--cherry);
+  color: #fff;
+  font: 700 0.75rem/1 var(--body);
+  border: 2px solid var(--bg);
+}
+/* A message that arrived while the chat was closed: top of the screen, out of the way of the pinned
+   action cards at the bottom, gone after a few seconds (tap to open the chat). */
+.chat-popup {
+  position: fixed;
+  top: 76px; /* below the top bar: never covers its buttons (the chat button included) */
+  left: 50%;
+  z-index: 40;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 2 * var(--gutter)));
+  padding: 10px 16px;
+  border: 3px solid var(--edge);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--lift), 0 12px 30px rgba(43, 27, 51, 0.35);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere; /* people type anything */
+  text-wrap: pretty;
+  cursor: pointer;
+  animation: chat-drop 0.25s ease-out;
+}
+@keyframes chat-drop {
+  from {
+    transform: translate(-50%, -20px);
+    opacity: 0;
+  }
+}
+/* The panel: a bottom sheet on phones, a docked card bottom-right on wider screens. */
+.chat-panel {
+  position: fixed;
+  z-index: 45;
+  right: var(--gutter);
+  bottom: 12px;
+  left: var(--gutter);
+  display: flex;
+  flex-direction: column;
+  max-height: min(70svh, 560px);
+  border: 3px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--lift), 0 16px 40px rgba(43, 27, 51, 0.4);
+}
+@media (min-width: 700px) {
+  .chat-panel {
+    left: auto;
+    width: 380px;
+  }
+}
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 2px solid var(--rule);
+}
+.chat-tabs {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.chat-tab,
+.chat-close {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--field);
+  color: var(--ink);
+  font: 700 0.95rem/1 var(--body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chat-tab[aria-pressed="true"] {
+  background: var(--plum);
+  color: var(--bulb);
+}
+.chat-close {
+  padding: 0;
+  flex: none;
+}
+.chat-tab:focus-visible,
+.chat-close:focus-visible,
+.chat-popup:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.chat-dot {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cherry);
+}
+.chat-log {
+  flex: 1 1 auto;
+  min-height: 120px;
+  padding: 10px;
+  overflow-y: auto;
+}
+.chat-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chat-log li {
+  text-wrap: pretty; /* no lone last word (or emoji) */
+  max-width: 85%;
+  align-self: flex-start;
+  padding: 7px 11px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--surface-2);
+  overflow-wrap: anywhere;
+}
+.chat-log li.mine {
+  align-self: flex-end;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--teal-light);
+}
+.chat-log li.chat-empty {
+  max-width: none;
+  align-self: stretch;
+  background: none;
+  text-align: center;
+}
+.chat-name {
+  display: block;
+  font-size: 0.85rem;
+}
+.chat-note {
+  margin: 0;
+  padding: 12px;
+  border-top: 2px solid var(--rule);
+}
+.chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 8px;
+  border-top: 2px solid var(--rule);
+}
+.chat-form input {
+  min-width: 0;
+  font-size: 1rem;
+}
+.chat-form .btn {
+  white-space: nowrap;
+}
+/* TV: the latest messages float bottom-left like live comments, fading after a while. */
+.chat-ticker {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  max-width: 480px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.chat-ticker li {
+  padding: 10px 16px;
+  border: 3px solid var(--edge);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+  box-shadow: var(--lift);
+  animation: chat-fade 12s ease-in forwards;
+}
+@keyframes chat-fade {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-popup {
+    animation: none;
+  }
+  .chat-ticker li {
+    animation: none;
+  }
+}
+/* Very narrow phones: the account button goes icon-only so the chat button fits in the top bar. */
+@media (max-width: 379px) {
+  .topbar .account-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+.acct-icon {
+  display: none;
+}
+@media (max-width: 379px) {
+  .topbar .acct-icon {
+    display: inline;
   }
 }

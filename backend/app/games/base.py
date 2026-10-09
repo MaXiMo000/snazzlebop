@@ -227,6 +227,18 @@ class Game(ABC):
     @abstractmethod
     def view_for(self, pid: str) -> dict[str, Any]: ...
 
+    # -- chat: who may talk to whom ------------------------------------------------------------------
+    def chat_team(self, pid: str) -> tuple[str, str] | None:
+        """This player's private team channel as (key, label), or None for no team chat. By default the
+        Teams switch's two teams; games with their own teams override it (and partner games where talking
+        privately would be cheating return None)."""
+        team = self.teams.get(pid)
+        return None if team is None else (f"team:{team}", ("Team Tangerine", "Team Teal")[team])
+
+    def chat_muted(self, pid: str) -> bool:
+        """True while the rules say this player must stay silent (a Codewords Spymaster mid-game)."""
+        return False
+
     def peek(self, pid: str) -> str | None:
         """The Peek power card: one private line about a secret in the game as it stands right now (or None
         when there's nothing to see). Called only for a seated player; the line goes only to them."""

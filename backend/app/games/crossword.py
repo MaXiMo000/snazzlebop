@@ -286,6 +286,11 @@ class CrosswordRace(Game):
         i = self.rng.randrange(len(clue["word"]))
         return f"{clue['num']} {clue['dir']}: letter {i + 1} is {clue['word'][i]}."
 
+    def chat_team(self, pid: str) -> tuple[str, str] | None:
+        if self.mode != "teams" or pid not in self.team_of:
+            return None
+        return f"team:{self.team_of[pid]}", self.team_of[pid]
+
     def view_for(self, pid: str) -> dict[str, Any]:
         rows = max((r for r, _ in self.letters), default=0) + 1
         # Letters your side paid for: yours (and your team's) only, never anyone else's or the TV's.
