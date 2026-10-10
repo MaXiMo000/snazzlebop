@@ -9445,3 +9445,657 @@ b.team-name.team-1 {
     animation: none;
   }
 }
+
+/* ---- snakes and ladders ----------------------------------------------------------------------------- */
+.seg-snakes {
+  --accent: #1f6f3a;
+  --accent-ink: #fff;
+  --accent-soft: #d8efdc;
+}
+.sn-layout {
+  display: grid;
+  gap: 18px;
+}
+.sn-board-col {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.sn-frame {
+  padding: 6px;
+  border: 3px solid var(--edge);
+  border-radius: var(--radius);
+  background: #5b3a1e;
+  box-shadow: var(--lift);
+}
+.sn-board {
+  container-type: inline-size;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  color: #2b1b33;
+}
+.sn-sq {
+  display: grid;
+  align-items: start;
+  justify-items: start;
+  padding: 3%;
+  background: #fff3d6;
+  font: 700 2.6cqw / 1 var(--body);
+  color: #7a5a3c;
+}
+.sn-sq.alt {
+  background: #ffe2a8;
+}
+.sn-sq.home {
+  place-items: center;
+  background: #ffd23f;
+  font-size: 5cqw;
+}
+.sn-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.sn-ladder line {
+  stroke: #8a5a14;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
+.sn-ladder line.rung {
+  stroke: #b98433;
+  stroke-width: 0.8;
+}
+.sn-snake polyline {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sn-snake .body {
+  stroke: var(--snake);
+  stroke-width: 3.2;
+}
+.sn-snake .belly {
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 0.9;
+  stroke-dasharray: 0.2 2.4;
+}
+.sn-snake .head {
+  fill: var(--snake);
+}
+.sn-snake .eye {
+  fill: #fff;
+}
+.sn-snake.c0 {
+  --snake: #c8203a;
+}
+.sn-snake.c1 {
+  --snake: #2a7d46;
+}
+.sn-snake.c2 {
+  --snake: #6b2fa0;
+}
+.sn-snake.c3 {
+  --snake: #1f5fae;
+}
+/* Tokens: a hop per square, then one long ride up a ladder or down a snake. */
+.sn-token {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 2;
+  width: 7.4cqw;
+  height: 7.4cqw;
+  transform: translate(calc(-50% + var(--dx, 0%)), calc(-50% + var(--dy, 0%)));
+  transition:
+    left 0.12s ease-out,
+    top 0.12s ease-out;
+  animation: sn-pop 0.3s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.sn-token.slide {
+  z-index: 3;
+  transition:
+    left 0.95s cubic-bezier(0.5, 0, 0.3, 1),
+    top 0.95s cubic-bezier(0.5, 0, 0.3, 1);
+}
+.sn-token.now {
+  z-index: 4;
+}
+.sn-avatar {
+  width: 100%;
+  height: 100%;
+  border: 0.6cqw solid #fff;
+  font-size: 3cqw;
+  box-shadow: 0 0.5cqw 0 rgba(0, 0, 0, 0.35);
+}
+.sn-avatar.face {
+  font-size: 4.4cqw;
+}
+.sn-token.now .sn-avatar {
+  border-color: #ff7a3d;
+}
+@keyframes sn-pop {
+  from {
+    scale: 0;
+  }
+}
+.sn-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 10px 0 0;
+}
+.sn-start-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 2px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sn-start-chip .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.7rem;
+}
+.sn-start-chip .avatar.face {
+  font-size: 1rem;
+}
+.sn-action {
+  display: grid;
+  gap: 12px;
+}
+.sn-dice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 56px;
+}
+.sn-story {
+  margin: 0;
+  font-weight: 700;
+  text-align: left;
+  text-wrap: balance;
+}
+.sn-winner {
+  margin: 0;
+  text-wrap: balance;
+}
+.sn .score-rows .avatar {
+  width: 30px;
+  height: 30px;
+  font-size: 0.75rem;
+}
+.sn .score-rows .avatar.face {
+  font-size: 1.05rem;
+}
+@media (min-width: 900px) {
+  .sn-layout {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .sn-board-col {
+    max-width: min(640px, 100svh - 300px);
+  }
+}
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-snakes) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tv .sn-layout {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .tv .sn-board-col {
+    width: min(100svh - 290px, 58vw);
+    max-width: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sn-token,
+  .sn-token.slide {
+    transition: none;
+    animation: none;
+  }
+}
+.sn-at-1 {
+  --x: 5%;
+  --y: 95%;
+}
+.sn-at-2 {
+  --x: 15%;
+  --y: 95%;
+}
+.sn-at-3 {
+  --x: 25%;
+  --y: 95%;
+}
+.sn-at-4 {
+  --x: 35%;
+  --y: 95%;
+}
+.sn-at-5 {
+  --x: 45%;
+  --y: 95%;
+}
+.sn-at-6 {
+  --x: 55%;
+  --y: 95%;
+}
+.sn-at-7 {
+  --x: 65%;
+  --y: 95%;
+}
+.sn-at-8 {
+  --x: 75%;
+  --y: 95%;
+}
+.sn-at-9 {
+  --x: 85%;
+  --y: 95%;
+}
+.sn-at-10 {
+  --x: 95%;
+  --y: 95%;
+}
+.sn-at-11 {
+  --x: 95%;
+  --y: 85%;
+}
+.sn-at-12 {
+  --x: 85%;
+  --y: 85%;
+}
+.sn-at-13 {
+  --x: 75%;
+  --y: 85%;
+}
+.sn-at-14 {
+  --x: 65%;
+  --y: 85%;
+}
+.sn-at-15 {
+  --x: 55%;
+  --y: 85%;
+}
+.sn-at-16 {
+  --x: 45%;
+  --y: 85%;
+}
+.sn-at-17 {
+  --x: 35%;
+  --y: 85%;
+}
+.sn-at-18 {
+  --x: 25%;
+  --y: 85%;
+}
+.sn-at-19 {
+  --x: 15%;
+  --y: 85%;
+}
+.sn-at-20 {
+  --x: 5%;
+  --y: 85%;
+}
+.sn-at-21 {
+  --x: 5%;
+  --y: 75%;
+}
+.sn-at-22 {
+  --x: 15%;
+  --y: 75%;
+}
+.sn-at-23 {
+  --x: 25%;
+  --y: 75%;
+}
+.sn-at-24 {
+  --x: 35%;
+  --y: 75%;
+}
+.sn-at-25 {
+  --x: 45%;
+  --y: 75%;
+}
+.sn-at-26 {
+  --x: 55%;
+  --y: 75%;
+}
+.sn-at-27 {
+  --x: 65%;
+  --y: 75%;
+}
+.sn-at-28 {
+  --x: 75%;
+  --y: 75%;
+}
+.sn-at-29 {
+  --x: 85%;
+  --y: 75%;
+}
+.sn-at-30 {
+  --x: 95%;
+  --y: 75%;
+}
+.sn-at-31 {
+  --x: 95%;
+  --y: 65%;
+}
+.sn-at-32 {
+  --x: 85%;
+  --y: 65%;
+}
+.sn-at-33 {
+  --x: 75%;
+  --y: 65%;
+}
+.sn-at-34 {
+  --x: 65%;
+  --y: 65%;
+}
+.sn-at-35 {
+  --x: 55%;
+  --y: 65%;
+}
+.sn-at-36 {
+  --x: 45%;
+  --y: 65%;
+}
+.sn-at-37 {
+  --x: 35%;
+  --y: 65%;
+}
+.sn-at-38 {
+  --x: 25%;
+  --y: 65%;
+}
+.sn-at-39 {
+  --x: 15%;
+  --y: 65%;
+}
+.sn-at-40 {
+  --x: 5%;
+  --y: 65%;
+}
+.sn-at-41 {
+  --x: 5%;
+  --y: 55%;
+}
+.sn-at-42 {
+  --x: 15%;
+  --y: 55%;
+}
+.sn-at-43 {
+  --x: 25%;
+  --y: 55%;
+}
+.sn-at-44 {
+  --x: 35%;
+  --y: 55%;
+}
+.sn-at-45 {
+  --x: 45%;
+  --y: 55%;
+}
+.sn-at-46 {
+  --x: 55%;
+  --y: 55%;
+}
+.sn-at-47 {
+  --x: 65%;
+  --y: 55%;
+}
+.sn-at-48 {
+  --x: 75%;
+  --y: 55%;
+}
+.sn-at-49 {
+  --x: 85%;
+  --y: 55%;
+}
+.sn-at-50 {
+  --x: 95%;
+  --y: 55%;
+}
+.sn-at-51 {
+  --x: 95%;
+  --y: 45%;
+}
+.sn-at-52 {
+  --x: 85%;
+  --y: 45%;
+}
+.sn-at-53 {
+  --x: 75%;
+  --y: 45%;
+}
+.sn-at-54 {
+  --x: 65%;
+  --y: 45%;
+}
+.sn-at-55 {
+  --x: 55%;
+  --y: 45%;
+}
+.sn-at-56 {
+  --x: 45%;
+  --y: 45%;
+}
+.sn-at-57 {
+  --x: 35%;
+  --y: 45%;
+}
+.sn-at-58 {
+  --x: 25%;
+  --y: 45%;
+}
+.sn-at-59 {
+  --x: 15%;
+  --y: 45%;
+}
+.sn-at-60 {
+  --x: 5%;
+  --y: 45%;
+}
+.sn-at-61 {
+  --x: 5%;
+  --y: 35%;
+}
+.sn-at-62 {
+  --x: 15%;
+  --y: 35%;
+}
+.sn-at-63 {
+  --x: 25%;
+  --y: 35%;
+}
+.sn-at-64 {
+  --x: 35%;
+  --y: 35%;
+}
+.sn-at-65 {
+  --x: 45%;
+  --y: 35%;
+}
+.sn-at-66 {
+  --x: 55%;
+  --y: 35%;
+}
+.sn-at-67 {
+  --x: 65%;
+  --y: 35%;
+}
+.sn-at-68 {
+  --x: 75%;
+  --y: 35%;
+}
+.sn-at-69 {
+  --x: 85%;
+  --y: 35%;
+}
+.sn-at-70 {
+  --x: 95%;
+  --y: 35%;
+}
+.sn-at-71 {
+  --x: 95%;
+  --y: 25%;
+}
+.sn-at-72 {
+  --x: 85%;
+  --y: 25%;
+}
+.sn-at-73 {
+  --x: 75%;
+  --y: 25%;
+}
+.sn-at-74 {
+  --x: 65%;
+  --y: 25%;
+}
+.sn-at-75 {
+  --x: 55%;
+  --y: 25%;
+}
+.sn-at-76 {
+  --x: 45%;
+  --y: 25%;
+}
+.sn-at-77 {
+  --x: 35%;
+  --y: 25%;
+}
+.sn-at-78 {
+  --x: 25%;
+  --y: 25%;
+}
+.sn-at-79 {
+  --x: 15%;
+  --y: 25%;
+}
+.sn-at-80 {
+  --x: 5%;
+  --y: 25%;
+}
+.sn-at-81 {
+  --x: 5%;
+  --y: 15%;
+}
+.sn-at-82 {
+  --x: 15%;
+  --y: 15%;
+}
+.sn-at-83 {
+  --x: 25%;
+  --y: 15%;
+}
+.sn-at-84 {
+  --x: 35%;
+  --y: 15%;
+}
+.sn-at-85 {
+  --x: 45%;
+  --y: 15%;
+}
+.sn-at-86 {
+  --x: 55%;
+  --y: 15%;
+}
+.sn-at-87 {
+  --x: 65%;
+  --y: 15%;
+}
+.sn-at-88 {
+  --x: 75%;
+  --y: 15%;
+}
+.sn-at-89 {
+  --x: 85%;
+  --y: 15%;
+}
+.sn-at-90 {
+  --x: 95%;
+  --y: 15%;
+}
+.sn-at-91 {
+  --x: 95%;
+  --y: 5%;
+}
+.sn-at-92 {
+  --x: 85%;
+  --y: 5%;
+}
+.sn-at-93 {
+  --x: 75%;
+  --y: 5%;
+}
+.sn-at-94 {
+  --x: 65%;
+  --y: 5%;
+}
+.sn-at-95 {
+  --x: 55%;
+  --y: 5%;
+}
+.sn-at-96 {
+  --x: 45%;
+  --y: 5%;
+}
+.sn-at-97 {
+  --x: 35%;
+  --y: 5%;
+}
+.sn-at-98 {
+  --x: 25%;
+  --y: 5%;
+}
+.sn-at-99 {
+  --x: 15%;
+  --y: 5%;
+}
+.sn-at-100 {
+  --x: 5%;
+  --y: 5%;
+}
+.sn-s0 {
+  --dx: 0%;
+  --dy: 0%;
+}
+.sn-s1 {
+  --dx: -22%;
+  --dy: -22%;
+}
+.sn-s2 {
+  --dx: 22%;
+  --dy: 22%;
+}
+.sn-s3 {
+  --dx: 22%;
+  --dy: -22%;
+}
+.sn-s4 {
+  --dx: -22%;
+  --dy: 22%;
+}
+.sn-s5 {
+  --dx: 0%;
+  --dy: -28%;
+}
+.sn-s6 {
+  --dx: 0%;
+  --dy: 28%;
+}
+.sn-s7 {
+  --dx: -28%;
+  --dy: 0%;
+}

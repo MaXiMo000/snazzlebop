@@ -205,6 +205,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           <li>
             <b>Reaction Duel</b> (classic): wait… wait… TAP! Fastest finger wins, but watch out for fake-outs.
           </li>
+          <li>
+            <b>Snakes and Ladders</b> (classic): roll and race to 100. Ladders shoot you up, snakes send you sliding back down.
+          </li>
         </ul>
       </Card>
     </div>

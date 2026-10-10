@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes";
   title: string;
   blurb: string;
   min_players: number;
@@ -369,6 +369,7 @@ export type GameView =
   | MafiaView
   | BombView
   | ReflexView
+  | SnakesView
   | JackpotView;
 
 export interface Highlight {
@@ -1226,4 +1227,36 @@ export interface ReflexView {
   you: { early: boolean; tapped: boolean } | null;
   best?: Record<string, number>;
   wins?: Record<string, number>;
+}
+
+export interface SnakesMove {
+  n: number;
+  player: string;
+  die: number;
+  from: number;
+  /** where the die took them, before any ladder or snake */
+  mid: number;
+  to: number;
+  via: "ladder" | "snake" | null;
+}
+
+export interface SnakesView {
+  game: "snakes";
+  phase: "play" | "final";
+  round: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  order: string[];
+  /** 0 = not on the board yet */
+  pos: Record<string, number>;
+  turn: string | null;
+  sixes: number;
+  last: SnakesMove | null;
+  log: SnakesMove[];
+  /** [foot, top] pairs */
+  ladders: number[][];
+  /** [head, tail] pairs */
+  snakes: number[][];
+  winner: string | null;
+  scores?: Record<string, number>;
 }

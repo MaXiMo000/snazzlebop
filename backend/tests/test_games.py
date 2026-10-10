@@ -62,6 +62,7 @@ class RegistryTests(unittest.TestCase):
                 "mafia",
                 "bomb",
                 "reflex",
+                "snakes",
             },
         )
 

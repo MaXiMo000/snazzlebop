@@ -40,6 +40,7 @@ EXPECTED_BY_GAME = {
     "chicken": {"too_late", "wrong_phase"},
     "lastcard": {"no_catch"},
     "bomb": {"not_yours", "used"},
+    "snakes": {"not_your_turn"},
 }
 
 ALLOWED_KEYS = {
@@ -208,6 +209,20 @@ for _phase in ("spin", "choose", "perform", "vote", "result", "final"):
         }
         | {"result", "up_next", "history"}
     )
+for _phase in ("play", "final"):
+    ALLOWED_KEYS[("snakes", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
+        "order",
+        "pos",
+        "turn",
+        "sixes",
+        "last",
+        "log",
+        "ladders",
+        "snakes",
+        "winner",
+        "scores",
+        "stats",
+    }
 for _phase in ("wait", "go", "result", "final"):
     ALLOWED_KEYS[("reflex", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
         "fake",
@@ -1110,6 +1125,52 @@ async def play_lonely(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") == "lonely" and gg.get("phase") == "pick":
                 check(gg["you"]["pick"] in (None, sent[gg["round"]][b.pid]), f"{b.name} saw another pick")
+
+
+async def play_snakes(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """The first few rolls come from the players themselves (someone out of turn is refused); after that
+    the host's skip rolls for whoever's turn it is, to keep the run short. Every move must add up: the
+    die, the ladder or snake taken, whose turn follows, and the exact roll needed for 100."""
+    by_id = {b.pid: b for b in bots}
+    await all_until(bots, game_is("snakes", "play"), "snakes start")
+    g = host.state["game"]  # type: ignore[index]
+    jumps = {a: b for a, b in [*g["ladders"], *g["snakes"]]}
+    pos = dict(g["pos"])
+    order, sixes = g["order"], 0
+    for n in range(1, 4000):
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        turn = g["turn"]
+        if n <= 3:
+            other = next(b for b in bots if b.pid != turn)
+            await other.send(t="act", a="roll")  # refused: not_your_turn
+            await asyncio.sleep(1.3)  # the last token lands first
+            await by_id[turn].send(t="act", a="roll")
+        else:
+            await skip(host)
+        await all_until(bots, lambda st, k=n: (st["game"]["last"] or {}).get("n") == k, "snakes move")
+        g = host.state["game"]  # type: ignore[index]
+        last = g["last"]
+        check(last["player"] == turn and 1 <= last["die"] <= 6, "snakes: wrong player or die")
+        check(last["from"] == pos[turn], "snakes: the move started somewhere else")
+        want_mid = pos[turn] + last["die"] if pos[turn] + last["die"] <= 100 else pos[turn]
+        check(last["mid"] == want_mid, f"snakes: landed on {last['mid']}, expected {want_mid}")
+        check(last["to"] == jumps.get(want_mid, want_mid), "snakes: a ladder or snake was missed")
+        pos[turn] = last["to"]
+        check(g["pos"] == pos, "snakes: the board differs from the moves")
+        if g["phase"] == "final":
+            break
+        sixes = sixes + 1 if last["die"] == 6 else 0
+        again = last["die"] == 6 and sixes < 3
+        if not again:
+            sixes = 0
+        want_turn = turn if again else order[(order.index(turn) + 1) % len(order)]
+        check(g["turn"] == want_turn, f"snakes: {g['turn']} to play, expected {want_turn}")
+    g = host.state["game"]  # type: ignore[index]
+    check(g["phase"] == "final" and pos[g["winner"]] == 100, "snakes: nobody reached 100")
+    want = {q: 500 if q == g["winner"] else pos[q] * 3 for q in pos}
+    check(g["scores"] == want, f"snakes: scores {g['scores']} != {want}")
 
 
 async def play_reflex(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2454,7 +2515,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
-        games += ["bomb", "reflex"]
+        games += ["bomb", "reflex", "snakes"]
         if len(bots) >= 4:
             games.append("mafia")
             games.append("crossword-teams")
@@ -2545,6 +2606,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_bomb(host, bots, rng)
             elif game == "reflex":
                 await play_reflex(host, bots, rng)
+            elif game == "snakes":
+                await play_snakes(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2587,7 +2650,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game in ("mafia", "bomb", "reflex"):
+            elif game in ("mafia", "bomb", "reflex", "snakes"):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"{game}: scoreboard {got} != the game's {want}")

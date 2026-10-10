@@ -37,6 +37,7 @@ export const SEGMENT_ICON: Record<GameCard["id"] | "jackpot", string> = {
   mafia: "🎩",
   bomb: "💣",
   reflex: "⚡",
+  snakes: "🐍",
   jackpot: "💎",
 };
 

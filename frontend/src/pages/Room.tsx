@@ -42,6 +42,7 @@ import { Ludo } from "../games/Ludo";
 import { Chess } from "../games/Chess";
 import { Boxes } from "../games/Boxes";
 import { Lonely } from "../games/Lonely";
+import { Snakes } from "../games/Snakes";
 import { Reflex } from "../games/Reflex";
 import { Bomb } from "../games/Bomb";
 import { Mafia } from "../games/Mafia";
@@ -381,6 +382,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Bomb view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "reflex":
       return <Reflex view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "snakes":
+      return <Snakes view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }

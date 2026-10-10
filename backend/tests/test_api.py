@@ -98,6 +98,7 @@ def test_games_catalog(client):
         "mafia",
         "bomb",
         "reflex",
+        "snakes",
     }
 
 
