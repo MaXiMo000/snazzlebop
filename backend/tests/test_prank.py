@@ -6,6 +6,7 @@ import unittest
 
 from app import prank
 from app.config import load_settings
+from app.rooms import Room
 from tests.test_rooms import FakeConn, HubHarness
 from tests.test_show import finish
 
@@ -99,3 +100,51 @@ class ScareFlowTests(HubHarness):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RoomExtrasTests(HubHarness):
+    """Walk-ons (same private list as the prank), picked faces, and the host's mute-all."""
+
+    async def test_walk_on_for_listed_names_only(self):
+        hub = self.make_hub(jumpscare=True, jumpscare_names=LIST)
+        room, host, conns = await self.party(hub, 2)
+        self.assertIsNone(conns[host].last["entrance"])
+        _, star, _ = hub.join_room(room.code, LIST[0])
+        await hub.broadcast(room)
+        self.assertEqual(conns[host].last["entrance"], {"id": 1, "pid": star.id, "name": LIST[0]})
+        hub.join_audience(room.code, LIST[1])
+        await hub.broadcast(room)
+        self.assertEqual(conns[host].last["entrance"]["id"], 2)
+
+    async def test_faces_and_hush(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 2)
+        guest = next(p for p in room.players if p != host)
+        await hub.handle_message(room, guest, conns[guest], {"t": "avatar", "face": 3, "tone": 7})
+        self.assertEqual(conns[host].last["faces"], {guest: [3, 7]})
+        for bad in (
+            {"face": 99, "tone": 0},
+            {"face": True, "tone": 0},
+            {"face": "1", "tone": 0},
+            {"face": 0},
+        ):
+            await hub.handle_message(room, guest, conns[guest], {"t": "avatar", **bad})
+        self.assertEqual(room.faces, {guest: [3, 7]})
+        await hub.handle_message(room, guest, conns[guest], {"t": "hush"})
+        self.assertIn("not_host", conns[guest].errors())
+        await hub.handle_message(room, host, conns[host], {"t": "hush"})
+        self.assertEqual(conns[guest].last["call"]["hush"], 1)
+        await hub.handle_message(room, host, conns[host], {"t": "hush"})
+        self.assertIn("slow_down", conns[host].errors())
+        await hub.handle_message(room, guest, conns[guest], {"t": "leave"})
+        self.assertEqual(room.faces, {})
+
+    def test_old_snapshots_get_new_fields(self):
+        hub = self.make_hub()
+        room, _, _ = hub.create_room("Host")
+        state = room.__getstate__()
+        for gone in ("faces", "entrance"):
+            state.pop(gone)
+        fresh = Room.__new__(Room)
+        fresh.__setstate__(state)
+        self.assertEqual((fresh.faces, fresh.entrance), ({}, {}))

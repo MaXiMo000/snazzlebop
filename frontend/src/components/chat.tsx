@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { sfx } from "../lib/sfx";
+import { Avatar } from "./avatar";
 import type { ChatMessage, ChatState } from "../types";
 
 type Send = (msg: Record<string, unknown>) => void;
@@ -96,9 +97,14 @@ export function ChatDock({ chat, you, send }: { chat: ChatState; you: string; se
     if (last.by === you || s.open) return;
     setPopup(last);
     sfx.pop();
-    const t = window.setTimeout(() => setPopup(null), 4000);
-    return () => window.clearTimeout(t);
   }, [last, you, s.open]);
+  // Its own timer, keyed on the message: room updates in between must not cancel it.
+  const popupId = popup?.id;
+  useEffect(() => {
+    if (popupId === undefined) return;
+    const t = window.setTimeout(() => setPopup(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [popupId]);
 
   useEffect(() => {
     if (!s.open) return;
@@ -119,7 +125,11 @@ export function ChatDock({ chat, you, send }: { chat: ChatState; you: string; se
     <>
       {popup && !s.open && (
         <button type="button" className="chat-popup" onClick={() => set({ open: true })}>
-          <b>{popup.team ? `${popup.name} (team)` : popup.name}:</b> {popup.text}
+          <Avatar pid={popup.by} name={popup.name} />
+          <span className="chat-popup-body">
+            <b className="chat-name">{popup.team ? `${popup.name} (team)` : popup.name}</b>
+            <span className="chat-text">{popup.text}</span>
+          </span>
         </button>
       )}
       {s.open && (
@@ -154,12 +164,17 @@ export function ChatDock({ chat, you, send }: { chat: ChatState; you: string; se
                   {channel === "team" ? "Only your team sees this channel." : "Say hi! Everyone in the room sees this."}
                 </li>
               ) : (
-                shown.map((m) => (
-                  <li key={m.id} className={m.by === you ? "mine" : ""}>
-                    {m.by !== you && <b className="chat-name">{m.name}</b>}
-                    <span className="chat-text">{m.text}</span>
-                  </li>
-                ))
+                shown.map((m, i) => {
+                  // One avatar and name per run of messages from the same person.
+                  const first = shown[i - 1]?.by !== m.by;
+                  return (
+                    <li key={m.id} className={`chat-msg ${first ? "first" : ""} ${m.by === you ? "mine" : ""}`}>
+                      {first && <Avatar pid={m.by} name={m.name} />}
+                      {first && <b className="chat-name">{m.by === you ? "You" : m.name}</b>}
+                      <span className="chat-text">{m.text}</span>
+                    </li>
+                  );
+                })
               )}
             </ol>
           </div>
@@ -208,7 +223,10 @@ export function ChatTicker({ chat }: { chat: ChatState }) {
     <ol className="chat-ticker" aria-label="Latest chat">
       {recent.map((m) => (
         <li key={m.id}>
-          <b>{m.name}:</b> {m.text}
+          <Avatar pid={m.by} name={m.name} />
+          <span>
+            <b>{m.name}</b> {m.text}
+          </span>
         </li>
       ))}
     </ol>

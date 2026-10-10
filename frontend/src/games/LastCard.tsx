@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { Btn, Card, ShowHead, initials, nameOf } from "../components/ui";
+import { Avatar } from "../components/avatar";
+import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useOnChange, useReducedMotion, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
 import type { LastCardView, LcCard, LcColor, LcLog } from "../types";
@@ -247,7 +248,6 @@ function nextOf(view: LastCardView, pid: string | null): string | null {
   return k < 0 ? null : (view.order[(k + (view.direction < 0 ? -1 : 1) + n) % n] ?? null);
 }
 
-const AVATAR_TONES = 8;
 type Fx = {
   id: number;
   kind: "play" | "draw" | "skip" | "burst";
@@ -325,9 +325,7 @@ function Table({
                 key={pid}
                 className={`lc-seat2 lc-pos-${n}-${k} ${on ? "on" : ""} ${pid === you && !tv ? "you" : ""}`}
               >
-                <span className={`lc-avatar tone-${view.order.indexOf(pid) % AVATAR_TONES}`} aria-hidden="true">
-                  {initials(nameOf(view.players, pid))}
-                </span>
+                <Avatar pid={pid} name={nameOf(view.players, pid)} tone={view.order.indexOf(pid)} className="lc-avatar" />
                 <span className="lc-seat-who">
                   {pid === you && !tv ? "You" : (nameOf(view.players, pid).split(/\s+/)[0] ?? "")}
                 </span>

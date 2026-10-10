@@ -481,7 +481,11 @@ export interface RoomState {
   reactions: Reaction[];
   chat: ChatState;
   /** voice/video calls are set up on this server */
-  call: { available: boolean; allowed: boolean };
+  call: { available: boolean; allowed: boolean; hush: number };
+  /** picked looks: id -> [face, colour] */
+  faces: Record<string, number[]>;
+  /** the latest walk-on (names on the server's private list) */
+  entrance: { id: number; pid: string; name: string } | null;
   crowd: Crowd;
   market: MarketState | null;
   cards: CardsState | null;

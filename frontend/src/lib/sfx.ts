@@ -98,6 +98,17 @@ export const sfx = {
     for (let i = 0; i < 8; i++) note(380 + ((i * 97) % 260), i * 0.045, 0.03, "square", 0.05);
     note(220, 0.4, 0.08, "triangle", 0.14);
   },
+  /** a walk-on jingle: the same few notes every time for the same seed (so each person has their own) */
+  jingle(seed: number) {
+    const scale = [523.3, 587.3, 659.3, 784, 880, 1046.5];
+    let h = seed >>> 0;
+    for (let i = 0; i < 5; i++) {
+      h = (h * 1103515245 + 12345) >>> 0;
+      note(scale[(h >>> 16) % scale.length]!, i * 0.13, 0.16, "triangle", 0.16);
+    }
+    note(1046.5, 0.68, 0.7, "triangle", 0.18);
+    note(1318.5, 0.68, 0.7, "sine", 0.1);
+  },
   /** winner fanfare */
   fanfare() {
     [523.3, 659.3, 784, 1046.5].forEach((f, i) => note(f, i * 0.11, i === 3 ? 0.7 : 0.16, "triangle", 0.17));

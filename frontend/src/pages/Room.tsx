@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { AvatarPicker, FaceHost } from "../components/avatar";
 import { CallHost, CallStrip } from "../components/call";
+import { Entrance } from "../components/entrance";
 import { ChatDock, ChatTicker } from "../components/chat";
 import { ApiError, audienceSeat, clearSession, joinRoom, loadSession, tvSeat } from "../lib/api";
 import { useRoom } from "../lib/useRoom";
@@ -208,8 +210,16 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
     <div className="stack">
       <JumpScare count={state.scare} room={code} you={state.you} />
       <ReactionOverlay reactions={state.reactions} />
+      <FaceHost all={state.faces} you={state.you} send={send} />
+      <Entrance entrance={state.entrance} you={state.you} room={code} />
       {state.chat && <ChatDock chat={state.chat} you={state.you} send={send} />}
-      <CallHost available={!!state.call?.available} allowed={!!state.call?.allowed} send={send} />
+      <CallHost
+        available={!!state.call?.available}
+        allowed={!!state.call?.allowed}
+        hush={state.call?.hush}
+        host={isHost}
+        send={send}
+      />
       <CallStrip />
       {status === "reconnecting" && (
         <div className="alert calm row between" role="status">
@@ -414,6 +424,8 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
     <div className="tv stack">
       <h1 className="sr-only">Snazzlebop TV, room {code}</h1>
       <ReactionOverlay reactions={state.reactions} />
+      <FaceHost all={state.faces} you={state.you} />
+      <Entrance entrance={state.entrance} you={state.you} room={code} />
       {state.chat && <ChatTicker chat={state.chat} />}
       <CallHost available={!!state.call?.available} allowed={!!state.call?.allowed} send={watch} auto />
       <CallStrip tv />
@@ -733,6 +745,7 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
     <div className="stack enter">
       <RoomSign state={state} />
       <LastStandings state={state} />
+      <AvatarPicker you={state.you} name={state.players.find((p) => p.id === state.you)?.name ?? "?"} send={send} />
 
       <Contestants
         players={state.players}

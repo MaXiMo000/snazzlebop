@@ -11,7 +11,7 @@ import secrets
 import time
 import unicodedata
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Protocol
 
 from . import calls, persist, prank
@@ -31,10 +31,11 @@ ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
     *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready", "boost"),
-    *("shuffle", "ink", "inksync", "chat", "call"),
+    *("shuffle", "ink", "inksync", "chat", "call", "avatar", "hush"),
 }
 TEAM_MIN_PLAYERS = 4  # two teams of at least two
-AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync", "chat", "call"}
+AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync", "chat", "call", "avatar"}
+AVATAR_FACES, AVATAR_TONES = 24, 8  # a picked face and colour: indexes into the client's fixed lists
 CALL_GAP = 5.0  # seconds between call passes for one person
 # Chat: plain text, short, rate-limited per person and per room; only the latest messages are kept (in
 # memory and the room's snapshot, gone with the room). Logs never contain chat text.
@@ -153,6 +154,9 @@ class Room:
     chat_last: dict[str, float] = field(default_factory=dict)
     chat_window: list[float] = field(default_factory=list)
     call_last: dict[str, float] = field(default_factory=dict)
+    call_hush: int = 0  # goes up when the host mutes everyone; each screen mutes its own microphone
+    faces: dict[str, list[int]] = field(default_factory=dict)  # pid -> [face, tone], picked by that person
+    entrance: dict[str, Any] = field(default_factory=dict)  # the latest walk-on: {id, pid, name}
     market_next: str = ""  # the game the open market is waiting for
     market_until: float = 0.0
     market_moves: dict[str, float] = field(default_factory=dict)  # price changes after the last game
@@ -201,6 +205,9 @@ class Room:
 
     def __setstate__(self, state: dict[str, Any]) -> None:
         self.__dict__.update(state)
+        for f in fields(self):  # a snapshot from before a field existed: start it at its default
+            if f.name not in state and f.default_factory is not MISSING:
+                setattr(self, f.name, f.default_factory())
         self.lock = asyncio.Lock()
         for p in self.players.values():
             p.connected = False
@@ -388,6 +395,8 @@ class Hub:
         elif pid not in room.scares:
             return
         room.scares[pid] = room.scares.get(pid, 0) + 1
+        if name is not None:  # and a walk-on the whole room sees
+            room.entrance = {"id": room.entrance.get("id", 0) + 1, "pid": pid, "name": name}
 
     def _scare_everyone_matched(self, room: Room) -> None:
         for pid in list(room.scares):
@@ -544,7 +553,13 @@ class Hub:
             "quip": room.quip if room.phase in ("results", "finale") else "",
             "reactions": room.reactions,
             "chat": self._chat_view(room, pid),
-            "call": {"available": calls.enabled(self.settings), "allowed": self._call_allowed(room, pid)},
+            "call": {
+                "available": calls.enabled(self.settings),
+                "allowed": self._call_allowed(room, pid),
+                "hush": room.call_hush,
+            },
+            "faces": room.faces,
+            "entrance": room.entrance or None,
             "crowd": self._crowd_view(room, pid),
             "market": self._market_view(room, pid),
             "cards": self._cards_view(room, pid),
@@ -1313,6 +1328,27 @@ class Hub:
             return self._react(room, pid, msg)
         if kind == "chat":
             return self._chat(room, pid, msg)
+        if kind == "avatar":
+            face, tone = msg.get("face"), msg.get("tone")
+            if (
+                type(face) is not int
+                or type(tone) is not int
+                or not (0 <= face < AVATAR_FACES and 0 <= tone < AVATAR_TONES)
+            ):
+                raise HubError("bad_message", "Unknown message")
+            if room.faces.get(pid) == [face, tone]:
+                return False
+            room.faces[pid] = [face, tone]
+            return True
+        if kind == "hush":
+            if not is_host:
+                raise HubError("not_host", "Only the host can mute everyone", 403)
+            now = self.clock()
+            if now - room.call_last.get("hush", -1e9) < CALL_GAP:
+                raise HubError("slow_down", "Everyone was just muted")
+            room.call_last["hush"] = now
+            room.call_hush += 1
+            return True
         if kind == "predict":
             if pid not in room.audience:
                 raise HubError("audience_only", "Only the audience predicts")
@@ -1478,6 +1514,7 @@ class Hub:
             if player and room.phase == "lobby" and pid != room.host_id:
                 del room.players[pid]
                 room.total_scores.pop(pid, None)
+                room.faces.pop(pid, None)
                 conn = room.conns.pop(pid, None)
                 if conn is not None:
                     asyncio.get_running_loop().create_task(conn.close(1000))
@@ -1508,6 +1545,7 @@ class Hub:
             raise HubError("in_progress", "Remove players between games")
         del room.players[target]
         room.total_scores.pop(target, None)
+        room.faces.pop(target, None)
         self._drop_from_call(room, target)
         conn = room.conns.pop(target, None)
         if conn is not None:

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Btn, Card, ShowHead, initials, nameOf } from "../components/ui";
+import { Avatar } from "../components/avatar";
+import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useOnChange, useReducedMotion, useShow } from "../components/fx";
 import { Drawing, ERASER, Sketch, usePress } from "../components/sketch";
 import { useCountdown } from "../lib/useRoom";
@@ -267,9 +268,7 @@ function Page({
   return (
     <li className={`tp-page ${page.kind} ${where.entry % 2 ? "right" : "left"} ${fresh ? "fresh" : ""}`}>
       <p className="tp-who">
-        <span className={`tp-avatar tone-${tone % 8}`} aria-hidden="true">
-          {initials(who)}
-        </span>
+        <Avatar pid={page.by} name={who} tone={tone} className="tp-avatar" />
         <span className="tp-who-text">
           <b>{who}</b> {page.kind === "drawing" ? "drew" : where.entry === 0 ? "wrote" : "thought it was"}
         </span>
@@ -320,9 +319,12 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
   return (
     <Card className={`tp-album ${tv ? "big" : ""}`}>
       <div className="tp-cover">
-        <span className={`tp-avatar big tone-${view.order.indexOf(album.owner) % 8}`} aria-hidden="true">
-          {initials(nameOf(view.players, album.owner))}
-        </span>
+        <Avatar
+          pid={album.owner}
+          name={nameOf(view.players, album.owner)}
+          tone={view.order.indexOf(album.owner)}
+          className="tp-avatar big"
+        />
         <div className="tp-cover-text">
           <h3>{nameOf(view.players, album.owner)}’s book</h3>
           <ol className="tp-dots" aria-label={`Page ${album.entry + 1} of ${n}`}>

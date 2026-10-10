@@ -6996,6 +6996,206 @@ b.team-name.team-1 {
   }
 }
 
+/* ---- avatars: a picked face on a picked colour, or initials ---------------------------------------- */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--tone, var(--plum));
+  color: #fff;
+  font: 700 0.85rem / 1 var(--display);
+  user-select: none;
+}
+.avatar.face {
+  font: 400 1.3rem / 1 system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+.avatar.lg {
+  width: 52px;
+  height: 52px;
+  font-size: 1.2rem;
+}
+.avatar.lg.face {
+  font-size: 1.9rem;
+}
+.avatar.xl {
+  width: 112px;
+  height: 112px;
+  border: 5px solid #fff;
+  font-size: 2.6rem;
+}
+.avatar.xl.face {
+  font-size: 4rem;
+}
+.avatar-pick {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.avatar-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 4px 18px 4px 4px;
+  border: 3px solid var(--edge);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 1rem / 1.1 var(--body);
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+}
+.avatar-pick-panel {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 3px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.avatar-faces,
+.avatar-tones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+.avatar-face,
+.avatar-tone {
+  min-width: 44px;
+  height: 44px;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  background: var(--field);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.avatar-tone {
+  border-radius: 50%;
+  background: var(--tone);
+}
+.avatar-face[aria-pressed="true"],
+.avatar-tone[aria-pressed="true"] {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--tangerine);
+}
+.avatar-pick-btn:focus-visible,
+.avatar-face:focus-visible,
+.avatar-tone:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+
+/* ---- walk-ons: a title card for the whole room when a listed name joins --------------------------- */
+.entrance {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgba(20, 10, 28, 0.82);
+  animation: entrance-out 4.2s ease-in both;
+}
+.entrance-rays {
+  position: absolute;
+  width: 220vmax;
+  height: 220vmax;
+  background: repeating-conic-gradient(var(--tone) 0 10deg, transparent 10deg 20deg);
+  opacity: 0.55;
+  animation: entrance-spin 14s linear infinite;
+}
+.entrance-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(92vw, 720px);
+  padding: 28px 20px;
+  border: 5px solid #fff;
+  border-radius: 28px;
+  background: #1b1024;
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 0 0 8px var(--tone), 0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: entrance-in 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.entrance-intro {
+  margin: 0;
+  font: 700 clamp(1rem, 4.5vw, 1.6rem) / 1.2 var(--body);
+  color: #ffe9a8;
+  text-wrap: balance;
+}
+.entrance-name {
+  margin: 0;
+  max-width: 100%;
+  font: 400 clamp(2rem, 11vw, 5rem) / 1 var(--display);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  animation: entrance-name 0.5s 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@media (min-width: 1100px) {
+  .tv .entrance-card {
+    width: min(80vw, 1300px);
+    padding: 56px 40px;
+    gap: 20px;
+  }
+  .tv .entrance-intro {
+    font-size: 2.6rem;
+  }
+  .tv .entrance-name {
+    font-size: 9rem;
+  }
+  .tv .entrance .avatar.xl {
+    width: 200px;
+    height: 200px;
+    font-size: 5rem;
+  }
+  .tv .entrance .avatar.xl.face {
+    font-size: 7rem;
+  }
+}
+@keyframes entrance-in {
+  from {
+    transform: scale(0.3) rotate(-8deg);
+    opacity: 0;
+  }
+}
+@keyframes entrance-name {
+  from {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+@keyframes entrance-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes entrance-out {
+  0%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entrance,
+  .entrance-rays,
+  .entrance-card,
+  .entrance-name {
+    animation: none;
+  }
+}
+
 /* ---- chat ------------------------------------------------------------------------------------------- */
 .chat-button {
   position: relative;
@@ -7031,11 +7231,25 @@ b.team-name.team-1 {
   color: var(--ink);
   box-shadow: var(--lift), 0 12px 30px rgba(43, 27, 51, 0.35);
   font: inherit;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   text-align: left;
   overflow-wrap: anywhere; /* people type anything */
   text-wrap: pretty;
   cursor: pointer;
   animation: chat-drop 0.25s ease-out;
+}
+.chat-popup-body {
+  display: grid;
+  min-width: 0;
+}
+.chat-popup .chat-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 @keyframes chat-drop {
   from {
@@ -7127,31 +7341,45 @@ b.team-name.team-1 {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
-.chat-log li {
-  text-wrap: pretty; /* no lone last word (or emoji) */
-  max-width: 85%;
-  align-self: flex-start;
-  padding: 7px 11px;
-  border-radius: 14px 14px 14px 4px;
-  background: var(--surface-2);
+/* Rows like a group chat: one avatar and name per run of messages from the same person. */
+.chat-msg {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  column-gap: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
   overflow-wrap: anywhere;
+  text-wrap: pretty;
 }
-.chat-log li.mine {
-  align-self: flex-end;
-  border-radius: 14px 14px 4px 14px;
-  background: var(--teal-light);
+.chat-msg.first {
+  margin-top: 10px;
 }
-.chat-log li.chat-empty {
-  max-width: none;
-  align-self: stretch;
-  background: none;
-  text-align: center;
+.chat-msg:hover {
+  background: var(--surface-2);
+}
+.chat-msg .avatar {
+  grid-row: span 2;
+  align-self: start;
+  margin-top: 2px;
+}
+.chat-msg .chat-name,
+.chat-msg .chat-text {
+  grid-column: 2;
 }
 .chat-name {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+}
+.chat-msg.mine .chat-name {
+  color: var(--muted);
+}
+.chat-text {
+  line-height: 1.35;
+}
+.chat-log li.chat-empty {
+  padding: 16px 8px;
+  text-align: center;
 }
 .chat-note {
   margin: 0;
@@ -7187,6 +7415,9 @@ b.team-name.team-1 {
   pointer-events: none;
 }
 .chat-ticker li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 10px 16px;
   border: 3px solid var(--edge);
   border-radius: 16px;
@@ -7258,68 +7489,109 @@ b.team-name.team-1 {
     gap: 4px;
   }
 }
+/* The voice bar: always dark, like a call app. Faces are round; whoever is speaking gets a green ring. */
 .call-strip {
+  --call-bg: #1b1024;
+  --call-tile: #2c2038;
+  --call-live: #2fbf71;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border: var(--line);
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 3px solid var(--edge);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--call-bg);
+  color: #fff;
   box-shadow: var(--lift-sm);
+}
+.call-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #7fe3a8;
+}
+.call-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--call-live, #2fbf71);
 }
 .call-tiles,
 .call-grid {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  padding: 0;
+  padding: 4px;
   list-style: none;
   overflow-x: auto;
   min-width: 0;
   flex: 1 1 auto;
 }
 .call-tile {
-  position: relative;
   flex: none;
-  width: 64px;
-  height: 64px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 60px;
+}
+.call-face {
+  position: relative;
   display: grid;
   place-items: center;
-  overflow: hidden;
-  border-radius: 16px;
-  background: var(--plum);
-  border: 3px solid var(--edge);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--call-tile, #2c2038);
+  box-shadow: 0 0 0 3px transparent;
+  transition: box-shadow 0.12s;
 }
-.call-tile.speaking {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px var(--teal);
+.call-tile.speaking .call-face {
+  box-shadow: 0 0 0 3px #2fbf71;
+}
+.call-avatar {
+  width: 100%;
+  height: 100%;
+  font-size: 1.1rem;
+}
+.call-avatar.face {
+  font-size: 1.7rem;
 }
 .call-video {
   width: 100%;
   height: 100%;
+  border-radius: inherit;
   object-fit: cover;
 }
 .call-video.mirror {
   transform: scaleX(-1);
 }
-.call-initials {
-  font-family: var(--display);
-  font-size: 1.3rem;
-  color: var(--bulb);
+.call-muted {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--call-bg, #1b1024);
+  border-radius: 50%;
+  background: #d8324a;
+  color: #fff;
+}
+.call-muted .call-icon {
+  width: 13px;
+  height: 13px;
 }
 .call-name {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 1px 4px;
-  background: rgba(27, 16, 36, 0.78);
-  color: #fff;
-  font-size: 0.68rem;
+  max-width: 100%;
+  font-size: 0.75rem;
   font-weight: 700;
-  text-align: center;
+  color: #e9defa;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7327,48 +7599,74 @@ b.team-name.team-1 {
 .call-tile audio {
   display: none;
 }
+.call-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .call-controls {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
   flex: none;
+  padding: 4px;
+  border-radius: 999px;
+  background: #120a19;
 }
-.call-ctl {
-  position: relative;
-  width: 44px;
-  height: 44px;
+.call-ctl,
+.call-talk {
   display: grid;
   place-items: center;
-  border: 2px solid var(--edge);
+  width: 44px;
+  height: 44px;
+  border: 0;
   border-radius: 50%;
-  background: var(--field);
-  color: var(--ink);
-  font-size: 1.1rem;
+  background: #3a2c49;
+  color: #fff;
   cursor: pointer;
 }
+.call-ctl:hover,
+.call-talk:hover {
+  background: #4a3a5c;
+}
 .call-ctl[aria-pressed="true"] {
-  background: var(--bulb);
-  color: var(--plum);
+  background: #fff;
+  color: #1b1024;
 }
+.call-ctl.warn[aria-pressed="true"],
 .call-ctl.leave {
-  background: var(--cherry);
-  border-color: var(--cherry);
+  background: #d8324a;
+  color: #fff;
 }
-.call-ctl:focus-visible {
+.call-talk {
+  display: inline-flex;
+  gap: 8px;
+  width: auto;
+  padding: 0 16px;
+  border-radius: 999px;
+  font: 700 0.95rem / 1 var(--body);
+  white-space: nowrap;
+  touch-action: none; /* a held finger must not scroll or open a menu */
+  user-select: none;
+}
+.call-talk.on {
+  background: #2fbf71;
+  color: #10230f;
+}
+.call-ctl:focus-visible,
+.call-talk:focus-visible {
   outline: 4px solid var(--tangerine);
   outline-offset: 2px;
-}
-.call-slash {
-  position: absolute;
-  width: 26px;
-  height: 3px;
-  background: var(--cherry);
-  transform: rotate(-45deg);
-  border-radius: 2px;
 }
 .call-note {
   flex-basis: 100%;
   margin: 0;
   font-size: 0.9rem;
+  color: #d9cbe8;
 }
 .call-error .btn {
   margin-left: 8px;
@@ -7380,49 +7678,98 @@ b.team-name.team-1 {
   z-index: 50;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
   gap: 12px;
   padding: 16px;
-  background: rgba(20, 10, 28, 0.94);
+  background: #120a19;
 }
 .call-big .call-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
   grid-auto-rows: minmax(120px, 1fr);
+  width: 100%;
   overflow-y: auto;
 }
 .call-big .call-tile {
+  position: relative;
   width: auto;
-  height: auto;
-  border-radius: 20px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #2c2038;
+  box-shadow: inset 0 0 0 3px transparent;
 }
-.call-big .call-initials {
-  font-size: 2.6rem;
+.call-big .call-tile.speaking {
+  box-shadow: inset 0 0 0 4px #2fbf71;
+}
+.call-big .call-face {
+  width: min(96px, 46%);
+  height: auto;
+  aspect-ratio: 1;
+  box-shadow: none;
+}
+.call-big .call-tile.video .call-face {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.call-big .call-avatar {
+  font-size: 2rem;
+}
+.call-big .call-avatar.face {
+  font-size: 3rem;
+}
+.call-big .call-muted {
+  width: 28px;
+  height: 28px;
+  border-color: #2c2038;
+}
+.call-big .call-tile.video .call-muted {
+  right: 8px;
+  bottom: 8px;
 }
 .call-big .call-name {
-  font-size: 0.95rem;
-  padding: 4px 8px;
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 52px);
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgba(18, 10, 25, 0.8);
+  color: #fff;
+  font-size: 0.9rem;
 }
-.call-big .call-controls {
-  justify-content: center;
-}
-/* TV: a bigger strip of faces across the top, no controls, no sound. */
+/* TV: bigger faces across the top, no controls, no sound. */
 .call-strip.tv {
-  padding: 10px 14px;
+  padding: 12px 16px;
 }
 .call-strip.tv .call-tile {
-  width: 120px;
-  height: 120px;
-  border-radius: 22px;
+  width: 124px;
 }
-.call-strip.tv .call-initials {
+.call-strip.tv .call-face {
+  width: 108px;
+  height: 108px;
+}
+.call-strip.tv .call-avatar {
   font-size: 2.2rem;
 }
+.call-strip.tv .call-avatar.face {
+  font-size: 3.4rem;
+}
 .call-strip.tv .call-name {
-  font-size: 0.95rem;
+  font-size: 1rem;
+}
+.call-strip.tv .call-muted {
+  width: 32px;
+  height: 32px;
+  right: 0;
+  bottom: 0;
 }
 @media (prefers-reduced-motion: reduce) {
-  .call-tile.speaking {
-    box-shadow: none;
+  .call-face {
+    transition: none;
   }
 }
 /* Phones inside a room: the call and chat buttons take the account button's place in the top bar
@@ -7831,29 +8178,38 @@ b.team-name.team-1 {
   box-shadow: 0 0.8cqw 0 rgba(0, 0, 0, 0.35);
   transition: transform 0.2s;
 }
-:is(.lc-avatar, .tp-avatar).tone-0 {
-  background: #c0392b;
+.tone-0 {
+  --tone: #c0392b;
 }
-:is(.lc-avatar, .tp-avatar).tone-1 {
-  background: #1f63b5;
+.tone-1 {
+  --tone: #1f63b5;
 }
-:is(.lc-avatar, .tp-avatar).tone-2 {
-  background: #1d7a40;
+.tone-2 {
+  --tone: #1d7a40;
 }
-:is(.lc-avatar, .tp-avatar).tone-3 {
-  background: #8f6400;
+.tone-3 {
+  --tone: #8f6400;
 }
-:is(.lc-avatar, .tp-avatar).tone-4 {
-  background: #8e44ad;
+.tone-4 {
+  --tone: #8e44ad;
 }
-:is(.lc-avatar, .tp-avatar).tone-5 {
-  background: #b0520a;
+.tone-5 {
+  --tone: #b0520a;
 }
-:is(.lc-avatar, .tp-avatar).tone-6 {
-  background: #0e7583;
+.tone-6 {
+  --tone: #0e7583;
 }
-:is(.lc-avatar, .tp-avatar).tone-7 {
-  background: #b3306f;
+.tone-7 {
+  --tone: #b3306f;
+}
+.lc-avatar.face {
+  font-size: clamp(1.1rem, 6.5cqw, 2.2rem);
+}
+.tp-avatar.face {
+  font-size: 1.25rem;
+}
+.tp-avatar.big.face {
+  font-size: 1.8rem;
 }
 .lc-seat2.on .lc-avatar {
   border-color: var(--bulb);
