@@ -199,6 +199,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           <li>
             <b>Mafia Night</b> (classic): secret roles, quiet nights, loud days. Find the Mafia before they outnumber the town.
           </li>
+          <li>
+            <b>Hot Potato Bomb</b> (classic): answer the prompt to pass the ticking bomb. Hold it when it blows and you lose a life.
+          </li>
         </ul>
       </Card>
     </div>

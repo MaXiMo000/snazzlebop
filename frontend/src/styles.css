@@ -9023,3 +9023,212 @@ b.team-name.team-1 {
     animation: none;
   }
 }
+
+/* ---- hot potato bomb -------------------------------------------------------------------------------- */
+.seg-bomb {
+  --accent: #b3360c;
+  --accent-ink: #fff;
+  --accent-soft: #fbe1d4;
+}
+.bm-stage {
+  display: grid;
+  gap: 10px;
+}
+.bm-prompt {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin: 0;
+  text-align: center;
+}
+.bm-prompt b {
+  font: 400 clamp(1.25rem, 5.4vw, 2rem) / 1.15 var(--display);
+  text-wrap: balance;
+}
+/* Players round a ring (the seat positions are shared with the card table); the bomb flies between them. */
+.bm-ring {
+  container-type: inline-size;
+  position: relative;
+  width: min(100%, 560px);
+  aspect-ratio: 1 / 0.92;
+  margin: 0 auto;
+  border-radius: 50% / 46%;
+  background: radial-gradient(ellipse at 50% 45%, #3a2148 0%, #24122f 70%);
+  box-shadow: inset 0 0 0 1cqw #5b3a70;
+}
+.bm-seats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bm-seat {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.4cqw;
+  width: 24cqw;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #fff;
+}
+.bm-avatar {
+  width: 11cqw;
+  height: 11cqw;
+  min-width: 36px;
+  min-height: 36px;
+  border: 0.7cqw solid #fff;
+  font-size: clamp(0.8rem, 4cqw, 1.5rem);
+  transition: transform 0.2s;
+}
+.bm-avatar.face {
+  font-size: clamp(1.1rem, 6.5cqw, 2.2rem);
+}
+.bm-seat.on .bm-avatar {
+  border-color: #ff7a3d;
+  box-shadow: 0 0 0 1cqw rgba(255, 122, 61, 0.45);
+  transform: scale(1.12);
+}
+.bm-seat.out {
+  opacity: 0.55;
+}
+.bm-seat.out .bm-avatar {
+  filter: grayscale(1);
+}
+.bm-name {
+  max-width: 100%;
+  padding: 0 1.4cqw;
+  border-radius: 999px;
+  background: rgba(18, 10, 25, 0.75);
+  font-size: clamp(0.75rem, 3.4cqw, 1.1rem);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bm-lives {
+  font-size: clamp(0.6rem, 2.6cqw, 0.95rem);
+  line-height: 1;
+  white-space: nowrap;
+}
+.bm-bomb {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 3;
+  font-size: clamp(1.8rem, 11cqw, 4rem);
+  line-height: 1;
+  /* sits on the holder's shoulder, towards the middle of the ring */
+  transform: translate(calc(-50% + (50% - var(--x)) * 0.28), calc(-50% + (50% - var(--y)) * 0.28 - 9cqw));
+  transition:
+    left 0.35s cubic-bezier(0.3, 1.4, 0.5, 1),
+    top 0.35s cubic-bezier(0.3, 1.4, 0.5, 1);
+  animation: bm-shake 0.45s ease-in-out infinite;
+  filter: drop-shadow(0 0.6cqw 0 rgba(0, 0, 0, 0.4));
+}
+.bm-bomb.boom {
+  animation: bm-boom 0.7s ease-out both;
+}
+@keyframes bm-shake {
+  0%,
+  100% {
+    rotate: -9deg;
+  }
+  50% {
+    rotate: 9deg;
+    scale: 1.08;
+  }
+}
+@keyframes bm-boom {
+  0% {
+    scale: 0.4;
+  }
+  60% {
+    scale: 2.6;
+  }
+  100% {
+    scale: 2;
+  }
+}
+.bm-count {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  max-width: 44cqw;
+  color: #fff;
+  font-size: clamp(0.85rem, 4cqw, 1.4rem);
+  text-align: center;
+  text-wrap: balance;
+}
+.bm-count b {
+  display: block;
+  font: 400 clamp(1.2rem, 8cqw, 3rem) / 1 var(--display);
+}
+.bm-count b.who {
+  font: 700 clamp(1rem, 5.6cqw, 2.2rem) / 1.1 var(--body);
+  white-space: nowrap;
+}
+/* Your turn: the whole screen knows it. */
+.bm.hot .bm-answer {
+  border-color: var(--tangerine);
+  animation: bm-hot 0.6s ease-in-out infinite alternate;
+}
+@keyframes bm-hot {
+  to {
+    box-shadow: 0 0 0 6px rgba(255, 122, 61, 0.45);
+  }
+}
+.bm-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.bm-row input {
+  min-width: 0;
+  font-size: 1.1rem;
+}
+.bm-said {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bm-said li {
+  padding: 4px 12px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--field);
+  overflow-wrap: anywhere;
+}
+.bm-said li.new {
+  border-color: var(--tangerine);
+  animation: tp-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.bm-trophy {
+  margin: 0;
+  font-size: 3.6rem;
+  line-height: 1;
+}
+@media (min-width: 1100px) {
+  .tv .bm-ring {
+    width: min(100%, (100svh - 420px) / 0.92);
+  }
+  .tv .bm-prompt b {
+    font-size: 3rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bm-bomb,
+  .bm-bomb.boom,
+  .bm.hot .bm-answer,
+  .bm-said li.new {
+    animation: none;
+    transition: none;
+  }
+}

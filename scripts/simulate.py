@@ -36,7 +36,11 @@ TIMEOUT = 15.0
 # Errors a bot may legitimately trigger (racing for the same question, etc.). Anything else fails.
 EXPECTED_ERRORS = {"already_known", "no_asks", "wrong"}  # wrong: the deliberate crossword miss
 # Per game: a Chicken Run tap that lands just after the bomb is refused, and that's the point.
-EXPECTED_BY_GAME = {"chicken": {"too_late", "wrong_phase"}, "lastcard": {"no_catch"}}
+EXPECTED_BY_GAME = {
+    "chicken": {"too_late", "wrong_phase"},
+    "lastcard": {"no_catch"},
+    "bomb": {"not_yours", "used"},
+}
 
 ALLOWED_KEYS = {
     ("frenemy", "rank"): {"game", "phase", "round", "rounds", "remaining", "prompt", "players", "submitted"}
@@ -204,6 +208,21 @@ for _phase in ("spin", "choose", "perform", "vote", "result", "final"):
         }
         | {"result", "up_next", "history"}
     )
+for _phase in ("pass", "boom", "final"):
+    ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
+        "order",
+        "lives",
+        "out",
+        "holder",
+        "prompt",
+        "answers",
+        "count",
+        "boom",
+        "passes",
+        "winner",
+        "scores",
+        "blasts",
+    }
 for _phase in ("roles", "night", "dawn", "day", "verdict", "final"):
     ALLOWED_KEYS[("mafia", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "alive",
@@ -1082,6 +1101,65 @@ async def play_lonely(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                 check(gg["you"]["pick"] in (None, sent[gg["round"]][b.pid]), f"{b.name} saw another pick")
 
 
+async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """The holder answers and the bomb moves to the next player still in; a repeat or a non-holder is
+    refused; the host's skip sets it off, which costs the holder a life. No frame ever carries the fuse."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+    word = 0
+    for _ in range(60):
+        await all_until(bots, lambda st: st["game"]["phase"] in ("pass", "final"), "bomb live")
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        rnd, order = g["round"], g["order"]
+        for _ in range(rng.randint(0, 3)):
+            g = host.state["game"]  # type: ignore[index]
+            holder = g["holder"]
+            alive = [p for p in order if g["lives"][p] > 0]
+            other = next((p for p in alive if p != holder), None)
+            if other and rng.random() < 0.3:
+                await by_id[other].send(t="act", a="answer", text="not my turn")  # refused: not_yours
+            word += 1
+            await by_id[holder].send(t="act", a="answer", text=f"thing {word}")
+            i = order.index(holder)
+            want = next(p for p in order[i + 1 :] + order[: i + 1] if p in alive)
+            await all_until(
+                bots,
+                lambda st, w=want, n=word: (
+                    st["game"]["count"] >= 1
+                    and st["game"]["holder"] == w
+                    and st["game"]["answers"][-1]["text"] == f"thing {n}"
+                ),
+                "bomb passed",
+            )
+            if rng.random() < 0.3:
+                await by_id[want].send(t="act", a="answer", text=f"THING  {word}!")  # refused: used
+        g = host.state["game"]  # type: ignore[index]
+        holder, lives = g["holder"], g["lives"][g["holder"]]
+        await skip(host)
+        await all_until(
+            bots, lambda st, r=rnd: st["game"]["phase"] == "boom" and st["game"]["round"] == r, "bomb boom"
+        )
+        g = host.state["game"]  # type: ignore[index]
+        check(g["boom"]["who"] == holder, "bomb: it blew up on someone who wasn't holding it")
+        check(g["lives"][holder] == lives - 1, "bomb: the blast didn't cost exactly one life")
+        check(g["boom"]["out"] == (lives == 1), "bomb: out flag is wrong")
+        await skip(host)
+    g = host.state["game"]  # type: ignore[index]
+    check(g["phase"] == "final", "bomb: the game didn't end")
+    left = [p for p, n in g["lives"].items() if n > 0]
+    check(left == [g["winner"]], f"bomb: winner {g['winner']} but {left} still have lives")
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "bomb":
+                continue
+            check("fuse" not in json.dumps(gg), f"bomb: {b.name} was sent the fuse")
+            if gg["phase"] == "pass":
+                check(gg["remaining"] is None, f"bomb: {b.name} saw a countdown while the bomb was live")
+
+
 async def play_mafia(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     """Random nights and days until someone wins. Every frame is checked: nobody alive sees another
     role, night choices or the Detective's findings; a removed player's role becomes public; ghosts and
@@ -1172,7 +1250,9 @@ async def play_mafia(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             check("findings" not in you or role[b.pid] == "detective", f"mafia: {b.name} saw findings")
             check("mate_picks" not in you or role[b.pid] == "mafia", f"mafia: {b.name} saw the Mafia's picks")
             public = {
-                k: v for k, v in gg.items() if k not in ("you", "roles", "counts", "game", "dead", "news", "winner")
+                k: v
+                for k, v in gg.items()
+                if k not in ("you", "roles", "counts", "game", "dead", "news", "winner")
             }
             for word in ("mafia", "detective", "doctor"):
                 check(f'"{word}"' not in json.dumps(public), f"mafia: {b.name} saw a role in {gg['phase']}")
@@ -2319,6 +2399,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
+        games.append("bomb")
         if len(bots) >= 4:
             games.append("mafia")
             games.append("crossword-teams")
@@ -2405,6 +2486,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_tycoon(host, bots, rng)
             elif game == "mafia":
                 await play_mafia(host, bots, rng)
+            elif game == "bomb":
+                await play_bomb(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2447,10 +2530,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game == "mafia":
+            elif game in ("mafia", "bomb"):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
-                check(got == want, f"mafia: scoreboard {got} != the game's {want}")
+                check(got == want, f"{game}: scoreboard {got} != the game's {want}")
             elif game == "telephone":
                 want = telephone_points(host.state["game"]["books"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

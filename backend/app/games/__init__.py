@@ -3,6 +3,7 @@ from __future__ import annotations
 from .alibi import Alibi
 from .base import Game, GameError, Player
 from .blackjack import BlackjackShowdown
+from .bomb import HotPotatoBomb
 from .boxes import MysteryBoxes
 from .chess import Chess
 from .chicken import ChickenRun
@@ -55,6 +56,7 @@ REGISTRY: dict[str, type[Game]] = {
         DrawTelephone,
         PropertyTycoon,
         MafiaNight,
+        HotPotatoBomb,
     )
 }
 

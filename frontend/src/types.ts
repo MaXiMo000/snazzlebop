@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb";
   title: string;
   blurb: string;
   min_players: number;
@@ -367,6 +367,7 @@ export type GameView =
   | LudoView
   | ChessView
   | MafiaView
+  | BombView
   | JackpotView;
 
 export interface Highlight {
@@ -1176,5 +1177,27 @@ export interface MafiaView {
     | { round: number; kind: "night"; killed: string | null; saved: boolean; checked: string | null }
     | { round: number; kind: "day"; out: string | null; votes: Record<string, string | null> }
   )[];
+  scores?: Record<string, number>;
+}
+
+export interface BombView {
+  game: "bomb";
+  phase: "pass" | "boom" | "final";
+  round: number;
+  /** never a fuse countdown: only the pause after a blast */
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  /** the circle the bomb travels */
+  order: string[];
+  lives: Record<string, number>;
+  out: string[];
+  holder: string | null;
+  prompt: string;
+  /** this round's latest answers, oldest first */
+  answers: { by: string; text: string }[];
+  count: number;
+  boom: { who: string; out: boolean; prompt: string; answers: number } | null;
+  passes: Record<string, number>;
+  winner?: string | null;
   scores?: Record<string, number>;
 }
