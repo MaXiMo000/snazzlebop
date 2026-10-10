@@ -10,6 +10,7 @@ type Phase = "off" | "joining" | "live" | "error";
 let room: LkRoom | null = null;
 let snap = {
   available: false,
+  allowed: false,
   phase: "off" as Phase,
   error: "",
   expanded: false,
@@ -93,18 +94,28 @@ function leave() {
 }
 
 /** Mounted by the room page: knows whether calls exist, asks for passes, joins. */
-export function CallHost({ available, send, auto }: { available: boolean; send: Send; auto?: boolean }) {
+export function CallHost({
+  available,
+  allowed,
+  send,
+  auto,
+}: {
+  available: boolean;
+  allowed: boolean;
+  send: Send;
+  auto?: boolean;
+}) {
   useEffect(() => {
-    set({ available });
-  }, [available]);
+    set({ available, allowed });
+  }, [available, allowed]);
   useEffect(() => onCallPass((p) => void connect(p)), []);
   // The TV joins on its own (watch only, no sound).
   useEffect(() => {
-    if (auto && available && snap.phase === "off") {
+    if (auto && available && allowed && snap.phase === "off") {
       set({ phase: "joining" });
       send({ t: "call" });
     }
-  }, [auto, available, send]);
+  }, [auto, available, allowed, send]);
   useEffect(() => {
     joinWith = () => {
       set({ phase: "joining", error: "" });
@@ -117,10 +128,26 @@ export function CallHost({ available, send, auto }: { available: boolean; send: 
 let joinWith: () => void = () => undefined;
 
 /** Top-bar button: join the call, or (when in it) show or hide the big view. */
-export function CallButton() {
+export function CallButton({ go }: { go: (path: string) => void }) {
   const s = useCall();
   if (!s.available || s.tv) return null;
   const live = s.phase === "live";
+  // Calls are for signed-in accounts: a guest's button leads to sign-in (their seat is kept).
+  if (!s.allowed)
+    return (
+      <a
+        className="btn ghost call-button"
+        href="/account"
+        aria-label="Sign in to join the voice and video call"
+        onClick={(e) => {
+          e.preventDefault();
+          go("/account");
+        }}
+      >
+        <span aria-hidden="true">🔒</span>
+        <span className="btn-label">Call</span>
+      </a>
+    );
   return (
     <button
       type="button"

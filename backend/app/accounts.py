@@ -35,6 +35,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.requests import HTTPConnection
 
 from .coins import POWERUP_PRICES, season_of
 from .config import Settings
@@ -201,8 +202,8 @@ def public_user(user: Any) -> dict[str, Any]:
     return {"username": user.username, "coins": user.coins, "powerups": dict(user.powerups or {})}
 
 
-async def session_user(request: Request, db: Any) -> Any:
-    """The signed-in account behind this request's cookie, or None."""
+async def session_user(request: HTTPConnection, db: Any) -> Any:
+    """The signed-in account behind this request's (or WebSocket's) cookie, or None."""
     token = request.cookies.get(SESSION_COOKIE)
     if not token or len(token) > 100 or not db.ready:
         return None

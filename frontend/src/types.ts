@@ -481,7 +481,7 @@ export interface RoomState {
   reactions: Reaction[];
   chat: ChatState;
   /** voice/video calls are set up on this server */
-  call: { available: boolean };
+  call: { available: boolean; allowed: boolean };
   crowd: Crowd;
   market: MarketState | null;
   cards: CardsState | null;

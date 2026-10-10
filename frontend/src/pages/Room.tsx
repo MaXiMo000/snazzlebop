@@ -209,7 +209,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       <JumpScare count={state.scare} room={code} you={state.you} />
       <ReactionOverlay reactions={state.reactions} />
       {state.chat && <ChatDock chat={state.chat} you={state.you} send={send} />}
-      <CallHost available={!!state.call?.available} send={send} />
+      <CallHost available={!!state.call?.available} allowed={!!state.call?.allowed} send={send} />
       <CallStrip />
       {status === "reconnecting" && (
         <div className="alert calm row between" role="status">
@@ -415,7 +415,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
       <h1 className="sr-only">Snazzlebop TV, room {code}</h1>
       <ReactionOverlay reactions={state.reactions} />
       {state.chat && <ChatTicker chat={state.chat} />}
-      <CallHost available={!!state.call?.available} send={watch} auto />
+      <CallHost available={!!state.call?.available} allowed={!!state.call?.allowed} send={watch} auto />
       <CallStrip tv />
       {status !== "open" && (
         <p className="alert calm" role="status">

@@ -400,7 +400,7 @@ class Hub:
         if any(n.casefold() == name.casefold() for n in taken):
             raise HubError("name_taken", "Someone already has that name", 409)
 
-    def join_audience(self, code: str, name: str) -> tuple[Room, Watcher, str]:
+    def join_audience(self, code: str, name: str, user_id: int | None = None) -> tuple[Room, Watcher, str]:
         """A named seat in the crowd: works when the room is full or mid-game, not when it's locked."""
         room = self.get(code.upper() if isinstance(code, str) else code)
         if room is None:
@@ -413,11 +413,20 @@ class Hub:
         self._name_free(room, name)
         watcher = Watcher(id="au:" + secrets.token_urlsafe(6), name=name)
         room.audience[watcher.id] = watcher
+        if user_id is not None:
+            room.accounts[watcher.id] = user_id
         room.last_active = self.clock()
         self._scare(room, watcher.id, name)
         self._persist(room)
         token = sign_token(self.settings.secret_key, watcher.id, room.code, self.settings.token_ttl_seconds)
         return room, watcher, token
+
+    def link_account(self, room: Room, pid: str, user_id: int) -> None:
+        """A guest who signed in after sitting down: their seat now belongs to their account."""
+        if pid in room.accounts or not (pid in room.players or pid in room.audience):
+            return
+        room.accounts[pid] = user_id
+        self._persist(room)
 
     def issue_tv(self, code: str) -> tuple[Room, str]:
         """A read-only big-screen seat. Same trust as joining: anyone holding the room code."""
@@ -535,7 +544,7 @@ class Hub:
             "quip": room.quip if room.phase in ("results", "finale") else "",
             "reactions": room.reactions,
             "chat": self._chat_view(room, pid),
-            "call": {"available": calls.enabled(self.settings)},
+            "call": {"available": calls.enabled(self.settings), "allowed": self._call_allowed(room, pid)},
             "crowd": self._crowd_view(room, pid),
             "market": self._market_view(room, pid),
             "cards": self._cards_view(room, pid),
@@ -1536,10 +1545,17 @@ class Hub:
         return True
 
     # -- calls (LiveKit) ------------------------------------------------------------------------------
+    @staticmethod
+    def _call_allowed(room: Room, pid: str) -> bool:
+        """Calls are for signed-in accounts; a TV may watch when the room's host is signed in."""
+        return (room.host_id if pid in room.viewers else pid) in room.accounts
+
     async def _call(self, room: Room, pid: str, conn: Connection) -> None:
         """A pass for the room's voice/video call, sent only to the asking connection."""
         if not calls.enabled(self.settings):
             raise HubError("no_calls", "Calls aren't set up on this server")
+        if not self._call_allowed(room, pid):
+            raise HubError("sign_in", "Sign in to join the call")
         now = self.clock()
         if now - room.call_last.get(pid, -1e9) < CALL_GAP:
             raise HubError("slow_down", "Joining the call already: give it a moment")

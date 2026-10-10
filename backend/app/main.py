@@ -217,7 +217,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """A named seat in the crowd (react, predict). Rate limited and penalised exactly like join."""
         try:
             await hub.fetch(code.upper())
-            room, watcher, token = hub.join_audience(code, body.name)
+            room, watcher, token = hub.join_audience(code, body.name, await account_id(request))
         except HubError as exc:
             if exc.code == "room_not_found":
                 limiters["join"].penalize(

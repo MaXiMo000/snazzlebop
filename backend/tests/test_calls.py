@@ -66,12 +66,22 @@ class HubCallTests(HubHarness):
     async def test_passes(self):
         hub = self.make_hub(**LK)
         room, host, conns = await self.party(hub, 2)
+        # Guests can't: calls are for signed-in accounts.
+        await hub.handle_message(room, host, conns[host], {"t": "call"})
+        self.assertIn("sign_in", conns[host].errors())
+        self.assertFalse(conns[host].last["call"]["allowed"])
+        self.assertFalse(any(m["t"] == "call" for m in conns[host].sent))
+        hub.link_account(room, host, 7)
         await hub.handle_message(room, host, conns[host], {"t": "call"})
         msg = next(m for m in conns[host].sent if m["t"] == "call")
         claims = decode(msg["token"], LK["livekit_api_secret"])
         self.assertTrue(claims["video"]["canPublish"])
         self.assertEqual(msg["url"], LK["livekit_url"])
+        await hub.broadcast(room)
         self.assertTrue(conns[host].last["call"]["available"])
+        self.assertTrue(conns[host].last["call"]["allowed"])
+        guest = next(p for p in room.players if p != host)
+        self.assertFalse(conns[guest].last["call"]["allowed"])
         # Too soon again: refused.
         await hub.handle_message(room, host, conns[host], {"t": "call"})
         self.assertIn("slow_down", conns[host].errors())
@@ -85,7 +95,7 @@ class HubCallTests(HubHarness):
             next(m for m in screen.sent if m["t"] == "call")["token"], LK["livekit_api_secret"]
         )
         self.assertFalse(tv_claims["video"]["canPublish"])
-        _, fan, _ = hub.join_audience(room.code, "Fan")
+        _, fan, _ = hub.join_audience(room.code, "Fan", 8)
         fan_conn = FakeConn()
         await hub.connect(room, fan.id, fan_conn)
         await hub.handle_message(room, fan.id, fan_conn, {"t": "call"})

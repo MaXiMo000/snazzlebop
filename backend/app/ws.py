@@ -11,6 +11,7 @@ from typing import Any
 
 from fastapi import WebSocket
 
+from . import accounts
 from .rooms import Hub, Room
 from .security import RateLimiter, client_ip, verify_token
 
@@ -119,6 +120,11 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
                 join_bucket.penalize(ip, 4)  # same price as a wrong code on HTTP join
             await _close(ws, 1008)
             return
+        if pid not in room.accounts and pid not in room.viewers:
+            # Signed in after sitting down as a guest: the seat joins the account (coins, calls).
+            user = await accounts.session_user(ws, state.db)
+            if user is not None:
+                hub.link_account(room, pid, user.id)
         await hub.connect(room, pid, conn)
 
         bucket = RateLimiter(settings.ws_msgs_per_second, settings.ws_msg_burst, max_keys=1)

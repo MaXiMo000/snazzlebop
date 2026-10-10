@@ -80,7 +80,7 @@ export function App() {
           </span>
         </a>
         <div className="row topbar-tools">
-          <CallButton />
+          <CallButton go={go} />
           <ChatButton />
           <AccountButton go={go} />
           <ThemeToggle />

@@ -54,7 +54,7 @@ original has them.
   each other.
 - **Audience:** up to 30 more people can react, predict winners, trade and vote an MVP.
 - **Chat:** an everyone channel plus a private team channel when there are teams.
-- **Voice and video calls:** optional, through LiveKit.
+- **Voice and video calls:** optional, through LiveKit, for signed-in accounts.
 - **TV mode:** a read-only big-screen view, with faces from the call and the latest chat.
 - **Optional accounts:** coins for top places, a power-up shop, stats and monthly seasons.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced
