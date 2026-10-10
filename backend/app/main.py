@@ -84,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         on_results=pay_coins,
         spend_powerup=db.spend_powerup,
         refund_powerup=db.refund_powerup,
+        save_circle=db.save_circle,
     )
 
     @contextlib.asynccontextmanager
@@ -181,7 +182,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/api/rooms", status_code=201)
     async def create_room(body: NameBody, request: Request) -> dict[str, str]:
-        room, player, token = hub.create_room(body.name, await account_id(request))
+        uid = await account_id(request)
+        circle = await db.circle(uid) if uid is not None and db.ready else None
+        room, player, token = hub.create_room(body.name, uid, circle)
         return {"code": room.code, "player_id": player.id, "token": token}
 
     @app.post("/api/rooms/{code}/join")

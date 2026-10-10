@@ -15,6 +15,7 @@ const KEY = "snazzlebop:avatar";
 
 // The room publishes everyone's picked look here, so any screen can draw an avatar from just an id.
 let faces: Faces = {};
+let belt: string | null = null; // who wears the champion's crown
 const subs = new Set<() => void>();
 const useFaces = () =>
   useSyncExternalStore(
@@ -23,6 +24,14 @@ const useFaces = () =>
       return () => void subs.delete(fn);
     },
     () => faces,
+  );
+const useBelt = () =>
+  useSyncExternalStore(
+    (fn) => {
+      subs.add(fn);
+      return () => void subs.delete(fn);
+    },
+    () => belt,
   );
 
 function stored(): [number, number] | null {
@@ -45,11 +54,22 @@ function fallbackTone(pid: string) {
 export const toneOf = (pid: string, all: Faces = faces) => all[pid]?.[1] ?? fallbackTone(pid);
 
 /** Mounted by the room page: shares the room's looks and sends this device's saved look once. */
-export function FaceHost({ all, you, send }: { all: Faces | undefined; you: string; send?: Send }) {
+export function FaceHost({
+  all,
+  champion = null,
+  you,
+  send,
+}: {
+  all: Faces | undefined;
+  champion?: string | null;
+  you: string;
+  send?: Send;
+}) {
   useEffect(() => {
     faces = all ?? {};
+    belt = champion;
     for (const fn of subs) fn();
-  }, [all]);
+  }, [all, champion]);
   const mine = all?.[you];
   useEffect(() => {
     const want = stored();
@@ -74,10 +94,14 @@ export function Avatar({
   className?: string;
 }) {
   const all = useFaces();
+  const champion = useBelt() === pid;
   const face = all[pid]?.[0];
   const colour = all[pid]?.[1] ?? (tone === undefined ? toneOf(pid, all) : tone % TONES);
   return (
-    <span className={`avatar tone-${colour} ${face === undefined ? "" : "face"} ${className}`} aria-hidden="true">
+    <span
+      className={`avatar tone-${colour} ${face === undefined ? "" : "face"} ${champion ? "belt" : ""} ${className}`}
+      aria-hidden="true"
+    >
       {face === undefined ? initials(name) : FACES[face]}
     </span>
   );

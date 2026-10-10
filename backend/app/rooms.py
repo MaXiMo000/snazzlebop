@@ -31,10 +31,24 @@ ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
     *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready", "boost"),
-    *("shuffle", "ink", "inksync", "chat", "call", "avatar", "hush"),
+    *("shuffle", "ink", "inksync", "chat", "call", "avatar", "hush", "crown", "forfeit", "wheel"),
 }
 TEAM_MIN_PLAYERS = 4  # two teams of at least two
 AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync", "chat", "call", "avatar"}
+# The loser's wheel: the host's group writes its own forfeits; these fill the wheel until they have.
+DEFAULT_FORFEITS = (
+    "Sing the chorus of a song the room picks",
+    "Talk in a robot voice until the next game ends",
+    "Change your name to Potato for the next game",
+    "Do your best impression of the winner",
+    "Say something nice about everyone in the room",
+    "Speak only in questions for two minutes",
+    "Show the last photo on your phone",
+    "Dance for ten seconds, no music",
+    "Give the winner a royal title and use it all night",
+    "Tell your most embarrassing story in thirty seconds",
+)
+MAX_FORFEITS, FORFEIT_MAX, WHEEL_SLOTS, WHEEL_GAP = 20, 80, 8, 6.0
 AVATAR_FACES, AVATAR_TONES = 24, 8  # a picked face and colour: indexes into the client's fixed lists
 CALL_GAP = 5.0  # seconds between call passes for one person
 # Chat: plain text, short, rate-limited per person and per room; only the latest messages are kept (in
@@ -157,6 +171,9 @@ class Room:
     call_hush: int = 0  # goes up when the host mutes everyone; each screen mutes its own microphone
     faces: dict[str, list[int]] = field(default_factory=dict)  # pid -> [face, tone], picked by that person
     entrance: dict[str, Any] = field(default_factory=dict)  # the latest walk-on: {id, pid, name}
+    belt: str = ""  # the display name of the reigning champion (kept with the host's account)
+    forfeits: list[str] = field(default_factory=list)  # the group's own dares for the loser's wheel
+    wheel: dict[str, Any] = field(default_factory=dict)  # the last spin: {n, pid, name, options, pick}
     market_next: str = ""  # the game the open market is waiting for
     market_until: float = 0.0
     market_moves: dict[str, float] = field(default_factory=dict)  # price changes after the last game
@@ -234,6 +251,8 @@ class Hub:
         on_results: Callable[[list[dict[str, Any]]], Awaitable[dict[int, int]]] | None = None,
         spend_powerup: Callable[[int, str], Awaitable[bool]] | None = None,
         refund_powerup: Callable[[int, str], Awaitable[None]] | None = None,
+        # (host's account, belt holder's name, forfeits): remembered for that host's next rooms
+        save_circle: Callable[[int, str, list[str]], Awaitable[None]] | None = None,
     ) -> None:
         self.settings = settings
         self.clock = clock
@@ -251,6 +270,7 @@ class Hub:
         self.on_results = on_results
         self.spend_powerup = spend_powerup
         self.refund_powerup = refund_powerup
+        self.save_circle = save_circle
         self._saving: dict[str, bool] = {}  # room code -> another save is due once this one lands
 
     # -- snapshots: rooms survive a restart ----------------------------------------------------------
@@ -340,7 +360,9 @@ class Hub:
     def _issue(self, room: Room, player: Player) -> str:
         return sign_token(self.settings.secret_key, player.id, room.code, self.settings.token_ttl_seconds)
 
-    def create_room(self, name: str, user_id: int | None = None) -> tuple[Room, Player, str]:
+    def create_room(
+        self, name: str, user_id: int | None = None, circle: dict[str, Any] | None = None
+    ) -> tuple[Room, Player, str]:
         self.cleanup()
         if len(self.rooms) >= self.settings.max_rooms:
             raise HubError("busy", "The party house is full right now. Try again soon.", 503)
@@ -352,6 +374,9 @@ class Hub:
         room.total_scores[player.id] = 0
         if user_id is not None:
             room.accounts[player.id] = user_id
+        if circle:  # what this host's last night left behind
+            room.belt = str(circle.get("belt") or "")[:32]
+            room.forfeits = [str(x)[:FORFEIT_MAX] for x in (circle.get("forfeits") or [])][:MAX_FORFEITS]
         self.rooms[room.code] = room
         self._scare(room, player.id, name)
         self._persist(room)
@@ -574,6 +599,7 @@ class Hub:
                 "hush": room.call_hush,
             },
             "faces": room.faces,
+            "night": self._night_view(room),
             "entrance": room.entrance or None,
             "crowd": self._crowd_view(room, pid),
             "market": self._market_view(room, pid),
@@ -672,6 +698,104 @@ class Hub:
             if open_ and g is not None
             else 0,
         }
+
+    @staticmethod
+    def _standing(room: Room) -> tuple[str | None, str | None]:
+        """(the clear leader, the last-placed player) by tonight's totals; None while nothing separates
+        them (no points yet, or a tie at the top)."""
+        totals = {p: room.total_scores.get(p, 0) for p in room.players}
+        if len(totals) < 2 or len(set(totals.values())) < 2:
+            return None, None
+        top = max(totals.values())
+        leaders = [p for p, t in totals.items() if t == top]
+        low = min(totals.values())
+        return (leaders[0] if len(leaders) == 1 else None), min(p for p, t in totals.items() if t == low)
+
+    def _night_view(self, room: Room) -> dict[str, Any]:
+        """The champion's belt and the loser's wheel."""
+        holder = next(
+            (p.id for p in room.players.values() if p.name.casefold() == room.belt.casefold()), None
+        )
+        leader, last = self._standing(room)
+        return {
+            "belt": {"name": room.belt, "holder": holder if room.belt else None},
+            "leader": leader,
+            "last": last,
+            "forfeits": list(room.forfeits),
+            "wheel": room.wheel or None,
+        }
+
+    def _keep_circle(self, room: Room) -> None:
+        uid = room.accounts.get(room.host_id)
+        if self.save_circle is None or uid is None:
+            return
+        task = asyncio.get_running_loop().create_task(self.save_circle(uid, room.belt, list(room.forfeits)))
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    def _night(self, room: Room, pid: str, kind: str, msg: dict[str, Any]) -> bool:
+        """Between games: crown tonight's champion, edit the forfeits, spin the loser's wheel."""
+        is_host = pid == room.host_id
+        if room.phase in ("game", "intro", "market"):
+            raise HubError("in_progress", "Wait until the game is over", 409)
+        leader, last = self._standing(room)
+        if kind == "crown":
+            if not is_host:
+                raise HubError("not_host", "Only the host hands out the belt", 403)
+            if leader is None:
+                raise HubError("no_leader", "Nobody is clearly in front yet")
+            name = room.players[leader].name
+            room.belt = name
+            room.entrance = {
+                "id": room.entrance.get("id", 0) + 1,
+                "pid": leader,
+                "name": name,
+                "kind": "belt",
+            }
+            self._keep_circle(room)
+            return True
+        if kind == "forfeit":
+            if not is_host:
+                raise HubError("not_host", "Only the host edits the forfeits", 403)
+            if "del" in msg:
+                i = msg["del"]
+                if type(i) is not int or not 0 <= i < len(room.forfeits):
+                    raise HubError("bad_message", "Unknown message")
+                del room.forfeits[i]
+            else:
+                text = clean_chat(msg.get("add"))
+                if len(text) > FORFEIT_MAX:
+                    raise HubError("too_long", f"Forfeits are up to {FORFEIT_MAX} characters")
+                if len(room.forfeits) >= MAX_FORFEITS:
+                    raise HubError("full", "That's plenty of forfeits")
+                if text.casefold() in (f.casefold() for f in room.forfeits):
+                    raise HubError("duplicate", "That one's already on the wheel")
+                room.forfeits.append(text)
+            self._keep_circle(room)
+            return True
+        # the wheel: the loser spins it themselves (the host can do it for them)
+        if last is None:
+            raise HubError("no_loser", "Nobody is clearly last yet")
+        if not is_host and pid != last:
+            raise HubError("not_yours", "Only last place (or the host) spins the wheel", 403)
+        now = self.clock()
+        if now - room.call_last.get("wheel", -1e9) < WHEEL_GAP:
+            raise HubError("slow_down", "The wheel is still spinning")
+        room.call_last["wheel"] = now
+        spare = [f for f in DEFAULT_FORFEITS if f.casefold() not in {x.casefold() for x in room.forfeits}]
+        self.rng.shuffle(spare)
+        pool = list(room.forfeits)
+        self.rng.shuffle(pool)
+        options = (pool + spare)[:WHEEL_SLOTS] if len(pool) < WHEEL_SLOTS else pool[:WHEEL_SLOTS]
+        self.rng.shuffle(options)
+        room.wheel = {
+            "n": room.wheel.get("n", 0) + 1,
+            "pid": last,
+            "name": room.players[last].name,
+            "options": options,
+            "pick": self.rng.randrange(len(options)),
+        }
+        return True
 
     def _cards_view(self, room: Room, pid: str) -> dict[str, Any] | None:
         s = room.show
@@ -1520,6 +1644,10 @@ class Hub:
             room.highlights, room.quip, room.predictions = [], "", {}
             room.rivals, room.rival_news, room.card_news, room.mvp_votes = [], [], [], {}
             return True
+        if kind in ("crown", "forfeit", "wheel"):
+            if pid not in room.players:
+                raise HubError("players_only", "Only contestants can do that")
+            return self._night(room, pid, kind, msg)
         if kind in ("kick", "lock", "title"):
             if not is_host:
                 raise HubError("not_host", "Only the host can do that", 403)

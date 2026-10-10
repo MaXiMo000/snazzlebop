@@ -41,6 +41,11 @@ code, no sign-up needed. Put the show on a TV and play from your phones.
 | **Draw & Guess** | Pictionary-style drawing (live canvas) | 2-8 |
 | **Draw Telephone** | The drawing telephone game | 3-8 |
 | **Property Tycoon** | The property-trading board game | 2-8 |
+| **Mafia Night** | Mafia / Werewolf (hidden roles, night and day) | 4-8 |
+| **Hot Potato Bomb** | Pass the bomb with a secret fuse | 2-8 |
+| **Reaction Duel** | A reflex test with fake-outs | 2-8 |
+| **Snakes and Ladders** | Snakes and Ladders | 2-8 |
+| **Battleships** | Battleships (teams share a fleet) | 2-8 |
 | **Codewords** | Two-team word association | 4-8 |
 
 Many games have a **Teams** switch: two teams, combined scores, with official partner rules where the
@@ -59,6 +64,8 @@ original has them.
 - **Looks and walk-ons:** pick a face and a colour once; listed friends get a title card and a jingle
   when they join.
 - **Friends:** add each other by username, see who is hosting and join with one tap.
+- **Champion's belt and forfeit wheel:** the host crowns the night's leader, who wears a crown in
+  that host's rooms until someone takes it; last place spins a wheel of forfeits the group wrote.
 - **Recap picture:** the winner, the table, the best-liked drawing and a chat line as one image to
   share.
 - **Installable:** add it to a phone's home screen and it opens full-screen.

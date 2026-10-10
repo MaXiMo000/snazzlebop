@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { sfx } from "../lib/sfx";
 import { Avatar, toneOf } from "./avatar";
 
-export type EntranceInfo = { id: number; pid: string; name: string };
+export type EntranceInfo = { id: number; pid: string; name: string; kind?: "belt" };
 
 const INTROS = [
   "The one, the only…",
@@ -44,7 +44,8 @@ export function Entrance({ entrance, you, room }: { entrance: EntranceInfo | nul
     }
     if (entrance.id <= seen || (wasFirst && entrance.pid !== you)) return;
     setShow(entrance);
-    sfx.jingle(seed(entrance.name));
+    if (entrance.kind === "belt") sfx.fanfare();
+    else sfx.jingle(seed(entrance.name));
     const t = window.setTimeout(() => setShow(null), 4200);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,7 +57,9 @@ export function Entrance({ entrance, you, room }: { entrance: EntranceInfo | nul
       <span className="entrance-rays" aria-hidden="true" />
       <div className="entrance-card">
         <Avatar pid={show.pid} name={show.name} className="xl" />
-        <p className="entrance-intro">{INTROS[h % INTROS.length]}</p>
+        <p className="entrance-intro">
+          {show.kind === "belt" ? "👑 The belt goes to tonight’s champion…" : INTROS[h % INTROS.length]}
+        </p>
         <p className="entrance-name">{show.name}!</p>
       </div>
     </div>

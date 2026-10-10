@@ -124,6 +124,17 @@ class Friend(Base):
     )
 
 
+class Circle(Base):
+    """What a host's rooms remember from one night to the next: who holds the champion's belt (a display
+    name) and the forfeits their group wrote for the loser's wheel."""
+
+    __tablename__ = "circles"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    belt: Mapped[str] = mapped_column(String(32), default="")
+    forfeits: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+
 MAX_FRIENDS = 50
 
 
@@ -318,11 +329,35 @@ class Database:
         async with self.sessions() as session:
             await session.execute(delete(Session).where(Session.user_id == user_id))
             await session.execute(delete(Result).where(Result.user_id == user_id))
+            await session.execute(delete(Circle).where(Circle.user_id == user_id))
             await session.execute(
                 delete(Friend).where(or_(Friend.user_id == user_id, Friend.friend_id == user_id))
             )
             await session.execute(delete(User).where(User.id == user_id))
             await session.commit()
+
+    async def circle(self, user_id: int) -> dict[str, Any]:
+        """The host's belt holder and forfeits (empty when they have none, or the database is down)."""
+        try:
+            async with self.sessions() as session:
+                row = await session.get(Circle, user_id)
+            if row is not None:
+                return {"belt": row.belt, "forfeits": [str(x) for x in (row.forfeits or [])]}
+        except Exception:  # a room must open even if this can't be read
+            log.exception("circle load failed")
+        return {"belt": "", "forfeits": []}
+
+    async def save_circle(self, user_id: int, belt: str, forfeits: list[str]) -> None:
+        try:
+            async with self.sessions() as session:
+                row = await session.get(Circle, user_id)
+                if row is None:
+                    session.add(Circle(user_id=user_id, belt=belt, forfeits=list(forfeits)))
+                else:
+                    row.belt, row.forfeits = belt, list(forfeits)
+                await session.commit()
+        except Exception:
+            log.exception("circle save failed")
 
     async def add_friend(self, user_id: int, friend_id: int) -> bool:
         """False when the list is full. Adding someone twice is fine."""

@@ -40,7 +40,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Twenty-four games. One room code. No sign-up needed.</p>
+        <p className="lead">Twenty-nine games. One room code. No sign-up needed.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 

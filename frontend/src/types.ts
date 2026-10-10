@@ -492,7 +492,16 @@ export interface RoomState {
   /** picked looks: id -> [face, colour] */
   faces: Record<string, number[]>;
   /** the latest walk-on (names on the server's private list) */
-  entrance: { id: number; pid: string; name: string } | null;
+  entrance: { id: number; pid: string; name: string; kind?: "belt" } | null;
+  /** the champion's belt and the loser's forfeit wheel */
+  night: {
+    belt: { name: string; holder: string | null };
+    /** the clear leader / the last-placed player by tonight's totals (null while tied or pointless) */
+    leader: string | null;
+    last: string | null;
+    forfeits: string[];
+    wheel: { n: number; pid: string; name: string; options: string[]; pick: number } | null;
+  };
   crowd: Crowd;
   market: MarketState | null;
   cards: CardsState | null;

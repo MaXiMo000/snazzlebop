@@ -10306,3 +10306,235 @@ button.sh-cell {
     margin-bottom: 10px;
   }
 }
+
+/* ---- the champion's belt and the forfeit wheel -------------------------------------------------- */
+.avatar.belt {
+  position: relative;
+  box-shadow: 0 0 0 3px #ffd23f;
+}
+.avatar.belt::after {
+  content: "👑";
+  position: absolute;
+  top: -42%;
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+  font: 400 0.62em / 1 system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.4));
+  pointer-events: none;
+}
+.avatar.belt:not(.face)::after {
+  font-size: 1.15em;
+}
+.night {
+  display: grid;
+  gap: 12px;
+}
+.night h3,
+.night p {
+  margin: 0;
+}
+.night-belt {
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+.night-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.night-edit {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.night-edit .friend-add {
+  width: 100%;
+}
+.night-forfeits {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.night-forfeits li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 2px 14px;
+  border: 2px solid var(--edge);
+  border-radius: 14px;
+  background: var(--field);
+  overflow-wrap: anywhere;
+}
+.fw {
+  display: grid;
+  gap: 16px;
+  align-items: center;
+}
+.fw-stage {
+  container-type: inline-size;
+  position: relative;
+  width: min(100%, 300px);
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+.fw-pointer {
+  position: absolute;
+  top: -2%;
+  left: 50%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border: 7cqw solid transparent;
+  border-top-color: #fff;
+  border-bottom-width: 0;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.5));
+}
+.fw-wheel {
+  position: absolute;
+  inset: 4%;
+  border: 2.4cqw solid #2b1b33;
+  border-radius: 50%;
+  background: conic-gradient(
+    #c8203a 0 45deg,
+    #f2b705 45deg 90deg,
+    #127a3e 90deg 135deg,
+    #1f5fae 135deg 180deg,
+    #f07f1a 180deg 225deg,
+    #6b2fa0 225deg 270deg,
+    #0e7583 270deg 315deg,
+    #b3306f 315deg 360deg
+  );
+  box-shadow: 0 2cqw 0 rgba(0, 0, 0, 0.35);
+  transform: rotate(var(--end));
+}
+.fw-wheel[class*="to-"] {
+  animation: fw-spin 4.2s cubic-bezier(0.12, 0.75, 0.15, 1) both;
+}
+@keyframes fw-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(var(--end));
+  }
+}
+.fw-num {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font: 400 9cqw / 1 var(--display);
+  text-shadow: 0 0.6cqw 0 rgba(0, 0, 0, 0.45);
+}
+.fw-text {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.fw-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+}
+.fw-result {
+  padding: 12px 14px;
+  border: 3px solid var(--edge);
+  border-radius: 14px;
+  background: var(--mustard);
+  color: #2a1633;
+  font: 700 1.2rem / 1.3 var(--body);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  animation: tp-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.fw-list {
+  margin: 0;
+  padding-left: 1.6em;
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.fw-list li.hit {
+  color: var(--ink);
+  font-weight: 700;
+}
+@media (min-width: 700px) {
+  .fw {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw-wheel[class*="to-"],
+  .fw-result {
+    animation: none;
+  }
+}
+.fw-wheel.to-0,
+.fw-wheel.at-0 {
+  --end: 1777.5deg;
+}
+.fw-num.n0 {
+  transform: rotate(22.5deg) translateY(-33cqw);
+}
+.fw-wheel.to-1,
+.fw-wheel.at-1 {
+  --end: 1732.5deg;
+}
+.fw-num.n1 {
+  transform: rotate(67.5deg) translateY(-33cqw);
+}
+.fw-wheel.to-2,
+.fw-wheel.at-2 {
+  --end: 1687.5deg;
+}
+.fw-num.n2 {
+  transform: rotate(112.5deg) translateY(-33cqw);
+}
+.fw-wheel.to-3,
+.fw-wheel.at-3 {
+  --end: 1642.5deg;
+}
+.fw-num.n3 {
+  transform: rotate(157.5deg) translateY(-33cqw);
+}
+.fw-wheel.to-4,
+.fw-wheel.at-4 {
+  --end: 1597.5deg;
+}
+.fw-num.n4 {
+  transform: rotate(202.5deg) translateY(-33cqw);
+}
+.fw-wheel.to-5,
+.fw-wheel.at-5 {
+  --end: 1552.5deg;
+}
+.fw-num.n5 {
+  transform: rotate(247.5deg) translateY(-33cqw);
+}
+.fw-wheel.to-6,
+.fw-wheel.at-6 {
+  --end: 1507.5deg;
+}
+.fw-num.n6 {
+  transform: rotate(292.5deg) translateY(-33cqw);
+}
+.fw-wheel.to-7,
+.fw-wheel.at-7 {
+  --end: 1462.5deg;
+}
+.fw-num.n7 {
+  transform: rotate(337.5deg) translateY(-33cqw);
+}
