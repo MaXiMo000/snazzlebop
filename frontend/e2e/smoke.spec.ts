@@ -81,6 +81,7 @@ async function skipToResults(host: Page, a11y?: () => Promise<void>) {
 }
 
 test("home, create, join, lobby and every game's first screen", async ({ page: host, browser, baseURL }, info) => {
+  test.setTimeout(5 * 60_000); // every game's first screen
   const problems: string[] = [];
   const a11y: string[] = [];
   watchConsole(host, problems);

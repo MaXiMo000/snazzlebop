@@ -54,7 +54,14 @@ original has them.
   each other.
 - **Audience:** up to 30 more people can react, predict winners, trade and vote an MVP.
 - **Chat:** an everyone channel plus a private team channel when there are teams.
-- **Voice and video calls:** optional, through LiveKit, for signed-in accounts.
+- **Voice and video calls:** optional, through LiveKit, for signed-in accounts, with push-to-talk and
+  a host "mute everyone".
+- **Looks and walk-ons:** pick a face and a colour once; listed friends get a title card and a jingle
+  when they join.
+- **Friends:** add each other by username, see who is hosting and join with one tap.
+- **Recap picture:** the winner, the table, the best-liked drawing and a chat line as one image to
+  share.
+- **Installable:** add it to a phone's home screen and it opens full-screen.
 - **TV mode:** a read-only big-screen view, with faces from the call and the latest chat.
 - **Optional accounts:** coins for top places, a power-up shop, stats and monthly seasons.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced
@@ -103,7 +110,7 @@ Everything is read from the environment; [.env.example](.env.example) lists ever
 | `CLIENT_IP_HEADER` / `TRUSTED_PROXY_HOPS` | behind a proxy | how to find the client's IP for rate limits |
 | `ANTHROPIC_API_KEY` | no | grows the content pools with fresh, validated items |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | no | turns on voice and video calls |
-| `JUMPSCARE_NAMES` | no | a private, comma-separated list of friends to prank with a jump scare |
+| `JUMPSCARE_NAMES` | no | a private, comma-separated list of friends who get a walk-on and a jump scare |
 
 ## Deploy
 

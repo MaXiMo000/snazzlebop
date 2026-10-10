@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AvatarPicker, FaceHost } from "../components/avatar";
 import { CallHost, CallStrip } from "../components/call";
 import { Entrance } from "../components/entrance";
+import { Recap } from "../components/recap";
 import { ChatDock, ChatTicker } from "../components/chat";
 import { ApiError, audienceSeat, clearSession, joinRoom, loadSession, tvSeat } from "../lib/api";
 import { useRoom } from "../lib/useRoom";
@@ -313,6 +314,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
         </>
       )}
       {phase === "finale" && <ReactionBar send={send} />}
+      <Recap state={state} send={send} />
     </div>
   );
 }

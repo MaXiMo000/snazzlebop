@@ -7098,6 +7098,34 @@ b.team-name.team-1 {
   }
 }
 
+/* ---- the recap picture ------------------------------------------------------------------------ */
+.recap-open {
+  margin: 0;
+}
+.recap {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(18, 10, 25, 0.94);
+}
+.recap-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  aspect-ratio: 4 / 5;
+  align-self: center;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+.recap-actions {
+  flex-wrap: wrap;
+}
+
 /* ---- avatars: a picked face on a picked colour, or initials ---------------------------------------- */
 .avatar {
   display: inline-grid;
