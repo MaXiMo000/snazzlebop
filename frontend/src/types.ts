@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex";
   title: string;
   blurb: string;
   min_players: number;
@@ -368,6 +368,7 @@ export type GameView =
   | ChessView
   | MafiaView
   | BombView
+  | ReflexView
   | JackpotView;
 
 export interface Highlight {
@@ -1200,4 +1201,29 @@ export interface BombView {
   passes: Record<string, number>;
   winner?: string | null;
   scores?: Record<string, number>;
+}
+
+export interface ReflexView {
+  game: "reflex";
+  phase: "wait" | "go" | "result" | "final";
+  round: number;
+  rounds: number;
+  /** only the pause on the result screen: the signal is never counted down */
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  /** a fake-out on the pad right now (n changes with each one) */
+  fake: { word: string; tone: number; n: number } | null;
+  early: string[];
+  tapped: string[];
+  result: {
+    /** milliseconds, fastest first */
+    times: Record<string, number>;
+    early: string[];
+    points: Record<string, number>;
+    winner: string | null;
+  } | null;
+  scores: Record<string, number>;
+  you: { early: boolean; tapped: boolean } | null;
+  best?: Record<string, number>;
+  wins?: Record<string, number>;
 }

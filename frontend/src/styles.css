@@ -9232,3 +9232,216 @@ b.team-name.team-1 {
     transition: none;
   }
 }
+
+/* ---- reaction duel ---------------------------------------------------------------------------------- */
+.seg-reflex {
+  --accent: #0b6477;
+  --accent-ink: #fff;
+  --accent-soft: #d3eef3;
+}
+/* The pad: one huge button. Colours can lie (a fake-out may be green); the word TAP! never does. */
+.rx-pad {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: min(52svh, 460px);
+  padding: 20px;
+  border: 6px solid #fff;
+  border-radius: 32px;
+  background: #3a2148;
+  color: #fff;
+  font: inherit;
+  box-shadow: 0 10px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.rx-pad:disabled {
+  cursor: default;
+}
+.rx-pad:focus-visible {
+  outline: 6px solid var(--tangerine);
+  outline-offset: 4px;
+}
+.rx-pad.go {
+  background: #127a3e;
+}
+.rx-pad.fake.t0 {
+  background: #c8203a;
+}
+.rx-pad.fake.t1 {
+  background: #1f5fae;
+}
+.rx-pad.fake.t2 {
+  background: #6b2fa0;
+}
+.rx-pad.fake.t3 {
+  background: #127a3e; /* the cruel one: green, but not the word */
+}
+.rx-pad.early {
+  background: #4a4250;
+  border-style: dashed;
+}
+.rx-pad.done {
+  background: #1f4e45;
+}
+.rx-word {
+  font: 400 clamp(2.6rem, 17vw, 7rem) / 1 var(--display);
+  text-align: center;
+  animation: rx-pop 0.18s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.rx-pad.wait .rx-word {
+  animation: rx-breathe 1.4s ease-in-out infinite alternate;
+}
+.rx-sub {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  text-wrap: balance;
+}
+@keyframes rx-pop {
+  from {
+    transform: scale(0.5);
+  }
+}
+@keyframes rx-breathe {
+  to {
+    opacity: 0.6;
+  }
+}
+.rx-people {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rx-people li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 12px 4px 4px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 700;
+}
+.rx-people li.early {
+  border-style: dashed;
+  opacity: 0.75;
+}
+.rx-people li.tapped {
+  border-color: var(--teal);
+}
+.rx-name {
+  white-space: nowrap;
+}
+.rx-times {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rx-time {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "who ms"
+    "bar bar";
+  align-items: center;
+  gap: 4px 10px;
+}
+.rx-time-who {
+  grid-area: who;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  text-wrap: pretty;
+}
+.rx-ms {
+  grid-area: ms;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rx-pts {
+  color: var(--bulb);
+}
+.rx-bar {
+  grid-area: bar;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bulb);
+  animation: rx-grow 0.6s ease-out both;
+  transform-origin: left;
+}
+.rx-time.first .rx-bar {
+  background: #2fbf71;
+}
+@keyframes rx-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+.rx-time.w1 .rx-bar {
+  width: 10%;
+}
+.rx-time.w2 .rx-bar {
+  width: 20%;
+}
+.rx-time.w3 .rx-bar {
+  width: 30%;
+}
+.rx-time.w4 .rx-bar {
+  width: 40%;
+}
+.rx-time.w5 .rx-bar {
+  width: 50%;
+}
+.rx-time.w6 .rx-bar {
+  width: 60%;
+}
+.rx-time.w7 .rx-bar {
+  width: 70%;
+}
+.rx-time.w8 .rx-bar {
+  width: 80%;
+}
+.rx-time.w9 .rx-bar {
+  width: 90%;
+}
+.rx-time.w10 .rx-bar {
+  width: 100%;
+}
+.rx-best {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+.rx-fell {
+  margin-bottom: 0;
+  text-align: center;
+  text-wrap: balance;
+}
+@media (min-width: 1100px) {
+  .tv .rx-pad.big {
+    min-height: min(56svh, 620px);
+  }
+  .tv .rx-pad.big .rx-word {
+    font-size: 12rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rx-word,
+  .rx-pad.wait .rx-word,
+  .rx-bar {
+    animation: none;
+  }
+}

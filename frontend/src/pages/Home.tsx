@@ -202,6 +202,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           <li>
             <b>Hot Potato Bomb</b> (classic): answer the prompt to pass the ticking bomb. Hold it when it blows and you lose a life.
           </li>
+          <li>
+            <b>Reaction Duel</b> (classic): wait… wait… TAP! Fastest finger wins, but watch out for fake-outs.
+          </li>
         </ul>
       </Card>
     </div>

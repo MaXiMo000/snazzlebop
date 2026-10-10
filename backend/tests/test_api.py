@@ -97,6 +97,7 @@ def test_games_catalog(client):
         "tycoon",
         "mafia",
         "bomb",
+        "reflex",
     }
 
 

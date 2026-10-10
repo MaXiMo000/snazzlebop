@@ -208,6 +208,17 @@ for _phase in ("spin", "choose", "perform", "vote", "result", "final"):
         }
         | {"result", "up_next", "history"}
     )
+for _phase in ("wait", "go", "result", "final"):
+    ALLOWED_KEYS[("reflex", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "fake",
+        "early",
+        "tapped",
+        "result",
+        "scores",
+        "you",
+        "best",
+        "wins",
+    }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1099,6 +1110,50 @@ async def play_lonely(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") == "lonely" and gg.get("phase") == "pick":
                 check(gg["you"]["pick"] in (None, sent[gg["round"]][b.pid]), f"{b.name} saw another pick")
+
+
+async def play_reflex(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Some bots jump the gun (out of the round, -50); the rest tap after the signal, one after another,
+    and must be ranked in that order: 100, 60, 40, then 20. No frame says when the signal will come."""
+    start = {b.pid: len(b.raw) for b in bots}
+    rounds = host.state["game"]["rounds"]  # type: ignore[index]
+    want = dict.fromkeys((b.pid for b in bots), 0)
+    for rnd in range(1, rounds + 1):
+        await all_until(bots, game_is("reflex", "wait", rnd), f"reflex wait {rnd}")
+        early = [b for b in bots if rng.random() < 0.2][: len(bots) - 1]
+        for b in early:
+            await b.send(t="act", a="tap")
+            want[b.pid] -= 50
+        await all_until(bots, lambda st, k=len(early): len(st["game"]["early"]) == k, "reflex early")
+        await skip(host)  # the signal, now
+        await all_until(bots, game_is("reflex", "go", rnd), f"reflex go {rnd}")
+        rest = [b for b in bots if b not in early]
+        rng.shuffle(rest)
+        for i, b in enumerate(rest):
+            await b.send(t="act", a="tap")
+            await all_until(
+                bots,
+                lambda st, k=i + 1, r=rnd: st["game"]["phase"] == "result" or len(st["game"]["tapped"]) >= k,
+                "reflex tap",
+            )
+            want[b.pid] += (100, 60, 40)[i] if i < 3 else 20
+        await all_until(bots, game_is("reflex", "result", rnd), f"reflex result {rnd}")
+        r = host.state["game"]["result"]  # type: ignore[index]
+        check(list(r["times"]) == [b.pid for b in rest], "reflex: the ranking isn't the order they tapped in")
+        check(sorted(r["early"]) == sorted(b.pid for b in early), "reflex: wrong false starts")
+        check(list(r["times"].values()) == sorted(r["times"].values()), "reflex: times aren't fastest first")
+        check(host.state["game"]["scores"] == want, f"reflex: scores != {want}")  # type: ignore[index]
+        await skip(host)
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "reflex":
+                continue
+            blob = json.dumps(gg)
+            check("go_at" not in blob and "fakes" not in blob, f"reflex: {b.name} was told the schedule")
+            if gg["phase"] in ("wait", "go"):
+                check(gg["remaining"] is None, f"reflex: {b.name} saw a countdown to the signal")
+                check(gg["result"] is None, f"reflex: {b.name} saw the result early")
 
 
 async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2399,7 +2454,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
-        games.append("bomb")
+        games += ["bomb", "reflex"]
         if len(bots) >= 4:
             games.append("mafia")
             games.append("crossword-teams")
@@ -2488,6 +2543,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_mafia(host, bots, rng)
             elif game == "bomb":
                 await play_bomb(host, bots, rng)
+            elif game == "reflex":
+                await play_reflex(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2530,7 +2587,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game in ("mafia", "bomb"):
+            elif game in ("mafia", "bomb", "reflex"):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"{game}: scoreboard {got} != the game's {want}")
