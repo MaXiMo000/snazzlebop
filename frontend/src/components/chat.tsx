@@ -181,7 +181,7 @@ export function ChatDock({ chat, you, send }: { chat: ChatState; you: string; se
           {!chat.can_send ? (
             <p className="chat-note muted">The TV only watches.</p>
           ) : chat.muted ? (
-            <p className="chat-note muted">Spymasters stay silent until the game is over.</p>
+            <p className="chat-note muted">{chat.muted_note || "You can’t chat right now."}</p>
           ) : (
             <form
               className="chat-form"

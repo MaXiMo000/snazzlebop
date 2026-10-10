@@ -49,6 +49,7 @@ class Codewords(Game):
     min_players: ClassVar[int] = 4
     max_players: ClassVar[int] = 8
     SHOW: ClassVar[bool] = False  # a team game: played on its own, not in show nights
+    CHAT_MUTED_NOTE: ClassVar[str] = "Spymasters stay silent until the game is over."
     OPTIONS: ClassVar[dict[str, list[str]]] = {"pace": ["relaxed", "speedy"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Two teams, Red and Blue. Each has one Spymaster; everyone else guesses.",

@@ -196,6 +196,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           <li>
             <b>Chess</b> (classic): the real rules and chess clocks. One on one, or the whole room in two teams.
           </li>
+          <li>
+            <b>Mafia Night</b> (classic): secret roles, quiet nights, loud days. Find the Mafia before they outnumber the town.
+          </li>
         </ul>
       </Card>
     </div>

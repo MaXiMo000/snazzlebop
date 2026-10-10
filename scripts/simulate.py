@@ -204,6 +204,20 @@ for _phase in ("spin", "choose", "perform", "vote", "result", "final"):
         }
         | {"result", "up_next", "history"}
     )
+for _phase in ("roles", "night", "dawn", "day", "verdict", "final"):
+    ALLOWED_KEYS[("mafia", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
+        "alive",
+        "dead",
+        "counts",
+        "acted",
+        "votes",
+        "news",
+        "winner",
+        "roles",
+        "you",
+        "log",
+        "scores",
+    }
 ALLOWED_KEYS[("alibi", "interrogate")] = ALLOWED_KEYS[("alibi", "briefing")]
 ALLOWED_KEYS[("alibi", "vote")] = ALLOWED_KEYS[("alibi", "briefing")]
 ALLOWED_KEYS[("telepathy", "pick")] = {
@@ -1066,6 +1080,102 @@ async def play_lonely(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") == "lonely" and gg.get("phase") == "pick":
                 check(gg["you"]["pick"] in (None, sent[gg["round"]][b.pid]), f"{b.name} saw another pick")
+
+
+async def play_mafia(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Random nights and days until someone wins. Every frame is checked: nobody alive sees another
+    role, night choices or the Detective's findings; a removed player's role becomes public; ghosts and
+    the final screen see everything. The night's result must follow from what the bots sent."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+    await all_until(bots, game_is("mafia", "roles"), "mafia roles")
+    role = {b.pid: b.state["game"]["you"]["role"] for b in bots}  # type: ignore[index]
+    mafia = {p for p, r in role.items() if r == "mafia"}
+    check(len(mafia) == (2 if len(bots) >= 7 else 1), f"mafia: {len(mafia)} Mafia for {len(bots)} players")
+    for b in bots:
+        mates = set(b.state["game"]["you"]["mates"])  # type: ignore[index]
+        check(
+            mates == (mafia - {b.pid} if b.pid in mafia else set()), f"mafia: {b.name} got the wrong partners"
+        )
+    await skip(host)
+    last_protected = None
+    for _ in range(40):
+        await all_until(bots, lambda st: st["game"]["phase"] in ("night", "final"), "mafia night")
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        alive = list(g["alive"])
+        picks: dict[str, str] = {}
+        for pid in alive:
+            options = [
+                t
+                for t in alive
+                if (t != pid or role[pid] == "doctor")
+                and not (role[pid] == "mafia" and t in mafia)
+                and not (role[pid] == "doctor" and t == last_protected)
+            ]
+            picks[pid] = rng.choice(options)
+            await by_id[pid].send(t="act", a="night", target=picks[pid])
+        await all_until(bots, lambda st: st["game"]["phase"] == "dawn", "mafia dawn")
+        news = host.state["game"]["news"]  # type: ignore[index]
+        wanted = {picks[m] for m in alive if m in mafia}
+        doctor = next((p for p in alive if role[p] == "doctor"), None)
+        protected = picks.get(doctor) if doctor else None
+        if news["killed"]:
+            check(news["killed"] in wanted, "mafia: someone the Mafia didn't pick was removed")
+            check(news["killed"] != protected, "mafia: the protected player was removed")
+            check(news["role"] == role[news["killed"]], "mafia: the wrong role was revealed")
+        else:
+            check(news["saved"] and bool(wanted & {protected}), "mafia: nobody was removed and nobody saved")
+        last_protected = protected
+        detective = next((p for p in alive if role[p] == "detective"), None)
+        if detective:
+            found = by_id[detective].state["game"]["you"]["findings"]  # type: ignore[index]
+            check(found.get(picks[detective]) == (picks[detective] in mafia), "mafia: a wrong finding")
+        await skip(host)
+        await all_until(bots, lambda st: st["game"]["phase"] in ("day", "final"), "mafia day")
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        alive = list(g["alive"])
+        votes = {pid: rng.choice([None, *[t for t in alive if t != pid]]) for pid in alive}
+        for pid, target in votes.items():
+            await by_id[pid].send(t="act", a="vote", target=target)
+        await all_until(bots, lambda st: st["game"]["phase"] == "verdict", "mafia verdict")
+        news = host.state["game"]["news"]  # type: ignore[index]
+        tally: dict[str, int] = {}
+        for target in votes.values():
+            if target:
+                tally[target] = tally.get(target, 0) + 1
+        top = max(tally.values(), default=0)
+        leaders = [t for t, c in tally.items() if c == top]
+        skips = sum(v is None for v in votes.values())
+        want = leaders[0] if len(leaders) == 1 and top > skips else None
+        check(news["out"] == want, f"mafia: voted out {news['out']}, the votes say {want}")
+        await skip(host)
+    g = host.state["game"]  # type: ignore[index]
+    check(g["phase"] == "final" and g["winner"] in ("town", "mafia"), "mafia: the game didn't end")
+    check(g["roles"] == role, "mafia: the final roles differ from what was dealt")
+    left = [p for p in g["alive"] if p in mafia]
+    check((g["winner"] == "town") == (not left), "mafia: the wrong side won")
+    for b in bots:
+        gone = False
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "mafia":
+                continue
+            gone = gone or b.pid not in gg["alive"]
+            you = gg["you"]
+            check(you["role"] == role[b.pid], f"mafia: {b.name}'s role changed")
+            if gg["phase"] != "final" and not gone:
+                check(gg["roles"] is None, f"mafia: {b.name} saw every role while still in the game")
+            check("findings" not in you or role[b.pid] == "detective", f"mafia: {b.name} saw findings")
+            check("mate_picks" not in you or role[b.pid] == "mafia", f"mafia: {b.name} saw the Mafia's picks")
+            public = {
+                k: v for k, v in gg.items() if k not in ("you", "roles", "counts", "game", "dead", "news", "winner")
+            }
+            for word in ("mafia", "detective", "doctor"):
+                check(f'"{word}"' not in json.dumps(public), f"mafia: {b.name} saw a role in {gg['phase']}")
 
 
 async def play_truthdare(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2210,6 +2320,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         if len(bots) >= 4:
+            games.append("mafia")
             games.append("crossword-teams")
             games += [
                 "lastcard-pairs",
@@ -2292,6 +2403,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_telephone(host, bots, rng)
             elif game == "tycoon":
                 await play_tycoon(host, bots, rng)
+            elif game == "mafia":
+                await play_mafia(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2334,6 +2447,10 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
+            elif game == "mafia":
+                want = host.state["game"]["scores"]  # type: ignore[index]
+                got = {pid: after[pid] - before[pid] for pid in after}
+                check(got == want, f"mafia: scoreboard {got} != the game's {want}")
             elif game == "telephone":
                 want = telephone_points(host.state["game"]["books"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

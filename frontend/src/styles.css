@@ -8703,3 +8703,323 @@ b.team-name.team-1 {
     max-width: min(100%, (100svh - 370px) / 0.92);
   }
 }
+
+/* ---- mafia night ------------------------------------------------------------------------------------ */
+.seg-mafia {
+  --accent: #4a1d6b;
+  --accent-ink: #fff;
+  --accent-soft: #e6d8f3;
+}
+/* The sky: a moon over the sleeping town at night, the sun by day. */
+.mf-sky {
+  position: relative;
+  height: clamp(90px, 22vw, 150px);
+  overflow: hidden;
+  border: var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(#0d0a2a, #2b1b55 70%, #3a2a6a);
+  transition: background 1.2s;
+}
+.mf.is-day .mf-sky {
+  background: linear-gradient(#69c3f5, #bfe6fb 70%, #ffe7a8);
+}
+.mf-orb {
+  position: absolute;
+  top: 16%;
+  left: 12%;
+  width: clamp(40px, 10vw, 64px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fdf6d0;
+  box-shadow:
+    inset -10px -6px 0 #d9cf9a,
+    0 0 30px rgba(253, 246, 208, 0.6);
+  transition:
+    left 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background 1.2s,
+    box-shadow 1.2s;
+}
+.mf.is-day .mf-orb {
+  left: 74%;
+  background: #ffd23f;
+  box-shadow: 0 0 0 10px rgba(255, 210, 63, 0.35), 0 0 50px rgba(255, 210, 63, 0.9);
+}
+.mf-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 30%, #fff 99%, transparent), radial-gradient(1.5px 1.5px at 45% 18%, #fff 99%, transparent),
+    radial-gradient(2px 2px at 62% 42%, #fff 99%, transparent), radial-gradient(1.5px 1.5px at 80% 22%, #fff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 90% 55%, #fff 99%, transparent), radial-gradient(2px 2px at 33% 55%, #fff 99%, transparent);
+  animation: mf-twinkle 3s ease-in-out infinite alternate;
+  transition: opacity 1.2s;
+}
+.mf.is-day .mf-stars {
+  opacity: 0;
+  animation: none;
+}
+@keyframes mf-twinkle {
+  to {
+    opacity: 0.45;
+  }
+}
+/* A row of rooftops along the bottom, with a few lit windows at night. */
+.mf-town {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 38%;
+  background:
+    linear-gradient(#ffd23f, #ffd23f) 14% 60% / 6px 8px no-repeat,
+    linear-gradient(#ffd23f, #ffd23f) 47% 45% / 6px 8px no-repeat,
+    linear-gradient(#ffd23f, #ffd23f) 79% 62% / 6px 8px no-repeat,
+    linear-gradient(#150f2e, #150f2e) 0 100% / 22% 70% no-repeat,
+    linear-gradient(#150f2e, #150f2e) 20% 100% / 14% 100% no-repeat,
+    linear-gradient(#150f2e, #150f2e) 40% 100% / 20% 82% no-repeat,
+    linear-gradient(#150f2e, #150f2e) 64% 100% / 12% 60% no-repeat,
+    linear-gradient(#150f2e, #150f2e) 84% 100% / 24% 90% no-repeat,
+    linear-gradient(#150f2e, #150f2e) 100% 100% / 10% 66% no-repeat;
+}
+.mf.is-day .mf-town {
+  filter: brightness(2.6) saturate(0.6);
+}
+.mf-role-card {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.mf-role-card.ghost {
+  border-style: dashed;
+}
+.mf-role {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  border: 3px solid var(--edge);
+  border-radius: 16px;
+  background: var(--field);
+  animation: mf-flip 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+.mf-role.r-mafia {
+  border-color: var(--cherry);
+}
+.mf-role-icon {
+  flex: none;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+.mf-role-name {
+  margin: 0;
+  font: 400 1.35rem / 1.15 var(--display);
+  text-wrap: balance;
+}
+.mf-role-job {
+  margin: 6px 0 0;
+  text-wrap: pretty;
+}
+@keyframes mf-flip {
+  from {
+    transform: rotateY(90deg);
+    opacity: 0;
+  }
+}
+.mf-findings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.mf-findings li {
+  padding: 4px 10px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.mf-findings li.bad {
+  border-color: var(--cherry);
+}
+.mf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 132px), 1fr));
+  gap: 10px;
+}
+.mf-pick {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  min-height: 96px;
+  padding: 10px 6px;
+  border: 3px solid var(--edge);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+}
+.mf-pick:disabled {
+  opacity: 0.55;
+  cursor: default;
+  box-shadow: none;
+}
+.mf-pick.vote:disabled {
+  opacity: 1;
+}
+.mf-pick[aria-pressed="true"] {
+  border-color: var(--tangerine);
+  box-shadow: 0 0 0 3px var(--tangerine);
+}
+.mf-pick:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.mf-pick-name {
+  max-width: 100%;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+.mf-pick-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.mf-votes {
+  min-height: 1.3em;
+  font-weight: 700;
+}
+.mf-news {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+.mf-big {
+  margin: 0;
+  font-size: 3.4rem;
+  line-height: 1;
+  animation: mf-drop 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+@keyframes mf-drop {
+  from {
+    transform: translateY(-40px) scale(0.4);
+    opacity: 0;
+  }
+}
+/* The reveal: a rubber stamp. */
+.mf-stamp {
+  margin: 4px 0 0;
+  padding: 6px 16px;
+  border: 4px solid currentColor;
+  border-radius: 10px;
+  color: #7fe3a8;
+  font: 400 1.3rem / 1.1 var(--display);
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+  animation: mf-stamp 0.45s 0.7s cubic-bezier(0.2, 1.8, 0.4, 1) both;
+}
+.mf-stamp.bad {
+  color: #ff8fa0;
+}
+@keyframes mf-stamp {
+  from {
+    transform: rotate(-4deg) scale(3);
+    opacity: 0;
+  }
+}
+.mf-winner {
+  margin: 0;
+  font-size: clamp(1.6rem, 7vw, 2.6rem);
+}
+.mf-town-list {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.mf-town-list li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "face who pts"
+    "face tag tag";
+  align-items: center;
+  gap: 2px 10px;
+}
+.mf-town-list .avatar {
+  grid-area: face;
+}
+.mf-town-list .score-pts {
+  grid-area: pts;
+}
+.mf-town-list li.out .avatar {
+  filter: grayscale(1);
+}
+.mf-town-list li.out b {
+  text-decoration: line-through;
+}
+.mf-who {
+  grid-area: who;
+  min-width: 0;
+  text-wrap: pretty;
+}
+.mf-tag {
+  grid-area: tag;
+  justify-self: start;
+  padding: 3px 10px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--field);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mf-tag.r-mafia {
+  border-color: var(--cherry);
+}
+.mf-tag.unknown {
+  color: var(--muted);
+}
+@media (min-width: 560px) {
+  .mf-town-list li {
+    grid-template-columns: 36px minmax(0, 1fr) auto auto;
+    grid-template-areas: "face who tag pts";
+  }
+}
+.mf-log {
+  margin: 8px 0 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 4px;
+}
+@media (min-width: 1100px) {
+  .tv .mf-sky {
+    height: 200px;
+  }
+  .tv .mf-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+  .tv .mf-big {
+    font-size: 6rem;
+  }
+  .tv .mf-stamp {
+    font-size: 2.6rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mf-sky,
+  .mf-orb,
+  .mf-stars {
+    transition: none;
+    animation: none;
+  }
+  .mf-role,
+  .mf-big,
+  .mf-stamp {
+    animation: none;
+  }
+}

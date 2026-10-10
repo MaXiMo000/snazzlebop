@@ -119,6 +119,8 @@ class Game(ABC):
     # True when the host may switch on Teams: two teams, the team's combined score wins. A game with an
     # official partner rule plays it (self.teams); the rest play as usual and the hub adds up the teams.
     TEAMS: ClassVar[bool] = False
+    # What a player reads when chat_muted() is keeping them quiet.
+    CHAT_MUTED_NOTE: ClassVar[str] = "You can't chat right now."
 
     def __init__(
         self,

@@ -95,6 +95,7 @@ def test_games_catalog(client):
         "drawguess",
         "telephone",
         "tycoon",
+        "mafia",
     }
 
 

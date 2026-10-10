@@ -1636,7 +1636,7 @@ class Hub:
         game = self._chat_game(room)
         seated = pid in room.players
         if game is not None and seated and pid in game.round_scores and game.chat_muted(pid):
-            raise HubError("muted", "Spymasters stay silent until the game is over")
+            raise HubError("muted", game.CHAT_MUTED_NOTE)
         team = None
         if to == "team":
             channel = (
@@ -1682,6 +1682,7 @@ class Hub:
             ],
             "team": channel[1] if channel else None,
             "muted": bool(game is not None and playing and game.chat_muted(pid)),
+            "muted_note": game.CHAT_MUTED_NOTE if game is not None else "",
             "can_send": pid not in room.viewers,
         }
 

@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia";
   title: string;
   blurb: string;
   min_players: number;
@@ -38,6 +38,8 @@ export interface ChatState {
   team: string | null;
   /** the game says you must stay silent (a Codewords Spymaster mid-game) */
   muted: boolean;
+  /** why (shown instead of the message box) */
+  muted_note: string;
   can_send: boolean;
 }
 
@@ -364,6 +366,7 @@ export type GameView =
   | LastCardView
   | LudoView
   | ChessView
+  | MafiaView
   | JackpotView;
 
 export interface Highlight {
@@ -1128,4 +1131,50 @@ export interface ChessView extends GameBase {
     suggestions: { by: string; move: string; san: string }[];
   } | null;
   scores: Record<string, number>;
+}
+
+export type MafiaRole = "mafia" | "detective" | "doctor" | "villager";
+
+export interface MafiaView {
+  game: "mafia";
+  phase: "roles" | "night" | "dawn" | "day" | "verdict" | "final";
+  round: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  alive: string[];
+  /** in order; a removed player's role is public */
+  dead: { id: string; role: MafiaRole; how: "night" | "vote"; round: number }[];
+  /** how many of each role were dealt */
+  counts: Partial<Record<MafiaRole, number>>;
+  /** night: who has made their move (never what) */
+  acted: string[];
+  /** day: voter -> who they want out (null = skip) */
+  votes: Record<string, string | null>;
+  /** dawn: who was lost (or saved); verdict: who was voted out */
+  news: {
+    kind: "dawn" | "verdict";
+    killed?: string | null;
+    saved?: boolean;
+    out?: string | null;
+    role: MafiaRole | null;
+  } | null;
+  winner: "town" | "mafia" | null;
+  /** everyone's role: only for ghosts and at the end */
+  roles: Record<string, MafiaRole> | null;
+  you: {
+    role: MafiaRole;
+    alive: boolean;
+    mates: string[];
+    pick: string | null;
+    vote: string | null;
+    voted: boolean;
+    mate_picks?: Record<string, string>;
+    findings?: Record<string, boolean>;
+    last_protected?: string | null;
+  } | null;
+  log?: (
+    | { round: number; kind: "night"; killed: string | null; saved: boolean; checked: string | null }
+    | { round: number; kind: "day"; out: string | null; votes: Record<string, string | null> }
+  )[];
+  scores?: Record<string, number>;
 }
