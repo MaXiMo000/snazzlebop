@@ -21,6 +21,7 @@ from .mural import MoleInTheMural
 from .price import PriceIsWeird
 from .reflex import ReactionDuel
 from .roulette import RouletteRoyale
+from .ships import Battleships
 from .snakes import SnakesAndLadders
 from .split import SplitOrSteal
 from .telepathy import TelepathyTax
@@ -61,6 +62,7 @@ REGISTRY: dict[str, type[Game]] = {
         HotPotatoBomb,
         ReactionDuel,
         SnakesAndLadders,
+        Battleships,
     )
 }
 

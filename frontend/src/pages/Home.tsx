@@ -208,6 +208,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           <li>
             <b>Snakes and Ladders</b> (classic): roll and race to 100. Ladders shoot you up, snakes send you sliding back down.
           </li>
+          <li>
+            <b>Battleships</b> (classic): two hidden fleets. Call your shots and sink them all, one on one or in two teams.
+          </li>
         </ul>
       </Card>
     </div>

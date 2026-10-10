@@ -41,6 +41,7 @@ EXPECTED_BY_GAME = {
     "lastcard": {"no_catch"},
     "bomb": {"not_yours", "used"},
     "snakes": {"not_your_turn"},
+    "ships": {"not_your_turn"},
 }
 
 ALLOWED_KEYS = {
@@ -209,6 +210,21 @@ for _phase in ("spin", "choose", "perform", "vote", "result", "final"):
         }
         | {"result", "up_next", "history"}
     )
+for _phase in ("place", "battle", "final"):
+    ALLOWED_KEYS[("ships", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
+        "size",
+        "fleet",
+        "sides",
+        "side_names",
+        "boards",
+        "turn",
+        "shooter",
+        "last",
+        "winner",
+        "you",
+        "scores",
+        "tally",
+    }
 for _phase in ("play", "final"):
     ALLOWED_KEYS[("snakes", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1125,6 +1141,68 @@ async def play_lonely(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") == "lonely" and gg.get("phase") == "pick":
                 check(gg["you"]["pick"] in (None, sent[gg["round"]][b.pid]), f"{b.name} saw another pick")
+
+
+async def play_ships(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Each side shuffles and locks in, then the gunners fire (the simulator knows both fleets from the
+    bots' own views, so it can check every splash, hit and sinking). No frame before the end may show a
+    side the other side's ships: only shots, and a ship's squares once it has sunk."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+    await all_until(bots, game_is("ships", "place"), "ships place")
+    g = host.state["game"]  # type: ignore[index]
+    sides = g["sides"]
+    for side in (0, 1):
+        captain = by_id[sides[side][0]]
+        await captain.send(t="act", a="shuffle")
+        await captain.send(t="act", a="ready")
+    await all_until(bots, game_is("ships", "battle"), "ships battle")
+    fleets = [by_id[sides[side][0]].state["game"]["boards"][side]["ships"] for side in (0, 1)]  # type: ignore[index]
+    for side in (0, 1):
+        for pid in sides[side]:
+            mine = by_id[pid].state["game"]["boards"]  # type: ignore[index]
+            check(mine[side]["ships"] == fleets[side], f"ships: {pid} sees a different fleet from their side")
+    shot: list[set[int]] = [set(), set()]
+    for n in range(1, 200):
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        side, shooter = g["turn"], g["shooter"]
+        target = 1 - side
+        check(shooter in sides[side], "ships: the shooter isn't on the side whose turn it is")
+        ship_cells = [c for sh in fleets[target] for c in sh if c not in shot[target]]
+        free = [c for c in range(64) if c not in shot[target]]
+        cell = rng.choice(ship_cells) if ship_cells and rng.random() < 0.6 else rng.choice(free)
+        if n == 1:
+            other = next(b for b in bots if b.pid != shooter)
+            await other.send(t="act", a="fire", cell=cell)  # refused: not_your_turn
+        await by_id[shooter].send(t="act", a="fire", cell=cell)
+        await all_until(bots, lambda st, k=n: (st["game"]["last"] or {}).get("n") == k, "ships shot")
+        g = host.state["game"]  # type: ignore[index]
+        shot[target].add(cell)
+        ship = next((sh for sh in fleets[target] if cell in sh), None)
+        want = "miss" if ship is None else "sunk" if all(c in shot[target] for c in ship) else "hit"
+        check(g["last"]["result"] == want, f"ships: {g['last']['result']} at {cell}, expected {want}")
+        if g["phase"] != "final":
+            check(g["turn"] == (target if want == "miss" else side), "ships: the wrong side fires next")
+    g = host.state["game"]  # type: ignore[index]
+    check(g["phase"] == "final", "ships: the battle didn't end")
+    loser = 1 - g["winner"]
+    check(
+        all(c in shot[loser] for sh in fleets[loser] for c in sh), "ships: the loser still has a ship afloat"
+    )
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "ships" or gg["phase"] == "final":
+                continue
+            foe = 1 - gg["you"]["side"]
+            board = gg["boards"][foe]
+            check(board["ships"] is None, f"ships: {b.name} was sent the enemy fleet")
+            seen = {int(c) for c in board["shots"]} | {c for sh in board["sunk"] for c in sh}
+            check(
+                seen <= {int(c) for c in board["shots"]}, f"ships: {b.name} saw enemy squares nobody shot at"
+            )
 
 
 async def play_snakes(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2515,7 +2593,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         ]
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
-        games += ["bomb", "reflex", "snakes"]
+        games += ["bomb", "reflex", "snakes", "ships"]
         if len(bots) >= 4:
             games.append("mafia")
             games.append("crossword-teams")
@@ -2608,6 +2686,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_reflex(host, bots, rng)
             elif game == "snakes":
                 await play_snakes(host, bots, rng)
+            elif game == "ships":
+                await play_ships(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2650,7 +2730,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game in ("mafia", "bomb", "reflex", "snakes"):
+            elif game in ("mafia", "bomb", "reflex", "snakes", "ships"):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"{game}: scoreboard {got} != the game's {want}")

@@ -99,6 +99,7 @@ def test_games_catalog(client):
         "bomb",
         "reflex",
         "snakes",
+        "ships",
     }
 
 

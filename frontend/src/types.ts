@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships";
   title: string;
   blurb: string;
   min_players: number;
@@ -370,6 +370,7 @@ export type GameView =
   | BombView
   | ReflexView
   | SnakesView
+  | ShipsView
   | JackpotView;
 
 export interface Highlight {
@@ -1259,4 +1260,36 @@ export interface SnakesView {
   snakes: number[][];
   winner: string | null;
   scores?: Record<string, number>;
+}
+
+export interface ShipsBoard {
+  /** shots taken at this side: square -> result */
+  shots: Record<string, "hit" | "miss">;
+  /** ships that have gone down (their squares) */
+  sunk: number[][];
+  /** where the fleet sits: only for its own side, or everyone once the battle is over */
+  ships: number[][] | null;
+  afloat: number;
+  ready: boolean;
+}
+
+export interface ShipsView {
+  game: "ships";
+  phase: "place" | "battle" | "final";
+  round: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  size: number;
+  fleet: number[];
+  sides: string[][];
+  side_names: string[];
+  boards: ShipsBoard[];
+  /** the side whose shot it is */
+  turn: number | null;
+  shooter: string | null;
+  last: { n: number; by: string; side: number; cell: number; result: "miss" | "hit" | "sunk" } | null;
+  winner: number | null;
+  you: { side: number } | null;
+  scores?: Record<string, number>;
+  tally?: Record<string, { hits: number; sunk: number; shots: number }>;
 }
