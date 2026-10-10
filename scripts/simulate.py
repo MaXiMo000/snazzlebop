@@ -1273,7 +1273,7 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
             book = (j - step) % n
             task = b.state["game"]["task"]  # type: ignore[index]
             if step:
-                check(task["from"] == order[(j - 1) % n], "telephone: the page came from the wrong player")
+                check("from" not in task, "telephone: a page named its author during play")
             if phase == "draw":
                 check(task["prompt"] == made[(book, step - 1)], f"telephone: {b.name} got the wrong sentence")
                 ops = [
@@ -1331,10 +1331,16 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
             want = made[(book, entry)]
             if isinstance(want, str):
                 check(page["text"] == want, "telephone: the album shows the wrong words")
-            fans = [b for b in bots if b.pid != page["by"] and rng.random() < 0.4]
+            author = order[(book + entry) % n]
+            shown = host.state["game"]["album"]["pages"]  # type: ignore[index]
+            if entry < n - 1:
+                check(all(pg["by"] is None for pg in shown), "telephone: the album named someone too early")
+            else:
+                check(all(pg["by"] for pg in shown), "telephone: the finished book didn't name its authors")
+            fans = [b for b in bots if b.pid != author and rng.random() < 0.4]
             for b in fans:
                 await b.send(t="act", a="like", book=book, entry=entry)
-            likes[page["by"]] += len(fans)
+            likes[author] += len(fans)
             await host.until(
                 lambda st, e=entry, k=len(fans): st["game"]["album"]["pages"][e]["likes"] == k,
                 "telephone likes",

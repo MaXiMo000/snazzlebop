@@ -239,9 +239,11 @@ class DrawTelephone(Game):
             self.bump()
 
     # -- views ----------------------------------------------------------------------------------------
-    def _page(self, page: dict[str, Any], pid: str) -> dict[str, Any]:
+    def _page(self, page: dict[str, Any], pid: str, named: bool = True) -> dict[str, Any]:
+        """A page of a book. Nobody is named until the whole book has been shown (you know your own)."""
         return {
-            "by": page["by"],
+            "by": page["by"] if named else None,
+            "mine": page["by"] == pid,
             "kind": page["kind"],
             "text": page.get("text"),
             "drawing": page["canvas"].id if page["kind"] == "drawing" else None,
@@ -256,8 +258,7 @@ class DrawTelephone(Game):
         if self.phase == "write":
             task["idea"] = self.ideas[pid]
         else:
-            prev = self._previous(pid)
-            task["from"] = prev["by"]
+            prev = self._previous(pid)  # whose page it is stays secret until the album names them
             if self.phase == "draw":
                 task["prompt"] = prev["text"]
             else:
@@ -282,12 +283,14 @@ class DrawTelephone(Game):
             "scores": self.scores(),
         }
         if self.phase == "album":
+            named = self.entry == len(self.order) - 1  # the last page is out: now say who did what
             view["album"] = {
                 "book": self.book,
                 "books": len(self.books),
-                "owner": self.order[self.book],
+                "owner": self.order[self.book] if named else None,
+                "named": named,
                 "entry": self.entry,
-                "pages": [self._page(pg, pid) for pg in self.books[self.book][: self.entry + 1]],
+                "pages": [self._page(pg, pid, named) for pg in self.books[self.book][: self.entry + 1]],
             }
         if self.phase == "final":
             view["books"] = [

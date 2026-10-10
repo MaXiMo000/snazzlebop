@@ -52,7 +52,7 @@ export function Telephone({ view, you, receivedAt, send, tv = false }: Props) {
     view.phase === "final"
       ? "Final scores"
       : view.phase === "album"
-        ? `Book ${view.album!.book + 1} of ${view.album!.books} · ${name(view.album!.owner)}’s book`
+        ? `Book ${view.album!.book + 1} of ${view.album!.books}${view.album!.owner ? ` · ${name(view.album!.owner)}’s book` : " · who made this?"}`
         : `${step} · ${task ? (task.done ? "Done! Waiting for the others" : STEP_SIGN[view.phase]) : STEP_SIGN[view.phase]}`;
 
   return (
@@ -91,9 +91,9 @@ function TextTask({ view, send, receivedAt }: { view: TelephoneView; send: Send;
     <Card tone={describe ? "plain" : "stage"} className={describe ? "" : "center"}>
       {describe && task.drawing && (
         <>
-          <p className="sign">{nameOf(view.players, task.from!)} drew this. What is it?</p>
+          <p className="sign">Somebody drew this. What is it?</p>
           <div className="space-top">
-            <Drawing id={task.drawing} send={send} label={`${nameOf(view.players, task.from!)}’s drawing`} />
+            <Drawing id={task.drawing} send={send} label="A drawing to describe" />
           </div>
         </>
       )}
@@ -157,7 +157,7 @@ function DrawTask({ view, send }: { view: TelephoneView; send: Send }) {
         <Card tone="stage" className="center tp-prompt">
           <p className="sign">Draw this</p>
           <p className="tp-prompt-text">“{task.prompt}”</p>
-          <p className="muted">from {nameOf(view.players, task.from!)}</p>
+          <p className="muted">from a mystery writer</p>
         </Card>
         <Sketch
           ink={view.ink}
@@ -244,7 +244,6 @@ function Progress({ view, you, tv }: { view: TelephoneView; you: string; tv: boo
 function Page({
   page,
   players,
-  you,
   send,
   tv,
   where,
@@ -262,13 +261,20 @@ function Page({
   tone: number;
   fresh?: boolean;
 }) {
-  const who = nameOf(players, page.by);
-  const mine = page.by === you;
+  // Anonymous while the book is read out; named once its last page is on screen.
+  const who = page.by ? nameOf(players, page.by) : page.mine && !tv ? "You" : "Somebody";
+  const mine = page.mine && !tv;
   const what = page.kind === "drawing" ? `${who}’s drawing` : `${who}’s words`;
   return (
     <li className={`tp-page ${page.kind} ${where.entry % 2 ? "right" : "left"} ${fresh ? "fresh" : ""}`}>
       <p className="tp-who">
-        <Avatar pid={page.by} name={who} tone={tone} className="tp-avatar" />
+        {page.by ? (
+          <Avatar key="named" pid={page.by} name={who} tone={tone} className="tp-avatar named" />
+        ) : (
+          <span className="tp-avatar avatar mystery" aria-hidden="true">
+            ?
+          </span>
+        )}
         <span className="tp-who-text">
           <b>{who}</b> {page.kind === "drawing" ? "drew" : where.entry === 0 ? "wrote" : "thought it was"}
         </span>
@@ -319,14 +325,21 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
   return (
     <Card className={`tp-album ${tv ? "big" : ""}`}>
       <div className="tp-cover">
-        <Avatar
-          pid={album.owner}
-          name={nameOf(view.players, album.owner)}
-          tone={view.order.indexOf(album.owner)}
-          className="tp-avatar big"
-        />
+        {album.owner ? (
+          <Avatar
+            key="named"
+            pid={album.owner}
+            name={nameOf(view.players, album.owner)}
+            tone={view.order.indexOf(album.owner)}
+            className="tp-avatar big named"
+          />
+        ) : (
+          <span className="tp-avatar big avatar mystery" aria-hidden="true">
+            ?
+          </span>
+        )}
         <div className="tp-cover-text">
-          <h3>{nameOf(view.players, album.owner)}’s book</h3>
+          <h3>{album.owner ? `${nameOf(view.players, album.owner)}’s book` : "Whose book is this?"}</h3>
           <ol className="tp-dots" aria-label={`Page ${album.entry + 1} of ${n}`}>
             {view.order.map((_, i) => (
               <li key={i} className={i < album.entry ? "seen" : i === album.entry ? "now" : ""} />
@@ -348,7 +361,7 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
               tv={tv}
               where={{ book: album.book, entry: i }}
               replay={i === album.pages.length - 1}
-              tone={view.order.indexOf(pg.by)}
+              tone={pg.by ? view.order.indexOf(pg.by) : 0}
               fresh={i === album.pages.length - 1}
             />
           ))}
@@ -408,7 +421,7 @@ function Final({ view, you, send, tv }: { view: TelephoneView; you: string; send
                 tv={tv}
                 where={{ book, entry: i }}
                 replay={false}
-                tone={view.order.indexOf(pg.by)}
+                tone={pg.by ? view.order.indexOf(pg.by) : 0}
               />
             ))}
           </ol>

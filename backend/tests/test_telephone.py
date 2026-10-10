@@ -74,7 +74,7 @@ class FlowTests(unittest.TestCase):
             task = g.view_for(pid)["task"]
             book = g.books[g._book_of(pid)]
             self.assertEqual(task["prompt"], book[0]["text"])
-            self.assertNotEqual(task["from"], pid)  # never your own sentence
+            self.assertNotIn("from", task)  # anonymous until the album names everyone
         for pid in g.order:
             g.handle(pid, {"a": "done"})
         self.assertEqual(g.phase, "describe")
@@ -245,3 +245,24 @@ class HubInkTests(HubHarness):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AnonymousTests(unittest.TestCase):
+    def test_nobody_is_named_until_the_book_is_finished(self):
+        g, _ = make(3)
+        play_steps(g)
+        tv = "tv:screen"
+        for viewer in [*g.order, tv]:
+            album = g.view_for(viewer)["album"]
+            self.assertIsNone(album["owner"])
+            self.assertFalse(album["named"])
+            self.assertEqual([pg["by"] for pg in album["pages"]], [None])
+            self.assertEqual(album["pages"][0]["mine"], viewer == g.books[0][0]["by"])
+        while g.entry < len(g.order) - 1:
+            self.assertTrue(all(pg["by"] is None for pg in g.view_for(tv)["album"]["pages"]))
+            g.advance()
+        album = g.view_for(tv)["album"]
+        self.assertEqual(album["owner"], g.order[0])
+        self.assertEqual([pg["by"] for pg in album["pages"]], [pg["by"] for pg in g.books[0]])
+        g.advance()  # the next book starts anonymous again
+        self.assertIsNone(g.view_for(tv)["album"]["owner"])

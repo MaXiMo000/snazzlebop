@@ -921,7 +921,10 @@ export interface DrawGuessView extends GameBase {
 }
 
 export interface TpPage {
-  by: string;
+  /** null until the whole book has been shown: pages are anonymous while it's read out */
+  by: string | null;
+  /** your own page (you can't like it) */
+  mine: boolean;
   kind: "text" | "drawing";
   text: string | null;
   /** a finished drawing's id (fetch it with an "inksync" message) */
@@ -953,7 +956,7 @@ export interface TelephoneView extends GameBase {
   ink: { id: string; count: number } | null;
   you: { playing: boolean };
   scores: Record<string, number>;
-  album?: { book: number; books: number; owner: string; entry: number; pages: TpPage[] };
+  album?: { book: number; books: number; owner: string | null; named: boolean; entry: number; pages: TpPage[] };
   books?: { owner: string; pages: TpPage[] }[];
 }
 

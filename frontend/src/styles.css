@@ -6223,6 +6223,26 @@ b.team-name.team-1 {
   }
 }
 
+/* Pages are anonymous while a book is read out; the faces pop in when its last page lands. */
+.tp-avatar.mystery {
+  background: var(--plum);
+  color: var(--bulb);
+  border: 3px dashed var(--bulb);
+  box-shadow: none;
+}
+.tp-avatar.named {
+  animation: tp-named 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes tp-named {
+  from {
+    transform: scale(0) rotate(-180deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-avatar.named {
+    animation: none;
+  }
+}
 /* album: a chat thread, like passing the book round the room */
 .tp-cover {
   display: flex;

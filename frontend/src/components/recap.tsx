@@ -22,7 +22,7 @@ function noteDrawings(state: RoomState, send: Send) {
   if (!g || g.game !== "telephone" || !g.books) return;
   for (const book of g.books)
     for (const page of book.pages)
-      if (page.kind === "drawing" && page.drawing && page.likes >= (star?.likes ?? 0) && page.drawing !== star?.id) {
+      if (page.kind === "drawing" && page.drawing && page.by && page.likes >= (star?.likes ?? 0) && page.drawing !== star?.id) {
         star = { id: page.drawing, by: page.by, likes: page.likes };
         if (!drawingOps(page.drawing)) send({ t: "inksync", id: page.drawing });
       }
