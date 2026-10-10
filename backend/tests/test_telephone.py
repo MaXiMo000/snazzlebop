@@ -9,7 +9,7 @@ import unittest
 
 from app.games import GameError, Player
 from app.games.content import TELEPHONE_IDEAS
-from app.games.telephone import LIKE_POINTS, TIMEOUT_TEXT, DrawTelephone
+from app.games.telephone import LIKE_POINTS, TIMEOUT_TEXT, DrawTelephone, hops_for
 
 from .test_rooms import FakeConn, HubHarness
 
@@ -61,8 +61,9 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(g.phase, "album")
         for b, book in enumerate(g.books):
             self.assertEqual([pg["kind"] for pg in book], ["text", "drawing", "text", "drawing"])
-            # Book b starts with its owner, then visits each next player once.
-            self.assertEqual([pg["by"] for pg in book], [g.order[(b + s) % 4] for s in range(4)])
+            # Book b starts with its owner, then visits every other player once.
+            self.assertEqual(book[0]["by"], g.order[b])
+            self.assertEqual(sorted(pg["by"] for pg in book), sorted(g.order))
             self.assertEqual(book[0]["text"], first[g.order[b]])
 
     def test_draw_works_from_the_previous_page_and_describe_from_the_drawing(self):
@@ -245,6 +246,27 @@ class HubInkTests(HubHarness):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PassingTests(unittest.TestCase):
+    def test_you_get_a_different_persons_page_each_step(self):
+        for n in range(3, 9):
+            for seed in range(4):
+                g, _ = make(n, seed)
+                play_steps(g)
+                got: dict[str, list[str]] = {p: [] for p in g.order}  # who each player received from
+                for book in g.books:
+                    self.assertEqual(sorted(pg["by"] for pg in book), sorted(g.order))
+                    for prev, page in zip(book, book[1:], strict=False):
+                        got[page["by"]].append(prev["by"])
+                for pid, senders in got.items():
+                    self.assertNotIn(pid, senders)
+                    repeats = len(senders) - len(set(senders))
+                    # Even tables: never the same person twice. Odd ones: one repeat at most.
+                    self.assertLessEqual(repeats, 0 if n % 2 == 0 else 1, (n, seed, senders))
+
+    def test_the_pattern_changes_from_game_to_game(self):
+        self.assertGreater(len({tuple(hops_for(6, random.Random(s))) for s in range(12)}), 1)
 
 
 class AnonymousTests(unittest.TestCase):

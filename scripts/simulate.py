@@ -1265,17 +1265,43 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
     start = {b.pid: len(b.raw) for b in bots}
     ink_start = {b.pid: len(b.ink) for b in bots}
     made: dict[tuple[int, int], Any] = {}  # (book, step) -> text or drawing ops
+    author: dict[tuple[int, int], str] = {}  # (book, step) -> who made that page
+    senders: dict[str, list[str]] = {p: [] for p in order}  # whose pages each player was handed
     for step in range(n):
         phase = "write" if step == 0 else "draw" if step % 2 else "describe"
         await all_until(bots, phase_is(phase), f"telephone {phase} {step}")
+        held: set[int] = set()
         for j, pid in enumerate(order):
             b = by_id[pid]
-            book = (j - step) % n
             task = b.state["game"]["task"]  # type: ignore[index]
             if step:
                 check("from" not in task, "telephone: a page named its author during play")
+            # Which book is this? The one whose last page is exactly what this bot was handed.
+            book = j
             if phase == "draw":
-                check(task["prompt"] == made[(book, step - 1)], f"telephone: {b.name} got the wrong sentence")
+                book = next((bk for bk in range(n) if made.get((bk, step - 1)) == task["prompt"]), -1)
+                check(book >= 0, f"telephone: {b.name} got a sentence nobody wrote")
+            elif phase == "describe":
+                drawing = task["drawing"]
+                await b.send(t="inksync", id=drawing)
+
+                def got(_st: dict[str, Any], b: Bot = b, d: str = drawing) -> bool:
+                    return any(f.get("id") == d and f.get("full") for f in b.ink)
+
+                await b.until(got, "telephone drawing")
+                frame = next(f for f in reversed(b.ink) if f.get("id") == drawing and f.get("full"))
+                book = next((bk for bk in range(n) if made.get((bk, step - 1)) == frame["ops"]), -1)
+                check(book >= 0, f"telephone: {b.name} got a drawing nobody drew")
+            check(book not in held, f"telephone: two players hold book {book}")
+            check(
+                pid not in [author.get((book, s)) for s in range(step)],
+                f"telephone: {b.name} got a book twice",
+            )
+            if step:
+                senders[pid].append(author[(book, step - 1)])
+            held.add(book)
+            author[(book, step)] = pid
+            if phase == "draw":
                 ops = [
                     {
                         "op": "line",
@@ -1290,22 +1316,13 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
                 made[(book, step)] = ops
                 await b.send(t="act", a="done")
             else:
-                if phase == "describe":
-                    drawing = task["drawing"]
-                    await b.send(t="inksync", id=drawing)
-
-                    def got(_st: dict[str, Any], b: Bot = b, d: str = drawing) -> bool:
-                        return any(f.get("id") == d and f.get("full") for f in b.ink)
-
-                    await b.until(got, "telephone drawing")
-                    frame = next(f for f in reversed(b.ink) if f.get("id") == drawing and f.get("full"))
-                    check(
-                        frame["ops"] == made[(book, step - 1)], f"telephone: {b.name} got the wrong drawing"
-                    )
                 text = f"{'start' if step == 0 else 'saw'} {rng.randrange(10**6)} by {b.name}"
                 made[(book, step)] = text
                 await b.send(t="act", a="text", text=text)
     await all_until(bots, phase_is("album"), "telephone album")
+    for pid, got_from in senders.items():
+        repeats = len(got_from) - len(set(got_from))
+        check(repeats <= (0 if n % 2 == 0 else 1), f"telephone: {pid} kept getting the same person's pages")
     for b in bots:
         relayed = [f for f in b.ink[ink_start[b.pid] :] if not f.get("full")]
         check(not relayed, f"telephone: {b.name} received someone's strokes while they drew")
@@ -1331,16 +1348,16 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
             want = made[(book, entry)]
             if isinstance(want, str):
                 check(page["text"] == want, "telephone: the album shows the wrong words")
-            author = order[(book + entry) % n]
+            page_by = author[(book, entry)]
             shown = host.state["game"]["album"]["pages"]  # type: ignore[index]
             if entry < n - 1:
                 check(all(pg["by"] is None for pg in shown), "telephone: the album named someone too early")
             else:
                 check(all(pg["by"] for pg in shown), "telephone: the finished book didn't name its authors")
-            fans = [b for b in bots if b.pid != author and rng.random() < 0.4]
+            fans = [b for b in bots if b.pid != page_by and rng.random() < 0.4]
             for b in fans:
                 await b.send(t="act", a="like", book=book, entry=entry)
-            likes[author] += len(fans)
+            likes[page_by] += len(fans)
             await host.until(
                 lambda st, e=entry, k=len(fans): st["game"]["album"]["pages"][e]["likes"] == k,
                 "telephone likes",

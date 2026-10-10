@@ -19,6 +19,8 @@ drawn; the album shows pages only as they are revealed.
 
 from __future__ import annotations
 
+import random
+from itertools import pairwise, permutations
 from typing import Any, ClassVar
 
 from .base import Game, GameError
@@ -29,6 +31,23 @@ MAX_TEXT = 80
 LIKE_POINTS = 100
 DRAWING_POINTS = 20000  # per drawing: a room holds up to 32 of them, and every change is snapshotted
 TIMEOUT_TEXT = "???"
+
+
+def hops_for(n: int, rng: random.Random) -> list[int]:
+    """How far round the circle each book has travelled at each step: a different seat every step
+    (so a book visits everyone once), chosen so that the jump from one step to the next is a different
+    size as often as possible. That jump decides whose page you receive, so you get a different person
+    almost every time (every time with an even number of players) instead of always your neighbour."""
+    best: list[tuple[int, ...]] = []
+    most = -1
+    for rest in permutations(range(1, n)):
+        seats = (0, *rest)
+        distinct = len({(b - a) % n for a, b in pairwise(seats)})
+        if distinct > most:
+            best, most = [seats], distinct
+        elif distinct == most:
+            best.append(seats)
+    return list(rng.choice(best))
 
 
 class DrawTelephone(Game):
@@ -65,6 +84,7 @@ class DrawTelephone(Game):
         picks = self.deal("ideas", len(TELEPHONE_IDEAS), n)
         self.ideas = {p: TELEPHONE_IDEAS[i] for p, i in zip(self.order, picks, strict=True)}
         self.books: list[list[dict[str, Any]]] = [[] for _ in range(n)]  # book i starts with order[i]
+        self.hops = hops_for(n, self.rng)
         self.step = 0
         self.book = 0  # the album page being shown: book, entry
         self.entry = 0
@@ -76,8 +96,8 @@ class DrawTelephone(Game):
 
     # -- steps ----------------------------------------------------------------------------------------
     def _book_of(self, pid: str) -> int:
-        """The book this player holds at the current step (book i travels i, i+1, i+2, ...)."""
-        return (self.order.index(pid) - self.step) % len(self.order)
+        """The book this player holds at the current step (book i is hops[step] seats on from i)."""
+        return (self.order.index(pid) - self.hops[self.step]) % len(self.order)
 
     def _begin_step(self) -> None:
         self.done: set[str] = set()
