@@ -30,6 +30,7 @@ import re
 import secrets
 import time
 import unicodedata
+from collections.abc import Callable
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -193,6 +194,11 @@ class ConfirmBody(BaseModel):
     password: str = Field(max_length=PASSWORD_MAX)
 
 
+class FriendBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    username: str = Field(max_length=64)
+
+
 class BuyBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     item: str = Field(max_length=16)
@@ -210,7 +216,12 @@ async def session_user(request: HTTPConnection, db: Any) -> Any:
     return await db.user_for_session(token_hash(token))
 
 
-def router(settings: Settings, db: Any, limiter: RateLimiter) -> APIRouter:
+def router(
+    settings: Settings,
+    db: Any,
+    limiter: RateLimiter,
+    hosting: Callable[[set[int]], dict[int, str]] = lambda ids: {},
+) -> APIRouter:
     api = APIRouter()
     lockout = Lockout()
 
@@ -377,6 +388,49 @@ def router(settings: Settings, db: Any, limiter: RateLimiter) -> APIRouter:
         resp = JSONResponse({"ok": True})
         resp.delete_cookie(SESSION_COOKIE, path="/", samesite="strict", secure=settings.is_production)
         return resp
+
+    # Friends: add by username. A friend's open room shows only once both have added each other, so
+    # adding someone never reveals where they are.
+    async def friend_target(body: FriendBody, user: Any) -> Any:
+        name = body.username.strip()
+        other = await db.user_by_name(name) if USERNAME_RE.fullmatch(name) else None
+        if other is None:
+            raise HubError("no_such_user", "No account with that username", 404)
+        if other.id == user.id:
+            raise HubError("bad_friend", "That's you!")
+        return other
+
+    @api.get("/api/friends")
+    async def friends(request: Request) -> JSONResponse:
+        user = await require_user(request)
+        lists = await db.friends(user.id)
+        rooms = hosting({i for i, _ in lists["mutual"]})
+        return JSONResponse(
+            {
+                "friends": [{"username": n, "room": rooms.get(i)} for i, n in lists["mutual"]],
+                "sent": [n for _, n in lists["sent"]],
+                "asked": [n for _, n in lists["asked"]],
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @api.post("/api/friends")
+    async def add_friend(body: FriendBody, request: Request) -> JSONResponse:
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        other = await friend_target(body, user)
+        if not await db.add_friend(user.id, other.id):
+            raise HubError("friends_full", "Your friends list is full")
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/friends/remove")
+    async def remove_friend(body: FriendBody, request: Request) -> JSONResponse:
+        same_origin(request)
+        user = await require_user(request)
+        other = await friend_target(body, user)
+        await db.remove_friend(user.id, other.id)
+        return JSONResponse({"ok": True})
 
     @api.get("/api/shop")
     async def shop() -> dict[str, Any]:

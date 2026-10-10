@@ -173,7 +173,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def stats() -> dict[str, int]:
         return await db.stats()
 
-    app.include_router(accounts.router(settings, db, limiters["auth"]))
+    app.include_router(accounts.router(settings, db, limiters["auth"], hub.hosting))
 
     async def account_id(request: Request) -> int | None:
         user = await accounts.session_user(request, db)

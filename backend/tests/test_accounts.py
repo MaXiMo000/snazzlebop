@@ -180,6 +180,49 @@ def test_rooms_remember_the_account_but_never_show_it(client):
 
 
 # -- the rules, pure ----------------------------------------------------------------------------------
+def test_friends_see_each_others_rooms_only_when_both_added(client):
+    signup(client, "Ana_99")
+    client.cookies.clear()
+    signup(client, "Bo_77")
+    bo = dict(client.cookies)
+    assert client.post("/api/friends", json={"username": "nobody_1"}).status_code == 404
+    assert client.post("/api/friends", json={"username": "bo_77"}).status_code == 400
+    assert (
+        client.post(
+            "/api/friends", json={"username": "ana_99"}, headers={"Origin": "https://evil.example"}
+        ).status_code
+        == 403
+    )
+    assert client.post("/api/friends", json={"username": "ana_99"}).status_code == 200
+    assert client.get("/api/friends").json() == {"friends": [], "sent": ["Ana_99"], "asked": []}
+
+    # Ana hosts a room. Bo added her, but she hasn't added him: he sees nothing.
+    client.cookies.clear()
+    client.post("/api/auth/login", json={"username": "Ana_99", "password": PW})
+    code = client.post("/api/rooms", json={"name": "Ana"}).json()["code"]
+    hub = client.app.state.hub
+    room = hub.get(code)
+    room.players[room.host_id].connected = True
+    assert client.get("/api/friends").json() == {"friends": [], "sent": [], "asked": ["Bo_77"]}
+    client.cookies.clear()
+    client.cookies.update(bo)
+    assert client.get("/api/friends").json()["friends"] == []
+
+    # She adds him back: now he sees her room, until she locks it.
+    client.cookies.clear()
+    client.post("/api/auth/login", json={"username": "Ana_99", "password": PW})
+    assert client.post("/api/friends", json={"username": "Bo_77"}).status_code == 200
+    client.cookies.clear()
+    client.cookies.update(bo)
+    assert client.get("/api/friends").json()["friends"] == [{"username": "Ana_99", "room": code}]
+    room.locked = True
+    assert client.get("/api/friends").json()["friends"] == [{"username": "Ana_99", "room": None}]
+    assert client.post("/api/friends/remove", json={"username": "Ana_99"}).status_code == 200
+    assert client.get("/api/friends").json() == {"friends": [], "sent": [], "asked": ["Ana_99"]}
+    client.cookies.clear()
+    assert client.get("/api/friends").status_code == 401
+
+
 def test_places_and_coins():
     assert coins.places({"a": 300, "b": 300, "c": 100, "d": 0}) == {"a": 1, "b": 1, "c": 3, "d": 4}
     assert [coins.coins_for(p, 5) for p in (1, 2, 3, 4, 5)] == [50, 30, 20, 10, 5]

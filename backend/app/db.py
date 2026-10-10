@@ -21,6 +21,7 @@ from sqlalchemy import (
     UniqueConstraint,
     delete,
     func,
+    or_,
     select,
     update,
 )
@@ -110,6 +111,20 @@ class Result(Base):
     points: Mapped[int] = mapped_column(Integer)
     coins: Mapped[int] = mapped_column(Integer)
     played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class Friend(Base):
+    """One account added another. Friends see each other's rooms only once both have added the other."""
+
+    __tablename__ = "friends"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    friend_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+
+
+MAX_FRIENDS = 50
 
 
 def make_engine(url: str) -> AsyncEngine:
@@ -303,8 +318,53 @@ class Database:
         async with self.sessions() as session:
             await session.execute(delete(Session).where(Session.user_id == user_id))
             await session.execute(delete(Result).where(Result.user_id == user_id))
+            await session.execute(
+                delete(Friend).where(or_(Friend.user_id == user_id, Friend.friend_id == user_id))
+            )
             await session.execute(delete(User).where(User.id == user_id))
             await session.commit()
+
+    async def add_friend(self, user_id: int, friend_id: int) -> bool:
+        """False when the list is full. Adding someone twice is fine."""
+        async with self.sessions() as session:
+            have = await session.execute(select(Friend.friend_id).where(Friend.user_id == user_id))
+            mine = set(have.scalars())
+            if friend_id in mine:
+                return True
+            if len(mine) >= MAX_FRIENDS:
+                return False
+            session.add(Friend(user_id=user_id, friend_id=friend_id))
+            await session.commit()
+            return True
+
+    async def remove_friend(self, user_id: int, friend_id: int) -> None:
+        async with self.sessions() as session:
+            await session.execute(
+                delete(Friend).where(Friend.user_id == user_id, Friend.friend_id == friend_id)
+            )
+            await session.commit()
+
+    async def friends(self, user_id: int) -> dict[str, list[tuple[int, str]]]:
+        """(id, username) lists: 'mutual' (both added), 'sent' (only I added), 'asked' (only they added)."""
+        async with self.sessions() as session:
+            out = await session.execute(
+                select(User.id, User.username)
+                .join(Friend, Friend.friend_id == User.id)
+                .where(Friend.user_id == user_id)
+            )
+            back = await session.execute(
+                select(User.id, User.username)
+                .join(Friend, Friend.user_id == User.id)
+                .where(Friend.friend_id == user_id)
+            )
+        mine = {int(i): str(n) for i, n in out.all()}
+        theirs = {int(i): str(n) for i, n in back.all()}
+        by_name = lambda pairs: sorted(pairs, key=lambda p: p[1].casefold())  # noqa: E731
+        return {
+            "mutual": by_name((i, n) for i, n in mine.items() if i in theirs),
+            "sent": by_name((i, n) for i, n in mine.items() if i not in theirs),
+            "asked": by_name((i, n) for i, n in theirs.items() if i not in mine),
+        }
 
     async def buy(self, user_id: int, item: str, price: int) -> User | None:
         """Spend coins on a power-up in one step: None (and nothing spent) if there aren't enough."""

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ApiError, createRoom, joinRoom } from "../lib/api";
 import { Btn, Card } from "../components/ui";
 import { useAccount } from "../lib/account";
+import { Friends, InstallApp } from "../components/friends";
 
 export function Home({ go }: { go: (path: string) => void }) {
   const [name, setName] = useState("");
@@ -42,6 +43,8 @@ export function Home({ go }: { go: (path: string) => void }) {
         <p className="lead">Twenty-four games. One room code. No sign-up needed.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
+
+      {user && <Friends name={name} go={go} />}
 
       <div className="grid">
         <Card aria-labelledby="host-h">
@@ -124,6 +127,8 @@ export function Home({ go }: { go: (path: string) => void }) {
           {error}
         </p>
       )}
+
+      <InstallApp />
 
       <Card tone="soft" aria-labelledby="lineup-h">
         <h2 id="lineup-h">Tonight’s lineup</h2>

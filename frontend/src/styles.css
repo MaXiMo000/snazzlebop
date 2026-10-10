@@ -6996,6 +6996,108 @@ b.team-name.team-1 {
   }
 }
 
+/* ---- friends (home page, signed in) ----------------------------------------------------------- */
+.friends {
+  display: grid;
+  gap: 12px;
+}
+.friends h2,
+.friends p {
+  margin: 0;
+}
+.friend-live,
+.friend-rows,
+.friend-chips {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.friend-live li,
+.friend-rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 8px 8px 14px;
+  border: 3px solid var(--edge);
+  border-radius: 16px;
+  background: var(--field);
+  overflow-wrap: anywhere;
+}
+.friend-live li {
+  border-color: var(--teal);
+}
+.friend-live-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.friend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2fbf71;
+  animation: friend-pulse 1.6s ease-in-out infinite;
+}
+@keyframes friend-pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgba(47, 191, 113, 0.25);
+  }
+}
+.friend-chips {
+  display: flex;
+  flex-wrap: wrap;
+}
+.friend-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 4px 0 14px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.friend-chips li.pending {
+  border-style: dashed;
+}
+.friend-x {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.friend-x:focus-visible {
+  outline: 4px solid var(--tangerine);
+}
+.friend-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.friend-add input {
+  min-width: 0;
+}
+.install {
+  margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .friend-dot {
+    animation: none;
+  }
+}
+
 /* ---- avatars: a picked face on a picked colour, or initials ---------------------------------------- */
 .avatar {
   display: inline-grid;

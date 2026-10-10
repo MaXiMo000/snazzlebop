@@ -430,6 +430,21 @@ class Hub:
         token = sign_token(self.settings.secret_key, watcher.id, room.code, self.settings.token_ttl_seconds)
         return room, watcher, token
 
+    def hosting(self, user_ids: set[int]) -> dict[int, str]:
+        """Rooms these accounts are hosting right now that a friend could walk into: account -> code."""
+        out: dict[int, str] = {}
+        for room in self.rooms.values():
+            uid = room.accounts.get(room.host_id)
+            if (
+                uid in user_ids
+                and not room.locked
+                and room.phase == "lobby"
+                and len(room.players) < self.settings.max_players_per_room
+                and room.players[room.host_id].connected
+            ):
+                out[uid] = room.code
+        return out
+
     def link_account(self, room: Room, pid: str, user_id: int) -> None:
         """A guest who signed in after sitting down: their seat now belongs to their account."""
         if pid in room.accounts or not (pid in room.players or pid in room.audience):
