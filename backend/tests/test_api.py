@@ -206,7 +206,8 @@ def test_ws_message_limits(tmp_path):
             for _ in range(50):
                 ws.send_json({"t": "ping"})
             with pytest.raises(WebSocketDisconnect) as closed:
-                ws.receive_json()  # the server never answers pings; the flood closes the socket
+                while ws.receive_json()["t"] == "pong":  # answered until the flood closes the socket
+                    pass
             assert closed.value.code == 4008  # "slow down": the client reconnects, not "room ended"
         room2 = make_room(c, "Big")
         with c.websocket_connect(f"/ws/{room2['code']}") as ws:

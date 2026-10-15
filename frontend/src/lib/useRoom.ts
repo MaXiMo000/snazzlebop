@@ -45,6 +45,7 @@ export function useRoom(code: string, token: string | null): RoomConnection {
     let retries = 0;
     let pingTimer: number | undefined;
     let retryTimer: number | undefined;
+    let probeTimer: number | undefined;
     let recoveredTimer: number | undefined;
 
     const connect = () => {
@@ -55,11 +56,10 @@ export function useRoom(code: string, token: string | null): RoomConnection {
 
       ws.onopen = () => {
         ws.send(JSON.stringify({ t: "auth", token }));
-        pingTimer = window.setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: "ping" }));
-        }, 25_000);
+        pingTimer = window.setInterval(() => probe(), 25_000);
       };
       ws.onmessage = (ev) => {
+        window.clearTimeout(probeTimer);
         try {
           const msg = JSON.parse(String(ev.data)) as { t: string; message?: string };
           if (msg.t === "state") {
@@ -102,10 +102,41 @@ export function useRoom(code: string, token: string | null): RoomConnection {
       };
     };
 
+    // A socket can die silently while a phone sleeps: ping, and drop it if nothing answers in 5 s.
+    const probe = () => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ t: "ping" }));
+      window.clearTimeout(probeTimer);
+      probeTimer = window.setTimeout(() => {
+        // A dead socket can take a minute to report its close: let it go and dial again now.
+        const onclose = ws.onclose;
+        ws.onclose = null;
+        ws.onmessage = null;
+        ws.close(4000);
+        onclose?.call(ws, new CloseEvent("close", { code: 4000 }));
+      }, 5000);
+    };
+    // Back on screen or back online: check the socket now, and skip any backoff wait.
+    const wake = () => {
+      if (document.visibilityState !== "visible" || stopped) return;
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) return probe();
+      if (ws && ws.readyState === WebSocket.CONNECTING) return;
+      window.clearTimeout(retryTimer);
+      retries = 0;
+      connect();
+    };
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("online", wake);
+
     connect();
     return () => {
       stopped = true;
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("online", wake);
       window.clearInterval(pingTimer);
+      window.clearTimeout(probeTimer);
       window.clearTimeout(retryTimer);
       window.clearTimeout(recoveredTimer);
       wsRef.current?.close(1000);

@@ -1102,20 +1102,24 @@ class Hub:
         if not isinstance(msg, dict) or msg.get("t") not in ALLOWED_MESSAGE_TYPES:
             return await self.send_error(conn, "bad_message", "Unknown message")
         kind = msg["t"]
+        if kind == "ping":
+            # The reply lets a phone waking from sleep tell a live socket from a dead one.
+            # A TV's keep-alive pings don't keep a room alive.
+            if pid not in room.viewers:
+                room.last_active = self.clock()
+            with contextlib.suppress(Exception):
+                await asyncio.wait_for(conn.send_json({"t": "pong"}), 5)
+            return
         if pid in room.viewers:
-            # TV screens only watch: no actions, and their keep-alive pings don't keep a room alive.
+            # TV screens only watch: no actions.
             if kind == "inksync":
                 return self._ink_sync(room, pid, conn, msg)
             if kind == "call":
                 return await self._call(room, pid, conn)
-            if kind != "ping":
-                await self.send_error(conn, "read_only", "TV mode is read-only")
-            return
+            return await self.send_error(conn, "read_only", "TV mode is read-only")
         if pid in room.audience and kind not in AUDIENCE_MESSAGE_TYPES:
             return await self.send_error(conn, "audience_only", "The audience can react and predict")
         room.last_active = self.clock()
-        if kind == "ping":
-            return
         try:
             if kind == "inksync":
                 return self._ink_sync(room, pid, conn, msg)

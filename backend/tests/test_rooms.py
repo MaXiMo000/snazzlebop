@@ -272,6 +272,7 @@ class HubTests(HubHarness):
         self.clock.t += 50
         await hub.handle_message(room, vid1, screen, {"t": "ping"})
         self.assertEqual(room.last_active, before)
+        self.assertIn({"t": "pong"}, screen.sent)  # answered, so a waking screen can tell it's live
         # At most two screens: a third evicts the oldest, whose token then stops working.
         hub.issue_tv(room.code)
         hub.issue_tv(room.code)
