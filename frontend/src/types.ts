@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia";
   title: string;
   blurb: string;
   min_players: number;
@@ -371,6 +371,7 @@ export type GameView =
   | ReflexView
   | SnakesView
   | ShipsView
+  | TriviaView
   | JackpotView;
 
 export interface Highlight {
@@ -1301,4 +1302,56 @@ export interface ShipsView {
   you: { side: number } | null;
   scores?: Record<string, number>;
   tally?: Record<string, { hits: number; sunk: number; shots: number }>;
+}
+
+export interface TriviaCategory {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+export interface TriviaView {
+  game: "trivia";
+  phase: "pick" | "wager" | "question" | "reveal" | "final";
+  style: "classic" | "fastest" | "survival" | "wager" | "draft";
+  round: number;
+  /** null in survival: it runs until one is left */
+  rounds: number | null;
+  remaining: number | null;
+  /** seconds a question stays up */
+  limit: number;
+  players: { id: string; name: string }[];
+  category: TriviaCategory | null;
+  /** 1 easy, 2 medium, 3 hard */
+  level: number | null;
+  question: { q: string; choices: string[]; tf: boolean } | null;
+  /** who has locked in (never what) */
+  answered: string[];
+  wagered: string[];
+  pick: { picker: string; offers: TriviaCategory[] } | null;
+  lives: Record<string, number>;
+  /** players on a run of 2+ right answers */
+  streaks: Record<string, number>;
+  scores: Record<string, number>;
+  you: {
+    answer: number | null;
+    wager: number | null;
+    max_wager: number;
+    streak: number;
+    lives: number | null;
+    out: boolean;
+  } | null;
+  result?: {
+    right: number;
+    answer: string;
+    picks: Record<string, number>;
+    times: Record<string, number>;
+    gains: Record<string, number>;
+    first: string | null;
+    out: string[];
+    wagers: Record<string, number>;
+  };
+  history?: { q: string; a: string; cat: string; right: string[] }[];
+  correct?: Record<string, number>;
+  best_streak?: Record<string, number>;
 }

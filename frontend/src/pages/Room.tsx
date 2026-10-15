@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { OPTION_LABELS } from "../lib/options";
 import { AvatarPicker, FaceHost } from "../components/avatar";
 import { CallHost, CallStrip } from "../components/call";
 import { Entrance } from "../components/entrance";
@@ -46,6 +47,7 @@ import { Lonely } from "../games/Lonely";
 import { Ships } from "../games/Ships";
 import { Snakes } from "../games/Snakes";
 import { Reflex } from "../games/Reflex";
+import { Trivia } from "../games/Trivia";
 import { Bomb } from "../games/Bomb";
 import { Mafia } from "../games/Mafia";
 import { Roulette } from "../games/Roulette";
@@ -389,6 +391,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Snakes view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "ships":
       return <Ships view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "trivia":
+      return <Trivia view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "jackpot":
       return <Jackpot view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
   }
@@ -617,69 +621,6 @@ function AudienceLobby({ state }: { state: RoomState }) {
     </div>
   );
 }
-
-const OPTION_LABELS: Record<string, Record<string, string>> = {
-  mode: {
-    classic: "Classic (5 hands)",
-    tournament: "Tournament (knockouts, 3+ players)",
-    race: "Everyone for themselves",
-    teams: "Two teams (4+ players)",
-    normal: "Normal",
-    hard: "Hard (every hint must be used)",
-  },
-  hands: {
-    "1": "1 hand",
-    "3": "3 hands (most points wins)",
-  },
-  stacking: {
-    off: "Off (official rules)",
-    on: "On (+2 on +2, +4 on +4)",
-  },
-  clock: {
-    "10": "10 minutes each",
-    "5": "5 minutes each (blitz)",
-    "3+2": "3 minutes + 2 s a move",
-    "15+10": "15 minutes + 10 s a move",
-  },
-  tokens: {
-    "4": "4 tokens each (classic)",
-    "2": "2 tokens each (quick game)",
-  },
-  rounds: {
-    "3": "3 words",
-    "5": "5 words",
-    "1": "1 word",
-  },
-  turns: {
-    "2": "Everyone draws twice",
-    "1": "Everyone draws once",
-    "3": "Everyone draws 3 times",
-  },
-  time: {
-    "80": "80 seconds to draw",
-    "60": "60 seconds (quick)",
-    "100": "100 seconds (relaxed)",
-    "90": "90 seconds to draw",
-    "120": "2 minutes (relaxed)",
-  },
-  pace: {
-    relaxed: "Relaxed (2½ min clues, 3 min guessing)",
-    speedy: "Speedy (75 s clues, 90 s guessing)",
-  },
-  heat: {
-    mild: "😇 Mild (party-safe)",
-    cheeky: "😈 Cheeky (bold and embarrassing, never rude)",
-  },
-  length: {
-    standard: "Standard (2 turns each)",
-    quick: "Quick (1 turn each)",
-    marathon: "Marathon (3 turns each)",
-    "45": "45 minutes (then the richest wins)",
-    "30": "30 minutes",
-    "60": "1 hour",
-    "0": "No limit (until one is left)",
-  },
-};
 
 /** The host during a game: skip the current wait, or end the game (two taps) and go back to the lobby. */
 function HostGameBar({ state, send }: { state: RoomState; send: Send }) {

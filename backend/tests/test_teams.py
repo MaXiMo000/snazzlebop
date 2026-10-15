@@ -72,6 +72,7 @@ class SwitchTests(unittest.IsolatedAsyncioTestCase):
                 "telephone",
                 "tycoon",
                 "snakes",
+                "trivia",
             },
         )
 

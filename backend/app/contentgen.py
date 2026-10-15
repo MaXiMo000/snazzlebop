@@ -168,6 +168,22 @@ def v_wits(raw: Any) -> dict[str, Any] | None:
     return {"q": q, "a": a, "unit": unit}
 
 
+def v_trivia(raw: Any) -> dict[str, Any] | None:
+    """A four-choice quiz question in one of Trivia Tonight's categories."""
+    if not isinstance(raw, dict) or raw.get("cat") not in C.TRIVIA_CATEGORIES:
+        return None
+    level, q, a = raw.get("level"), _text(raw.get("q"), 15, 120), _text(raw.get("a"), 1, 40)
+    wrong = raw.get("wrong")
+    if isinstance(level, bool) or level not in (1, 2, 3) or not q or not q.endswith("?") or not a:
+        return None
+    if not isinstance(wrong, list) or len(wrong) != 3:
+        return None
+    others = [_text(w, 1, 40) for w in wrong]
+    if not all(others) or len({x.casefold() for x in [a, *others] if x}) != 4:
+        return None
+    return {"cat": raw["cat"], "level": level, "q": q, "a": a, "wrong": others}
+
+
 def v_codeword(raw: Any) -> str | None:
     """A Codewords board word: one common English word, A-Z only."""
     if not isinstance(raw, str):
@@ -320,6 +336,28 @@ KINDS["wits"] = Kind(
     lambda x: f"{x['q']} -> {x['a']} {x['unit']}",
 )
 
+KINDS["trivia"] = Kind(
+    C.TRIVIA,
+    lambda x: _key(x["q"]),
+    v_trivia,
+    _obj(
+        {
+            "cat": {"type": "string", "enum": list(C.TRIVIA_CATEGORIES)},
+            "level": _I,
+            "q": _S,
+            "a": _S,
+            "wrong": _SL,
+        }
+    ),
+    "Trivia Tonight quiz questions: four-choice trivia for a party quiz. 'a' is the one right answer, "
+    "'wrong' exactly three plausible but clearly wrong choices (same kind of thing as the answer, no "
+    "'all of the above'). Only stable, well-documented facts a reference book would agree on: no "
+    "records, prices, populations, current holders or anything that changes or is disputed. 'level' is "
+    "1 (most people know it), 2 (a keen quizzer knows it) or 3 (hard). Question 15-120 characters ending "
+    "in '?', choices 1-40 characters. Spread the batch across the categories and levels.",
+    lambda x: f"[{x['cat']} {x['level']}] {x['q']} -> {x['a']}",
+)
+
 KINDS["codewords"] = Kind(
     C.CODEWORDS,
     lambda x: x,
@@ -419,6 +457,7 @@ GAME_KINDS: dict[str, str | tuple[str, ...]] = {
     "mural": "mural",
     "crossword": "crossword",
     "wits": "wits",
+    "trivia": "trivia",
     "codewords": "codewords",
     "truthdare": ("truth_mild", "truth_cheeky", "dare_mild", "dare_cheeky"),
     "drawguess": "drawword",

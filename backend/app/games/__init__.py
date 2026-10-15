@@ -26,6 +26,7 @@ from .snakes import SnakesAndLadders
 from .split import SplitOrSteal
 from .telepathy import TelepathyTax
 from .telephone import DrawTelephone
+from .trivia import TriviaTonight
 from .truthdare import TruthOrDare
 from .tycoon import PropertyTycoon
 from .wits import WagerWits
@@ -63,6 +64,7 @@ REGISTRY: dict[str, type[Game]] = {
         ReactionDuel,
         SnakesAndLadders,
         Battleships,
+        TriviaTonight,
     )
 }
 

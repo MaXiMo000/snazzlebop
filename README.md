@@ -13,6 +13,7 @@ code, no sign-up needed. Put the show on a TV and play from your phones.
 
 | Game | Players | What happens |
 | --- | --- | --- |
+| **Trivia Tonight** | 1-8 | 1,300+ questions in 15 categories. Classic, fastest finger, survival, high stakes or category draft. |
 | **Frenemy Radar** | 3-8 | Secretly rank everyone on flattering traits, then see your blind spot. |
 | **Alibi** | 4-8 | A killer with a partly fake alibi hides among innocents. Question, object, vote. |
 | **Price Is Weird** | 2-8 | Closest without going over, a sealed chaos spin, sabotage and a Showcase finale. |

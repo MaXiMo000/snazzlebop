@@ -9,6 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
+# The quiz bank lives in trivia.txt (parsed by trivia_bank); re-exported so contentgen grows it here.
+from .trivia_bank import CATEGORIES as TRIVIA_CATEGORIES  # noqa: F401
+from .trivia_bank import TRIVIA  # noqa: F401
+
 # ---------------------------------------------------------------------------------------------------
 # Frenemy Radar: "who is most likely to..." (ranked, so every prompt must be fun to "win")
 # ---------------------------------------------------------------------------------------------------

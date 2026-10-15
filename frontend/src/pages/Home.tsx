@@ -40,7 +40,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Twenty-nine games. One room code. No sign-up needed.</p>
+        <p className="lead">Thirty games. One room code. No sign-up needed.</p>
         <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -133,6 +133,9 @@ export function Home({ go }: { go: (path: string) => void }) {
       <Card tone="soft" aria-labelledby="lineup-h">
         <h2 id="lineup-h">Tonight’s lineup</h2>
         <ul className="lineup">
+          <li>
+            <b>Trivia Tonight</b>: the quiz show. 1,300+ questions, 15 categories, five ways to play. Speed counts!
+          </li>
           <li>
             <b>Frenemy Radar</b>: rank your friends on silly traits, then find out how wrong your self-image is.
           </li>

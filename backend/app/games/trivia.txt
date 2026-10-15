@@ -1,0 +1,1351 @@
+# Trivia Tonight question bank (parsed and checked by trivia_bank.py on import).
+#   [category]                               a category from trivia_bank.CATEGORIES (may repeat)
+#   level|question|right|wrong|wrong|wrong   four choices; level 1 easy, 2 medium, 3 hard
+#   level|statement|True or False            a true-or-false statement
+# Only stable, well-documented facts: nothing that changes (records, prices, populations, holders).
+
+[general]
+1|How many days are there in a leap year?|366|365|364|367
+1|How many sides does a hexagon have?|6|5|7|8
+1|What colour do you get by mixing blue and yellow paint?|Green|Purple|Orange|Brown
+1|What colour do you get by mixing red and white paint?|Pink|Orange|Purple|Peach
+1|Which month has the fewest days?|February|April|June|November
+1|How many hours are in a day?|24|12|36|48
+1|How many legs does a spider have?|8|6|10|12
+1|What shape has three sides?|Triangle|Square|Pentagon|Circle
+1|How many colours are in a rainbow?|7|5|6|8
+1|How many cards are in a standard deck, not counting jokers?|52|54|48|50
+1|How many years are in a century?|100|10|1,000|50
+1|How many wheels does a tricycle have?|3|2|4|1
+1|What do we call 12 o'clock at night?|Midnight|Noon|Dawn|Dusk
+1|What is the largest number you can roll with two ordinary dice?|12|10|11|36
+1|How many minutes are in an hour?|60|100|30|90
+1|What colour are school buses in the United States?|Yellow|Red|Blue|Green
+1|How many sides does a stop sign have?|8|6|5|10
+1|How many squares are on a tic-tac-toe grid?|9|6|12|16
+1|How many strings does a standard violin have?|4|5|6|3
+1|Which season comes after summer?|Autumn|Spring|Winter|Monsoon
+1|How many months have exactly 30 days?|4|5|6|3
+1|How many zeros are in one million?|6|5|7|9
+1|There are 7 days in a week.|True
+1|A square has five corners.|False
+1|What do you call a word that means the opposite of another word?|Antonym|Synonym|Homonym|Acronym
+2|How many years are in a millennium?|1,000|100|500|10,000
+2|What is the Roman numeral for 50?|L|C|D|X
+2|What is the Roman numeral for 100?|C|M|L|D
+2|What is the Roman numeral for 1,000?|M|C|D|K
+2|In the NATO phonetic alphabet, which word stands for the letter A?|Alfa|Apple|Anchor|Arrow
+2|In the NATO phonetic alphabet, which word stands for the letter Z?|Zulu|Zebra|Zero|Zeta
+2|In the NATO phonetic alphabet, which word stands for the letter E?|Echo|Eagle|Easy|Edward
+2|How many squares are on a chessboard?|64|81|100|48
+2|Which wedding anniversary is traditionally celebrated with gold?|50th|25th|10th|40th
+2|Which wedding anniversary is traditionally celebrated with silver?|25th|10th|50th|15th
+2|How many zeros are in one billion?|9|6|12|8
+2|What does a barometer measure?|Air pressure|Temperature|Rainfall|Wind speed
+2|What does a seismograph record?|Earthquakes|Rainfall|Wind speed|Sunlight
+2|Which instrument does a doctor use to listen to your heart?|Stethoscope|Otoscope|Microscope|Periscope
+2|How many dots are on a standard six-sided die in total?|21|18|24|36
+2|What is the fear of spiders called?|Arachnophobia|Claustrophobia|Acrophobia|Agoraphobia
+2|Claustrophobia is the fear of what?|Enclosed spaces|Heights|Open spaces|Water
+2|How many pieces does each player start with in chess?|16|12|18|20
+2|Which Hindu festival is known as the Festival of Lights?|Diwali|Holi|Navratri|Pongal
+2|Which spring festival is famous for throwing coloured powder?|Holi|Diwali|Eid|Hanukkah
+2|How many seconds are in an hour?|3,600|360|6,000|1,000
+2|What is the name of the Japanese art of folding paper?|Origami|Ikebana|Bonsai|Kirigami
+2|What is the most common colour of a London taxi, the "black cab"?|Black|Yellow|Red|White
+2|How many players are needed for a game of bridge?|4|2|6|8
+2|Which number is considered unlucky in many Western traditions?|13|7|3|9
+2|What is a group of crows called?|A murder|A flock|A parliament|A gaggle
+2|Which day of the week is named after the Norse god Thor?|Thursday|Tuesday|Saturday|Wednesday
+2|Which day of the week is named after the planet Saturn?|Saturday|Sunday|Tuesday|Friday
+2|How many people sit on a standard jury in England?|12|10|8|15
+2|What is the name of the coloured part of the eye?|Iris|Pupil|Retina|Cornea
+2|How many keys does a standard piano have?|88|76|92|64
+2|What is the name of the device that turns a car's wheels left and right?|Steering wheel|Gearbox|Clutch|Axle
+2|A baker's dozen is how many?|13|12|14|11
+2|How many items are in a gross?|144|100|120|150
+2|What does a cartographer make?|Maps|Clocks|Barrels|Glass
+2|What does a cobbler traditionally repair?|Shoes|Barrels|Clocks|Roofs
+2|Which planet shares its name with the Roman messenger god?|Mercury|Mars|Jupiter|Neptune
+2|The Eiffel Tower is in Rome.|False
+2|A decade is ten years.|True
+2|What colour do you get by mixing red and blue paint?|Purple|Green|Brown|Orange
+3|Which wedding anniversary is traditionally celebrated with rubies?|40th|30th|35th|45th
+3|What does an anemometer measure?|Wind speed|Rainfall|Humidity|Earthquakes
+3|Acrophobia is the fear of what?|Heights|Spiders|Crowds|Flying
+3|How many branches does a Hanukkah menorah have?|9|7|8|10
+3|How many seconds are in a day?|86,400|36,000|24,000|60,000
+3|What is the traditional birthstone for April?|Diamond|Emerald|Ruby|Sapphire
+3|What is the traditional birthstone for May?|Emerald|Opal|Topaz|Garnet
+3|How many dominoes are in a standard double-six set?|28|24|32|36
+3|What is a vexillologist an expert in?|Flags|Coins|Stamps|Maps
+3|What is a numismatist an expert in?|Coins|Stamps|Insects|Clocks
+3|What does a philatelist collect?|Stamps|Coins|Butterflies|Postcards
+3|In the NATO phonetic alphabet, which word stands for the letter Q?|Quebec|Queen|Quiet|Quartz
+3|How many faces does a standard icosahedron have?|20|12|10|24
+3|What is the name for a group of owls?|A parliament|A murder|A pride|A colony
+3|Hydrophobia is an old name for which disease?|Rabies|Cholera|Tetanus|Polio
+3|Which wedding anniversary is traditionally celebrated with diamonds?|60th|50th|40th|75th
+[science]
+1|What is the chemical symbol for water?|H2O|CO2|O2|NaCl
+1|What gas do plants take in from the air to make food?|Carbon dioxide|Oxygen|Nitrogen|Helium
+1|What gas do humans need to breathe in to live?|Oxygen|Carbon dioxide|Nitrogen|Hydrogen
+1|At what temperature in degrees Celsius does water freeze?|0|32|100|-10
+1|At what temperature in degrees Celsius does water boil at sea level?|100|90|212|120
+1|What force pulls objects towards the Earth?|Gravity|Magnetism|Friction|Inertia
+1|What is the hardest natural substance?|Diamond|Gold|Iron|Quartz
+1|Which organ pumps blood around the body?|Heart|Lungs|Liver|Kidneys
+1|What do we call animals that eat only plants?|Herbivores|Carnivores|Omnivores|Insectivores
+1|What is the largest organ of the human body?|Skin|Liver|Brain|Lungs
+1|How many bones are in an adult human body?|206|186|226|300
+1|What do caterpillars turn into?|Butterflies or moths|Beetles|Bees|Dragonflies
+1|Which part of the plant takes in water from the soil?|Roots|Leaves|Petals|Stem
+1|Sound travels faster than light.|False
+1|Bats are mammals.|True
+1|What is the boiling point of water in degrees Fahrenheit?|212|100|180|200
+1|What kind of energy does a solar panel use?|Sunlight|Wind|Heat from the ground|Waves
+2|What is the chemical symbol for gold?|Au|Ag|Gd|Go
+2|What is the chemical symbol for iron?|Fe|Ir|In|I
+2|What is the chemical symbol for sodium?|Na|So|Sd|S
+2|What is the chemical symbol for silver?|Ag|Si|Sv|Au
+2|What is the chemical symbol for potassium?|K|P|Po|Pt
+2|What is the most abundant gas in Earth's atmosphere?|Nitrogen|Oxygen|Carbon dioxide|Argon
+2|What part of the cell contains its genetic material?|Nucleus|Membrane|Cytoplasm|Ribosome
+2|What does DNA stand for?|Deoxyribonucleic acid|Dinitrogen acid|Dual nucleic acid|Deoxyribose nitrate
+2|What is the smallest bone in the human body?|Stapes|Femur|Patella|Radius
+2|What is the longest bone in the human body?|Femur|Tibia|Humerus|Spine
+2|Which blood cells carry oxygen around the body?|Red blood cells|White blood cells|Platelets|Plasma
+2|What is the pH of pure water?|7|0|14|5
+2|Which scientist proposed the theory of general relativity?|Albert Einstein|Isaac Newton|Niels Bohr|Galileo Galilei
+2|Who is known for the laws of motion and universal gravitation?|Isaac Newton|Albert Einstein|Charles Darwin|Michael Faraday
+2|Who developed the theory of evolution by natural selection?|Charles Darwin|Gregor Mendel|Louis Pasteur|Alfred Nobel
+2|What is the unit of electrical resistance?|Ohm|Volt|Watt|Ampere
+2|What is the unit of power?|Watt|Joule|Newton|Pascal
+2|What is the unit of force?|Newton|Joule|Watt|Kelvin
+2|Which element has the atomic number 1?|Hydrogen|Helium|Oxygen|Carbon
+2|Which element has the chemical symbol O?|Oxygen|Osmium|Gold|Oganesson
+2|What is the centre of an atom called?|Nucleus|Electron|Shell|Core
+2|Which particle in an atom has a negative charge?|Electron|Proton|Neutron|Photon
+2|Which planet has the strongest pull of gravity in our Solar System?|Jupiter|Saturn|Neptune|Earth
+2|How many chambers does the human heart have?|4|2|3|6
+2|What type of rock is formed from cooled lava or magma?|Igneous|Sedimentary|Metamorphic|Limestone
+2|What type of rock is marble?|Metamorphic|Igneous|Sedimentary|Volcanic
+2|What is the process by which plants make food from sunlight?|Photosynthesis|Respiration|Digestion|Fermentation
+2|What is the name for animals that are active at night?|Nocturnal|Diurnal|Crepuscular|Dormant
+2|Which vitamin does the skin make when exposed to sunlight?|Vitamin D|Vitamin C|Vitamin A|Vitamin B12
+2|What is the name for a scientist who studies rocks?|Geologist|Biologist|Meteorologist|Botanist
+2|What is the name for a scientist who studies plants?|Botanist|Zoologist|Geologist|Ecologist
+2|What do you call a substance that speeds up a chemical reaction without being used up?|Catalyst|Solvent|Reagent|Isotope
+2|Light from the Sun takes about 8 minutes to reach Earth.|True
+2|Humans have four lungs.|False
+2|What is the most common element in the universe?|Hydrogen|Helium|Oxygen|Carbon
+2|Which metal is liquid at room temperature?|Mercury|Lead|Tin|Aluminium
+2|What colour does litmus paper turn in acid?|Red|Blue|Green|Yellow
+2|What is the speed of light, roughly, in kilometres per second?|300,000|30,000|3,000|3,000,000
+2|What is the common name for sodium chloride?|Table salt|Baking soda|Chalk|Vinegar
+2|What is the chemical formula for carbon dioxide?|CO2|CO|C2O|O2C2
+2|What is the name of the force that slows things down when surfaces rub together?|Friction|Gravity|Inertia|Tension
+2|Which organ filters the blood to make urine?|Kidneys|Liver|Spleen|Bladder
+3|Which element has the atomic number 6?|Carbon|Nitrogen|Oxygen|Boron
+3|What is the chemical symbol for lead?|Pb|Ld|Le|Pl
+3|What is the chemical symbol for tungsten?|W|Tu|Tn|Wo
+3|What is the chemical symbol for tin?|Sn|Ti|Tn|St
+3|What is the most abundant metal in the Earth's crust?|Aluminium|Iron|Copper|Gold
+3|Who discovered penicillin?|Alexander Fleming|Louis Pasteur|Joseph Lister|Edward Jenner
+3|Who created the first vaccine, against smallpox?|Edward Jenner|Louis Pasteur|Alexander Fleming|Jonas Salk
+3|Who is known as the father of genetics for his work with pea plants?|Gregor Mendel|Charles Darwin|Francis Crick|Robert Hooke
+3|What is absolute zero in degrees Celsius, to the nearest degree?|-273|-100|-459|-373
+3|What is the SI unit of temperature?|Kelvin|Celsius|Fahrenheit|Joule
+3|Which noble gas is used in bright advertising signs that glow red-orange?|Neon|Argon|Xenon|Krypton
+3|How many elements are in the periodic table today?|118|108|112|126
+3|What is the name for the bones in your fingers and toes?|Phalanges|Metacarpals|Tarsals|Carpals
+3|Which part of the brain controls balance and coordination?|Cerebellum|Cerebrum|Brainstem|Hypothalamus
+3|What is the powerhouse of the cell?|Mitochondria|Ribosome|Nucleus|Golgi body
+3|Which gland in the neck controls how fast the body uses energy?|Thyroid|Pancreas|Adrenal|Pituitary
+3|What is the name of the scale used to measure the hardness of minerals?|Mohs scale|Richter scale|Kelvin scale|Beaufort scale
+3|What is the Beaufort scale used to measure?|Wind speed|Earthquakes|Hardness|Rainfall
+3|Who discovered radium and polonium with her husband Pierre?|Marie Curie|Rosalind Franklin|Ada Lovelace|Lise Meitner
+3|Which blood type is known as the universal donor?|O negative|AB positive|A negative|B positive
+3|How many pairs of chromosomes do humans normally have?|23|21|24|46
+3|What is the hardest substance in the human body?|Tooth enamel|Bone|Nail|Cartilage
+3|The chemical symbol for potassium is P.|False
+[geography]
+1|What is the largest ocean on Earth?|Pacific|Atlantic|Indian|Arctic
+1|What is the capital of France?|Paris|Lyon|Marseille|Nice
+1|What is the capital of Japan?|Tokyo|Osaka|Kyoto|Seoul
+1|What is the capital of Italy?|Rome|Milan|Venice|Naples
+1|What is the capital of Spain?|Madrid|Barcelona|Seville|Lisbon
+1|What is the capital of the United Kingdom?|London|Manchester|Edinburgh|Dublin
+1|On which continent is Egypt?|Africa|Asia|Europe|South America
+1|On which continent is Brazil?|South America|Africa|North America|Europe
+1|Which country is shaped like a boot?|Italy|Greece|Portugal|Chile
+1|How many continents are there?|7|5|6|8
+1|What is the largest country in the world by area?|Russia|Canada|China|United States
+1|Which is the coldest continent?|Antarctica|Europe|Asia|North America
+1|In which country are the Pyramids of Giza?|Egypt|Mexico|Peru|Sudan
+1|In which city is the Statue of Liberty?|New York|Washington|Boston|Chicago
+1|Which country is home to kangaroos in the wild?|Australia|Brazil|India|South Africa
+1|The Sahara is a desert in Africa.|True
+1|Mount Everest is in Africa.|False
+1|What is the capital of Germany?|Berlin|Munich|Hamburg|Frankfurt
+1|What is the capital of the United States?|Washington, D.C.|New York|Los Angeles|Philadelphia
+2|What is the capital of Australia?|Canberra|Sydney|Melbourne|Perth
+2|What is the capital of Canada?|Ottawa|Toronto|Vancouver|Montreal
+2|What is the capital of Brazil?|Brasilia|Rio de Janeiro|Sao Paulo|Salvador
+2|What is the capital of Turkey?|Ankara|Istanbul|Izmir|Antalya
+2|What is the capital of Egypt?|Cairo|Alexandria|Luxor|Giza
+2|What is the capital of South Korea?|Seoul|Busan|Incheon|Pyongyang
+2|What is the capital of India?|New Delhi|Mumbai|Kolkata|Bengaluru
+2|What is the capital of Argentina?|Buenos Aires|Cordoba|Santiago|Montevideo
+2|What is the capital of Kenya?|Nairobi|Mombasa|Kampala|Addis Ababa
+2|What is the capital of Norway?|Oslo|Bergen|Stockholm|Copenhagen
+2|What is the capital of Portugal?|Lisbon|Porto|Madrid|Faro
+2|What is the capital of Greece?|Athens|Thessaloniki|Sparta|Crete
+2|What is the capital of Mexico?|Mexico City|Guadalajara|Cancun|Monterrey
+2|What is the capital of Ireland?|Dublin|Cork|Belfast|Galway
+2|What is the longest river in South America?|Amazon|Orinoco|Parana|Magdalena
+2|Through which city does the River Thames flow?|London|Paris|Dublin|Edinburgh
+2|Which river flows through Paris?|Seine|Rhine|Loire|Thames
+2|Which river flows through Cairo?|Nile|Congo|Niger|Zambezi
+2|What is the tallest mountain in the world above sea level?|Mount Everest|K2|Kilimanjaro|Mont Blanc
+2|What is the highest mountain in Africa?|Kilimanjaro|Mount Kenya|Atlas|Table Mountain
+2|What is the largest hot desert in the world?|Sahara|Gobi|Kalahari|Arabian
+2|What is the smallest country in the world?|Vatican City|Monaco|San Marino|Malta
+2|Which country has a red maple leaf on its flag?|Canada|Japan|Switzerland|Austria
+2|Which country's flag is a red circle on a white background?|Japan|South Korea|China|Bangladesh
+2|Which mountain range separates Europe from Asia in Russia?|Urals|Alps|Andes|Himalayas
+2|Which mountain range runs down the west side of South America?|Andes|Rockies|Alps|Pyrenees
+2|In which country is the city of Marrakesh?|Morocco|Tunisia|Egypt|Algeria
+2|In which country is Machu Picchu?|Peru|Bolivia|Chile|Mexico
+2|In which country is the Taj Mahal?|India|Pakistan|Iran|Bangladesh
+2|In which country is the ancient city of Petra?|Jordan|Egypt|Turkey|Lebanon
+2|Which US state is made up entirely of islands?|Hawaii|Alaska|Florida|Rhode Island
+2|What is the largest state in the United States by area?|Alaska|Texas|California|Montana
+2|Which sea lies between Europe and Africa?|Mediterranean|Caribbean|Red Sea|Black Sea
+2|Which ocean lies between Africa and Australia?|Indian|Pacific|Atlantic|Southern
+2|What is the largest island in the world?|Greenland|Australia|Borneo|Madagascar
+2|Which two countries share the longest international border?|Canada and the US|Russia and China|Chile and Argentina|India and Bangladesh
+2|What is the currency of Japan?|Yen|Won|Yuan|Ringgit
+2|What is the currency of the United Kingdom?|Pound sterling|Euro|Dollar|Franc
+2|In which country would you find the region of Tuscany?|Italy|Spain|France|Portugal
+2|Iceland is mostly covered in ice and Greenland is mostly green.|False
+2|Venice is famous for its canals.|True
+2|Which city is known as the Big Apple?|New York|Chicago|Los Angeles|Boston
+2|Which African country has the most pyramids?|Sudan|Egypt|Libya|Ethiopia
+3|What is the capital of New Zealand?|Wellington|Auckland|Christchurch|Queenstown
+3|What is the capital of Switzerland?|Bern|Zurich|Geneva|Basel
+3|What is the capital of Morocco?|Rabat|Casablanca|Marrakesh|Fez
+3|What is the capital of Vietnam?|Hanoi|Ho Chi Minh City|Da Nang|Hue
+3|What is the capital of Nigeria?|Abuja|Lagos|Kano|Ibadan
+3|What is the capital of Pakistan?|Islamabad|Karachi|Lahore|Peshawar
+3|What is the capital of Kazakhstan?|Astana|Almaty|Tashkent|Bishkek
+3|What is the capital of Mongolia?|Ulaanbaatar|Astana|Bishkek|Kathmandu
+3|What is the capital of Peru?|Lima|Cusco|Quito|La Paz
+3|What is the capital of Iceland?|Reykjavik|Oslo|Helsinki|Akureyri
+3|What is the deepest lake in the world?|Lake Baikal|Lake Tanganyika|Lake Superior|Caspian Sea
+3|What is the largest lake in Africa?|Lake Victoria|Lake Tanganyika|Lake Malawi|Lake Chad
+3|Which country has the most natural lakes?|Canada|Russia|Finland|United States
+3|What is the driest hot desert in the world, in South America?|Atacama|Patagonian|Sonoran|Namib
+3|Which strait separates Europe from Africa at its narrowest point?|Strait of Gibraltar|Bosphorus|Strait of Hormuz|Bering Strait
+3|Which strait separates Asia from North America?|Bering Strait|Strait of Malacca|Davis Strait|Cook Strait
+3|Which country is completely surrounded by South Africa?|Lesotho|Eswatini|Botswana|Namibia
+3|Which canal links the Mediterranean and the Red Sea?|Suez Canal|Panama Canal|Kiel Canal|Corinth Canal
+3|Which canal links the Atlantic and Pacific Oceans?|Panama Canal|Suez Canal|Erie Canal|Kiel Canal
+3|What is the second-longest river in Africa?|Congo|Niger|Zambezi|Orange
+3|On which island is the city of Palermo?|Sicily|Sardinia|Corsica|Malta
+3|Mount Kilimanjaro is in which country?|Tanzania|Kenya|Uganda|Ethiopia
+3|What is the official currency of Switzerland?|Swiss franc|Euro|Krona|Schilling
+3|How many countries border Germany?|9|7|8|10
+
+[history]
+1|Who was the first President of the United States?|George Washington|Abraham Lincoln|Thomas Jefferson|John Adams
+1|Which ancient people built the pyramids at Giza?|Egyptians|Romans|Greeks|Aztecs
+1|Which country gave the Statue of Liberty to the United States?|France|Britain|Spain|Italy
+1|Who was the first person to walk on the Moon?|Neil Armstrong|Buzz Aldrin|Yuri Gagarin|Michael Collins
+1|In which year did humans first land on the Moon?|1969|1959|1972|1965
+1|Which ship sank on its first voyage in 1912 after hitting an iceberg?|Titanic|Lusitania|Britannic|Mayflower
+1|What were the Roman fighters who fought in arenas called?|Gladiators|Samurai|Knights|Vikings
+1|Which seafaring people from Scandinavia raided Europe from the 8th century?|Vikings|Normans|Saxons|Celts
+1|Christopher Columbus sailed to the Americas in 1492.|True
+1|The Great Wall was built in Japan.|False
+2|In which year did World War II end?|1945|1944|1946|1939
+2|In which year did World War I begin?|1914|1912|1916|1918
+2|In which year did the Berlin Wall fall?|1989|1991|1985|1979
+2|Who was the British Prime Minister for most of World War II?|Winston Churchill|Neville Chamberlain|Clement Attlee|Anthony Eden
+2|Which civilisation built Machu Picchu?|Inca|Maya|Aztec|Olmec
+2|Who was the first woman to fly solo across the Atlantic Ocean?|Amelia Earhart|Bessie Coleman|Amy Johnson|Harriet Quimby
+2|Who painted the ceiling of the Sistine Chapel?|Michelangelo|Leonardo da Vinci|Raphael|Donatello
+2|Which French emperor was defeated at the Battle of Waterloo?|Napoleon Bonaparte|Louis XIV|Charlemagne|Napoleon III
+2|In which year did the Titanic sink?|1912|1905|1915|1920
+2|Who was the first person to travel into space?|Yuri Gagarin|Neil Armstrong|Alan Shepard|John Glenn
+2|Which wall was built across northern Britain by the Romans?|Hadrian's Wall|Offa's Dyke|Antonine Fence|Caesar's Wall
+2|What was the name of the ship that carried the Pilgrims to America in 1620?|Mayflower|Santa Maria|Endeavour|Victory
+2|Who was the queen of ancient Egypt famous for her links with Julius Caesar and Mark Antony?|Cleopatra|Nefertiti|Hatshepsut|Boudica
+2|Which city was buried by the eruption of Mount Vesuvius in AD 79?|Pompeii|Rome|Naples|Carthage
+2|Which famous leader led India's non-violent independence movement?|Mahatma Gandhi|Jawaharlal Nehru|Subhas Chandra Bose|B. R. Ambedkar
+2|In which year did India gain independence from Britain?|1947|1950|1945|1942
+2|Who was the US President who gave the Gettysburg Address?|Abraham Lincoln|George Washington|Ulysses S. Grant|Theodore Roosevelt
+2|Which empire was ruled by Genghis Khan?|Mongol Empire|Ottoman Empire|Persian Empire|Roman Empire
+2|Which ancient wonder stood in the harbour of Rhodes?|The Colossus|The Lighthouse|The Hanging Gardens|The Mausoleum
+2|Who wrote the "I Have a Dream" speech?|Martin Luther King Jr.|Malcolm X|Rosa Parks|Frederick Douglass
+2|Who became South Africa's first black president in 1994?|Nelson Mandela|Desmond Tutu|Thabo Mbeki|Jacob Zuma
+2|What was the name of the first artificial satellite, launched in 1957?|Sputnik 1|Explorer 1|Vostok 1|Telstar
+2|Which English king had six wives?|Henry VIII|Henry VII|Edward VI|Richard III
+2|In which country did the Renaissance begin?|Italy|France|England|Spain
+2|Who invented the printing press with movable type in Europe around 1440?|Johannes Gutenberg|William Caxton|Leonardo da Vinci|Martin Luther
+2|The ancient Olympic Games began in Greece.|True
+2|The Roman Empire's capital was Athens.|False
+2|Which explorer led the first expedition to sail all the way around the world, which finished after his death?|Ferdinand Magellan|Vasco da Gama|James Cook|Francis Drake
+2|Who was the first Emperor of Rome?|Augustus|Julius Caesar|Nero|Caligula
+2|In which year did the French Revolution begin?|1789|1776|1804|1815
+2|In which year was the US Declaration of Independence signed?|1776|1789|1812|1754
+3|Which queen ruled England from 1558 to 1603?|Elizabeth I|Mary I|Victoria|Anne
+3|In which year was the Battle of Hastings?|1066|1086|1166|966
+3|Who was the first woman to win a Nobel Prize?|Marie Curie|Mother Teresa|Jane Addams|Dorothy Hodgkin
+3|What was the name of the trade route linking China with the Mediterranean?|Silk Road|Spice Way|Amber Road|Tea Trail
+3|Which ancient city was the capital of the Aztec empire?|Tenochtitlan|Cusco|Chichen Itza|Teotihuacan
+3|Which pharaoh's nearly intact tomb was found by Howard Carter in 1922?|Tutankhamun|Ramesses II|Khufu|Akhenaten
+3|Which document, sealed in 1215, limited the power of the English king?|Magna Carta|Bill of Rights|Domesday Book|Act of Union
+3|Which battle in 1805 was a famous British naval victory under Nelson?|Trafalgar|Waterloo|Jutland|Agincourt
+3|Who was the first female Prime Minister of the United Kingdom?|Margaret Thatcher|Theresa May|Indira Gandhi|Golda Meir
+3|Who was the first female Prime Minister of India?|Indira Gandhi|Sarojini Naidu|Pratibha Patil|Sonia Gandhi
+3|In which year did the Soviet Union dissolve?|1991|1989|1993|1985
+3|Which ancient civilisation invented cuneiform writing?|Sumerians|Egyptians|Greeks|Phoenicians
+3|What was the name of the Byzantine capital city?|Constantinople|Antioch|Alexandria|Ravenna
+3|Which Chinese dynasty built most of the Great Wall that stands today?|Ming|Qin|Han|Tang
+3|Who was the leader of the Soviet Union during most of World War II?|Joseph Stalin|Vladimir Lenin|Nikita Khrushchev|Leon Trotsky
+3|In which year did the American Civil War end?|1865|1861|1870|1855
+3|Which explorer was the first European to reach India by sea, in 1498?|Vasco da Gama|Christopher Columbus|Bartolomeu Dias|Ferdinand Magellan
+3|The Hundred Years' War lasted exactly 100 years.|False
+3|Who was the Carthaginian general who crossed the Alps with elephants?|Hannibal|Hamilcar|Scipio|Spartacus
+3|Which empire was ruled from Istanbul for over 450 years?|Ottoman Empire|Mughal Empire|Persian Empire|Roman Empire
+3|Which Mughal emperor built the Taj Mahal?|Shah Jahan|Akbar|Babur|Aurangzeb
+[screen]
+1|What is the name of the toy cowboy in Toy Story?|Woody|Buzz|Jessie|Rex
+1|What kind of animal is Simba in The Lion King?|Lion|Tiger|Leopard|Cheetah
+1|In Finding Nemo, what kind of fish is Nemo?|Clownfish|Goldfish|Angelfish|Pufferfish
+1|What is the name of the snowman in Frozen?|Olaf|Sven|Kristoff|Hans
+1|What colour is Shrek?|Green|Blue|Brown|Grey
+1|What kind of animal is Dumbo?|Elephant|Mouse|Horse|Bear
+1|Which superhero is known as the Man of Steel?|Superman|Batman|Iron Man|Captain America
+1|Which superhero's alter ego is Bruce Wayne?|Batman|Superman|Spider-Man|Iron Man
+1|Which superhero's alter ego is Peter Parker?|Spider-Man|Batman|Ant-Man|Daredevil
+1|In which city does Batman protect the people?|Gotham City|Metropolis|Star City|Central City
+1|What does E.T. want to do in the film E.T. the Extra-Terrestrial?|Phone home|Find treasure|Become famous|Win a race
+1|In Toy Story, Buzz Lightyear's catchphrase is "To infinity and beyond!"|True
+1|Mickey Mouse's girlfriend is called Daisy.|False
+1|Which animated film features a rat who wants to be a chef in Paris?|Ratatouille|Flushed Away|The Rescuers|Stuart Little
+1|What is the name of the fairy in Peter Pan?|Tinker Bell|Silvermist|Fawn|Navi
+2|Who directed Jurassic Park?|Steven Spielberg|James Cameron|George Lucas|Ridley Scott
+2|Who directed Titanic (1997)?|James Cameron|Steven Spielberg|Christopher Nolan|Peter Jackson
+2|Which wizard school does Harry Potter attend?|Hogwarts|Durmstrang|Beauxbatons|Ilvermorny
+2|What is the name of Harry Potter's owl?|Hedwig|Errol|Pigwidgeon|Fawkes
+2|In Star Wars, who is Luke Skywalker's father?|Darth Vader|Obi-Wan Kenobi|Han Solo|Yoda
+2|What is the name of the hobbit who carries the One Ring to Mordor?|Frodo Baggins|Bilbo Baggins|Samwise Gamgee|Pippin Took
+2|In The Wizard of Oz, what colour are Dorothy's slippers in the 1939 film?|Ruby red|Silver|Gold|Emerald green
+2|What is the name of the lion in The Chronicles of Narnia?|Aslan|Mufasa|Leo|Alex
+2|Which film features the line "I'll be back"?|The Terminator|Die Hard|Rambo|Predator
+2|In The Matrix, which pill does Neo take?|Red|Blue|Green|Yellow
+2|Which 1975 film about a great white shark was directed by Steven Spielberg?|Jaws|The Deep|Orca|Piranha
+2|What is the name of the coffee shop in the TV show Friends?|Central Perk|Monk's Cafe|The Max|Luke's Diner
+2|In The Simpsons, what is the name of Homer's wife?|Marge|Lisa|Maggie|Patty
+2|In which fictional town do The Simpsons live?|Springfield|Shelbyville|Quahog|South Park
+2|Which TV series features dragons and the Iron Throne?|Game of Thrones|The Witcher|Vikings|Merlin
+2|What is the name of the time-travelling alien in Doctor Who?|The Doctor|The Master|The Traveller|The Professor
+2|What does the Doctor travel in, in Doctor Who?|The TARDIS|A DeLorean|A phone booth called Dolly|The Enterprise
+2|What kind of car is the time machine in Back to the Future?|DeLorean|Mustang|Beetle|Corvette
+2|In Back to the Future, what speed must the car reach to time travel, in miles per hour?|88|100|77|121
+2|What is the name of Andy's dinosaur toy in Toy Story?|Rex|Dino|Spike|Trex
+2|Which Disney princess has a pet tiger called Rajah?|Jasmine|Mulan|Pocahontas|Moana
+2|In The Lion King, what is the name of Simba's evil uncle?|Scar|Mufasa|Zazu|Rafiki
+2|In Frozen, what is the name of Elsa's sister?|Anna|Ariel|Aurora|Belle
+2|Which film features the song "Let It Go"?|Frozen|Tangled|Moana|Encanto
+2|Which film features the song "Hakuna Matata"?|The Lion King|Aladdin|The Jungle Book|Tarzan
+2|In Monsters, Inc., what powers the city of Monstropolis at the start?|Children's screams|Electricity from lightning|Candy|Laughter from monsters
+2|Which superhero carries a shield with a star on it?|Captain America|Thor|Wonder Woman|Black Panther
+2|What is the name of Thor's hammer?|Mjolnir|Stormbreaker|Excalibur|Gungnir
+2|In Star Wars, what is Chewbacca?|A Wookiee|An Ewok|A Jawa|A Hutt
+2|Charlie Chaplin was famous for silent films.|True
+2|The film Up is about a house lifted by thousands of balloons.|True
+3|Which film won the first Academy Award for Best Picture?|Wings|Sunrise|The Jazz Singer|Metropolis
+3|Who directed the 1960 film Psycho?|Alfred Hitchcock|Stanley Kubrick|Orson Welles|Billy Wilder
+3|Who directed 2001: A Space Odyssey?|Stanley Kubrick|Ridley Scott|Steven Spielberg|George Lucas
+3|Who directed Citizen Kane and starred in it?|Orson Welles|Charlie Chaplin|John Huston|Frank Capra
+3|What is the name of the computer in 2001: A Space Odyssey?|HAL 9000|Skynet|Mother|Deep Thought
+3|Who directed the Japanese animated film Spirited Away?|Hayao Miyazaki|Isao Takahata|Makoto Shinkai|Mamoru Hosoda
+3|In Casablanca, what is the name of the nightclub owned by Rick?|Rick's Cafe Americain|The Blue Parrot|Club Moroccan|Rick's Bar
+3|What was the first full-length cel-animated feature film released by Disney?|Snow White and the Seven Dwarfs|Pinocchio|Fantasia|Bambi
+3|What was the first fully computer-animated feature film?|Toy Story|Shrek|A Bug's Life|Antz
+3|Who composed the music for Star Wars and Jaws?|John Williams|Hans Zimmer|Howard Shore|James Horner
+3|In which country was The Lord of the Rings film trilogy mainly filmed?|New Zealand|Ireland|Canada|Iceland
+3|What is the name of the shark in Jaws, as nicknamed by the film crew?|Bruce|Jaws|Moby|Chomper
+3|In The Wizard of Oz, what is the name of Dorothy's dog?|Toto|Rex|Bingo|Spot
+3|Which actor voiced the Genie in Disney's 1992 Aladdin?|Robin Williams|Eddie Murphy|Jim Carrey|Billy Crystal
+3|Which film is set mostly on the planet Pandora?|Avatar|Dune|Interstellar|Prometheus
+3|Which Pixar film is set in the Land of the Dead during Dia de los Muertos?|Coco|Soul|Onward|Encanto
+[music]
+1|How many strings does a standard guitar have?|6|4|5|8
+1|Which instrument has 88 keys?|Piano|Organ|Accordion|Harp
+1|Which instrument do you blow into and has a slide?|Trombone|Trumpet|Tuba|Clarinet
+1|What do you call a group of four musicians?|Quartet|Trio|Quintet|Duet
+1|What do you call a song sung by two people?|Duet|Solo|Trio|Chorus
+1|Which instrument has black and white keys?|Piano|Violin|Drum|Flute
+1|Which band was made up of John, Paul, George and Ringo?|The Beatles|The Rolling Stones|The Who|The Kinks
+1|Which instrument is the largest in the string family?|Double bass|Cello|Viola|Violin
+1|A drum is a percussion instrument.|True
+1|A flute is a string instrument.|False
+2|Who is known as the King of Pop?|Michael Jackson|Elvis Presley|Prince|Stevie Wonder
+2|Who is known as the King of Rock and Roll?|Elvis Presley|Chuck Berry|Little Richard|Buddy Holly
+2|Which singer was known as the Queen of Soul?|Aretha Franklin|Diana Ross|Whitney Houston|Etta James
+2|Which composer wrote the Moonlight Sonata?|Beethoven|Mozart|Chopin|Bach
+2|Which composer went deaf but kept composing?|Beethoven|Mozart|Haydn|Handel
+2|Which composer wrote The Four Seasons?|Vivaldi|Bach|Handel|Mozart
+2|From which country did the band ABBA come?|Sweden|Norway|Denmark|Finland
+2|Which band released the album "The Dark Side of the Moon"?|Pink Floyd|Led Zeppelin|The Doors|Genesis
+2|Which Queen song begins "Is this the real life?"|Bohemian Rhapsody|We Will Rock You|Somebody to Love|Under Pressure
+2|Who was the lead singer of Queen?|Freddie Mercury|Brian May|Roger Taylor|David Bowie
+2|How many lines are on a musical staff?|5|4|6|7
+2|What does "forte" mean in music?|Loud|Soft|Fast|Slow
+2|What does "piano" mean as a musical direction?|Soft|Loud|Fast|Smooth
+2|What does "tempo" mean in music?|Speed|Volume|Pitch|Key
+2|Which instrument did Jimi Hendrix famously play?|Electric guitar|Drums|Saxophone|Piano
+2|Which woodwind instrument has a double reed and is often used to tune the orchestra?|Oboe|Clarinet|Flute|Saxophone
+2|Which brass instrument is the largest and lowest in an orchestra?|Tuba|Trombone|French horn|Trumpet
+2|Which country does the didgeridoo come from?|Australia|New Zealand|South Africa|Brazil
+2|Which country does the sitar come from?|India|Japan|Turkey|Spain
+2|Which music style originated in Jamaica and was made famous by Bob Marley?|Reggae|Calypso|Salsa|Ska
+2|Which city is known as the birthplace of jazz?|New Orleans|Chicago|New York|Memphis
+2|How many notes are in a major scale, not counting the repeated top note?|7|8|5|12
+2|What is the highest female singing voice?|Soprano|Alto|Tenor|Mezzo-soprano
+2|What is the highest common adult male singing voice in choirs?|Tenor|Bass|Baritone|Alto
+2|Mozart was born in Austria.|True
+2|The saxophone is a brass instrument.|False
+3|Which composer wrote the opera The Magic Flute?|Mozart|Verdi|Wagner|Puccini
+3|Which composer wrote the ballet Swan Lake?|Tchaikovsky|Stravinsky|Prokofiev|Rachmaninoff
+3|Which composer wrote the opera Carmen?|Bizet|Verdi|Puccini|Rossini
+3|Which composer wrote the Brandenburg Concertos?|Bach|Handel|Vivaldi|Haydn
+3|How many symphonies did Beethoven complete?|9|7|5|12
+3|What is the name of a piece for a solo instrument with an orchestra?|Concerto|Sonata|Symphony|Etude
+3|What Italian term means "gradually getting louder"?|Crescendo|Diminuendo|Staccato|Legato
+3|What Italian term means notes played short and detached?|Staccato|Legato|Fermata|Rubato
+3|In which country was the composer Frederic Chopin born?|Poland|France|Austria|Hungary
+3|The saxophone is named after its inventor, Adolphe Sax.|True
+3|Which singer released the album "Thriller"?|Michael Jackson|Prince|Lionel Richie|Stevie Wonder
+3|Which band sang "Stairway to Heaven"?|Led Zeppelin|The Eagles|Deep Purple|Black Sabbath
+3|What nationality was the composer Antonin Dvorak?|Czech|Polish|Russian|Hungarian
+[sport]
+1|How many players are on a football (soccer) team on the pitch?|11|10|9|12
+1|In which sport do you score a "touchdown"?|American football|Rugby|Baseball|Ice hockey
+1|In which sport would you perform a slam dunk?|Basketball|Volleyball|Tennis|Handball
+1|What colour is the centre of an archery target?|Gold|Red|Blue|Black
+1|In which sport is the term "love" used for a score of zero?|Tennis|Golf|Cricket|Badminton
+1|How many rings are on the Olympic flag?|5|4|6|7
+1|In which sport do you use a shuttlecock?|Badminton|Squash|Tennis|Table tennis
+1|What is the maximum score with one dart?|60|50|100|20
+1|In bowling, what is it called when you knock down all ten pins with your first ball?|Strike|Spare|Split|Turkey
+1|A marathon is a running race.|True
+1|Golf is played with a round orange ball.|False
+1|How many players are on a basketball team on the court?|5|6|7|4
+2|How often are the Summer Olympic Games normally held?|Every 4 years|Every 2 years|Every 3 years|Every 5 years
+2|How long is a marathon, to the nearest kilometre?|42 km|40 km|26 km|50 km
+2|In which country did the Olympic Games originate?|Greece|Italy|Egypt|France
+2|In golf, what is a score of one under par on a hole called?|Birdie|Eagle|Bogey|Albatross
+2|In golf, what is a score of one over par on a hole called?|Bogey|Birdie|Par|Eagle
+2|How many players are on a rugby union team on the pitch?|15|13|11|12
+2|How many players are on a volleyball team on the court?|6|5|7|8
+2|How many points is a touchdown worth in American football?|6|7|3|5
+2|In cricket, how many balls are in an over?|6|5|8|10
+2|In cricket, what is it called when a batter is out without scoring?|A duck|A golden egg|A blank|A nil
+2|Which country hosted the first FIFA World Cup in 1930?|Uruguay|Brazil|Italy|England
+2|In tennis, what is a score of 40-40 called?|Deuce|Advantage|Love|Match point
+2|Which sport is played at Wimbledon?|Tennis|Cricket|Golf|Horse racing
+2|In which sport do teams compete for the Stanley Cup?|Ice hockey|Basketball|Baseball|American football
+2|How many holes are played in a standard round of golf?|18|9|12|21
+2|In snooker, how many points is the black ball worth?|7|5|6|10
+2|How many players are on an ice hockey team on the ice, including the goalie?|6|5|7|11
+2|In which sport might you perform a "Fosbury flop"?|High jump|Pole vault|Diving|Gymnastics
+2|What is the diameter of a basketball hoop, in inches?|18|16|20|24
+2|In baseball, how many strikes make an out?|3|4|2|5
+2|Which martial art's name means "the gentle way"?|Judo|Karate|Taekwondo|Kung fu
+2|Which country is famous for inventing sumo wrestling?|Japan|China|Korea|Mongolia
+2|In which sport do you use the terms "spike", "set" and "dig"?|Volleyball|Basketball|Netball|Squash
+2|The Tour de France is a cycling race.|True
+2|A rugby ball is perfectly round.|False
+3|In golf, what is a score of two under par on a hole called?|Eagle|Birdie|Albatross|Condor
+3|In golf, what is a score of three under par on a hole called?|Albatross|Eagle|Condor|Birdie
+3|What is the maximum break in snooker without free balls?|147|155|180|120
+3|How many players are on a water polo team in the water, including the goalkeeper?|7|6|8|5
+3|In which city were the first modern Olympic Games held in 1896?|Athens|Paris|London|Rome
+3|How long is an Olympic swimming pool, in metres?|50|25|100|75
+3|In which sport is the Ryder Cup contested?|Golf|Tennis|Sailing|Polo
+3|In which sport is the Davis Cup contested?|Tennis|Golf|Rowing|Cricket
+3|Which sport is played on a court with a "kitchen" or non-volley zone?|Pickleball|Squash|Badminton|Padel
+3|In darts, what is the highest score possible with three darts?|180|150|160|170
+3|In which sport would you find a "googly"?|Cricket|Baseball|Golf|Rugby
+3|What is the length of a cricket pitch, in yards?|22|20|24|18
+3|What is the national sport of Canada played in summer?|Lacrosse|Baseball|Curling|Rugby
+3|How many events are in a decathlon?|10|7|5|12
+3|How many events are in a heptathlon?|7|5|8|10
+
+[food]
+1|What is the main ingredient in guacamole?|Avocado|Pea|Cucumber|Lime
+1|Which fruit is dried to make raisins?|Grapes|Plums|Apricots|Figs
+1|Which fruit is dried to make prunes?|Plums|Grapes|Cherries|Dates
+1|What is the main ingredient of an omelette?|Eggs|Flour|Potatoes|Rice
+1|Which country is pizza originally from?|Italy|Greece|France|United States
+1|What colour is the inside of a ripe kiwi fruit, usually?|Green|Orange|Red|Purple
+1|Which nut is used to make marzipan?|Almond|Peanut|Walnut|Hazelnut
+1|What do bees collect from flowers to make honey?|Nectar|Pollen|Sap|Dew
+1|Which vegetable is famous for making you cry when you cut it?|Onion|Carrot|Leek|Celery
+1|Popcorn is made from which grain?|Corn|Wheat|Rice|Oats
+1|What is tofu made from?|Soybeans|Rice|Chickpeas|Wheat
+1|Which yellow fruit do monkeys famously love in cartoons?|Banana|Lemon|Mango|Pineapple
+1|Peanuts grow underground.|True
+1|Tomatoes are a type of vegetable, botanically speaking.|False
+1|What is the main ingredient of hummus?|Chickpeas|Lentils|Peas|Beans
+2|Which country is famous for sushi?|Japan|China|Korea|Thailand
+2|What is the Italian word for "cooked so it is still firm to the bite"?|Al dente|Al forno|Antipasto|Dolce
+2|Which spice gives curry its yellow colour?|Turmeric|Saffron|Paprika|Cumin
+2|Which is the most expensive spice by weight?|Saffron|Vanilla|Cardamom|Cinnamon
+2|What type of pastry is used to make eclairs and profiteroles?|Choux|Puff|Filo|Shortcrust
+2|What is the main ingredient in a traditional falafel?|Chickpeas or fava beans|Lentils|Potatoes|Rice
+2|Which country does the dish paella come from?|Spain|Mexico|Italy|Portugal
+2|Which country does the dish goulash come from?|Hungary|Germany|Poland|Austria
+2|Which country is the origin of the croissant's ancestor, the kipferl?|Austria|France|Belgium|Switzerland
+2|What is mozzarella traditionally made from in Campania?|Buffalo milk|Goat's milk|Sheep's milk|Almond milk
+2|What do you call a dish served cold made of blended tomatoes, popular in Spain?|Gazpacho|Borscht|Minestrone|Vichyssoise
+2|What is the main ingredient in borscht?|Beetroot|Cabbage|Tomato|Carrot
+2|What is the main ingredient in a traditional pesto?|Basil|Spinach|Parsley|Mint
+2|Which grain is used to make risotto?|Rice|Barley|Couscous|Quinoa
+2|Which country is the origin of kimchi?|Korea|Japan|China|Vietnam
+2|Which Indian bread is cooked in a tandoor oven?|Naan|Chapati|Paratha|Puri
+2|What is the name of the Japanese soup made from fermented soybean paste?|Miso soup|Ramen|Udon|Pho
+2|Which country does the dish pho come from?|Vietnam|Thailand|China|Cambodia
+2|Which fruit has its seeds on the outside?|Strawberry|Raspberry|Blueberry|Kiwi
+2|Which nut is used to make Nutella?|Hazelnut|Almond|Peanut|Cashew
+2|Brie and Camembert are cheeses from which country?|France|Italy|Switzerland|Belgium
+2|Parmesan cheese comes from which country?|Italy|France|Spain|Greece
+2|Feta cheese comes from which country?|Greece|Turkey|Italy|Cyprus
+2|What is the main ingredient of a traditional tortilla in Mexico?|Corn|Wheat|Rice|Potatoes
+2|Which fruit is known as the "king of fruits" in Southeast Asia, famous for its smell?|Durian|Jackfruit|Mango|Rambutan
+2|Which vegetable is used to make sauerkraut?|Cabbage|Cucumber|Turnip|Lettuce
+2|What is wasabi traditionally made from?|A plant root|Seaweed|Fish|Green chilli
+2|Chocolate is made from the beans of the cacao tree.|True
+2|Cashew nuts grow on the outside of a fruit called a cashew apple.|True
+2|Which herb is the main flavour in tzatziki along with cucumber?|Mint or dill|Basil|Rosemary|Thyme
+2|Which country does the dessert baklava come from?|Turkey|Italy|Spain|Morocco
+2|What is the name of the Italian dessert made with coffee-soaked ladyfingers?|Tiramisu|Panna cotta|Cannoli|Gelato
+2|What do you call the outer layer of an orange used in cooking?|Zest|Pith|Pulp|Rind oil
+2|Which flatbread is used to make a Mexican quesadilla?|Tortilla|Pita|Naan|Lavash
+3|Which country is the largest producer of coffee?|Brazil|Colombia|Vietnam|Ethiopia
+3|Which fruit is a cross between a tangerine and a pomelo or grapefruit?|Tangelo|Clementine|Kumquat|Satsuma
+3|What is the main ingredient in the Middle Eastern dish baba ghanoush?|Aubergine|Chickpeas|Lentils|Courgette
+3|Which grain is used to make the Middle Eastern dish tabbouleh?|Bulgur wheat|Rice|Barley|Couscous
+3|What is the main ingredient in a traditional Scottish haggis?|Sheep's offal|Beef|Fish|Potatoes
+3|Which country is the origin of the dish poutine?|Canada|France|Belgium|United States
+3|Which pepper is used to make paprika?|Red bell or chilli peppers|Black peppercorns|Green peppercorns|Szechuan pepper
+3|What is the Japanese word for a meal served in a single-portion box?|Bento|Donburi|Tempura|Onigiri
+3|Which fruit is the main flavour in the French dessert tarte Tatin?|Apple|Pear|Plum|Apricot
+3|What is the main ingredient in the Indian dish dal?|Lentils|Rice|Potatoes|Paneer
+3|Paneer is a type of what?|Cheese|Bread|Pickle|Rice dish
+3|What is the name for the Japanese art of slicing raw fish?|Sashimi|Tempura|Teriyaki|Yakitori
+3|Which spice comes from the dried stigmas of a crocus flower?|Saffron|Turmeric|Paprika|Cumin
+3|Which spice comes from the bark of a tree?|Cinnamon|Nutmeg|Clove|Pepper
+3|Which spice is the dried flower bud of a tree?|Clove|Nutmeg|Cinnamon|Star anise
+3|Which country is famous for the dish jollof rice, with a friendly rivalry with Ghana?|Nigeria|Kenya|Egypt|Morocco
+[animals]
+1|What is the largest animal that has ever lived?|Blue whale|African elephant|Megalodon|Giraffe
+1|What is the fastest land animal?|Cheetah|Lion|Horse|Gazelle
+1|What do you call a baby cat?|Kitten|Puppy|Cub|Calf
+1|What do you call a baby dog?|Puppy|Kitten|Foal|Kid
+1|What do you call a baby horse?|Foal|Calf|Kid|Lamb
+1|What do you call a baby sheep?|Lamb|Kid|Calf|Piglet
+1|What do you call a baby kangaroo?|Joey|Cub|Kit|Pup
+1|How many legs does an insect have?|6|8|4|10
+1|Which bird is famous for copying human speech?|Parrot|Crow|Eagle|Penguin
+1|Which animal is known as the "king of the jungle"?|Lion|Tiger|Gorilla|Elephant
+1|What is the tallest animal in the world?|Giraffe|Elephant|Camel|Ostrich
+1|What is a group of lions called?|A pride|A pack|A herd|A flock
+1|What is a group of wolves called?|A pack|A pride|A flock|A school
+1|What is a group of fish called?|A school|A herd|A pack|A pride
+1|Which animal has black and white stripes and lives in Africa?|Zebra|Panda|Skunk|Badger
+1|What do pandas mostly eat?|Bamboo|Fish|Fruit|Grass
+1|Penguins can fly.|False
+1|Whales are mammals.|True
+1|Which animal is famous for changing colour to match its surroundings?|Chameleon|Gecko|Iguana|Komodo dragon
+1|What is the largest bird in the world?|Ostrich|Emu|Albatross|Eagle
+2|How many hearts does an octopus have?|3|1|2|8
+2|What is the only mammal that can truly fly?|Bat|Flying squirrel|Sugar glider|Colugo
+2|What is a group of geese on the ground called?|A gaggle|A pride|A murder|A pod
+2|What is a group of whales or dolphins called?|A pod|A school|A herd|A pack
+2|What is a female deer called?|Doe|Mare|Ewe|Sow
+2|What is a male duck called?|Drake|Gander|Cob|Rooster
+2|What is a male goose called?|Gander|Drake|Cob|Buck
+2|What is a female sheep called?|Ewe|Doe|Sow|Hen
+2|Which bird lays the largest eggs?|Ostrich|Emu|Albatross|Eagle
+2|Which continent has no native ants?|Antarctica|Australia|Europe|South America
+2|What do you call an animal that eats both plants and meat?|Omnivore|Carnivore|Herbivore|Insectivore
+2|How many legs does a crab have, including its claws?|10|8|6|12
+2|Which sea creature has eight arms?|Octopus|Squid|Starfish|Jellyfish
+2|What is the largest species of shark?|Whale shark|Great white|Hammerhead|Tiger shark
+2|What is a baby owl called?|Owlet|Chick|Fledge|Hootlet
+2|What is a baby swan called?|Cygnet|Duckling|Gosling|Chick
+2|What is a baby goat called?|Kid|Lamb|Foal|Calf
+2|What is a baby frog called before it grows legs?|Tadpole|Froglet|Larva|Polliwog egg
+2|Which bird is a symbol of peace?|Dove|Eagle|Swan|Robin
+2|Which animal's fingerprints are almost impossible to tell apart from a human's?|Koala|Chimpanzee|Gorilla|Raccoon
+2|What is the slowest-moving land mammal?|Sloth|Tortoise|Koala|Panda
+2|Which big cat is the largest?|Tiger|Lion|Jaguar|Leopard
+2|Which animal is known for building dams on rivers?|Beaver|Otter|Muskrat|Badger
+2|What is the name of the pouch animal from Australia that eats eucalyptus?|Koala|Wombat|Wallaby|Possum
+2|Spiders are insects.|False
+2|Dolphins breathe air.|True
+2|A snail breathes through a hole in its side, not through gills.|True
+2|What kind of animal is a Komodo dragon?|Lizard|Snake|Crocodile|Dinosaur
+2|Which animal has the longest pregnancy of any mammal, almost two years?|Elephant|Blue whale|Giraffe|Rhino
+2|What colour is a polar bear's skin?|Black|White|Pink|Grey
+2|Which insect makes silk?|Silkworm|Spider|Bee|Ant
+2|How many eyes does a bee have?|5|2|4|8
+3|What is the national animal of Scotland?|Unicorn|Lion|Red deer|Golden eagle
+3|What is a group of flamingos called?|A flamboyance|A blush|A parade|A pinkness
+3|What is a group of owls called?|A parliament|A wisdom|A hoot|A council
+3|What is a group of rhinos called?|A crash|A herd|A smash|A thunder
+3|What is a group of ravens called?|An unkindness|A murder|A caw|A dread
+3|Which bird can fly backwards?|Hummingbird|Swift|Kingfisher|Swallow
+3|Which mammal lays eggs and has a duck-like bill?|Platypus|Echidna|Otter|Wombat
+3|What is the only bird known to have a nose at the tip of its beak?|Kiwi|Toucan|Puffin|Ibis
+3|What is the largest living species of lizard?|Komodo dragon|Green iguana|Monitor lizard|Gila monster
+3|How many stomachs does a cow have, or compartments in its stomach?|4|2|3|6
+3|What colour is the blood of an octopus?|Blue|Red|Green|Clear
+3|Which animal has the most powerful bite force measured?|Saltwater crocodile|Great white shark|Hippo|Lion
+3|What is a male bee called?|Drone|Worker|King|Soldier
+3|What is the largest species of penguin?|Emperor penguin|King penguin|Adelie penguin|Gentoo penguin
+3|What is a baby echidna called?|Puggle|Joey|Kit|Cub
+3|What type of animal is a gecko?|Lizard|Frog|Salamander|Snake
+3|Which fish can inflate itself into a ball?|Pufferfish|Clownfish|Lionfish|Stingray
+3|A group of jellyfish can be called a smack.|True
+[space]
+1|What is the closest star to Earth?|The Sun|Proxima Centauri|Sirius|Polaris
+1|Which planet is known as the Red Planet?|Mars|Venus|Jupiter|Mercury
+1|What is the largest planet in our Solar System?|Jupiter|Saturn|Neptune|Earth
+1|Which planet is famous for its rings?|Saturn|Mars|Venus|Mercury
+1|How many planets are in our Solar System?|8|9|7|10
+1|What is the name of Earth's natural satellite?|The Moon|The Sun|Mars|Phobos
+1|Which planet do we live on?|Earth|Mars|Venus|Jupiter
+1|What do we call a person trained to travel into space?|Astronaut|Astronomer|Pilot|Cosmologist
+1|Which planet is closest to the Sun?|Mercury|Venus|Earth|Mars
+1|The Sun is a star.|True
+1|The Moon makes its own light.|False
+1|What shape is the Earth, roughly?|A sphere|A cube|A flat disc|A cone
+2|Which planet is the hottest in the Solar System?|Venus|Mercury|Mars|Jupiter
+2|Which planet is farthest from the Sun?|Neptune|Uranus|Saturn|Pluto
+2|What was Pluto reclassified as in 2006?|Dwarf planet|Asteroid|Comet|Moon
+2|What is the name of our galaxy?|The Milky Way|Andromeda|Orion|Whirlpool
+2|What is the nearest large galaxy to the Milky Way?|Andromeda|Triangulum|Sombrero|Whirlpool
+2|How long does it take the Earth to go once around the Sun?|About 365 days|About 30 days|About 24 hours|About 100 days
+2|How long does the Moon take to orbit the Earth, roughly?|27 days|7 days|365 days|90 days
+2|What is a shooting star really?|A meteor|A falling star|A comet|A satellite
+2|Which planet spins on its side?|Uranus|Neptune|Saturn|Venus
+2|What is the Great Red Spot on Jupiter?|A giant storm|A volcano|A crater|A lake
+2|Which space telescope was launched in 1990?|Hubble|James Webb|Kepler|Spitzer
+2|What is the name of the force that keeps planets in orbit around the Sun?|Gravity|Magnetism|Friction|Inertia
+2|What was the name of the mission that first landed humans on the Moon?|Apollo 11|Apollo 13|Gemini 4|Vostok 1
+2|Who was the second person to walk on the Moon?|Buzz Aldrin|Michael Collins|Alan Shepard|John Glenn
+2|What is the name of the ring of rocky bodies between Mars and Jupiter?|Asteroid belt|Kuiper belt|Oort cloud|Van Allen belt
+2|What is a light-year a measure of?|Distance|Time|Brightness|Speed
+2|Which planet has a day longer than its year?|Venus|Mercury|Mars|Jupiter
+2|Which planet has the moon Titan?|Saturn|Jupiter|Uranus|Neptune
+2|What are the two moons of Mars called?|Phobos and Deimos|Io and Europa|Titan and Rhea|Castor and Pollux
+2|What is the brightest star in the night sky?|Sirius|Polaris|Betelgeuse|Vega
+2|Which star is known as the North Star?|Polaris|Sirius|Vega|Rigel
+2|Which constellation is known as the Hunter?|Orion|Ursa Major|Cassiopeia|Leo
+2|What is the name for an explosion of a massive star at the end of its life?|Supernova|Nebula|Pulsar|Quasar
+2|What is the name of the first dog to orbit the Earth?|Laika|Belka|Strelka|Rex
+2|What is the outermost layer of the Sun's atmosphere, seen during an eclipse?|Corona|Core|Photosphere|Chromosphere
+2|There is no sound in the vacuum of space.|True
+2|Mars has two moons.|True
+3|Which planet has Olympus Mons, the largest known volcano in the Solar System?|Mars|Venus|Earth|Mercury
+3|What is the largest moon in the Solar System?|Ganymede|Titan|Callisto|Io
+3|Which moon of Jupiter is the most volcanically active body in the Solar System?|Io|Europa|Ganymede|Callisto
+3|Which moon of Jupiter is thought to have an ocean under its icy crust?|Europa|Io|Titan|Phobos
+3|What is the name of the boundary around a black hole beyond which nothing escapes?|Event horizon|Singularity|Photon ring|Accretion disc
+3|What is the name of the region of icy bodies beyond Neptune?|Kuiper belt|Asteroid belt|Oort ring|Heliosphere
+3|Who was the first woman to travel into space?|Valentina Tereshkova|Sally Ride|Mae Jemison|Svetlana Savitskaya
+3|Which NASA lander reached Mars in 1976 and sent back the first clear photos from its surface?|Viking 1|Curiosity|Sojourner|Pathfinder
+3|How long does light from the Sun take to reach Earth?|About 8 minutes|About 8 seconds|About 1 hour|About 1 day
+3|Which planet has the shortest day, about 10 hours?|Jupiter|Saturn|Mercury|Earth
+3|Which spacecraft is the farthest human-made object from Earth?|Voyager 1|Voyager 2|Pioneer 10|New Horizons
+3|What is the name of the spacecraft that flew past Pluto in 2015?|New Horizons|Voyager 2|Cassini|Juno
+3|What is the name of the Cassini mission's target planet?|Saturn|Jupiter|Uranus|Neptune
+3|Which element makes up most of the Sun?|Hydrogen|Helium|Oxygen|Carbon
+3|What is the term for the point in a planet's orbit closest to the Sun?|Perihelion|Aphelion|Apogee|Zenith
+3|Neptune was found by mathematical prediction before it was seen.|True
+3|What colour are the hottest stars?|Blue|Red|Yellow|Orange
+3|What is the name of the large galaxy that will one day merge with the Milky Way?|Andromeda|Triangulum|Large Magellanic Cloud|Sombrero
+[words]
+1|How many letters are in the English alphabet?|26|24|25|28
+1|Which letter comes after "P" in the alphabet?|Q|O|R|S
+1|What is the plural of "mouse"?|Mice|Mouses|Meese|Mousen
+1|What is the plural of "child"?|Children|Childs|Childes|Childer
+1|What is the opposite of "ancient"?|Modern|Old|Antique|Historic
+1|How many vowels are in the English alphabet, not counting Y?|5|6|4|7
+1|Which word is a synonym of "happy"?|Joyful|Gloomy|Angry|Tired
+1|What is the plural of "goose"?|Geese|Gooses|Geeses|Goosen
+1|Which word rhymes with "cat"?|Hat|Cut|Cot|Kit
+1|Which punctuation mark ends a question?|Question mark|Full stop|Comma|Colon
+1|"Swam" is the past tense of "swim".|True
+1|A noun is a doing word.|False
+2|What is a word that reads the same forwards and backwards called?|Palindrome|Anagram|Acronym|Homophone
+2|What is a word formed from the first letters of other words called?|Acronym|Anagram|Synonym|Idiom
+2|What is a word made by rearranging the letters of another word called?|Anagram|Palindrome|Homonym|Antonym
+2|Words that sound the same but have different meanings, like "flour" and "flower", are called what?|Homophones|Synonyms|Antonyms|Acronyms
+2|What does "RSVP" ask you to do?|Reply to an invitation|Bring a gift|Dress formally|Arrive early
+2|What does the abbreviation "e.g." mean?|For example|That is|And so on|Note well
+2|What does the abbreviation "i.e." mean?|That is|For example|And so on|In addition
+2|What does the abbreviation "etc." mean?|And so on|For example|That is|Please reply
+2|Which language has the most native speakers in the world?|Mandarin Chinese|English|Spanish|Hindi
+2|What is the most commonly used letter in English?|E|A|T|S
+2|What is the official language of Brazil?|Portuguese|Spanish|Brazilian|French
+2|What is the official language of Argentina?|Spanish|Portuguese|Italian|English
+2|In which language does "gracias" mean "thank you"?|Spanish|Italian|Portuguese|French
+2|In which language does "danke" mean "thank you"?|German|Dutch|Swedish|Danish
+2|In which language does "merci" mean "thank you"?|French|Italian|Spanish|Romanian
+2|In which language does "arigato" mean "thank you"?|Japanese|Korean|Chinese|Thai
+2|What does "bonjour" mean in English?|Hello or good day|Goodbye|Thank you|Good night
+2|What does the Spanish word "amigo" mean?|Friend|Brother|Love|Neighbour
+2|What is a "lexicon"?|A vocabulary|A type of lizard|A grammar rule|A poem
+2|What do you call a three-line Japanese poem with 5, 7 and 5 syllables?|Haiku|Sonnet|Limerick|Tanka
+2|What is the longest word in this list?|Encyclopedia|Dictionary|Thesaurus|Almanac
+2|What is a group of words containing a subject and a verb called?|Clause|Phrase|Prefix|Suffix
+2|What part of speech describes a noun, like "red" or "tall"?|Adjective|Adverb|Verb|Pronoun
+2|What part of speech is "quickly"?|Adverb|Adjective|Noun|Verb
+2|Which spelling of "necessary" is correct?|Necessary|Neccessary|Necesary|Neccesary
+2|Which spelling of "separate" is correct?|Separate|Seperate|Separete|Seperete
+2|Which spelling of "definitely" is correct?|Definitely|Definately|Defanitely|Definitly
+2|The word "alphabet" comes from the first two letters of the Greek alphabet.|True
+2|"Their", "there" and "they're" all mean the same thing.|False
+3|What is a "sesquipedalian" word?|A very long word|A rude word|A borrowed word|A made-up word
+3|Which language does the word "kindergarten" come from?|German|Dutch|French|Danish
+3|Which language does the word "shampoo" come from?|Hindi|Arabic|Persian|Turkish
+3|Which language does the word "ketchup" likely come from?|Hokkien Chinese|French|Malay|Spanish
+3|Which language does the word "algebra" come from?|Arabic|Greek|Latin|Persian
+3|Which language does the word "tsunami" come from?|Japanese|Indonesian|Hawaiian|Chinese
+3|What is the term for a word that imitates a sound, like "buzz" or "sizzle"?|Onomatopoeia|Alliteration|Metaphor|Hyperbole
+3|What is the term for repeating the first sound in nearby words, like "silly snakes slither"?|Alliteration|Assonance|Rhyme|Onomatopoeia
+3|What is the term for a big exaggeration, like "I've told you a million times"?|Hyperbole|Simile|Irony|Oxymoron
+3|What is the term for a phrase like "deafening silence" that joins opposites?|Oxymoron|Paradox|Simile|Metaphor
+3|What is the term for comparing things using "like" or "as"?|Simile|Metaphor|Analogy|Idiom
+3|What does the Latin phrase "carpe diem" mean?|Seize the day|Love conquers all|I came, I saw, I conquered|Know yourself
+3|What does the Latin phrase "et cetera" literally mean?|And the rest|And so forth|For example|In addition
+3|What is the name for the dot over a lowercase "i"?|Tittle|Jot|Speck|Pip
+3|What is the symbol "&", meaning "and", called?|Ampersand|Asterisk|Octothorpe|Tilde
+3|What is the star-shaped symbol "*", often used for footnotes, called?|Asterisk|Ampersand|Obelus|Caret
+3|What is the name of the symbol "~"?|Tilde|Caret|Breve|Macron
+3|How many letters are in the Greek alphabet?|24|26|22|28
+3|What is the last letter of the Greek alphabet?|Omega|Zeta|Psi|Sigma
+
+[arts]
+1|Who painted the Mona Lisa?|Leonardo da Vinci|Michelangelo|Pablo Picasso|Vincent van Gogh
+1|Who wrote Romeo and Juliet?|William Shakespeare|Charles Dickens|Jane Austen|Mark Twain
+1|In which book series is there a boy wizard called Harry?|Harry Potter|Percy Jackson|Narnia|Discworld
+1|What are the three primary colours in traditional painting?|Red, yellow and blue|Red, green and blue|Orange, green and purple|Black, white and grey
+1|Who wrote The Cat in the Hat?|Dr. Seuss|Roald Dahl|Beatrix Potter|Eric Carle
+1|Which author created Peter Rabbit?|Beatrix Potter|A. A. Milne|Kenneth Grahame|Lewis Carroll
+1|Who wrote Charlie and the Chocolate Factory?|Roald Dahl|Enid Blyton|C. S. Lewis|J. K. Rowling
+1|What is the name of the bear in the stories by A. A. Milne?|Winnie-the-Pooh|Paddington|Baloo|Rupert
+1|Which girl falls down a rabbit hole into Wonderland?|Alice|Dorothy|Wendy|Lucy
+1|Vincent van Gogh painted The Starry Night.|True
+1|Pablo Picasso was a famous composer.|False
+2|Who wrote Pride and Prejudice?|Jane Austen|Charlotte Bronte|Emily Bronte|George Eliot
+2|Who wrote Oliver Twist and A Christmas Carol?|Charles Dickens|Thomas Hardy|Charlotte Bronte|Jane Austen
+2|Who wrote The Adventures of Tom Sawyer?|Mark Twain|Jack London|Herman Melville|John Steinbeck
+2|Who wrote the Sherlock Holmes stories?|Arthur Conan Doyle|Agatha Christie|Edgar Allan Poe|Raymond Chandler
+2|Which detective was created by Agatha Christie?|Hercule Poirot|Sherlock Holmes|Philip Marlowe|Inspector Morse
+2|Who wrote The Hobbit?|J. R. R. Tolkien|C. S. Lewis|Terry Pratchett|George R. R. Martin
+2|Who wrote The Lion, the Witch and the Wardrobe?|C. S. Lewis|J. R. R. Tolkien|Philip Pullman|Roald Dahl
+2|Who wrote 1984 and Animal Farm?|George Orwell|Aldous Huxley|H. G. Wells|Ray Bradbury
+2|Who wrote The Jungle Book?|Rudyard Kipling|Robert Louis Stevenson|Lewis Carroll|Jack London
+2|Who wrote Treasure Island?|Robert Louis Stevenson|Daniel Defoe|Jules Verne|Walter Scott
+2|Who wrote Twenty Thousand Leagues Under the Seas?|Jules Verne|H. G. Wells|Arthur Conan Doyle|Alexandre Dumas
+2|Who wrote Frankenstein?|Mary Shelley|Bram Stoker|Emily Bronte|Edgar Allan Poe
+2|Who wrote Moby-Dick?|Herman Melville|Mark Twain|Nathaniel Hawthorne|Ernest Hemingway
+2|Who painted The Scream?|Edvard Munch|Salvador Dali|Claude Monet|Gustav Klimt
+2|Who painted the famous water lilies series?|Claude Monet|Edgar Degas|Paul Cezanne|Pierre-Auguste Renoir
+2|Who painted The Persistence of Memory, with melting clocks?|Salvador Dali|Rene Magritte|Pablo Picasso|Joan Miro
+2|Which artist cut off part of his own ear?|Vincent van Gogh|Paul Gauguin|Pablo Picasso|Henri Matisse
+2|Which art movement is Pablo Picasso famous for co-founding?|Cubism|Impressionism|Surrealism|Pop Art
+2|Which artist is famous for paintings of soup cans?|Andy Warhol|Roy Lichtenstein|Jackson Pollock|Keith Haring
+2|In which museum is the Mona Lisa displayed?|The Louvre|The Uffizi|The Prado|The British Museum
+2|Who sculpted the famous statue of David in Florence?|Michelangelo|Donatello|Bernini|Rodin
+2|Who sculpted The Thinker?|Auguste Rodin|Michelangelo|Henry Moore|Constantin Brancusi
+2|What is a self-portrait?|A picture an artist makes of themselves|A painting of a landscape|A picture of food|A sculpture of an animal
+2|Which Shakespeare play features the line "To be, or not to be"?|Hamlet|Macbeth|Othello|King Lear
+2|Which Shakespeare play features three witches?|Macbeth|Hamlet|The Tempest|Twelfth Night
+2|In which city is Shakespeare's Romeo and Juliet set?|Verona|Venice|Rome|Florence
+2|What is the name of the pirate captain in Peter Pan?|Captain Hook|Captain Flint|Long John Silver|Blackbeard
+2|What is the name of the boy who never grows up?|Peter Pan|Pinocchio|Oliver Twist|Tom Thumb
+2|Who wrote the poem "The Raven"?|Edgar Allan Poe|Walt Whitman|Robert Frost|Emily Dickinson
+2|Leonardo da Vinci painted The Last Supper.|True
+2|Sherlock Holmes lives at 221B Baker Street.|True
+2|Who wrote Little Women?|Louisa May Alcott|Harriet Beecher Stowe|Edith Wharton|Emily Dickinson
+2|Who wrote Matilda and The BFG?|Roald Dahl|David Walliams|Michael Morpurgo|Jacqueline Wilson
+2|Who is the author of the Diary of a Wimpy Kid books?|Jeff Kinney|Rick Riordan|Dav Pilkey|R. L. Stine
+3|Who wrote One Hundred Years of Solitude?|Gabriel Garcia Marquez|Jorge Luis Borges|Isabel Allende|Pablo Neruda
+3|Who wrote War and Peace?|Leo Tolstoy|Fyodor Dostoevsky|Anton Chekhov|Ivan Turgenev
+3|Who wrote Crime and Punishment?|Fyodor Dostoevsky|Leo Tolstoy|Nikolai Gogol|Alexander Pushkin
+3|Who wrote Don Quixote?|Miguel de Cervantes|Lope de Vega|Dante Alighieri|Francisco Goya
+3|Who wrote The Divine Comedy?|Dante Alighieri|Giovanni Boccaccio|Petrarch|Virgil
+3|Who wrote the ancient Greek epics the Iliad and the Odyssey, by tradition?|Homer|Sophocles|Virgil|Plato
+3|Who painted Girl with a Pearl Earring?|Johannes Vermeer|Rembrandt|Frans Hals|Jan van Eyck
+3|Who painted The Night Watch?|Rembrandt|Vermeer|Rubens|Van Dyck
+3|Who painted The Birth of Venus?|Sandro Botticelli|Raphael|Titian|Caravaggio
+3|Who painted The Kiss, covered in gold leaf?|Gustav Klimt|Egon Schiele|Edvard Munch|Alphonse Mucha
+3|Who painted Guernica?|Pablo Picasso|Salvador Dali|Joan Miro|Francisco Goya
+3|Which Mexican artist is famous for her self-portraits?|Frida Kahlo|Diego Rivera|Remedios Varo|Leonora Carrington
+3|Which artist was known for "drip" paintings?|Jackson Pollock|Mark Rothko|Willem de Kooning|Paul Klee
+3|What is the Japanese art of growing miniature trees called?|Bonsai|Ikebana|Origami|Sumi-e
+3|Which Japanese artist made The Great Wave off Kanagawa?|Hokusai|Hiroshige|Utamaro|Sesshu
+3|What is the name of the hobbit's home in The Hobbit?|Bag End|Rivendell|Bree|Edoras
+3|Who wrote The Great Gatsby?|F. Scott Fitzgerald|Ernest Hemingway|John Steinbeck|William Faulkner
+3|Who wrote To Kill a Mockingbird?|Harper Lee|Truman Capote|John Steinbeck|Toni Morrison
+3|Who wrote Things Fall Apart?|Chinua Achebe|Wole Soyinka|Ngugi wa Thiong'o|Chimamanda Ngozi Adichie
+3|Who wrote The Little Prince?|Antoine de Saint-Exupery|Victor Hugo|Albert Camus|Jules Verne
+3|Who wrote Les Miserables?|Victor Hugo|Alexandre Dumas|Gustave Flaubert|Emile Zola
+3|What is a sonnet?|A 14-line poem|A 3-line poem|A long story|A play in five acts
+[tech]
+1|What does "www" stand for in a web address?|World Wide Web|World Web Wide|Wide World Web|Web World Wide
+1|Which company makes the iPhone?|Apple|Samsung|Google|Nokia
+1|What device do you use to move a pointer on a computer screen?|Mouse|Keyboard|Monitor|Speaker
+1|Who invented the telephone, according to most history books?|Alexander Graham Bell|Thomas Edison|Nikola Tesla|Guglielmo Marconi
+1|Who is famous for inventing a practical light bulb?|Thomas Edison|Albert Einstein|Isaac Newton|James Watt
+1|What are the Wright brothers famous for?|The first powered aeroplane flight|They built the first jet|They invented the helicopter|They crossed the Atlantic first
+1|What is the brain of a computer called?|CPU|RAM|Hard drive|Monitor
+1|A keyboard is an input device.|True
+1|Email was invented in the 21st century.|False
+2|What does "CPU" stand for?|Central Processing Unit|Computer Power Unit|Central Program Utility|Core Processing Unit
+2|What does "RAM" stand for?|Random Access Memory|Read Access Memory|Run All Memory|Rapid Action Memory
+2|What does "USB" stand for?|Universal Serial Bus|United Serial Bus|Universal System Bridge|Unified Storage Box
+2|What does "Wi-Fi" let devices do?|Connect to a network without wires|Charge without wires|Print without ink|Play music louder
+2|What does "GPS" stand for?|Global Positioning System|General Position Service|Global Pointing Satellite|Geographic Path System
+2|What does "PDF" stand for?|Portable Document Format|Printed Document File|Public Data Format|Page Design File
+2|What does "URL" stand for?|Uniform Resource Locator|Universal Reference Link|Unified Router Line|User Resource Link
+2|How many bits are in a byte?|8|4|10|16
+2|What is the binary number 10 in decimal?|2|10|1|4
+2|Who co-founded Microsoft with Paul Allen?|Bill Gates|Steve Jobs|Larry Page|Mark Zuckerberg
+2|Who co-founded Apple with Steve Wozniak and Ronald Wayne?|Steve Jobs|Bill Gates|Tim Cook|Jeff Bezos
+2|Who is credited with inventing the World Wide Web?|Tim Berners-Lee|Vint Cerf|Bill Gates|Alan Turing
+2|Which British mathematician is famous for breaking codes in World War II and founding computer science?|Alan Turing|Charles Babbage|Ada Lovelace|John von Neumann
+2|Who is often called the first computer programmer?|Ada Lovelace|Grace Hopper|Alan Turing|Margaret Hamilton
+2|Which Scottish inventor greatly improved the steam engine in the 1760s and 1770s?|James Watt|George Stephenson|Isambard Brunel|Richard Arkwright
+2|Who sent the first radio signals across the Atlantic in 1901?|Guglielmo Marconi|Nikola Tesla|Thomas Edison|Heinrich Hertz
+2|Who invented dynamite?|Alfred Nobel|Thomas Edison|Marie Curie|James Watt
+2|What did Karl Benz invent in 1885?|The first practical motor car|The bicycle|The aeroplane|The tractor
+2|What does a "QR" code stand for?|Quick Response|Quality Rating|Queued Reading|Quick Read
+2|What is the name of the small file a website stores in your browser?|Cookie|Biscuit|Crumb|Token
+2|In computing, what is a "bug"?|An error in a program|A virus|A tiny chip|A fast cable
+2|What does "AI" stand for?|Artificial intelligence|Automatic input|Advanced internet|Analog interface
+2|Which key on a keyboard usually starts a new line?|Enter|Shift|Tab|Escape
+2|What does "HTML" stand for?|HyperText Markup Language|High Tech Modern Language|Hyperlink Text Mode Language|Home Tool Markup Language
+2|What year did the first iPhone come out?|2007|2005|2009|2010
+2|Which company makes the PlayStation?|Sony|Nintendo|Microsoft|Sega
+2|Which company makes the Xbox?|Microsoft|Sony|Nintendo|Apple
+2|Which company created the Game Boy?|Nintendo|Sega|Sony|Atari
+2|What is the name of Nintendo's famous plumber character?|Mario|Luigi|Wario|Toad
+2|What is the name of the blue hedgehog from Sega games?|Sonic|Spike|Blue|Speedy
+2|A gigabyte is bigger than a megabyte.|True
+2|The first computer mouse was made of wood.|True
+3|What does "HTTP" stand for?|HyperText Transfer Protocol|High Transfer Text Process|Hyperlink Transfer Tool Protocol|Host Text Transfer Program
+3|What does "SSD" stand for in computer storage?|Solid State Drive|Super Speed Disk|System Storage Device|Single Sided Disk
+3|Who designed the Analytical Engine, an early mechanical computer?|Charles Babbage|Alan Turing|Blaise Pascal|Gottfried Leibniz
+3|Which programming language is named after a British comedy group?|Python|Ruby|Java|Perl
+3|What was the name of the first general-purpose electronic computer, built in 1945?|ENIAC|UNIVAC|Colossus|Z3
+3|Where did Britain's codebreakers work in World War II?|Bletchley Park|Greenwich|Cambridge|Oxford
+3|Who invented the World Wide Web while working at CERN?|Tim Berners-Lee|Robert Cailliau|Vint Cerf|Marc Andreessen
+3|Who invented the phonograph in 1877?|Thomas Edison|Alexander Graham Bell|Emile Berliner|Nikola Tesla
+3|What is the binary number 1010 in decimal?|10|8|12|5
+3|How many kilobytes are in a megabyte, in the traditional binary sense?|1,024|1,000|512|2,048
+3|Which inventor is famous for alternating current (AC) electricity systems?|Nikola Tesla|Thomas Edison|Michael Faraday|Alessandro Volta
+3|Which unit of electrical potential is named after Alessandro Volta?|Volt|Ampere|Ohm|Watt
+3|Who invented the jet engine independently in Britain in the 1930s?|Frank Whittle|Hans von Ohain|Igor Sikorsky|Barnes Wallis
+3|Which company was founded in a garage by Bill Hewlett and David Packard?|HP|IBM|Intel|Dell
+3|What does the "e" in "e-mail" stand for?|Electronic|Easy|Express|External
+3|In what decade was the first email sent?|1970s|1960s|1980s|1990s
+[myths]
+1|Who is the king of the gods in Greek mythology?|Zeus|Poseidon|Hades|Apollo
+1|Who is the Greek god of the sea?|Poseidon|Zeus|Ares|Hermes
+1|What mythical creature is a horse with a single horn?|Unicorn|Pegasus|Centaur|Griffin
+1|What mythical creature is a winged horse in Greek myths?|Pegasus|Unicorn|Hippogriff|Kelpie
+1|Which mythical creature is half human and half fish?|Mermaid|Centaur|Minotaur|Harpy
+1|Which mythical bird bursts into flames and is reborn from its ashes?|Phoenix|Griffin|Roc|Thunderbird
+1|Which hero is famous for his great strength and twelve labours?|Hercules|Achilles|Perseus|Odysseus
+1|In legend, who pulled the sword from the stone?|King Arthur|Robin Hood|Merlin|Lancelot
+1|Which outlaw robbed from the rich to give to the poor?|Robin Hood|Dick Turpin|King Arthur|Ned Kelly
+1|Dragons in Chinese tradition are often seen as lucky.|True
+1|Thor is a god from Egyptian mythology.|False
+2|Who is the Greek god of the underworld?|Hades|Ares|Hermes|Dionysus
+2|Who is the Greek goddess of wisdom?|Athena|Aphrodite|Hera|Artemis
+2|Who is the Greek goddess of love?|Aphrodite|Athena|Hera|Demeter
+2|Who is the messenger of the Greek gods, with winged sandals?|Hermes|Apollo|Ares|Hephaestus
+2|What is the Roman name for Zeus?|Jupiter|Mars|Neptune|Saturn
+2|What is the Roman name for the Greek god Ares?|Mars|Mercury|Jupiter|Vulcan
+2|What is the Roman name for Poseidon?|Neptune|Pluto|Jupiter|Saturn
+2|Who is the Norse god of thunder?|Thor|Odin|Loki|Freyr
+2|Who is the father of the Norse gods, with one eye?|Odin|Thor|Loki|Tyr
+2|Who is the Norse trickster god?|Loki|Odin|Baldur|Heimdall
+2|What is the hall of fallen warriors in Norse myth called?|Valhalla|Asgard|Midgard|Helheim
+2|What is the name of the home of the Norse gods?|Asgard|Olympus|Valhalla|Midgard
+2|On which mountain did the Greek gods live?|Mount Olympus|Mount Etna|Mount Ida|Mount Parnassus
+2|Which monster had snakes for hair and turned people to stone?|Medusa|The Minotaur|The Sphinx|Scylla
+2|Which hero killed Medusa?|Perseus|Theseus|Hercules|Jason
+2|What creature was half man and half bull and lived in a labyrinth?|Minotaur|Centaur|Satyr|Cyclops
+2|Which hero killed the Minotaur?|Theseus|Perseus|Achilles|Odysseus
+2|Which hero sailed with the Argonauts to find the Golden Fleece?|Jason|Odysseus|Hercules|Theseus
+2|What was the weak spot of the Greek hero Achilles?|His heel|His shoulder|His knee|His elbow
+2|What did Pandora release when she opened the box (or jar)?|The world's evils|Gold|Wishes|Animals
+2|Which giant had only one eye in Greek myths?|Cyclops|Titan|Colossus|Typhon
+2|Which Trojan War trick hid soldiers inside a gift?|The wooden horse|The golden apple|The silver shield|The bronze bull
+2|Who is the Egyptian god of the Sun?|Ra|Osiris|Anubis|Horus
+2|Which Egyptian god had the head of a jackal?|Anubis|Horus|Thoth|Set
+2|Which wizard advised King Arthur?|Merlin|Gandalf|Morgan|Gawain
+2|What is the name of King Arthur's sword?|Excalibur|Durendal|Gram|Joyeuse
+2|What is the name of King Arthur's famous round piece of furniture?|The Round Table|The Great Throne|The Silver Chair|The Long Bench
+2|Which creature has the body of a lion and the head and wings of an eagle?|Griffin|Sphinx|Chimera|Manticore
+2|Which creature is half human and half horse?|Centaur|Minotaur|Satyr|Faun
+2|In Scottish legend, what is the name of the monster said to live in a loch?|Nessie|Bigfoot|The Kraken|The Yeti
+2|What is the Himalayan "abominable snowman" also called?|Yeti|Sasquatch|Wendigo|Troll
+2|Icarus flew too close to the Sun and his wax wings melted.|True
+3|Who is the Greek goddess of the hunt?|Artemis|Athena|Demeter|Hestia
+3|Who is the Greek goddess of the harvest?|Demeter|Hera|Persephone|Hestia
+3|Who is the Greek god of wine and parties?|Dionysus|Apollo|Hermes|Pan
+3|Who is the Greek blacksmith god?|Hephaestus|Ares|Apollo|Hermes
+3|Who is the queen of the Greek gods?|Hera|Athena|Aphrodite|Rhea
+3|Which Titan held up the sky on his shoulders?|Atlas|Prometheus|Cronus|Hyperion
+3|Which Titan stole fire from the gods and gave it to humans?|Prometheus|Atlas|Epimetheus|Cronus
+3|What was the name of the three-headed dog guarding the underworld?|Cerberus|Orthrus|Ladon|Argos
+3|What is the name of the ferryman of the dead in Greek myth?|Charon|Hermes|Thanatos|Hypnos
+3|Which river in the Greek underworld made the dead forget?|Lethe|Styx|Acheron|Cocytus
+3|What is the name of the giant tree that links the nine worlds in Norse myth?|Yggdrasil|Bifrost|Mjolnir|Gungnir
+3|What is the rainbow bridge to Asgard called?|Bifrost|Yggdrasil|Gjallar|Midgard
+3|What is the name of Odin's eight-legged horse?|Sleipnir|Fenrir|Hugin|Gullfaxi
+3|What is the Norse end-of-the-world battle called?|Ragnarok|Valhalla|Asgardfall|Fimbulwinter
+3|Which Egyptian goddess was often shown as a cat?|Bastet|Isis|Hathor|Sekhmet
+3|Which Egyptian god had the head of a falcon?|Horus|Ra|Thoth|Anubis
+3|In Hindu tradition, which elephant-headed god removes obstacles?|Ganesha|Hanuman|Vishnu|Shiva
+3|Which monkey god is a hero of the Ramayana?|Hanuman|Ganesha|Garuda|Rama
+3|In Arthurian legend, what is the name of the island where Arthur was taken after his last battle?|Avalon|Camelot|Lyonesse|Tintagel
+3|What was the name of the sea monster in Norse legend, like a giant squid?|Kraken|Leviathan|Jormungandr|Scylla
+3|In Japanese folklore, what is a kitsune?|A fox spirit|A dragon|A water imp|A ghost cat
+[maths]
+1|What is 7 times 8?|56|54|64|48
+1|What is 12 times 12?|144|124|132|154
+1|What is half of 50?|25|20|30|15
+1|What is 100 minus 37?|63|73|67|53
+1|How many sides does a pentagon have?|5|6|7|8
+1|How many degrees are in a right angle?|90|180|45|360
+1|How many degrees are in a full circle?|360|180|90|100
+1|What is 9 times 9?|81|72|99|89
+1|What is a quarter of 100?|25|20|40|50
+1|What is 15 plus 27?|42|32|41|52
+1|An even number is always divisible by 2.|True
+1|Zero is an odd number.|False
+1|How many sides does an octagon have?|8|6|10|12
+2|What is the square root of 144?|12|14|11|16
+2|What is the square root of 81?|9|8|7|11
+2|What is 2 to the power of 10?|1,024|1,000|512|2,048
+2|What is the next prime number after 7?|11|9|13|10
+2|Which of these is a prime number?|29|27|33|39
+2|What is 15% of 200?|30|15|20|35
+2|What is the value of pi to two decimal places?|3.14|3.16|3.12|3.41
+2|How many degrees do the angles in a triangle add up to?|180|360|90|270
+2|How many degrees do the angles in a square add up to?|360|180|270|400
+2|What is 3 cubed?|27|9|81|18
+2|What is 25% as a fraction?|1/4|1/2|1/5|2/5
+2|What is 0.5 as a percentage?|50%|5%|0.5%|500%
+2|What is the name of a triangle with all sides equal?|Equilateral|Isosceles|Scalene|Right-angled
+2|What is the name of a triangle with no equal sides?|Scalene|Isosceles|Equilateral|Obtuse
+2|What do you call the longest side of a right-angled triangle?|Hypotenuse|Radius|Diagonal|Base
+2|What is the distance across a circle through its centre called?|Diameter|Radius|Circumference|Chord
+2|What is the distance around a circle called?|Circumference|Diameter|Radius|Area
+2|How many sides does a dodecagon have?|12|10|11|20
+2|How many centimetres are in a metre?|100|10|1,000|60
+2|How many grams are in a kilogram?|1,000|100|10|10,000
+2|What is 1,000 divided by 8?|125|120|100|150
+2|What is 13 times 3?|39|36|33|43
+2|What is the smallest prime number?|2|1|3|0
+2|How many minutes are in a whole day?|1,440|1,200|1,000|2,400
+2|What comes next: 2, 4, 8, 16, ...?|32|24|20|30
+2|What comes next: 1, 1, 2, 3, 5, 8, ...?|13|11|12|16
+2|A triangle can have two right angles.|False
+2|Every square is also a rectangle.|True
+2|What is the Roman numeral for 9?|IX|VIIII|XI|IIX
+3|What is the square root of 225?|15|25|13|17
+3|What is 17 times 17?|289|279|299|269
+3|What is the name of the famous sequence 1, 1, 2, 3, 5, 8, 13?|Fibonacci sequence|Pascal sequence|Prime sequence|Euler sequence
+3|Which Greek mathematician is famous for the theorem about right-angled triangles?|Pythagoras|Euclid|Archimedes|Thales
+3|Who is known as the father of geometry?|Euclid|Pythagoras|Archimedes|Aristotle
+3|Which Greek shouted "Eureka!" in his bath, according to legend?|Archimedes|Pythagoras|Euclid|Plato
+3|How many edges does a cube have?|12|8|6|24
+3|How many vertices (corners) does a cube have?|8|6|12|4
+3|How many faces does a tetrahedron have?|4|3|5|6
+3|What is the sum of the numbers 1 to 100?|5,050|5,000|10,000|5,500
+3|What is 111 times 111?|12,321|11,111|12,121|13,321
+3|What is a polygon with seven sides called?|Heptagon|Hexagon|Nonagon|Octagon
+3|What is the only number that is neither prime nor composite among positive whole numbers?|1|0|2|9
+3|What is the value of 0 factorial (0!)?|1|0|Undefined|Infinity
+3|What is 5 factorial (5!)?|120|25|60|720
+3|How many seconds are in a week?|604,800|86,400|100,800|60,480
+3|In Roman numerals, what is MMXX?|2020|2200|1020|2010
+3|What is the name for a number that equals the sum of its divisors, like 6 or 28?|Perfect number|Prime number|Square number|Lucky number
+
+[geography]
+1|What is the capital of Russia?|Moscow|St Petersburg|Kyiv|Minsk
+1|What is the capital of China?|Beijing|Shanghai|Hong Kong|Guangzhou
+1|Which ocean lies between Europe and North America?|Atlantic|Pacific|Indian|Arctic
+1|Which country has the city of Sydney?|Australia|New Zealand|Canada|South Africa
+1|Which is the longest river in the world, by most measurements?|Nile|Amazon|Yangtze|Mississippi
+1|In which country is the Eiffel Tower?|France|Belgium|Italy|Germany
+1|In which country is the Colosseum?|Italy|Greece|Spain|Turkey
+2|What is the capital of the Netherlands?|Amsterdam|Rotterdam|The Hague|Utrecht
+2|What is the capital of Sweden?|Stockholm|Oslo|Gothenburg|Helsinki
+2|What is the capital of Finland?|Helsinki|Tallinn|Stockholm|Turku
+2|What is the capital of Denmark?|Copenhagen|Aarhus|Oslo|Malmo
+2|What is the capital of Poland?|Warsaw|Krakow|Gdansk|Prague
+2|What is the capital of Austria?|Vienna|Salzburg|Graz|Budapest
+2|What is the capital of Hungary?|Budapest|Vienna|Prague|Bucharest
+2|What is the capital of the Czech Republic?|Prague|Brno|Bratislava|Vienna
+2|What is the capital of Belgium?|Brussels|Antwerp|Bruges|Amsterdam
+2|What is the capital of Thailand?|Bangkok|Phuket|Chiang Mai|Hanoi
+2|What is the capital of Indonesia?|Jakarta|Bali|Surabaya|Bandung
+2|What is the capital of the Philippines?|Manila|Cebu|Davao|Quezon City
+2|What is the capital of Chile?|Santiago|Valparaiso|Lima|Buenos Aires
+2|What is the capital of Colombia?|Bogota|Medellin|Cali|Quito
+2|What is the capital of Cuba?|Havana|Santiago de Cuba|San Juan|Kingston
+2|What is the capital of Jamaica?|Kingston|Montego Bay|Nassau|Havana
+2|What is the capital of Saudi Arabia?|Riyadh|Jeddah|Mecca|Dubai
+2|What is the capital of the United Arab Emirates?|Abu Dhabi|Dubai|Sharjah|Doha
+2|What is the capital of Ghana?|Accra|Kumasi|Lagos|Abidjan
+2|What is the capital of Ethiopia?|Addis Ababa|Nairobi|Asmara|Khartoum
+2|What is the capital of Scotland?|Edinburgh|Glasgow|Aberdeen|Inverness
+2|What is the capital of Wales?|Cardiff|Swansea|Newport|Bangor
+2|In which country is the city of Kyoto?|Japan|China|South Korea|Taiwan
+2|In which country is the city of Istanbul?|Turkey|Greece|Egypt|Bulgaria
+2|In which country is the city of Barcelona?|Spain|Italy|Portugal|France
+2|In which country would you find the fjords of Geiranger?|Norway|Sweden|Iceland|Finland
+2|Which country is known as the Land of the Rising Sun?|Japan|China|Thailand|South Korea
+2|Which country has the most people living in it, as of the 2020s?|India|China|United States|Indonesia
+2|Which African country was formerly called Abyssinia?|Ethiopia|Eritrea|Somalia|Sudan
+2|Which country is also called Holland?|The Netherlands|Belgium|Denmark|Germany
+2|Which river flows through London?|Thames|Severn|Trent|Mersey
+2|Which river flows through Rome?|Tiber|Po|Arno|Danube
+2|Which river flows through Budapest and Vienna?|Danube|Rhine|Elbe|Vistula
+2|Which waterfall lies on the border of Canada and the United States?|Niagara Falls|Victoria Falls|Angel Falls|Iguazu Falls
+2|Victoria Falls lies on the border of Zambia and which other country?|Zimbabwe|Botswana|Mozambique|Malawi
+2|Which US city is famous for the Golden Gate Bridge?|San Francisco|Los Angeles|Seattle|New York
+2|What is the largest country in South America?|Brazil|Argentina|Peru|Colombia
+2|What is the largest country in Africa by area?|Algeria|Nigeria|Egypt|Democratic Republic of the Congo
+2|Which country has the most time zones, counting its territories?|France|Russia|United States|China
+3|Which Bolivian city is the seat of government?|La Paz|Sucre|Santa Cruz|Cochabamba
+3|What is the capital of Myanmar?|Naypyidaw|Yangon|Mandalay|Bago
+3|What is the capital of Tanzania?|Dodoma|Dar es Salaam|Arusha|Zanzibar City
+3|What is the capital of Cameroon?|Yaounde|Douala|Lagos|Libreville
+3|What is the capital of Ecuador?|Quito|Guayaquil|Cuenca|Bogota
+3|What is the capital of Uruguay?|Montevideo|Punta del Este|Asuncion|Buenos Aires
+3|What is the capital of Paraguay?|Asuncion|Montevideo|Encarnacion|La Paz
+3|What is the capital of Slovakia?|Bratislava|Kosice|Ljubljana|Banska Bystrica
+3|What is the capital of Slovenia?|Ljubljana|Maribor|Zagreb|Bratislava
+3|What is the capital of Croatia?|Zagreb|Split|Dubrovnik|Belgrade
+3|What is the capital of Romania?|Bucharest|Cluj-Napoca|Budapest|Sofia
+3|What is the capital of Bulgaria?|Sofia|Plovdiv|Varna|Bucharest
+3|What is the capital of Afghanistan?|Kabul|Kandahar|Herat|Tehran
+3|What is the capital of Nepal?|Kathmandu|Pokhara|Thimphu|Lhasa
+3|What is the capital of Bhutan?|Thimphu|Paro|Kathmandu|Dhaka
+3|What is the capital of Madagascar?|Antananarivo|Toamasina|Mahajanga|Moroni
+3|What is the highest waterfall in the world?|Angel Falls|Niagara Falls|Victoria Falls|Iguazu Falls
+3|In which country is Angel Falls?|Venezuela|Brazil|Colombia|Guyana
+3|What is the longest mountain range on land?|Andes|Himalayas|Rockies|Urals
+3|Which landlocked country lies between India and China?|Nepal|Bangladesh|Myanmar|Laos
+3|Which two countries are the only double-landlocked countries in the world?|Liechtenstein and Uzbekistan|Switzerland and Austria|Bolivia and Paraguay|Nepal and Bhutan
+3|Which salt lake lies between Israel and Jordan?|Dead Sea|Red Sea|Caspian Sea|Aral Sea
+3|What is the lowest point on land on Earth?|The Dead Sea shore|Death Valley|The Caspian shore|Lake Assal
+[history]
+1|Which famous wall was built to protect China from invaders?|The Great Wall|Hadrian's Wall|The Berlin Wall|The Western Wall
+1|Which animals did the ancient Romans race in the Circus Maximus?|Horses|Camels|Elephants|Dogs
+1|Which ancient civilisation wrote with hieroglyphs?|Egyptians|Romans|Vikings|Celts
+2|What was the name of the Allied invasion of Normandy on 6 June 1944?|D-Day|V-Day|Operation Torch|Market Garden
+2|Who was the US president during the American Civil War?|Abraham Lincoln|Ulysses S. Grant|Andrew Johnson|James Buchanan
+2|Who was the first emperor of a unified China?|Qin Shi Huang|Kublai Khan|Sun Yat-sen|Confucius
+2|Which ancient city is famous for its army of terracotta warriors?|Xi'an|Beijing|Nanjing|Luoyang
+2|Who was the famous nurse known as "the Lady with the Lamp"?|Florence Nightingale|Mary Seacole|Clara Barton|Edith Cavell
+2|Which explorer reached the South Pole first, in 1911?|Roald Amundsen|Robert Falcon Scott|Ernest Shackleton|Richard Byrd
+2|Who was the first person to reach the summit of Mount Everest with Tenzing Norgay?|Edmund Hillary|George Mallory|Reinhold Messner|Chris Bonington
+2|In which year did Edmund Hillary and Tenzing Norgay climb Everest?|1953|1948|1961|1939
+2|Which civil rights activist refused to give up her bus seat in Montgomery in 1955?|Rosa Parks|Harriet Tubman|Coretta Scott King|Ruby Bridges
+2|Which Roman general was assassinated on the Ides of March, 44 BC?|Julius Caesar|Mark Antony|Pompey|Augustus
+2|Who led the Mongol conquests in the early 13th century?|Genghis Khan|Kublai Khan|Attila|Tamerlane
+2|What was the name of the plague that swept Europe in the 1340s?|The Black Death|The Great Fever|The Red Plague|The Sweating Sickness
+2|In which year did the Great Fire of London happen?|1666|1066|1766|1606
+2|Which famous ship did Charles Darwin sail on?|HMS Beagle|HMS Victory|HMS Endeavour|HMS Bounty
+2|The first circumnavigation was completed by which expedition?|Magellan-Elcano expedition|Drake expedition|Cook expedition|Columbus expedition
+2|What was the name of the Egyptian writing stone that helped decode hieroglyphs?|Rosetta Stone|Sphinx Tablet|Cairo Slab|Giza Stone
+2|Which country did the Aztecs live in, in modern terms?|Mexico|Peru|Guatemala|Colombia
+2|Which famous queen of the Iceni led a revolt against the Romans?|Boudica|Cleopatra|Zenobia|Matilda
+2|The Berlin Wall divided East and West Berlin.|True
+2|Napoleon was famously very short for his time.|False
+3|Who was the first President of the Republic of India?|Rajendra Prasad|Jawaharlal Nehru|Sarvepalli Radhakrishnan|Zakir Husain
+3|Who wrote The Communist Manifesto with Friedrich Engels?|Karl Marx|Vladimir Lenin|Leon Trotsky|Mao Zedong
+3|Which ancient Greek city-state was famous for its warriors?|Sparta|Athens|Corinth|Thebes
+3|In which year did Christopher Columbus first reach the Americas?|1492|1498|1488|1501
+3|Which Greek philosopher taught Alexander the Great?|Aristotle|Plato|Socrates|Pythagoras
+3|Which king of Macedon built an empire stretching to India?|Alexander the Great|Philip II|Darius I|Xerxes
+3|Who was the last pharaoh of ancient Egypt?|Cleopatra VII|Ramesses II|Tutankhamun|Nefertiti
+3|In which year did the Wright brothers make their first powered flight?|1903|1899|1910|1908
+3|What was the name of the first successful English colony in America?|Jamestown|Plymouth|Roanoke|Boston
+3|Which treaty ended World War I with Germany?|Treaty of Versailles|Treaty of Paris|Treaty of Ghent|Treaty of Vienna
+3|Which empire did Suleiman the Magnificent rule?|Ottoman Empire|Mughal Empire|Persian Empire|Byzantine Empire
+3|Who was the first European to see the Pacific from the Americas, in 1513?|Vasco Nunez de Balboa|Hernan Cortes|Francisco Pizarro|Ferdinand Magellan
+3|What was the name of the US program that put astronauts on the Moon?|Apollo|Gemini|Mercury|Artemis
+3|Which famous library in Egypt was one of the largest of the ancient world?|Library of Alexandria|Library of Cairo|Library of Thebes|Library of Memphis
+[screen]
+1|What kind of animal is Scooby-Doo?|Dog|Cat|Horse|Bear
+1|What is the name of SpongeBob's starfish best friend?|Patrick|Squidward|Gary|Plankton
+1|Where does SpongeBob SquarePants live?|In a pineapple under the sea|In a rock|In a shell|In a coral castle
+1|What is the name of the green ogre's donkey friend in Shrek?|Donkey|Puss|Pinocchio|Farquaad
+1|In Cinderella, what does the pumpkin turn into?|A carriage|A horse|A castle|A dress
+1|What colour is the Pink Panther?|Pink|Purple|Red|Orange
+2|Which animated family lives in Bedrock?|The Flintstones|The Jetsons|The Simpsons|The Griffins
+2|Which animated family lives in the future, in Orbit City?|The Jetsons|The Flintstones|The Incredibles|The Robinsons
+2|What is the name of the robot in the Pixar film about a lonely trash-compacting robot?|WALL-E|EVE|Baymax|R2-D2
+2|What is the name of the inflatable robot in Big Hero 6?|Baymax|WALL-E|Bolt|Gizmo
+2|In Despicable Me, what are Gru's small yellow helpers called?|Minions|Gremlins|Oompa Loompas|Smurfs
+2|Which Pixar film is about the emotions inside a girl's head?|Inside Out|Soul|Up|Coco
+2|Which animated film features a clownfish father searching the ocean?|Finding Nemo|Shark Tale|The Little Mermaid|Luca
+2|Which film features a family of superheroes called the Parrs?|The Incredibles|Sky High|Megamind|Bolt
+2|In Toy Story, what is the name of the boy who owns the toys?|Andy|Sid|Bonnie|Ben
+2|In The Lion King, what kind of animal is Pumbaa?|Warthog|Meerkat|Hyena|Hippo
+2|In The Lion King, what kind of animal is Timon?|Meerkat|Warthog|Mongoose|Lemur
+2|In Aladdin, what is the name of the monkey?|Abu|Iago|Rajah|Raja
+2|In The Little Mermaid, what is the name of the crab?|Sebastian|Flounder|Scuttle|Ursula
+2|In Beauty and the Beast, what is the name of the candlestick?|Lumiere|Cogsworth|Chip|Gaston
+2|Which film features the characters Woody, Buzz and Jessie?|Toy Story 2|Cars|Monsters, Inc.|A Bug's Life
+2|What is the name of the wizard who guides Frodo in The Lord of the Rings?|Gandalf|Saruman|Dumbledore|Merlin
+2|Who is Harry Potter's best friend with red hair?|Ron Weasley|Neville Longbottom|Draco Malfoy|Seamus Finnigan
+2|What position does Harry Potter play in Quidditch?|Seeker|Keeper|Chaser|Beater
+2|In Star Wars, what colour is Yoda's skin?|Green|Blue|Grey|Brown
+2|In Star Wars, what is the name of Han Solo's ship?|Millennium Falcon|X-wing|Star Destroyer|Slave I
+2|Which superhero is a billionaire who builds a suit of armour?|Iron Man|Batman|Green Lantern|The Flash
+2|What is the name of the Hulk's alter ego?|Bruce Banner|Bruce Wayne|Tony Stark|Steve Rogers
+2|What is the name of Wonder Woman's home island?|Themyscira|Atlantis|Krypton|Asgard
+2|What is the name of Superman's home planet?|Krypton|Mars|Xandar|Oa
+2|In Jurassic Park, what kind of dinosaur chases the jeep?|Tyrannosaurus rex|Velociraptor|Triceratops|Spinosaurus
+2|The film The Sound of Music is set in Austria.|True
+2|Mary Poppins arrives by holding an umbrella.|True
+3|Which film won the Academy Award for Best Picture for 1997, about a sinking ship?|Titanic|The English Patient|Good Will Hunting|L.A. Confidential
+3|Who directed Pulp Fiction?|Quentin Tarantino|Martin Scorsese|Guy Ritchie|David Fincher
+3|Who directed The Godfather?|Francis Ford Coppola|Martin Scorsese|Brian De Palma|Sergio Leone
+3|Who directed Schindler's List?|Steven Spielberg|Roman Polanski|Ridley Scott|Oliver Stone
+3|Who directed Inception and Interstellar?|Christopher Nolan|Denis Villeneuve|Ridley Scott|James Cameron
+3|Which film features the quote "Here's looking at you, kid"?|Casablanca|Gone with the Wind|Citizen Kane|The Maltese Falcon
+3|Which film features the line "May the Force be with you"?|Star Wars|Star Trek|Dune|The Matrix
+3|In which year was the first Star Wars film released?|1977|1975|1980|1983
+3|Which studio made the films My Neighbor Totoro and Spirited Away?|Studio Ghibli|Toei Animation|Pixar|Madhouse
+3|What is the name of the hotel in Stanley Kubrick's The Shining?|The Overlook Hotel|The Bates Motel|The Grand Budapest|The Stanley Hotel
+3|What does Dorothy say she wants to do at the end of The Wizard of Oz?|Go home|Stay in Oz|Become a witch|Find her shoes
+3|What is Indiana Jones's real first name?|Henry|Indiana|Harrison|Walter
+3|Which actor played Jack Sparrow in Pirates of the Caribbean?|Johnny Depp|Orlando Bloom|Geoffrey Rush|Keanu Reeves
+[music]
+1|Which instrument do you hit with sticks?|Drum|Flute|Violin|Harp
+1|Which instrument has pedals and many strings and is plucked?|Harp|Guitar|Cello|Banjo
+1|Which family of instruments includes the trumpet?|Brass|Woodwind|Strings|Percussion
+1|Which family of instruments includes the violin?|Strings|Brass|Woodwind|Percussion
+1|What do you call the person who leads an orchestra?|Conductor|Composer|Soloist|Director
+2|What is the name of the Beatles' song about a yellow underwater vessel?|Yellow Submarine|Octopus's Garden|Help!|Penny Lane
+2|Which band released the song "Dancing Queen"?|ABBA|Queen|Bee Gees|Blondie
+2|Which singer was known as the Material Girl?|Madonna|Cher|Cyndi Lauper|Whitney Houston
+2|Which singer is known as the Godfather of Soul?|James Brown|Ray Charles|Otis Redding|Marvin Gaye
+2|Which composer wrote the Messiah oratorio, with the "Hallelujah" chorus?|Handel|Bach|Haydn|Mozart
+2|Which instrument is a ukulele most like?|A small guitar|A violin|A drum|A flute
+2|Which country does flamenco music and dance come from?|Spain|Portugal|Mexico|Argentina
+2|Which country does the tango come from?|Argentina|Spain|Brazil|Cuba
+2|Which Brazilian music style became famous with "The Girl from Ipanema"?|Bossa nova|Samba|Tango|Salsa
+2|What is the name for a series of notes played one after another that makes a tune?|Melody|Harmony|Rhythm|Chord
+2|What do you call three or more notes played at the same time?|Chord|Scale|Octave|Interval
+2|What is a "bpm" in music?|Beats per minute|Bars per measure|Bass power meter|Big piano music
+2|What instrument does a pianist play?|Piano|Violin|Drums|Trumpet
+2|What instrument does a cellist play?|Cello|Violin|Clarinet|Harp
+2|The harmonica is played by blowing and drawing air.|True
+3|Which composer wrote "Ride of the Valkyries"?|Richard Wagner|Gustav Mahler|Richard Strauss|Johannes Brahms
+3|Which composer wrote "The Nutcracker"?|Tchaikovsky|Rimsky-Korsakov|Mussorgsky|Borodin
+3|Which composer wrote "Bolero"?|Maurice Ravel|Claude Debussy|Erik Satie|Camille Saint-Saens
+3|Which composer wrote "Clair de Lune"?|Claude Debussy|Maurice Ravel|Frederic Chopin|Franz Liszt
+3|Which composer wrote "The Blue Danube" waltz?|Johann Strauss II|Franz Schubert|Joseph Haydn|Franz Lehar
+3|Which composer wrote "Rhapsody in Blue"?|George Gershwin|Leonard Bernstein|Aaron Copland|Duke Ellington
+3|Which jazz trumpeter was nicknamed "Satchmo"?|Louis Armstrong|Miles Davis|Dizzy Gillespie|Chet Baker
+3|Which composer wrote "The Planets" suite?|Gustav Holst|Edward Elgar|Ralph Vaughan Williams|Benjamin Britten
+3|Which composer wrote "Pomp and Circumstance" marches?|Edward Elgar|Gustav Holst|Henry Purcell|Arthur Sullivan
+3|What is the Italian term for gradually getting softer?|Diminuendo|Crescendo|Allegro|Fortissimo
+3|What does "allegro" mean as a tempo marking?|Fast and lively|Slow|Very soft|Smooth
+3|What does "adagio" mean as a tempo marking?|Slow|Fast|Loud|Short
+[sport]
+1|In which sport do players use a puck?|Ice hockey|Field hockey|Lacrosse|Polo
+1|How many points is a basket from far outside the arc worth in basketball?|3|2|4|1
+1|In which sport do you ride waves on a board?|Surfing|Skiing|Rowing|Skating
+1|What sport is played at the Tour de France?|Cycling|Running|Sailing|Horse racing
+1|In which sport do players try to get a ball into a hoop?|Basketball|Volleyball|Baseball|Golf
+2|What is the national sport of Japan?|Sumo|Judo|Karate|Baseball
+2|In which sport is the term "hat-trick" used for three goals by one player?|Football|Tennis|Golf|Swimming
+2|In which sport might you see a "scrum"?|Rugby|Football|Basketball|Baseball
+2|In which sport is the Ashes series contested?|Cricket|Rugby|Golf|Tennis
+2|What is the name of the area where a boxing match takes place?|Ring|Pitch|Court|Rink
+2|Which sport uses a "bunker", "fairway" and "green"?|Golf|Tennis|Cricket|Polo
+2|Which country won the first ever FIFA World Cup?|Uruguay|Argentina|Brazil|Italy
+2|How many players are on a netball team on court?|7|5|6|9
+2|In which sport do you use the terms "foil", "epee" and "sabre"?|Fencing|Archery|Judo|Shooting
+2|In tennis, what is it called when a server wins a point without the receiver touching the ball?|Ace|Let|Volley|Smash
+2|In which sport are the Harlem Globetrotters famous?|Basketball|Baseball|Football|Ice hockey
+2|Which sport is played on horseback with mallets?|Polo|Croquet|Hockey|Cricket
+2|In the Olympics, what colour medal is given for second place?|Silver|Bronze|Gold|Platinum
+2|How many players are on a baseball team on the field?|9|10|11|8
+2|What shape is the playing field in baseball often called?|A diamond|A square|A circle|An oval
+2|How many minutes are in a regular football (soccer) match, not counting stoppage time?|90|80|100|60
+2|Table tennis is also known as ping-pong.|True
+2|In cricket, a "century" is 100 runs.|True
+3|In which year were the first modern Winter Olympics held?|1924|1908|1936|1896
+3|In which city were the first modern Winter Olympics held?|Chamonix|St. Moritz|Lake Placid|Oslo
+3|How many players are on a hurling team?|15|11|13|12
+3|What is the national sport of Afghanistan, played on horseback with a goat carcass?|Buzkashi|Polo|Kabaddi|Pehlwani
+3|Which sport is played with "stones" and brooms on ice?|Curling|Bandy|Skeleton|Biathlon
+3|In which sport does the biathlon combine skiing with what?|Rifle shooting|Archery|Skating|Swimming
+3|How many fences are in the Grand National horse race, jumped over two laps?|30|20|40|16
+3|In which sport is the Calcutta Cup contested between England and Scotland?|Rugby union|Cricket|Football|Golf
+3|What is the distance of the shortest standard Olympic sprint on the track?|100 metres|50 metres|60 metres|200 metres
+3|Which tennis tournament is played on clay courts in Paris?|French Open|Wimbledon|US Open|Australian Open
+3|Which tennis Grand Slam is played on grass?|Wimbledon|French Open|US Open|Australian Open
+3|In which sport would you perform a "triple axel"?|Figure skating|Gymnastics|Diving|Ski jumping
+3|How high is a basketball hoop from the floor, in feet?|10|9|11|12
+[animals]
+1|What do you call a baby bear?|Cub|Kit|Calf|Joey
+1|What do you call a baby cow?|Calf|Foal|Lamb|Kid
+1|What do you call a baby pig?|Piglet|Calf|Kit|Cub
+1|What do you call a baby duck?|Duckling|Gosling|Cygnet|Chick
+1|Which animal has a trunk?|Elephant|Rhino|Hippo|Tapir
+1|What do caterpillars eat mostly?|Leaves|Insects|Seeds|Fish
+1|Which animal is known for its black and white fur and lives in China?|Giant panda|Zebra|Skunk|Badger
+1|Which animal says "moo"?|Cow|Sheep|Goat|Horse
+1|Which bird is known for its colourful tail feathers it fans out?|Peacock|Flamingo|Parrot|Swan
+1|Frogs are amphibians.|True
+2|What do you call an animal that only eats meat?|Carnivore|Herbivore|Omnivore|Frugivore
+2|Which animal is the largest primate?|Gorilla|Chimpanzee|Orangutan|Baboon
+2|Which bird is the fastest in a dive?|Peregrine falcon|Golden eagle|Swift|Ostrich
+2|Which animal can live the longest of these?|Greenland shark|Elephant|Parrot|Horse
+2|Which reptile can live over 150 years?|Giant tortoise|Crocodile|Iguana|Python
+2|What do you call a female fox?|Vixen|Doe|Jenny|Sow
+2|What do you call a female pig?|Sow|Ewe|Doe|Mare
+2|What do you call a female horse?|Mare|Filly|Doe|Ewe
+2|What is the largest type of deer?|Moose|Elk|Reindeer|Red deer
+2|What are baby rabbits called?|Kits|Cubs|Pups|Calves
+2|Which animal is a hippopotamus's closest living relative?|Whale|Pig|Rhino|Elephant
+2|Which big cat cannot fully retract its claws?|Cheetah|Lion|Tiger|Leopard
+2|Which bird has the largest wingspan?|Wandering albatross|Andean condor|Bald eagle|Pelican
+2|What is the only continent where giraffes live in the wild?|Africa|Asia|South America|Australia
+2|Which marine mammal is known as a "sea cow"?|Manatee|Walrus|Seal|Sea lion
+2|Which animal is famous for having a pouch and hopping, besides the kangaroo?|Wallaby|Wombat|Koala|Possum
+2|What do bees use to tell each other where flowers are?|A waggle dance|Buzzing songs|Smell trails only|Colour flashes
+2|Sharks have bones made of cartilage.|True
+2|An octopus has three hearts.|True
+3|What is the smallest mammal in the world by mass?|Etruscan shrew|Bumblebee bat|Pygmy mouse|Pygmy marmoset
+3|What is the fastest fish in the ocean, by most estimates?|Sailfish|Bluefin tuna|Marlin|Mako shark
+3|Which animal has the largest eyes of any living creature?|Colossal squid|Blue whale|Ostrich|Owl
+3|What do you call a group of zebras?|A dazzle|A stripe|A herd of bars|A crossing
+3|What is a group of hedgehogs called?|An array|A spike|A prickle|A cluster
+3|What is the only big cat that lives and hunts in groups?|Lion|Tiger|Leopard|Jaguar
+3|Which bird is the national bird of India?|Peacock|Eagle|Parrot|Crane
+3|Which animal can regrow its lost limbs, including parts of its heart?|Axolotl|Gecko|Frog|Newt
+3|How many legs does a lobster have, including claws?|10|8|12|6
+3|What is the largest species of bear?|Polar bear|Grizzly bear|Sun bear|Black bear
+[science]
+1|What is H2O more commonly called?|Water|Salt|Air|Sugar
+1|Which waste gas do we breathe out?|Carbon dioxide|Oxygen|Helium|Hydrogen
+1|What is the centre of the Earth called?|The core|The crust|The mantle|The shell
+1|What do you call a scientist who studies the stars?|Astronomer|Astrologer|Geologist|Biologist
+1|Which state of matter is steam?|Gas|Liquid|Solid|Plasma
+1|Ice is the solid form of water.|True
+2|Which part of the eye controls how much light gets in?|Iris|Lens|Retina|Cornea
+2|Which organ produces insulin?|Pancreas|Liver|Kidney|Stomach
+2|Which organ stores bile?|Gallbladder|Liver|Pancreas|Spleen
+2|How many teeth does an adult human usually have, including wisdom teeth?|32|28|30|36
+2|What is the main gas found in the Sun?|Hydrogen|Oxygen|Carbon dioxide|Neon
+2|What kind of energy is stored in food?|Chemical energy|Nuclear energy|Sound energy|Kinetic energy
+2|What do you call the change from liquid to gas?|Evaporation|Condensation|Freezing|Melting
+2|What do you call the change from gas to liquid?|Condensation|Evaporation|Sublimation|Melting
+2|What does a magnet attract?|Iron and some other metals|All metals|Wood|Glass
+2|What is the name of the layer of gas that protects Earth from ultraviolet light?|Ozone layer|Ionosphere|Troposphere|Exosphere
+2|How many teeth does a child usually have in a full set of milk teeth?|20|24|16|28
+2|Which scientist first described gravity after an apple fell, according to the story?|Isaac Newton|Galileo Galilei|Albert Einstein|Johannes Kepler
+2|What colour of light has the longest wavelength we can see?|Red|Violet|Green|Blue
+2|Lightning is hotter than the surface of the Sun.|True
+3|What is the chemical symbol for mercury?|Hg|Me|Mr|Hy
+3|Which metal has the highest melting point?|Tungsten|Iron|Titanium|Platinum
+3|What is the most electrically conductive metal?|Silver|Copper|Gold|Aluminium
+3|What is the study of fungi called?|Mycology|Botany|Virology|Entomology
+3|What is the study of insects called?|Entomology|Etymology|Ornithology|Herpetology
+3|What is the study of birds called?|Ornithology|Oology|Entomology|Ichthyology
+3|What particle has no electrical charge?|Neutron|Proton|Electron|Ion
+3|What is the name for a change in a gene?|Mutation|Mitosis|Meiosis|Osmosis
+3|Which scientist proposed the uncertainty principle?|Werner Heisenberg|Niels Bohr|Erwin Schrodinger|Max Planck
+3|How many bones are in the human skull, including the jaw?|22|14|28|32
+[food]
+1|What colour is a ripe banana?|Yellow|Red|Purple|Blue
+1|What is the main ingredient in bread?|Flour|Rice|Potato|Milk
+1|What are French fries made from?|Potatoes|Carrots|Parsnips|Apples
+1|Which drink is made from leaves and is very popular in Britain and India?|Tea|Coffee|Lemonade|Cocoa
+1|Which fruit grows on a palm tree and has a hard hairy shell?|Coconut|Mango|Pineapple|Papaya
+1|What is made by churning cream?|Butter|Cheese|Yoghurt|Ice cream
+2|Which country is famous for the dish pad thai?|Thailand|Vietnam|Laos|Malaysia
+2|Which country is famous for tacos?|Mexico|Spain|Peru|Argentina
+2|Which country invented the fortune cookie as it's known today?|United States|China|Japan|Korea
+2|What kind of food is a "baguette"?|Bread|Cheese|Cake|Sausage
+2|What is the main ingredient of a traditional gnocchi?|Potato|Rice|Cheese|Egg
+2|What type of food is gouda?|Cheese|Bread|Sausage|Pastry
+2|Which fruit is used to make the drink cider?|Apples|Pears|Grapes|Peaches
+2|Which bean is used to make chocolate?|Cacao|Coffee|Vanilla|Soya
+2|Which is the main ingredient in a traditional Greek moussaka?|Aubergine|Courgette|Potato|Cabbage
+2|What is the Japanese dish of battered and deep-fried seafood or vegetables?|Tempura|Teriyaki|Sukiyaki|Sashimi
+2|What is the main ingredient in a classic Caesar salad?|Romaine lettuce|Spinach|Cabbage|Rocket
+2|What is the name of the Spanish dish of small snacks?|Tapas|Mezze|Antipasti|Dim sum
+2|What is the name of the Chinese meal of small dumplings and dishes served with tea?|Dim sum|Tapas|Mezze|Bento
+2|Which fruit is the main ingredient of a traditional marmalade?|Oranges|Strawberries|Apples|Lemons only
+2|Which country invented the sandwich, according to its famous name?|England|France|Italy|United States
+2|Peanuts are actually legumes, not true nuts.|True
+3|What is the name of the Moroccan clay pot used for slow cooking?|Tagine|Paella|Wok|Karahi
+3|What gives Thai green curry its colour?|Green chillies and herbs|Spinach|Matcha|Peas
+3|Which Japanese green tea is ground into a fine powder?|Matcha|Sencha|Genmaicha|Hojicha
+3|Which spice blend is common in Indian cooking, meaning "hot spices"?|Garam masala|Ras el hanout|Za'atar|Berbere
+3|Which country is the origin of the dish ceviche?|Peru|Mexico|Chile|Spain
+3|Which cheese is traditionally used in a Greek salad?|Feta|Halloumi|Mozzarella|Ricotta
+3|Which country is famous for Gruyere and Emmental cheese?|Switzerland|Austria|France|Germany
+3|Which nut is the main ingredient in a traditional pesto alongside basil?|Pine nuts|Walnuts|Almonds|Cashews
+[general]
+1|What do you call the time when the sun goes down?|Sunset|Sunrise|Dawn|Noon
+1|How many sides does a rectangle have?|4|3|5|6
+1|Which day comes before Wednesday?|Tuesday|Monday|Thursday|Friday
+1|What is the opposite of "hot"?|Cold|Warm|Wet|Soft
+1|What is the main colour of the sky on a clear day?|Blue|Green|Purple|Orange
+1|In which game do you say "checkmate"?|Chess|Checkers|Bingo|Poker
+2|How many years are in a decade?|10|100|5|12
+2|How many weeks are in a year?|52|48|50|56
+2|What is the name for a doctor who looks after teeth?|Dentist|Optician|Surgeon|Vet
+2|What is the name for a doctor who looks after animals?|Vet|Dentist|Paediatrician|Pharmacist
+2|What does a lighthouse do?|Warns ships of danger|Makes electricity|Stores water|Measures wind
+2|How many centimetres are in an inch, roughly?|2.5|1.5|5|10
+2|Which of these is a herb?|Basil|Cinnamon|Pepper|Nutmeg
+2|What is the name of the coloured lights at a road junction?|Traffic lights|Street lamps|Beacons|Crossing lamps
+2|On a traffic light, which colour means stop?|Red|Amber|Green|Blue
+2|What is the name for a person who writes books?|Author|Editor|Publisher|Printer
+2|Which of these is not a primary colour of light?|Yellow|Red|Green|Blue
+2|How many musicians are in a trio?|3|2|4|5
+2|Which coin-flip side is the opposite of "heads"?|Tails|Backs|Legs|Wings
+3|What is the national flower of India?|Lotus|Rose|Jasmine|Marigold
+3|What is the national animal of Australia, shown on its coat of arms with the emu?|Kangaroo|Koala|Platypus|Dingo
+3|What do the letters "a.m." stand for after a time?|Ante meridiem|After midday|Ante midnight|Across morning
+3|How many hours ahead of London is Tokyo in the northern winter?|9|7|8|10
+3|How many squares are there in total on a standard Scrabble board?|225|196|256|169

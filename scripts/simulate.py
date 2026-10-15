@@ -250,6 +250,25 @@ for _phase in ("wait", "go", "result", "final"):
         "best",
         "wins",
     }
+for _phase in ("pick", "wager", "question", "reveal", "final"):
+    ALLOWED_KEYS[("trivia", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "style",
+        "limit",
+        "category",
+        "level",
+        "question",
+        "answered",
+        "wagered",
+        "pick",
+        "lives",
+        "streaks",
+        "scores",
+        "you",
+        "result",
+        "history",
+        "correct",
+        "best_streak",
+    }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1293,6 +1312,50 @@ async def play_reflex(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             if gg["phase"] in ("wait", "go"):
                 check(gg["remaining"] is None, f"reflex: {b.name} saw a countdown to the signal")
                 check(gg["result"] is None, f"reflex: {b.name} saw the result early")
+
+
+async def play_trivia(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Every style: the picker drafts, everyone bets, every bot still in answers at random. Nothing
+    before a reveal may carry the answer or another player's choice; the reveal's gains add up."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+    for _ in range(200):
+        await all_until(
+            bots, lambda st: st["game"]["phase"] in ("pick", "wager", "question", "final"), "trivia live"
+        )
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        stage = host.state["stage"]  # type: ignore[index]
+        if g["phase"] == "pick":
+            await by_id[g["pick"]["picker"]].send(
+                t="act", a="pick", cat=rng.choice(g["pick"]["offers"])["id"]
+            )
+        elif g["phase"] == "wager":
+            for b in bots:
+                cap = b.state["game"]["you"]["max_wager"]  # type: ignore[index]
+                await b.send(t="act", a="wager", amount=rng.randint(0, cap))
+        else:
+            n = len(g["question"]["choices"])
+            alive = [b for b in bots if not b.state["game"]["you"]["out"]]  # type: ignore[index]
+            for b in alive:
+                await b.send(t="act", a="answer", choice=rng.randrange(n))
+            await all_until(bots, game_is("trivia", "reveal"), "trivia reveal")
+            r = host.state["game"]["result"]  # type: ignore[index]
+            check(set(r["picks"]) == {b.pid for b in alive}, "trivia: a pick went missing")
+            await skip(host)
+        await all_until(bots, lambda st, s0=stage: st["stage"] != s0, "trivia next")
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "trivia" or gg["phase"] not in ("pick", "wager", "question"):
+                continue
+            check("result" not in gg and "history" not in gg, f"trivia: {b.name} saw a result early")
+            mine = (gg.get("you") or {}).get("answer")
+            check(
+                mine is None or gg["phase"] == "question",
+                f"trivia: {b.name} saw an answer outside a question",
+            )
 
 
 async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2594,6 +2657,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         games += ["bomb", "reflex", "snakes", "ships"]
+        games += ["trivia", "trivia-fastest", "trivia-survival", "trivia-wager", "trivia-draft"]
         if len(bots) >= 4:
             games.append("mafia")
             games.append("crossword-teams")
@@ -2604,6 +2668,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 "drawguess-pairs",
                 "telephone-pairs",
                 "tycoon-pairs",
+                "trivia-pairs",
             ]  # the Teams switch
         if len(bots) == 4:
             games.append("ludo-pairs")  # Ludo teams are exactly 2 v 2
@@ -2620,6 +2685,9 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await host.send(t="start", game=game, options={"mode": "tournament"})
             elif name == "crossword-teams":
                 await host.send(t="start", game=game, options={"mode": "teams"})
+            elif game == "trivia" and not name.endswith("-pairs"):
+                style = name.split("-")[1] if "-" in name else "classic"
+                await host.send(t="start", game=game, options={"style": style, "questions": "5"})
             elif name.endswith("-pairs"):
                 await host.send(t="start", game=game, teams=True)
             else:
@@ -2688,6 +2756,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_snakes(host, bots, rng)
             elif game == "ships":
                 await play_ships(host, bots, rng)
+            elif game == "trivia":
+                await play_trivia(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2730,7 +2800,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game in ("mafia", "bomb", "reflex", "snakes", "ships"):
+            elif game in ("mafia", "bomb", "reflex", "snakes", "ships", "trivia"):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"{game}: scoreboard {got} != the game's {want}")

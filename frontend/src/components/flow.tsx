@@ -3,6 +3,7 @@ import { Btn, Card, ShowHead, nameOf } from "./ui";
 import { SEGMENT_ICON } from "./show";
 import { sfx } from "../lib/sfx";
 import { TeamsCard } from "./teams";
+import { OPTION_LABELS } from "../lib/options";
 import type { GameCard, RoomState } from "../types";
 
 type Send = (msg: Record<string, unknown>) => void;
@@ -30,16 +31,18 @@ export function IntroScreen({ state, receivedAt, send, readOnly }: { state: Room
   const isHost = state.room.host === state.you;
   const imReady = intro.ready.includes(state.you);
   const waitingOn = state.players.filter((p) => p.connected && !intro.ready.includes(p.id));
-  const values = Object.values(intro.options);
-  const mode = values.join(" · ");
+  const chosen = Object.entries(intro.options).map(([k, v]) => OPTION_LABELS[k]?.[v] ?? v);
   return (
     <div className={`seg-${intro.game} stack enter`}>
       <ShowHead sign="Up next · how to play" title={intro.title} remaining={intro.closes_in} receivedAt={receivedAt}>
-        {mode && (
-          <span className="chip plum">
-            {mode}
-            {values.length === 1 ? ("pace" in intro.options ? " pace" : " mode") : ""}
-          </span>
+        {chosen.length > 0 && (
+          <p className="intro-options">
+            {chosen.map((label) => (
+              <span key={label} className="chip plum">
+                {label}
+              </span>
+            ))}
+          </p>
         )}
       </ShowHead>
       <Card tone="stage">
