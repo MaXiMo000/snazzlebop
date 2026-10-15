@@ -66,6 +66,11 @@ summary,
   --lift-sm: 0 4px 0 var(--shadow);
   --line: 3px solid var(--edge);
   --gutter: 16px;
+  /* Installed app (viewport-fit=cover): room for the status bar, notch and home indicator. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
   color-scheme: dark;
 }
 
@@ -166,6 +171,7 @@ body {
       transparent 7deg 14deg
     );
   background-attachment: fixed;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
   overflow-x: clip; /* clip, not hidden: hidden makes body a scroll box and breaks position: sticky */
 }
 html {
@@ -627,7 +633,7 @@ input[type="password"]:focus-visible,
 /* Errors float at the top of the screen, so a refused move is seen wherever you've scrolled to. */
 .toast {
   position: fixed;
-  top: 12px;
+  top: calc(12px + var(--safe-top));
   left: 50%;
   z-index: 60;
   width: min(calc(100% - 2 * var(--gutter)), 520px);
@@ -1480,7 +1486,7 @@ details summary {
 @media (max-width: 899px) {
   .bj-move {
     position: sticky;
-    bottom: 10px;
+    bottom: calc(10px + var(--safe-bottom));
     z-index: 5;
     box-shadow:
       var(--lift),
@@ -2802,7 +2808,7 @@ details.how-to[open] summary {
 @media (max-width: 899px) {
   .ready-bar {
     position: sticky;
-    bottom: 12px;
+    bottom: calc(12px + var(--safe-bottom));
     z-index: 30;
   }
 }
@@ -4586,7 +4592,7 @@ button.cw-card:hover {
 @media (max-width: 899px) {
   .ludo-turn.mine {
     position: sticky;
-    bottom: 10px;
+    bottom: calc(10px + var(--safe-bottom));
     z-index: 5;
     box-shadow:
       var(--lift),
@@ -6457,7 +6463,7 @@ b.team-name.team-1 {
   }
   .ty-board-col {
     position: sticky;
-    top: 10px;
+    top: calc(10px + var(--safe-top));
     max-width: max(420px, 100svh - 40px);
   }
 }
@@ -6813,7 +6819,7 @@ b.team-name.team-1 {
 @media (max-width: 899px) {
   .ty-action.mine {
     position: sticky;
-    bottom: 10px;
+    bottom: calc(10px + var(--safe-bottom));
     z-index: 5;
     box-shadow:
       var(--lift),
@@ -7130,7 +7136,8 @@ b.team-name.team-1 {
   grid-template-rows: minmax(0, 1fr) auto;
   justify-items: center;
   gap: 12px;
-  padding: 16px;
+  padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom))
+    calc(16px + var(--safe-left));
   background: rgba(18, 10, 25, 0.94);
 }
 .recap-canvas {
@@ -7369,7 +7376,7 @@ b.team-name.team-1 {
    action cards at the bottom, gone after a few seconds (tap to open the chat). */
 .chat-popup {
   position: fixed;
-  top: 76px; /* below the top bar: never covers its buttons (the chat button included) */
+  top: calc(76px + var(--safe-top)); /* below the top bar: never covers its buttons (the chat button included) */
   left: 50%;
   z-index: 40;
   transform: translateX(-50%);
@@ -7411,9 +7418,9 @@ b.team-name.team-1 {
 .chat-panel {
   position: fixed;
   z-index: 45;
-  right: var(--gutter);
-  bottom: 12px;
-  left: var(--gutter);
+  right: calc(var(--gutter) + var(--safe-right));
+  bottom: calc(12px + var(--safe-bottom));
+  left: calc(var(--gutter) + var(--safe-left));
   display: flex;
   flex-direction: column;
   max-height: min(70svh, 560px);
@@ -7553,8 +7560,8 @@ b.team-name.team-1 {
 /* TV: the latest messages float bottom-left like live comments, fading after a while. */
 .chat-ticker {
   position: fixed;
-  left: 24px;
-  bottom: 24px;
+  left: calc(24px + var(--safe-left));
+  bottom: calc(24px + var(--safe-bottom));
   z-index: 30;
   display: grid;
   gap: 8px;
@@ -7830,7 +7837,8 @@ b.team-name.team-1 {
   grid-template-rows: minmax(0, 1fr) auto;
   justify-items: center;
   gap: 12px;
-  padding: 16px;
+  padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom))
+    calc(16px + var(--safe-left));
   background: #120a19;
 }
 .call-big .call-grid {
