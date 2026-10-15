@@ -226,6 +226,13 @@ class Game(ABC):
     def advance(self) -> None:
         """Host asked to skip the current wait."""
 
+    def skip(self) -> bool:
+        """The host's Skip button. Same as the clock running out, except where skipping would let a host
+        who is also playing use a secret (when a fuse blows, when a signal comes) or cut someone's turn
+        short: those games return False here and let their own clock decide."""
+        self.advance()
+        return True
+
     @abstractmethod
     def view_for(self, pid: str) -> dict[str, Any]: ...
 

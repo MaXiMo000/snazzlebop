@@ -196,6 +196,17 @@ class HubTests(HubHarness):
         await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": 7})
         self.assertIn("bad_message", conns[host].errors())
 
+    async def test_host_is_told_when_a_wait_cannot_be_skipped(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 2)
+        await hub.handle_message(room, host, conns[host], {"t": "start", "game": "trivia"})
+        if room.phase == "intro":
+            await hub.handle_message(room, host, conns[host], {"t": "skip"})
+        self.assertEqual(room.game.phase, "question")
+        await hub.handle_message(room, host, conns[host], {"t": "skip"})
+        self.assertIn("no_skip", conns[host].errors())
+        self.assertEqual(room.game.phase, "question")
+
     async def test_timer_tick_drives_game(self):
         hub = self.make_hub()
         room, host, conns = await self.party(hub, 2)

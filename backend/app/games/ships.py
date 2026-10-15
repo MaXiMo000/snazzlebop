@@ -169,6 +169,14 @@ class Battleships(Game):
         if not self.finished and self.expired():
             self.advance()
 
+    def skip(self) -> bool:
+        """Only the placing: in battle a skip would fire a random shot for someone else (the turn clock
+        does that when they really are away)."""
+        if self.phase != "place":
+            return False
+        self.advance()
+        return True
+
     def advance(self) -> None:
         if self.finished:
             return

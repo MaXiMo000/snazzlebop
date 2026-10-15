@@ -223,6 +223,14 @@ class MafiaNight(Game):
         if not self.finished and self.expired():
             self.advance()
 
+    def skip(self) -> bool:
+        """The reading screens only: a host in the Mafia could otherwise end the night before the Doctor
+        or the Detective has chosen, or cut the day's debate short."""
+        if self.phase in ("night", "day"):
+            return False
+        self.advance()
+        return True
+
     def advance(self) -> None:
         if self.finished:
             return

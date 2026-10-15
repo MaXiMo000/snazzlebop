@@ -138,6 +138,13 @@ class ReactionDuel(Game):
         elif self.expired():
             self.advance()
 
+    def skip(self) -> bool:
+        """Never during the wait: a host who skips it knows when the signal comes and taps first."""
+        if self.phase == "wait":
+            return False
+        self.advance()
+        return True
+
     def advance(self) -> None:
         if self.finished:
             return

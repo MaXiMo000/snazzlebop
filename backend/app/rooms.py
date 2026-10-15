@@ -1629,7 +1629,8 @@ class Hub:
                     raise HubError("bad_message", "Unknown message")
                 if seen != room.game.stage:
                     return False  # the wait the host meant to skip already ended on its own
-            room.game.advance()
+            if not room.game.skip():
+                raise HubError("no_skip", "This part runs on its own clock: no skipping it")
             self._maybe_finish(room)
             return True
         if kind == "lobby":

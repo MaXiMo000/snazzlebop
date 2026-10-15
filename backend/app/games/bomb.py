@@ -136,6 +136,13 @@ class HotPotatoBomb(Game):
         elif self.phase == "boom" and self.expired():
             self.advance()
 
+    def skip(self) -> bool:
+        """Never while the bomb is live: a host holding it could set it off on whoever has it."""
+        if self.phase == "pass":
+            return False
+        self.advance()
+        return True
+
     def advance(self) -> None:
         if self.finished:
             return

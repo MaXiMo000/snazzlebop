@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import hashlib
 import json
 import random
@@ -541,14 +542,22 @@ class Bot:
                     self.errors.append(msg.get("code", "?"))
                 async with self.cond:
                     self.cond.notify_all()
+            self.closed = 1000  # a clean close ends the loop without an exception
         except websockets.ConnectionClosed as exc:
             self.closed = exc.rcvd.code if exc.rcvd else 1006
 
-    async def until(self, pred: Any, what: str) -> dict[str, Any]:
+    async def keepalive(self) -> None:
+        """Ping every 25 s like a real screen, so a bot that's out of a long game isn't closed as idle."""
+        while self.closed is None:
+            await asyncio.sleep(25)
+            with contextlib.suppress(Exception):
+                await self.send(t="ping")
+
+    async def until(self, pred: Any, what: str, wait: float = TIMEOUT) -> dict[str, Any]:
         async with self.cond:
             try:
                 await asyncio.wait_for(
-                    self.cond.wait_for(lambda: self.state is not None and pred(self.state)), TIMEOUT
+                    self.cond.wait_for(lambda: self.state is not None and pred(self.state)), wait
                 )
             except TimeoutError:
                 raise Check(f"{self.name}: timed out waiting for {what} ({self.where()})") from None
@@ -580,8 +589,8 @@ def game_is(game: str, phase: str, rnd: int | None = None):
     return pred
 
 
-async def all_until(bots: list[Bot], pred: Any, what: str) -> None:
-    await asyncio.gather(*(b.until(pred, what) for b in bots))
+async def all_until(bots: list[Bot], pred: Any, what: str, wait: float = TIMEOUT) -> None:
+    await asyncio.gather(*(b.until(pred, what, wait) for b in bots))
 
 
 async def skip(host: Bot) -> None:
@@ -1283,8 +1292,7 @@ async def play_reflex(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             await b.send(t="act", a="tap")
             want[b.pid] -= 50
         await all_until(bots, lambda st, k=len(early): len(st["game"]["early"]) == k, "reflex early")
-        await skip(host)  # the signal, now
-        await all_until(bots, game_is("reflex", "go", rnd), f"reflex go {rnd}")
+        await all_until(bots, game_is("reflex", "go", rnd), f"reflex go {rnd}", wait=10)
         rest = [b for b in bots if b not in early]
         rng.shuffle(rest)
         for i, b in enumerate(rest):
@@ -1394,9 +1402,11 @@ async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                 await by_id[want].send(t="act", a="answer", text=f"THING  {word}!")  # refused: used
         g = host.state["game"]  # type: ignore[index]
         holder, lives = g["holder"], g["lives"][g["holder"]]
-        await skip(host)
         await all_until(
-            bots, lambda st, r=rnd: st["game"]["phase"] == "boom" and st["game"]["round"] == r, "bomb boom"
+            bots,
+            lambda st, r=rnd: st["game"]["phase"] == "boom" and st["game"]["round"] == r,
+            "bomb boom",
+            wait=45,
         )
         g = host.state["game"]  # type: ignore[index]
         check(g["boom"]["who"] == holder, "bomb: it blew up on someone who wasn't holding it")
@@ -2623,6 +2633,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         bot = Bot(name, pid, token, ws)
         bots.append(bot)
         readers.append(asyncio.create_task(bot.read()))
+        readers.append(asyncio.create_task(bot.keepalive()))
     host = bots[0]
     try:
         await all_until(

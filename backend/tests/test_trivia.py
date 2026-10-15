@@ -132,7 +132,7 @@ class ClassicTests(unittest.TestCase):
 
     def test_clock_ends_the_question_and_host_cannot_skip_it(self):
         g, clock = make(2, timer="15")
-        g.advance()  # a host skip mid-question does nothing: the clock ends it
+        g.skip()  # a host skip mid-question does nothing: the clock ends it
         self.assertEqual(g.phase, "question")
         g.handle("p0", {"a": "answer", "choice": right(g)})
         clock.t += 15

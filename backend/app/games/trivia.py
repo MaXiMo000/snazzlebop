@@ -319,7 +319,7 @@ class TriviaTonight(Game):
     # -- timers -----------------------------------------------------------------------------------
     def tick(self) -> None:
         if not self.finished and self.expired():
-            self._expire()
+            self.advance()
 
     def _expire(self) -> None:
         if self.phase == "pick":
@@ -332,10 +332,15 @@ class TriviaTonight(Game):
             self._next()
 
     def advance(self) -> None:
-        """Host skip: the picks, bets and the reveal, never a question that's still running."""
-        if self.finished or self.phase == "question":
-            return
-        self._expire()
+        if not self.finished:
+            self._expire()
+
+    def skip(self) -> bool:
+        """The picks, bets and the reveal, never a question that's still running (the clock ends it)."""
+        if self.phase == "question":
+            return False
+        self.advance()
+        return True
 
     def chat_muted(self, pid: str) -> bool:
         return self.phase == "question"
