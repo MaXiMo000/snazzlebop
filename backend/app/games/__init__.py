@@ -14,6 +14,7 @@ from .dice import LiarsDice
 from .drawguess import DrawGuess
 from .four import FourInARow
 from .frenemy import FrenemyRadar
+from .hangman import Hangman
 from .lastcard import LastCard
 from .lists import LetterLists
 from .lonely import LowestLonely
@@ -71,6 +72,7 @@ REGISTRY: dict[str, type[Game]] = {
         Battleships,
         FourInARow,
         LetterLists,
+        Hangman,
     )
 }
 

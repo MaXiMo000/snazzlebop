@@ -305,6 +305,22 @@ for _phase in ("write", "review", "scores", "final"):
         "result",
         "history",
     }
+for _phase in ("set", "guess", "reveal", "final"):
+    ALLOWED_KEYS[("hangman", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "setter",
+        "guesser",
+        "order",
+        "pattern",
+        "hint",
+        "guessed",
+        "misses",
+        "max_misses",
+        "suggestions",
+        "word",
+        "result",
+        "scores",
+        "history",
+    }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1528,6 +1544,64 @@ async def play_lists(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") == "lists" and gg["phase"] == "write":
                 check(gg["answers"] is None, f"lists: {b.name} saw answers while writing")
+
+
+async def play_hangman(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """The setter picks a suggestion; the guessers take turns with common letters (and a wrong solve now
+    and then). Points must follow the rules; only the setter ever sees the word before the reveal."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+    want = {b.pid: 0 for b in bots}
+    rounds = host.state["game"]["rounds"]  # type: ignore[index]
+    order = "etaoinshrdlucmfwypvbgkjqxz"
+    for rnd in range(1, rounds + 1):
+        await all_until(bots, game_is("hangman", "set", rnd), f"hangman set {rnd}")
+        setter = by_id[host.state["game"]["setter"]]  # type: ignore[index]
+        word = setter.state["game"]["suggestions"][rng.randrange(3)]  # type: ignore[index]
+        await setter.send(t="act", a="set", word=word)
+        await all_until(bots, game_is("hangman", "guess", rnd), f"hangman guess {rnd}")
+        tried: list[str] = []
+        misses = 0
+        while True:
+            g = host.state["game"]  # type: ignore[index]
+            if g["phase"] != "guess":
+                break
+            who = by_id[g["guesser"]]
+            n_before = len(g["guessed"]) + len(g["misses"])
+            if rng.random() < 0.08:
+                await who.send(t="act", a="solve", word="definitely not it")
+                misses += 1
+            else:
+                letter = next(c for c in order if c not in tried)
+                tried.append(letter)
+                await who.send(t="act", a="letter", letter=letter)
+                hits = word.count(letter)
+                if hits:
+                    want[who.pid] += 50 * hits
+                else:
+                    misses += 1
+            await all_until(
+                bots,
+                lambda st, k=n_before: (
+                    st["game"]["phase"] != "guess"
+                    or len(st["game"]["guessed"]) + len(st["game"]["misses"]) > k
+                ),
+                "hangman move",
+            )
+        r = host.state["game"]["result"]  # type: ignore[index]
+        check(r["word"] == word, "hangman: the reveal shows a different word")
+        if misses >= 6:
+            want[setter.pid] += 300
+            check(r["solver"] is None, "hangman: solved after six misses")
+        check(
+            host.state["game"]["scores"] == want, f"hangman: scores {host.state['game']['scores']} != {want}"
+        )  # type: ignore[index]
+        await skip(host)
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") == "hangman" and gg["phase"] in ("set", "guess") and b.pid != gg["setter"]:
+                check(gg["word"] is None and not gg["suggestions"], f"hangman: {b.name} saw the word early")
 
 
 async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2839,7 +2913,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         games += ["bomb", "reflex", "snakes", "ships"]
-        games += ["rather", "four", "lists"]
+        games += ["rather", "four", "lists", "hangman"]
         games += ["trivia", "trivia-fastest", "trivia-survival", "trivia-wager", "trivia-draft"]
         if len(bots) >= 4:
             games.append("mafia")
@@ -2948,6 +3022,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_four(host, bots, rng)
             elif game == "lists":
                 await play_lists(host, bots, rng)
+            elif game == "hangman":
+                await play_hangman(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2990,7 +3066,18 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game in ("mafia", "bomb", "reflex", "snakes", "ships", "trivia", "rather", "four", "lists"):
+            elif game in (
+                "mafia",
+                "bomb",
+                "reflex",
+                "snakes",
+                "ships",
+                "trivia",
+                "rather",
+                "four",
+                "lists",
+                "hangman",
+            ):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"{game}: scoreboard {got} != the game's {want}")

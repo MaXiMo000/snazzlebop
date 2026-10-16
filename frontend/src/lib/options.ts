@@ -1,5 +1,9 @@
 /** What the host's game options say in the lobby and on the intro screen (keys and values from the server). */
 export const OPTION_LABELS: Record<string, Record<string, string>> = {
+  sets: {
+    "1": "Everyone sets one word",
+    "2": "Everyone sets two words",
+  },
   lists: {
     "3": "3 lists",
     "2": "2 lists (quick)",

@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists" | "hangman";
   title: string;
   blurb: string;
   min_players: number;
@@ -375,6 +375,7 @@ export type GameView =
   | RatherView
   | FourView
   | ListsView
+  | HangmanView
   | JackpotView;
 
 export interface Highlight {
@@ -1430,4 +1431,31 @@ export interface ListsView {
   /** status per player per category: ok, same, nope or bad */
   result?: { status: Record<string, string[]>; gains: Record<string, number> };
   history?: { letter: string; gains: Record<string, number> }[];
+}
+
+export interface HangmanView {
+  game: "hangman";
+  phase: "set" | "guess" | "reveal" | "final";
+  round: number;
+  rounds: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  setter: string;
+  guesser: string | null;
+  /** the guessers, in turn order */
+  order: string[];
+  /** one entry per character: a letter once found, " " between words, null while hidden */
+  pattern: (string | null)[];
+  hint: string;
+  guessed: string[];
+  /** wrong letters, wrong solves (in quotes) and timeouts (⏱) */
+  misses: string[];
+  max_misses: number;
+  /** the setter's three suggestions (setting only) */
+  suggestions: string[];
+  /** the word: the setter's own screen, and everyone's from the reveal */
+  word: string | null;
+  result: { word: string; solver: string | null; setter: string; misses: number } | null;
+  scores: Record<string, number>;
+  history: { word: string; solver: string | null; setter: string; misses: number }[] | null;
 }

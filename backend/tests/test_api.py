@@ -104,6 +104,7 @@ def test_games_catalog(client):
         "rather",
         "four",
         "lists",
+        "hangman",
     }
 
 
