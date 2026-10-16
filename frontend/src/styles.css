@@ -11238,3 +11238,282 @@ details.game-options > div {
   color: var(--plum);
   font: 400 1.1rem / 1 var(--display);
 }
+
+/* ---- would you rather --------------------------------------------------------------------------- */
+.seg-rather {
+  --accent: #8a2d6b;
+  --accent-ink: #fff;
+  --accent-soft: #f6dcec;
+}
+.yr-tags {
+  margin: 8px 0 0;
+}
+.yr-hot .avatar.xl {
+  margin-inline: auto;
+}
+.yr-hot .lead {
+  text-wrap: balance;
+}
+/* The two choices: side by side from 560px, stacked on phones, with an OR medallion between. */
+.yr-pair {
+  position: relative;
+  display: grid;
+  gap: 18px;
+}
+@media (min-width: 560px) {
+  .yr-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 60px; /* room for the OR medallion between the two */
+  }
+}
+.yr-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  padding: 16px 18px;
+  border: var(--line);
+  border-radius: var(--radius);
+  background: var(--yc);
+  color: #fff;
+  font: 700 clamp(1.1rem, 4.6vw, 1.35rem) / 1.25 var(--body);
+  text-align: left;
+  box-shadow: 0 6px 0 var(--shadow);
+  text-wrap: balance;
+  transition:
+    transform 0.08s,
+    opacity 0.2s,
+    filter 0.2s;
+}
+.yr-choice.a {
+  --yc: #b8461b;
+}
+.yr-choice.b {
+  --yc: #0b6477;
+}
+button.yr-choice {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button.yr-choice:hover {
+  filter: brightness(1.08);
+}
+button.yr-choice:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--shadow);
+}
+.yr-choice:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 3px;
+}
+.yr-choice.chosen {
+  outline: 5px solid var(--mustard);
+  outline-offset: -2px;
+  animation: tq-pop 0.35s ease-out;
+}
+/* The other choice steps back in a solid grey (not faded: its words keep their contrast). */
+.yr-choice.dim {
+  --yc: #4a4250;
+}
+.yr-letter {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  font: 400 1.3rem / 1 var(--display);
+}
+.yr-text {
+  overflow-wrap: break-word;
+}
+.yr-or {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: var(--line);
+  border-radius: 50%;
+  background: var(--bulb);
+  color: var(--plum);
+  font: 400 0.95rem / 1 var(--display);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.yr-answer {
+  margin: 0;
+  font: 400 clamp(1.5rem, 6.5vw, 2.4rem) / 1.15 var(--display);
+  text-wrap: balance;
+}
+.yr-locks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.yr-locks li {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 64px;
+}
+.yr-locks .avatar {
+  outline: 3px dashed var(--muted);
+  outline-offset: 2px;
+}
+.yr-locks li.done .avatar {
+  outline: 3px solid var(--teal);
+}
+.yr-lock-name {
+  max-width: 88px;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* How the room split: a bar per side with the faces under it. */
+.yr-split {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.yr-split li {
+  display: grid;
+  gap: 6px;
+}
+.yr-split-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+}
+.yr-split-n {
+  font: 400 1.4rem / 1 var(--display);
+}
+.yr-bar {
+  width: 100%;
+  height: 16px;
+  border: 2.5px solid var(--edge);
+  border-radius: 9px;
+  background: var(--field);
+  overflow: hidden;
+  appearance: none;
+}
+.yr-bar::-webkit-meter-bar {
+  background: var(--field);
+  border: 0;
+}
+.yr-bar.a::-webkit-meter-optimum-value,
+.yr-bar.a::-webkit-meter-suboptimum-value,
+.yr-bar.a::-webkit-meter-even-less-good-value {
+  background: #b8461b;
+}
+.yr-bar.b::-webkit-meter-optimum-value,
+.yr-bar.b::-webkit-meter-suboptimum-value,
+.yr-bar.b::-webkit-meter-even-less-good-value {
+  background: #0b6477;
+}
+.yr-bar.a::-moz-meter-bar {
+  background: #b8461b;
+}
+.yr-bar.b::-moz-meter-bar {
+  background: #0b6477;
+}
+.yr-split-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 24px;
+}
+.yr .avatar.tiny {
+  width: 24px;
+  height: 24px;
+  font-size: 0.6rem;
+}
+.yr .avatar.tiny.face {
+  font-size: 0.9rem;
+}
+.yr-rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.yr-rows li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.yr-rows li.ok {
+  border-color: var(--teal);
+}
+.yr-rows li.hot {
+  border-style: dashed;
+}
+.yr-row-name {
+  display: grid;
+  min-width: 0;
+}
+.yr-row-name b {
+  overflow-wrap: break-word;
+}
+.yr-row-name .muted {
+  font-size: 0.9rem;
+}
+.yr-scores li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.yr-scores b {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.yr-history {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding-left: 1.4em;
+}
+.yr.big .yr-choice {
+  min-height: 140px;
+  font-size: clamp(1.4rem, 2.2vw, 2.2rem);
+}
+.yr.big .yr-pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 60px;
+}
+/* TV: the full width; the hot seat and the choices left, who's in and the scores right. */
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-rather) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tv .yr.tv-cols {
+    grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yr-choice.chosen {
+    animation: none;
+  }
+}

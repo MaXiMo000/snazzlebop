@@ -1,5 +1,9 @@
 /** What the host's game options say in the lobby and on the intro screen (keys and values from the server). */
 export const OPTION_LABELS: Record<string, Record<string, string>> = {
+  laps: {
+    "1": "Everyone in the hot seat once",
+    "2": "Everyone in the hot seat twice",
+  },
   style: {
     classic: "Classic (speed scores, streak bonus)",
     fastest: "Fastest finger (first right takes 1,000)",

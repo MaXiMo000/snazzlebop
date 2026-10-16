@@ -19,6 +19,7 @@ from .ludo import Ludo
 from .mafia import MafiaNight
 from .mural import MoleInTheMural
 from .price import PriceIsWeird
+from .rather import WouldYouRather
 from .reflex import ReactionDuel
 from .roulette import RouletteRoyale
 from .ships import Battleships
@@ -36,6 +37,7 @@ REGISTRY: dict[str, type[Game]] = {
     cls.game_id: cls
     for cls in (
         TriviaTonight,
+        WouldYouRather,
         FrenemyRadar,
         Alibi,
         PriceIsWeird,

@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather";
   title: string;
   blurb: string;
   min_players: number;
@@ -372,6 +372,7 @@ export type GameView =
   | SnakesView
   | ShipsView
   | TriviaView
+  | RatherView
   | JackpotView;
 
 export interface Highlight {
@@ -1353,4 +1354,34 @@ export interface TriviaView {
   history?: { q: string; a: string; cat: string; right: string[] }[];
   correct?: Record<string, number>;
   best_streak?: Record<string, number>;
+}
+
+export interface RatherResult {
+  hot: string;
+  /** the hot seat's answer: 0 = a, 1 = b, null if they ran out of time */
+  choice: number | null;
+  picks: Record<string, number>;
+  guesses: Record<string, number>;
+  /** who read the hot seat right */
+  right: string[];
+  gains: Record<string, number>;
+  /** how many picked a, b */
+  split: [number, number];
+}
+
+export interface RatherView {
+  game: "rather";
+  phase: "pick" | "reveal" | "final";
+  round: number;
+  rounds: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  hot: string;
+  dilemma: { a: string; b: string };
+  /** who has locked in (never what) */
+  locked: string[];
+  scores: Record<string, number>;
+  you: { pick: number | null; guess: number | null; hot: boolean } | null;
+  result?: RatherResult;
+  history?: (RatherResult & { a: string; b: string })[];
 }

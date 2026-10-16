@@ -1,0 +1,225 @@
+# Would You Rather dilemmas: one per line, the two choices separated by " | ".
+# Kind and silly: nothing about bodies, money worries, exes, religion or anything that singles someone out.
+# Each choice finishes "Would you rather..." and is at most 60 characters.
+be able to fly | be invisible
+always be 10 minutes early | always be 20 minutes late
+live in a treehouse | live in a houseboat
+have a pet dragon | have a pet unicorn
+only eat pizza forever | never eat pizza again
+talk to animals | speak every human language
+be a famous singer | be a famous chef
+explore space | explore the deep ocean
+have a rewind button | have a pause button for life
+live without music | live without films
+be the funniest person in the room | be the smartest person in the room
+always have to sing instead of speak | always have to dance everywhere you go
+have a personal robot butler | have a personal chef
+be a wizard | be a superhero
+never be cold again | never be too hot again
+read minds | see the future
+live in the city | live in the countryside
+win an Olympic gold | win an Oscar
+have a time machine | have a teleporter
+give up your phone for a month | give up dessert for a year
+have the voice of a cartoon duck | have the laugh of a hyena
+have hiccups for a day | sneeze every five minutes for a day
+be stuck in a lift with your favourite band | be stuck in a lift with your favourite actor
+have a lifetime supply of chocolate | have a lifetime supply of crisps
+always have to whisper | always have to shout
+be a kid again for a day | be 80 for a day
+have glow-in-the-dark hair | have hair that changes colour with your mood
+travel by giant snail | travel by slow-flying carpet
+live in a castle | live in a spaceship
+be able to breathe underwater | be able to survive in space
+have a photographic memory | be able to forget anything you want
+only wear pyjamas in public | only wear a suit at home
+be famous on the internet | be famous on TV
+eat only sweet food | eat only savoury food
+have a mini elephant as a pet | have a giant hamster as a pet
+know every song's lyrics | know every film's lines
+be the best player on a losing team | be the worst player on a winning team
+camp in the woods | stay in a fancy hotel
+have a rocket-powered skateboard | have shoes that let you jump 10 metres
+be a pirate | be a ninja
+never use a microwave again | never use a toaster again
+have every traffic light turn green for you | never wait in a queue again
+be able to talk to plants | be able to talk to machines
+live in a world without colour | live in a world without sound
+always know when someone is lying | always get away with lying
+have a dinosaur as a neighbour | have an alien as a neighbour
+have fingers as long as your legs | have legs as long as your fingers
+go to a theme park every weekend | go on one huge holiday a year
+be a famous painter | be a famous author
+spend a day as a cat | spend a day as a dog
+eat ice cream for breakfast | eat cereal for dinner
+have a secret tunnel in your house | have a secret slide in your house
+be the best dancer in the world | be the best singer in the world
+live on the Moon | live at the bottom of the sea
+always have to wear a cape | always have to wear a top hat
+lose the ability to read | lose the ability to speak
+win the lottery | find your dream job
+have a magic carpet | have a pet that can talk
+be in a horror film | be in a musical
+have unlimited holidays | have unlimited snacks
+always smell like cookies | always smell like fresh flowers
+be able to shrink | be able to grow to giant size
+go back in time | go forward in time
+have a laugh that makes everyone laugh | have a smile that makes everyone smile
+live with no internet | live with no hot water
+be a master of every board game | be a master of every video game
+ride a giant turtle | ride a giant eagle
+only be able to walk backwards | only be able to hop
+have a bed made of marshmallows | have a pillow made of clouds
+be a detective | be a spy
+eat a raw onion like an apple | drink a glass of pickle juice
+have a never-ending sandwich | have a never-ending cup of tea
+wake up with a new hairstyle every day | wake up with a new accent every day
+be the captain of a ship | be the pilot of a plane
+have a theme song that plays when you enter | have a narrator for your life
+live in a world made of sweets | live in a world made of toys
+have a garden full of fairies | have a garden full of tiny dinosaurs
+be able to cook any meal perfectly | be able to fix anything broken
+speak only in rhymes | speak only in questions
+meet your favourite cartoon character | meet your favourite video game character
+have super speed | have super strength
+always be in the mood to party | always be in the mood for a nap
+explore a jungle | explore a desert
+be able to control the weather | be able to control time
+have a giant trampoline in your garden | have a giant pool in your garden
+never have to sleep | never have to eat
+have the world's best memory for names | have the world's best sense of direction
+be a famous athlete | be a famous scientist
+have pet penguins | have pet otters
+wear the same outfit forever | never wear the same outfit twice
+live in the Harry Potter world | live in the Star Wars galaxy
+only travel by bicycle | only travel by horse
+have a phone that never runs out of battery | have shoes that never wear out
+be a zookeeper | be an astronaut
+live where it is always summer | live where it is always winter
+eat only with chopsticks | eat only with a giant spoon
+have a song stuck in your head forever | have an itch you can never scratch
+sing karaoke in front of a stadium | dance alone on live TV
+be the oldest sibling | be the youngest sibling
+be able to talk to your past self | be able to talk to your future self
+have a house with a secret room | have a car that can drive itself
+only eat cold food | only eat hot food
+be an expert at magic tricks | be an expert juggler
+have a giant cookie | have a hundred tiny cookies
+never feel embarrassed | never feel tired
+go on a road trip | go on a cruise
+have a pet owl that delivers letters | have a pet parrot that tells jokes
+star in a cartoon | star in a comic book
+know how every story ends | never know how any story ends
+have an extra hour in every day | have an extra day every week
+be a mermaid | be a centaur
+live in a snow globe | live in a bubble
+have a cloud that follows you and rains on you | have a sun that follows you and makes you sweat
+win every argument | win every game
+be the main character | be the funny sidekick
+build sandcastles all day | build snowmen all day
+have all your clothes be itchy | have all your shoes be too tight
+be able to hold your breath for an hour | be able to stay awake for a week
+eat only spicy food | eat only bland food
+be friends with a ghost | be friends with a vampire
+be a giant in a world of people | be a tiny person in a world of giants
+always have to use a typewriter | always have to send letters by post
+own a candy factory | own a toy factory
+be able to see in the dark | be able to hear a whisper a mile away
+have a robot dog | have a real dog that never grows old
+live inside a video game | live inside a film
+never stub your toe again | never bite your tongue again
+always win at rock paper scissors | always win at tic-tac-toe
+have a voice like a movie trailer | have a voice like a news reader
+spend a night in a museum | spend a night in a library
+be the best at a sport nobody knows | be average at a sport everyone loves
+have breakfast in bed every day | have dinner at a fancy restaurant every week
+ride the world's fastest roller coaster | ride the world's tallest Ferris wheel
+be stranded on an island with your best friend | be stranded on an island alone with every book
+be able to change your name every day | be able to change your face every day
+get a new pet every year | keep one pet forever
+lose all your photos | lose all your music
+go skydiving | go deep-sea diving
+have a magic backpack that never fills up | have a magic wallet that always has bus fare
+have hands that are always cold | have feet that are always cold
+have every meal cooked by a famous chef | have every outfit picked by a famous designer
+live in a lighthouse | live in a windmill
+be able to make plants grow instantly | be able to make it snow whenever you like
+be famous for your cooking | be famous for your jokes
+have a tail | have wings that don't work
+be in a band | be in a sports team
+have every day be your birthday | have every day be a holiday
+eat a whole lemon | eat a whole chilli
+live in a giant shoe | live in a giant pumpkin
+know every language | play every instrument
+wear socks on your hands for a day | wear shoes on the wrong feet for a day
+be a professional video gamer | be a professional sports player
+have a pet that glows | have a pet that floats
+walk through walls | jump over buildings
+have a never-ending bag of popcorn | have a never-ending glass of lemonade
+only be able to whisper on Mondays | only be able to sing on Fridays
+see your favourite band in concert | meet your favourite athlete
+have a giant bubble bath | have a giant ball pit
+be a famous magician | be a famous inventor
+get lost in a maze | get lost in a forest
+never have to do homework again | never have to do chores again
+live next to a beach | live next to a mountain
+have unlimited cinema tickets | have unlimited theme park tickets
+have hair made of spaghetti | have fingers made of breadsticks
+be the world's best gift giver | be the world's best storyteller
+have a cupcake shop | have an ice cream van
+float everywhere | bounce everywhere
+be in charge of the school for a day | be in charge of the country for a day
+live in a house shaped like a cat | live in a house shaped like a rocket
+eat only foods that are green | eat only foods that are orange
+know what your pet is thinking | know what a baby is thinking
+spend a week in the jungle | spend a week in the Arctic
+have a superpower you can only use once | have a weak superpower you can use forever
+be a famous YouTuber | be a famous film director
+be a knight | be a king or queen
+always have the perfect comeback | always know the right thing to say
+have a pet sloth | have a pet koala
+have your own island | have your own spaceship
+sleep in a hammock every night | sleep in a bunk bed every night
+be able to understand cats | be able to understand birds
+give a talk to a thousand people | sing a solo in front of a hundred
+only be able to watch cartoons | only be able to watch documentaries
+have super-bouncy hair | have super-long eyelashes
+live in a world with dragons | live in a world with robots
+have a personal fireworks show every night | have a personal concert every week
+go one day without your phone | go one week without television
+be a famous ballet dancer | be a famous breakdancer
+eat soup with a fork | eat cereal with chopsticks
+be known for your kindness | be known for your cleverness
+have a cat that barks | have a dog that meows
+be able to make anyone laugh | be able to make anyone calm
+win a dance-off | win a rap battle
+have a pool filled with jelly | have a pool filled with custard
+live in a cave | live in a tent
+be the first person to land on Mars | be the first person to find a new animal
+always be followed by a marching band | always be followed by a bubble machine
+be a great cook who hates eating | be a terrible cook who loves eating
+travel the world for a year | have your dream home forever
+be able to fly but only at walking speed | run super fast but only backwards
+have a hamster that can do maths | have a goldfish that can sing
+always get the window seat | always get the front row
+drink only water | drink only milk
+have super sensitive taste | have super sensitive smell
+be best friends with a celebrity | be best friends with a talking animal
+have an invisible friend | have an invisible bike
+be the world's best whistler | be the world's best hummer
+live in a house with no stairs | live in a house with only stairs
+make the best pancakes in the world | make the best pizza in the world
+have every song you hear be a sea shanty | have every song you hear be a lullaby
+live in a world where cars fly | live in a world where people teleport
+lose your sense of taste | lose your sense of smell
+be a superhero with a silly name | be a villain with a cool name
+always know what time it is | always know which way is north
+have your life be a musical | have your life be a nature documentary
+eat breakfast foods for every meal | eat dessert foods for every meal
+be a professional pillow tester | be a professional water-slide tester
+have a talking car | have a talking fridge
+have a giant teddy bear | have a giant beanbag
+play hide-and-seek in a castle | play tag in a giant maze
+always have a sunny day on your birthday | always have snow at the holidays
+be the person who tells the jokes | be the person who laughs the loudest
+live where you can see the Northern Lights | live where you can see shooting stars every night

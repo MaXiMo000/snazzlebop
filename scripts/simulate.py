@@ -269,6 +269,16 @@ for _phase in ("pick", "wager", "question", "reveal", "final"):
         "correct",
         "best_streak",
     }
+for _phase in ("pick", "reveal", "final"):
+    ALLOWED_KEYS[("rather", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "hot",
+        "dilemma",
+        "locked",
+        "scores",
+        "you",
+        "result",
+        "history",
+    }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1363,6 +1373,37 @@ async def play_trivia(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                 mine is None or gg["phase"] == "question",
                 f"trivia: {b.name} saw an answer outside a question",
             )
+
+
+async def play_rather(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Everyone answers and guesses the hot seat at random; the reveal's points must follow from the
+    answers sent, and no frame before a reveal may carry anyone's answer or guess but your own."""
+    start = {b.pid: len(b.raw) for b in bots}
+    rounds = host.state["game"]["rounds"]  # type: ignore[index]
+    want = {b.pid: 0 for b in bots}
+    for rnd in range(1, rounds + 1):
+        await all_until(bots, game_is("rather", "pick", rnd), f"rather pick {rnd}")
+        hot = host.state["game"]["hot"]  # type: ignore[index]
+        picks = {b.pid: rng.randrange(2) for b in bots}
+        guesses = {b.pid: rng.randrange(2) for b in bots if b.pid != hot}
+        for b in bots:
+            await b.send(
+                t="act", a="answer", pick=picks[b.pid], **({"guess": guesses[b.pid]} if b.pid != hot else {})
+            )
+        await all_until(bots, game_is("rather", "reveal", rnd), f"rather reveal {rnd}")
+        right = sorted(p for p, g in guesses.items() if g == picks[hot])
+        r = host.state["game"]["result"]  # type: ignore[index]
+        check(r["right"] == right and r["picks"] == picks, "rather: the reveal doesn't match the answers")
+        for p in right:
+            want[p] += 100
+        want[hot] += 50 * len(right)
+        check(host.state["game"]["scores"] == want, f"rather: scores != {want}")  # type: ignore[index]
+        await skip(host)
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") == "rather" and gg["phase"] == "pick":
+                check("result" not in gg, f"rather: {b.name} saw a result early")
 
 
 async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2674,6 +2715,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         games += ["bomb", "reflex", "snakes", "ships"]
+        games += ["rather"]
         games += ["trivia", "trivia-fastest", "trivia-survival", "trivia-wager", "trivia-draft"]
         if len(bots) >= 4:
             games.append("mafia")
@@ -2775,6 +2817,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_ships(host, bots, rng)
             elif game == "trivia":
                 await play_trivia(host, bots, rng)
+            elif game == "rather":
+                await play_rather(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2817,7 +2861,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game in ("mafia", "bomb", "reflex", "snakes", "ships", "trivia"):
+            elif game in ("mafia", "bomb", "reflex", "snakes", "ships", "trivia", "rather"):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"{game}: scoreboard {got} != the game's {want}")

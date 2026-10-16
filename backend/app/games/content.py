@@ -7,11 +7,35 @@ anything that could make someone feel singled out. Everyone should be happy to b
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 # The quiz bank lives in trivia.txt (parsed by trivia_bank); re-exported so contentgen grows it here.
 from .trivia_bank import CATEGORIES as TRIVIA_CATEGORIES  # noqa: F401
 from .trivia_bank import TRIVIA  # noqa: F401
+
+
+def _dilemmas(file: str) -> list[dict[str, str]]:
+    """Would You Rather pairs ("choice a | choice b" per line), checked on import."""
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for n, raw in enumerate((Path(__file__).with_name(file)).read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [x.strip() for x in line.split(" | ")]
+        if len(parts) != 2 or not all(0 < len(x) <= 60 for x in parts) or parts[0] == parts[1]:
+            raise ValueError(f"{file}:{n}: expected two different choices of 1-60 characters")
+        key = line.casefold()
+        if key in seen:
+            raise ValueError(f"{file}:{n}: duplicate")
+        seen.add(key)
+        out.append({"a": parts[0], "b": parts[1]})
+    return out
+
+
+# Would You Rather: two choices each finishing "Would you rather..." (rather.txt).
+RATHER: list[dict[str, str]] = _dilemmas("rather.txt")
 
 # ---------------------------------------------------------------------------------------------------
 # Frenemy Radar: "who is most likely to..." (ranked, so every prompt must be fun to "win")

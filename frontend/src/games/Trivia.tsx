@@ -402,10 +402,13 @@ function Final({ view, you, tv, name }: { view: TriviaView; you: string; tv: boo
   const rows = [...view.players].sort((a, b) => (view.scores[b.id] ?? 0) - (view.scores[a.id] ?? 0));
   const asked = view.history?.length ?? 0;
   const medal = ["🥇", "🥈", "🥉"];
+  const tied = rows.filter((p) => (view.scores[p.id] ?? 0) === (view.scores[rows[0]?.id ?? ""] ?? 0)).length > 1;
   return (
     <>
       <Card className={tv ? "tv-main" : ""}>
-        <p className="sign center">{rows[0] ? `${name(rows[0].id)} ${rows[0].id === you && !tv ? "win" : "wins"} the quiz!` : "That’s the quiz!"}</p>
+        <p className="sign center">
+          {!rows[0] || tied ? "It’s a tie at the top!" : `${name(rows[0].id)} ${rows[0].id === you && !tv ? "win" : "wins"} the quiz!`}
+        </p>
         <ol className="tq-podium space-top">
           {rows.map((p, i) => (
             <li key={p.id} className={i < 3 ? `place p${i + 1}` : "place"}>

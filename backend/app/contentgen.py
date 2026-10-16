@@ -184,6 +184,16 @@ def v_trivia(raw: Any) -> dict[str, Any] | None:
     return {"cat": raw["cat"], "level": level, "q": q, "a": a, "wrong": others}
 
 
+def v_rather(raw: Any) -> dict[str, str] | None:
+    """A Would You Rather dilemma: two different choices, each finishing "Would you rather..."."""
+    if not isinstance(raw, dict):
+        return None
+    a, b = _text(raw.get("a"), 4, 60), _text(raw.get("b"), 4, 60)
+    if not a or not b or a.casefold() == b.casefold() or a.endswith("?") or b.endswith("?"):
+        return None
+    return {"a": a, "b": b}
+
+
 def v_codeword(raw: Any) -> str | None:
     """A Codewords board word: one common English word, A-Z only."""
     if not isinstance(raw, str):
@@ -358,6 +368,19 @@ KINDS["trivia"] = Kind(
     lambda x: f"[{x['cat']} {x['level']}] {x['q']} -> {x['a']}",
 )
 
+KINDS["rather"] = Kind(
+    C.RATHER,
+    lambda x: _key(x["a"] + "|" + x["b"]),
+    v_rather,
+    _obj({"a": _S, "b": _S}),
+    "Would You Rather dilemmas for friends: two fun, roughly equally tempting (or equally silly) choices, "
+    "each finishing the sentence 'Would you rather...' in lower case, e.g. a='be able to fly', "
+    "b='be invisible'. Kind and playful: nothing about bodies, money worries, exes, religion, politics or "
+    "anything that singles someone out; nothing gross or scary. Each choice 4-60 characters, no question "
+    "mark.",
+    lambda x: f"{x['a']} | {x['b']}",
+)
+
 KINDS["codewords"] = Kind(
     C.CODEWORDS,
     lambda x: x,
@@ -458,6 +481,7 @@ GAME_KINDS: dict[str, str | tuple[str, ...]] = {
     "crossword": "crossword",
     "wits": "wits",
     "trivia": "trivia",
+    "rather": "rather",
     "codewords": "codewords",
     "truthdare": ("truth_mild", "truth_cheeky", "dare_mild", "dare_cheeky"),
     "drawguess": "drawword",
