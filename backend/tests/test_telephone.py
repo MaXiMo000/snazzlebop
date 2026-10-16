@@ -285,6 +285,22 @@ class AnonymousTests(unittest.TestCase):
             g.advance()
         album = g.view_for(tv)["album"]
         self.assertEqual(album["owner"], g.order[0])
-        self.assertEqual([pg["by"] for pg in album["pages"]], [pg["by"] for pg in g.books[0]])
+        # Only the owner: naming the other pages would give away the passing order (and the next book).
+        self.assertEqual([pg["by"] for pg in album["pages"]], [None] * len(g.order))
         g.advance()  # the next book starts anonymous again
         self.assertIsNone(g.view_for(tv)["album"]["owner"])
+
+    def test_seating_and_scores_stay_hidden_until_the_end(self):
+        g, _ = make(4)
+        play_steps(g)
+        fan = next(p for p in g.order if p != g.books[0][0]["by"])
+        g.handle(fan, {"a": "like", "book": 0, "entry": 0})
+        while not g.finished:
+            for viewer in [*g.order, "tv:screen", "au:fan"]:
+                v = g.view_for(viewer)
+                self.assertNotIn("order", v)
+                self.assertEqual(v["scores"], {})  # a like must not show whose page it was
+            g.advance()
+        final = g.view_for("tv:screen")
+        self.assertEqual(final["scores"][g.books[0][0]["by"]], LIKE_POINTS)
+        self.assertEqual([pg["by"] for pg in final["books"][0]["pages"]], [pg["by"] for pg in g.books[0]])

@@ -953,7 +953,6 @@ export interface TelephoneView extends GameBase {
   game: "telephone";
   phase: "write" | "draw" | "describe" | "album" | "final";
   players: { id: string; name: string }[];
-  order: string[];
   seconds: number;
   /** who has finished this step */
   done: string[];

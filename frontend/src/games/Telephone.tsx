@@ -211,14 +211,15 @@ function TvStep({ view }: { view: TelephoneView }) {
 
 /** Who has finished this step. */
 function Progress({ view, you, tv }: { view: TelephoneView; you: string; tv: boolean }) {
-  const waiting = view.order.filter((p) => !view.done.includes(p));
+  const seats = view.players.map((p) => p.id);
+  const waiting = seats.filter((p) => !view.done.includes(p));
   return (
     <Card className={tv ? "tp-progress big" : "tp-progress"}>
       <h3>
-        {view.done.length} of {view.order.length} done
+        {view.done.length} of {seats.length} done
       </h3>
       <ul className="tp-people">
-        {view.order.map((p) => {
+        {seats.map((p) => {
           const done = view.done.includes(p);
           return (
             <li key={p} className={done ? "done" : ""}>
@@ -232,7 +233,7 @@ function Progress({ view, you, tv }: { view: TelephoneView; you: string; tv: boo
           );
         })}
       </ul>
-      {waiting.length > 0 && waiting.length < view.order.length && (
+      {waiting.length > 0 && waiting.length < seats.length && (
         <p className="muted space-top">
           Waiting for {waiting.length === 1 ? nameOf(view.players, waiting[0]!) : `${waiting.length} players`}…
         </p>
@@ -309,7 +310,8 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
   const album = view.album!;
   const reduced = useReducedMotion();
   const newest = useRef<HTMLDivElement>(null);
-  const n = view.order.length;
+  const seats = view.players.map((p) => p.id);
+  const n = seats.length;
   const done = album.entry === n - 1;
   const first = album.pages[0];
   const last = album.pages[album.pages.length - 1];
@@ -330,7 +332,7 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
             key="named"
             pid={album.owner}
             name={nameOf(view.players, album.owner)}
-            tone={view.order.indexOf(album.owner)}
+            tone={seats.indexOf(album.owner)}
             className="tp-avatar big named"
           />
         ) : (
@@ -341,7 +343,7 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
         <div className="tp-cover-text">
           <h3>{album.owner ? `${nameOf(view.players, album.owner)}’s book` : "Whose book is this?"}</h3>
           <ol className="tp-dots" aria-label={`Page ${album.entry + 1} of ${n}`}>
-            {view.order.map((_, i) => (
+            {seats.map((_, i) => (
               <li key={i} className={i < album.entry ? "seen" : i === album.entry ? "now" : ""} />
             ))}
           </ol>
@@ -361,7 +363,7 @@ function Album({ view, you, send, tv }: { view: TelephoneView; you: string; send
               tv={tv}
               where={{ book: album.book, entry: i }}
               replay={i === album.pages.length - 1}
-              tone={pg.by ? view.order.indexOf(pg.by) : 0}
+              tone={pg.by ? seats.indexOf(pg.by) : 0}
               fresh={i === album.pages.length - 1}
             />
           ))}
@@ -421,7 +423,7 @@ function Final({ view, you, send, tv }: { view: TelephoneView; you: string; send
                 tv={tv}
                 where={{ book, entry: i }}
                 replay={false}
-                tone={pg.by ? view.order.indexOf(pg.by) : 0}
+                tone={pg.by ? view.players.findIndex((p) => p.id === pg.by) : 0}
               />
             ))}
           </ol>

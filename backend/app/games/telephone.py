@@ -14,7 +14,10 @@ can like any page but their own; each like is worth 100 points to the page's aut
 
 Secrecy: during the steps you see only your own task (the sentence to draw, or the drawing to describe),
 never another book. The TV and audience see who is done. Drawings are relayed to nobody while they're
-drawn; the album shows pages only as they are revealed.
+drawn; the album shows pages only as they are revealed. The album names each book's owner once its last
+page is out, but who made the other pages only on the final screen: the passing order (and so the seating)
+could otherwise be worked out from one book and used to name the pages of the next. For the same reason
+the scores (which move with every like) stay hidden until the final screen.
 """
 
 from __future__ import annotations
@@ -260,7 +263,7 @@ class DrawTelephone(Game):
 
     # -- views ----------------------------------------------------------------------------------------
     def _page(self, page: dict[str, Any], pid: str, named: bool = True) -> dict[str, Any]:
-        """A page of a book. Nobody is named until the whole book has been shown (you know your own)."""
+        """A page of a book. Its maker is named only on the final screen (you know your own)."""
         return {
             "by": page["by"] if named else None,
             "mine": page["by"] == pid,
@@ -294,23 +297,22 @@ class DrawTelephone(Game):
             "rounds": len(self.order),
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],
-            "order": list(self.order),
             "seconds": self.draw_seconds,
             "done": sorted(self.done) if self.phase in ("write", "draw", "describe") else [],
             "task": self._task(pid),
             "ink": canvas.view() if canvas is not None else None,
             "you": {"playing": pid in self.round_scores},
-            "scores": self.scores(),
+            "scores": self.scores() if self.phase == "final" else {},
         }
         if self.phase == "album":
-            named = self.entry == len(self.order) - 1  # the last page is out: now say who did what
+            named = self.entry == len(self.order) - 1  # the last page is out: now say whose book it was
             view["album"] = {
                 "book": self.book,
                 "books": len(self.books),
                 "owner": self.order[self.book] if named else None,
                 "named": named,
                 "entry": self.entry,
-                "pages": [self._page(pg, pid, named) for pg in self.books[self.book][: self.entry + 1]],
+                "pages": [self._page(pg, pid, named=False) for pg in self.books[self.book][: self.entry + 1]],
             }
         if self.phase == "final":
             view["books"] = [

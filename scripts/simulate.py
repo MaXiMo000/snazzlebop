@@ -144,7 +144,6 @@ for _phase in ("choose", "draw", "reveal", "final"):
     }
 for _phase in ("write", "draw", "describe", "album", "final"):
     ALLOWED_KEYS[("telephone", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
-        "order",
         "seconds",
         "done",
         "task",
@@ -1717,7 +1716,7 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
     receive a stroke while drawings are made, or see another book before the album. In the album the
     bots like pages; the scores must equal 100 per like."""
     by_id = {b.pid: b for b in bots}
-    order = host.state["game"]["order"]  # type: ignore[index]
+    order = [p["id"] for p in host.state["game"]["players"]]  # type: ignore[index]  # the seating is secret
     n = len(order)
     start = {b.pid: len(b.raw) for b in bots}
     ink_start = {b.pid: len(b.ink) for b in bots}
@@ -1733,7 +1732,8 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
             task = b.state["game"]["task"]  # type: ignore[index]
             if step:
                 check("from" not in task, "telephone: a page named its author during play")
-            # Which book is this? The one whose last page is exactly what this bot was handed.
+            # Which book is this? The one whose last page is exactly what this bot was handed. (Books are
+            # labelled by their first writer here; the album's own numbering is matched up later.)
             book = j
             if phase == "draw":
                 book = next((bk for bk in range(n) if made.get((bk, step - 1)) == task["prompt"]), -1)
@@ -1794,6 +1794,7 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
     # The album: every page, in order; bots like a few (never their own).
     likes: dict[str, int] = dict.fromkeys(order, 0)
     for book in range(n):
+        label = -1
         for entry in range(n):
             await host.until(
                 lambda st, bk=book, e=entry: (
@@ -1802,15 +1803,21 @@ async def play_telephone(host: Bot, bots: list[Bot], rng: random.Random) -> None
                 "telephone page",
             )
             page = host.state["game"]["album"]["pages"][entry]  # type: ignore[index]
-            want = made[(book, entry)]
+            if entry == 0:
+                label = next((bk for bk in range(n) if made.get((bk, 0)) == page["text"]), -1)
+                check(label >= 0, "telephone: the album opened a book nobody wrote")
+            want = made[(label, entry)]
             if isinstance(want, str):
                 check(page["text"] == want, "telephone: the album shows the wrong words")
-            page_by = author[(book, entry)]
-            shown = host.state["game"]["album"]["pages"]  # type: ignore[index]
+            page_by = author[(label, entry)]
+            album = host.state["game"]["album"]  # type: ignore[index]
+            check(all(pg["by"] is None for pg in album["pages"]), "telephone: the album named a page's maker")
             if entry < n - 1:
-                check(all(pg["by"] is None for pg in shown), "telephone: the album named someone too early")
+                check(album["owner"] is None, "telephone: the album named the book's owner too early")
             else:
-                check(all(pg["by"] for pg in shown), "telephone: the finished book didn't name its authors")
+                check(
+                    album["owner"] == author[(label, 0)], "telephone: the finished book named the wrong owner"
+                )
             fans = [b for b in bots if b.pid != page_by and rng.random() < 0.4]
             for b in fans:
                 await b.send(t="act", a="like", book=book, entry=entry)
