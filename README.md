@@ -51,6 +51,7 @@ code, no sign-up needed. Put the show on a TV and play from your phones.
 | **Four in a Row** | Connect Four (best of 3, teams take turns) | 2-8 |
 | **Letter Lists** | Scattergories (one letter, six categories, the room judges) | 2-8 |
 | **Hangman** | Hangman (everyone sets a word in turn) | 2-8 |
+| **Five Dice** | Yahtzee (everyone plays their own card at once) | 1-8 |
 | **Codewords** | Two-team word association | 4-8 |
 
 Many games have a **Teams** switch: two teams, combined scores, with official partner rules where the

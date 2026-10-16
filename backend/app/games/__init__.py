@@ -12,6 +12,7 @@ from .codewords import Codewords
 from .crossword import CrosswordRace
 from .dice import LiarsDice
 from .drawguess import DrawGuess
+from .fivedice import FiveDice
 from .four import FourInARow
 from .frenemy import FrenemyRadar
 from .hangman import Hangman
@@ -73,6 +74,7 @@ REGISTRY: dict[str, type[Game]] = {
         FourInARow,
         LetterLists,
         Hangman,
+        FiveDice,
     )
 }
 

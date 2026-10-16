@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists" | "hangman";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists" | "hangman" | "fivedice";
   title: string;
   blurb: string;
   min_players: number;
@@ -376,6 +376,7 @@ export type GameView =
   | FourView
   | ListsView
   | HangmanView
+  | FiveDiceView
   | JackpotView;
 
 export interface Highlight {
@@ -1458,4 +1459,30 @@ export interface HangmanView {
   result: { word: string; solver: string | null; setter: string; misses: number } | null;
   scores: Record<string, number>;
   history: { word: string; solver: string | null; setter: string; misses: number }[] | null;
+}
+
+export interface FiveDiceCard {
+  boxes: Record<string, number>;
+  /** 0 = not rolled yet this round */
+  dice: number[];
+  held: boolean[];
+  rolls: number;
+  done: boolean;
+  upper: number;
+  bonus: number;
+  total: number;
+}
+
+export interface FiveDiceView {
+  game: "fivedice";
+  phase: "play" | "final";
+  round: number;
+  rounds: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  cards: Record<string, FiveDiceCard>;
+  scores: Record<string, number>;
+  /** the boxes your dice may go in now, with their points */
+  you: { options: Record<string, number> } | null;
+  last: { by: string; box: string; points: number; dice: number[]; round: number }[];
 }

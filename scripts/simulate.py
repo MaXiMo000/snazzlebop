@@ -321,6 +321,13 @@ for _phase in ("set", "guess", "reveal", "final"):
         "scores",
         "history",
     }
+for _phase in ("play", "final"):
+    ALLOWED_KEYS[("fivedice", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "cards",
+        "scores",
+        "you",
+        "last",
+    }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1602,6 +1609,39 @@ async def play_hangman(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") == "hangman" and gg["phase"] in ("set", "guess") and b.pid != gg["setter"]:
                 check(gg["word"] is None and not gg["suggestions"], f"hangman: {b.name} saw the word early")
+
+
+async def play_fivedice(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Each bot rolls one to three times with random holds and scores a random box it's allowed. At the
+    end every card is full and the room's points are each card's total."""
+    rounds = host.state["game"]["rounds"]  # type: ignore[index]
+    for rnd in range(1, rounds + 1):
+        await all_until(
+            bots, lambda st, r=rnd: st["game"]["phase"] == "play" and st["game"]["round"] == r, "dice round"
+        )
+        for b in bots:
+            rolls = rng.randint(1, 3)
+            for k in range(rolls):
+                before = b.state["game"]["cards"][b.pid]["rolls"]  # type: ignore[index]
+                held = [rng.random() < 0.4 for _ in range(5)]
+                await b.send(t="act", a="roll", **({"held": held} if k else {}))
+                await b.until(
+                    lambda st, n=before, me=b.pid: st["game"]["cards"][me]["rolls"] > n, "dice roll"
+                )
+            options = b.state["game"]["you"]["options"]  # type: ignore[index]
+            check(bool(options), f"dice: {b.name} has nowhere to score")
+            await b.send(t="act", a="score", box=rng.choice(sorted(options)))
+        await all_until(
+            bots, lambda st, r=rnd: st["game"]["phase"] == "final" or st["game"]["round"] > r, "dice next"
+        )
+    g = host.state["game"]  # type: ignore[index]
+    check(g["phase"] == "final", "dice: the game didn't end")
+    for pid, card in g["cards"].items():
+        check(len(card["boxes"]) == rounds, f"dice: {pid} filled {len(card['boxes'])} boxes")
+        check(
+            g["scores"][pid] == card["total"],
+            f"dice: {pid} scored {g['scores'][pid]} != card {card['total']}",
+        )
 
 
 async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2913,7 +2953,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         games += ["bomb", "reflex", "snakes", "ships"]
-        games += ["rather", "four", "lists", "hangman"]
+        games += ["rather", "four", "lists", "hangman", "fivedice"]
         games += ["trivia", "trivia-fastest", "trivia-survival", "trivia-wager", "trivia-draft"]
         if len(bots) >= 4:
             games.append("mafia")
@@ -3024,6 +3064,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_lists(host, bots, rng)
             elif game == "hangman":
                 await play_hangman(host, bots, rng)
+            elif game == "fivedice":
+                await play_fivedice(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -3077,6 +3119,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 "four",
                 "lists",
                 "hangman",
+                "fivedice",
             ):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

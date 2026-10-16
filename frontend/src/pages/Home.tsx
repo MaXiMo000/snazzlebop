@@ -55,7 +55,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Thirty-four games. One room code. No sign-up needed.</p>
+        <p className="lead">Thirty-five games. One room code. No sign-up needed.</p>
         <p className="muted">Grab up to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -267,6 +267,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           </li>
           <li>
             <b>Hangman</b> (classic): take turns setting a word. Guess letters, steal the solve, beat the drawing.
+          </li>
+          <li>
+            <b>Five Dice</b> (classic): roll, hold, roll again. Fill your scorecard and chase five of a kind.
           </li>
         </ul>
       </Card>
