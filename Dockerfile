@@ -1,5 +1,5 @@
 # ---- 1. build the frontend --------------------------------------------------
-FROM public.ecr.aws/docker/library/node:22-alpine AS web
+FROM public.ecr.aws/docker/library/node:26-alpine AS web
 WORKDIR /web
 COPY frontend/package*.json ./
 RUN npm ci --ignore-scripts
