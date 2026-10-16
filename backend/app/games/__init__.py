@@ -35,6 +35,7 @@ from .wordrace import WordRace
 REGISTRY: dict[str, type[Game]] = {
     cls.game_id: cls
     for cls in (
+        TriviaTonight,
         FrenemyRadar,
         Alibi,
         PriceIsWeird,
@@ -64,7 +65,6 @@ REGISTRY: dict[str, type[Game]] = {
         ReactionDuel,
         SnakesAndLadders,
         Battleships,
-        TriviaTonight,
     )
 }
 

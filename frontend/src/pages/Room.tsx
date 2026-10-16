@@ -655,48 +655,150 @@ function StartGame({ game, enough, online, send, prefix, teamsFirst }: { game: G
   const teamsOk = online >= 4;
   const options = Object.entries(game.options ?? {});
   const picked = Object.fromEntries(options.map(([k, vals]) => [k, chosen[k] ?? vals[0]!]));
+  // What will start, in short ("Classic · 10 questions"): the full choices fold away until wanted.
+  const short = (label: string) => label.replace(/ \(.*\)$/, "");
+  const now = [
+    ...options.map(([k, vals]) => short(OPTION_LABELS[k]?.[picked[k] ?? vals[0]!] ?? picked[k] ?? "")),
+    ...(game.teams ? [teams ? "Two teams" : "Everyone for themselves"] : []),
+  ];
   return (
     <>
-      {options.map(([key, values]) => (
-        <div key={key} className="space-top">
-          <label className="field" htmlFor={`${prefix}opt-${game.id}-${key}`}>
-            {key.charAt(0).toUpperCase() + key.slice(1)}
-          </label>
-          <Select
-            id={`${prefix}opt-${game.id}-${key}`}
-            value={picked[key] ?? values[0] ?? ""}
-            onChange={(e) => setChosen((c) => ({ ...c, [key]: e.target.value }))}
-          >
-            {values.map((v) => (
-              <option key={v} value={v}>
-                {OPTION_LABELS[key]?.[v] ?? v}
-              </option>
-            ))}
-          </Select>
-        </div>
-      ))}
-      {game.teams && (
-        <div className="space-top">
-          <label className="field" htmlFor={`${prefix}teams-${game.id}`}>
-            Play
-          </label>
-          <Select id={`${prefix}teams-${game.id}`} value={teams ? "teams" : "solo"} onChange={(e) => setTeams(e.target.value === "teams")}>
-            <option value="solo">Everyone for themselves</option>
-            <option value="teams">{game.id === "ludo" ? "Two teams (exactly 4: 2 v 2)" : "Two teams (4+ players)"}</option>
-          </Select>
-        </div>
+      {now.length > 0 && (
+        <details className="game-options">
+          <summary>
+            <span className="game-options-title">
+              <span aria-hidden="true">⚙️</span> Game options
+            </span>
+            <span className="game-options-now">
+              {now.map((label, i) => (
+                <span key={i}>{label}</span>
+              ))}
+            </span>
+          </summary>
+          {options.map(([key, values]) => (
+            <div key={key} className="space-top">
+              <label className="field" htmlFor={`${prefix}opt-${game.id}-${key}`}>
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </label>
+              <Select
+                id={`${prefix}opt-${game.id}-${key}`}
+                value={picked[key] ?? values[0] ?? ""}
+                onChange={(e) => setChosen((c) => ({ ...c, [key]: e.target.value }))}
+              >
+                {values.map((v) => (
+                  <option key={v} value={v}>
+                    {OPTION_LABELS[key]?.[v] ?? v}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ))}
+          {game.teams && (
+            <div className="space-top">
+              <label className="field" htmlFor={`${prefix}teams-${game.id}`}>
+                Play
+              </label>
+              <Select id={`${prefix}teams-${game.id}`} value={teams ? "teams" : "solo"} onChange={(e) => setTeams(e.target.value === "teams")}>
+                <option value="solo">Everyone for themselves</option>
+                <option value="teams">{game.id === "ludo" ? "Two teams (exactly 4: 2 v 2)" : "Two teams (4+ players)"}</option>
+              </Select>
+            </div>
+          )}
+        </details>
       )}
       <Btn
-        className="space-top"
+        className="space-top start-game"
         variant="accent"
         block
         disabled={!enough || (teams && !teamsOk)}
         onClick={() => send({ t: "start", game: game.id, ...(options.length ? { options: picked } : {}), ...(teams ? { teams: true } : {}) })}
       >
-        {!enough ? `Need ${game.min_players}+ online` : teams && !teamsOk ? "Teams need 4+ online" : teams ? "Start in teams!" : "Start!"}
+        {!enough ? (online > game.max_players ? `Up to ${game.max_players} players` : `Need ${game.min_players}+ online`) : teams && !teamsOk ? "Teams need 4+ online" : teams ? "Start in teams!" : "Start!"}
         <span className="sr-only"> {game.title}</span>
       </Btn>
     </>
+  );
+}
+
+type Shelf = "all" | "show" | "classic" | "teams" | "fits";
+const SHELVES: [Shelf, string][] = [
+  ["all", "All games"],
+  ["fits", "Fits the room now"],
+  ["show", "Show games"],
+  ["classic", "Classics"],
+  ["teams", "Team games"],
+];
+const onShelf = (g: GameCard, shelf: Shelf, online: number): boolean =>
+  shelf === "all" ||
+  (shelf === "show" && g.show) ||
+  (shelf === "classic" && g.classic) ||
+  (shelf === "teams" && (g.teams || (!g.show && !g.classic))) ||
+  (shelf === "fits" && online >= g.min_players && online <= g.max_players);
+
+/** Every game in one place: filter by kind or by who's here, search by name, or let fate pick. */
+function GameShelf({ state, online, isHost, send }: { state: RoomState; online: number; isHost: boolean; send: Send }) {
+  const [shelf, setShelf] = useState<Shelf>("all");
+  const [query, setQuery] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
+  const q = query.trim().toLowerCase();
+  const shown = state.games.filter(
+    (g) => onShelf(g, shelf, online) && (!q || g.title.toLowerCase().includes(q) || g.blurb.toLowerCase().includes(q)),
+  );
+  const surprise = () => {
+    const pool = state.games.filter((g) => online >= g.min_players && online <= g.max_players);
+    const g = pool[Math.floor(Math.random() * pool.length)];
+    if (!g) return;
+    setShelf("all");
+    setQuery("");
+    setPicked(g.id);
+    window.setTimeout(() => {
+      const el = document.getElementById(`tile-${g.id}`);
+      el?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      el?.querySelector<HTMLButtonElement>("button.start-game")?.focus({ preventScroll: true });
+    }, 50);
+  };
+  return (
+    <section className="stack" aria-labelledby="games-h">
+      <div className="row between shelf-head">
+        <h2 id="games-h">{isHost ? "Or play a single game" : "Waiting for the host to pick a game…"}</h2>
+        {isHost && (
+          <Btn variant="gold" onClick={surprise}>
+            <span aria-hidden="true">🎲</span> Surprise me
+          </Btn>
+        )}
+      </div>
+      <div className="shelf-tools">
+        <div className="shelf-filters" role="group" aria-label="Show">
+          {SHELVES.map(([id, label]) => (
+            <button key={id} type="button" className="shelf-chip" aria-pressed={shelf === id} onClick={() => setShelf(id)}>
+              {label}
+              <span className="shelf-count">{state.games.filter((g) => onShelf(g, id, online)).length}</span>
+            </button>
+          ))}
+        </div>
+        <label className="sr-only" htmlFor="shelf-search">
+          Find a game
+        </label>
+        <input
+          id="shelf-search"
+          type="text"
+          className="shelf-search"
+          placeholder="Find a game…"
+          autoComplete="off"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      {shown.length === 0 ? (
+        <p className="muted center">No game matches that. Try another filter.</p>
+      ) : (
+        <div className="grid">
+          {shown.map((g) => (
+            <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} highlight={picked === g.id} teamsFirst={shelf === "teams" && g.teams} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -718,54 +820,31 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
       {isHost && <HostTools state={state} send={send} />}
       {isHost && <ShowBuilder state={state} send={send} />}
 
-      {state.games.some((g) => g.classic) && (
-        <Card tone="stage" aria-labelledby="classics-h">
-          <p className="sign" id="classics-h">
-            The classics
-          </p>
-          <p className="lead space-top">The games everyone knows, with a Snazzlebop twist. Played on their own, not in a show night.</p>
-          <div className="grid space-top">
-            {state.games
-              .filter((g) => g.classic)
-              .map((g) => (
-                <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} />
-              ))}
-          </div>
-        </Card>
-      )}
-
-      {state.games.some((g) => (!g.show && !g.classic) || g.teams) && (
-        <Card tone="stage" aria-labelledby="team-games-h">
-          <p className="sign" id="team-games-h">
-            Team games
-          </p>
-          <p className="lead space-top">Split into two teams and play head to head: the bigger combined score wins. Played on their own, not in a show night.</p>
-          <div className="grid space-top">
-            {state.games
-              .filter((g) => (!g.show && !g.classic) || g.teams)
-              .map((g) => (
-                <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} prefix="team-" teamsFirst={g.teams} />
-              ))}
-          </div>
-        </Card>
-      )}
-
-      <h2>{isHost ? "Or play a single game" : "Waiting for the host to pick a game…"}</h2>
-      <div className="grid">
-        {state.games
-          .filter((g) => g.show)
-          .map((g) => (
-            <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} />
-          ))}
-      </div>
+      <GameShelf state={state} online={online} isHost={isHost} send={send} />
     </div>
   );
 }
 
-function GameCardTile({ g, online, isHost, send, prefix = "", teamsFirst = false }: { g: GameCard; online: number; isHost: boolean; send: Send; prefix?: string; teamsFirst?: boolean }) {
+function GameCardTile({
+  g,
+  online,
+  isHost,
+  send,
+  prefix = "",
+  teamsFirst = false,
+  highlight = false,
+}: {
+  g: GameCard;
+  online: number;
+  isHost: boolean;
+  send: Send;
+  prefix?: string;
+  teamsFirst?: boolean;
+  highlight?: boolean;
+}) {
   const enough = online >= g.min_players && online <= g.max_players;
   return (
-    <Card as="article" key={g.id} className={`segment-card seg-${g.id} game-card`} aria-labelledby={`${prefix}seg-${g.id}`}>
+    <Card as="article" id={`tile-${g.id}`} className={`segment-card seg-${g.id} game-card ${highlight ? "picked" : ""}`} aria-labelledby={`${prefix}seg-${g.id}`}>
       <div className="band">
         <span className="chip plum">
           {g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`} players

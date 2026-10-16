@@ -798,11 +798,10 @@ test("Codewords: team game from the lobby, setup, a clue, marks and a reveal", a
   const shot = shots(host, info.project.name);
   const guests = await table(browser, baseURL!, host, ["Bo", "Cy", "Di"], problems);
   const all = [host, ...guests];
-  // It lives in its own "Team games" section, and isn't offered for show nights.
-  const teamGames = host.locator('[aria-labelledby="team-games-h"]');
-  await expect(host.locator("#team-games-h")).toBeVisible();
+  // It's under the "Team games" filter, and isn't offered for show nights.
+  await host.getByRole("button", { name: /^Team games/ }).click();
   await expect(host.getByRole("group", { name: "Games in this show, in order" }).getByRole("button", { name: "Codewords" })).toHaveCount(0);
-  await teamGames.locator("article.game-card.seg-codewords").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card.seg-codewords").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
 
   await expect(host.getByText("Pick your teams")).toBeVisible();
