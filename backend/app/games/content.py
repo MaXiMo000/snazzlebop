@@ -37,6 +37,23 @@ def _dilemmas(file: str) -> list[dict[str, str]]:
 # Would You Rather: two choices each finishing "Would you rather..." (rather.txt).
 RATHER: list[dict[str, str]] = _dilemmas("rather.txt")
 
+
+def _lines(file: str, most: int) -> list[str]:
+    """One item per line (comments and blanks skipped), each at most `most` characters, no repeats."""
+    out: list[str] = []
+    for n, raw in enumerate((Path(__file__).with_name(file)).read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if len(line) > most or line.casefold() in {x.casefold() for x in out}:
+            raise ValueError(f"{file}:{n}: too long or a repeat")
+        out.append(line)
+    return out
+
+
+# Letter Lists (Scattergories-style) categories (lists.txt).
+LIST_CATEGORIES: list[str] = _lines("lists.txt", 40)
+
 # ---------------------------------------------------------------------------------------------------
 # Frenemy Radar: "who is most likely to..." (ranked, so every prompt must be fun to "win")
 # ---------------------------------------------------------------------------------------------------

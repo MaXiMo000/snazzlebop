@@ -50,6 +50,7 @@ import { Reflex } from "../games/Reflex";
 import { Trivia } from "../games/Trivia";
 import { Rather } from "../games/Rather";
 import { Four } from "../games/Four";
+import { Lists } from "../games/Lists";
 import { Bomb } from "../games/Bomb";
 import { Mafia } from "../games/Mafia";
 import { Roulette } from "../games/Roulette";
@@ -393,6 +394,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Snakes view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "ships":
       return <Ships view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "lists":
+      return <Lists view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "four":
       return <Four view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "rather":

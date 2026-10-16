@@ -103,6 +103,7 @@ def test_games_catalog(client):
         "trivia",
         "rather",
         "four",
+        "lists",
     }
 
 

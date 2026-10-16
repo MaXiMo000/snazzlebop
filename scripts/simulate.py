@@ -293,6 +293,18 @@ for _phase in ("play", "over", "final"):
         "scores",
         "you",
     }
+for _phase in ("write", "review", "scores", "final"):
+    ALLOWED_KEYS[("lists", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "letter",
+        "categories",
+        "done",
+        "answers",
+        "nopes",
+        "scores",
+        "you",
+        "result",
+        "history",
+    }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1458,6 +1470,64 @@ async def play_four(host: Bot, bots: list[Bot], rng: random.Random) -> None:
                 column = [gg["grid"][r][c] for r in range(6)]
                 filled = [v for v in column if v is not None]
                 check(column[: len(filled)] == filled, f"four: {b.name} saw a floating disc")
+
+
+async def play_lists(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Bots write unique, shared and wrong-letter answers and vote some down; the scores must follow the
+    rules (unique and accepted 100, shared/blank/wrong/rejected 0). No answer shows before the review."""
+    start = {b.pid: len(b.raw) for b in bots}
+    want = {b.pid: 0 for b in bots}
+    rounds = host.state["game"]["rounds"]  # type: ignore[index]
+    for rnd in range(1, rounds + 1):
+        await all_until(bots, game_is("lists", "write", rnd), f"lists write {rnd}")
+        letter = host.state["game"]["letter"]  # type: ignore[index]
+        sheets: dict[str, list[str]] = {}
+        for j, b in enumerate(bots):
+            sheet = []
+            for i in range(6):
+                roll = rng.random()
+                sheet.append(
+                    f"{letter}shared{i}"
+                    if roll < 0.25
+                    else f"zz wrong {j}"
+                    if roll < 0.35 and letter != "Z"
+                    else ""
+                    if roll < 0.45
+                    else f"{letter}{j}x{i}"
+                )
+            sheets[b.pid] = sheet
+            await b.send(t="act", a="answers", answers=sheet, done=True)
+        await all_until(bots, game_is("lists", "review", rnd), f"lists review {rnd}")
+        nos: dict[tuple[str, int], int] = {}
+        for b in bots:
+            for o in bots:
+                if o is b:
+                    continue
+                for i, text in enumerate(sheets[o.pid]):
+                    if text.startswith(letter) and rng.random() < 0.15:
+                        await b.send(t="act", a="nope", who=o.pid, i=i)
+                        nos[(o.pid, i)] = nos.get((o.pid, i), 0) + 1
+        await all_until(
+            bots, lambda st, k=sum(nos.values()): sum(st["game"]["nopes"].values()) == k, "lists votes"
+        )
+        await skip(host)
+        await all_until(bots, game_is("lists", "scores", rnd), f"lists scores {rnd}")
+        for i in range(6):
+            good = {
+                p: sheet[i].casefold()
+                for p, sheet in sheets.items()
+                if sheet[i].startswith(letter) and nos.get((p, i), 0) * 2 <= len(bots) - 1
+            }
+            for p, k in good.items():
+                if list(good.values()).count(k) == 1:
+                    want[p] += 100
+        check(host.state["game"]["scores"] == want, f"lists: scores {host.state['game']['scores']} != {want}")  # type: ignore[index]
+        await skip(host)
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") == "lists" and gg["phase"] == "write":
+                check(gg["answers"] is None, f"lists: {b.name} saw answers while writing")
 
 
 async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2769,7 +2839,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         games += ["bomb", "reflex", "snakes", "ships"]
-        games += ["rather", "four"]
+        games += ["rather", "four", "lists"]
         games += ["trivia", "trivia-fastest", "trivia-survival", "trivia-wager", "trivia-draft"]
         if len(bots) >= 4:
             games.append("mafia")
@@ -2876,6 +2946,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_rather(host, bots, rng)
             elif game == "four":
                 await play_four(host, bots, rng)
+            elif game == "lists":
+                await play_lists(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2918,7 +2990,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game in ("mafia", "bomb", "reflex", "snakes", "ships", "trivia", "rather", "four"):
+            elif game in ("mafia", "bomb", "reflex", "snakes", "ships", "trivia", "rather", "four", "lists"):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"{game}: scoreboard {got} != the game's {want}")

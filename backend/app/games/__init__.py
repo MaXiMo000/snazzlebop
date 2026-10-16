@@ -15,6 +15,7 @@ from .drawguess import DrawGuess
 from .four import FourInARow
 from .frenemy import FrenemyRadar
 from .lastcard import LastCard
+from .lists import LetterLists
 from .lonely import LowestLonely
 from .ludo import Ludo
 from .mafia import MafiaNight
@@ -69,6 +70,7 @@ REGISTRY: dict[str, type[Game]] = {
         SnakesAndLadders,
         Battleships,
         FourInARow,
+        LetterLists,
     )
 }
 

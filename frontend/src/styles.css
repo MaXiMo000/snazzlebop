@@ -11747,3 +11747,291 @@ button.c4-col:focus-visible {
     animation: none;
   }
 }
+
+/* ---- letter lists -------------------------------------------------------------------------------- */
+.seg-lists {
+  --accent: #0d6b4f;
+  --accent-ink: #fff;
+  --accent-soft: #d5f0e5;
+}
+.ll-letter-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 10px 0 0;
+}
+/* The letter, as a split-flap tile. */
+.ll-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 72px;
+  border: var(--line);
+  border-radius: 10px;
+  background: var(--plum);
+  color: var(--bulb);
+  font: 400 2.6rem / 1 var(--display);
+  box-shadow: 0 5px 0 var(--shadow);
+  animation: ll-flip 0.5s ease-out;
+}
+.ll-tile::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.45);
+}
+@keyframes ll-flip {
+  from {
+    transform: rotateX(90deg);
+  }
+}
+.ll-rule {
+  font-weight: 700;
+  text-wrap: balance;
+}
+.ll-sheet {
+  display: grid;
+  gap: 16px;
+}
+.ll-fields {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: cat;
+}
+@media (min-width: 720px) {
+  .ll-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ll-fields .field {
+  display: block;
+  text-wrap: balance;
+}
+.ll-fields .field::before {
+  counter-increment: cat;
+  content: counter(cat) ". ";
+  color: var(--muted);
+}
+.ll-input {
+  position: relative;
+}
+.ll-input input {
+  padding-right: 48px;
+}
+.ll-check {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 700;
+  transform: translateY(-50%);
+}
+.ll-fields li.ok .ll-check {
+  background: var(--teal);
+  color: #fff;
+}
+.ll-fields li.wrong .ll-check {
+  background: var(--cherry);
+  color: #fff;
+}
+.ll-fields li.ok input {
+  border-color: var(--teal);
+}
+.ll-fields li.wrong input {
+  border-color: var(--cherry);
+}
+.ll-hint {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.ll-cats {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.6em;
+  font: 400 1.15rem / 1.3 var(--display);
+}
+.ll-done {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ll-done li {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 64px;
+}
+.ll-done .avatar {
+  outline: 3px dashed var(--muted);
+  outline-offset: 2px;
+}
+.ll-done li.done .avatar {
+  outline: 3px solid var(--teal);
+}
+.ll-done-name {
+  max-width: 88px;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ll-howto {
+  margin: 0;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.ll-review {
+  display: grid;
+  gap: 14px;
+}
+@media (min-width: 720px) {
+  .ll-review {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ll-cat h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  text-wrap: balance;
+}
+.ll-num {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.95rem;
+}
+.ll-answers {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ll-answers li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 4px 8px;
+  border: 2px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+.ll-answers li.ok {
+  border-color: var(--teal);
+}
+.ll-answers li.bad,
+.ll-answers li.nope {
+  border-style: dashed;
+}
+.ll-answer {
+  display: grid;
+  min-width: 0;
+}
+.ll-answer b {
+  overflow-wrap: break-word;
+}
+.ll-answer .muted {
+  font-size: 0.85rem;
+}
+.ll .avatar.tiny {
+  width: 24px;
+  height: 24px;
+  font-size: 0.6rem;
+}
+.ll .avatar.tiny.face {
+  font-size: 0.9rem;
+}
+.ll-no {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 12px;
+  border: 2.5px solid var(--edge);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 0.9rem / 1 var(--body);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.ll-no[aria-pressed="true"] {
+  background: var(--cherry);
+  color: #fff;
+}
+.ll-no:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.ll-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font: 700 0.85rem / 1.3 var(--body);
+  white-space: nowrap;
+}
+.ll-mark.ok {
+  background: var(--teal);
+  color: #fff;
+}
+.ll-mark.same {
+  background: var(--bulb);
+  color: var(--plum);
+}
+.ll-mark.nope,
+.ll-mark.bad {
+  background: var(--field);
+  color: var(--ink);
+}
+.ll.big .ll-tile {
+  width: 110px;
+  height: 124px;
+  font-size: 4.6rem;
+}
+.ll.big .ll-cats {
+  font-size: 1.8rem;
+}
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-lists) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ll.big .ll-review {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ll-tile {
+    animation: none;
+  }
+}
+.ll-votes {
+  white-space: nowrap; /* "· 1 no" stays together after the name */
+}

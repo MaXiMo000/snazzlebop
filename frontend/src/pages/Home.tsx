@@ -55,7 +55,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Thirty-two games. One room code. No sign-up needed.</p>
+        <p className="lead">Thirty-three games. One room code. No sign-up needed.</p>
         <p className="muted">Grab up to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -261,6 +261,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           </li>
           <li>
             <b>Four in a Row</b> (classic): drop your discs and line up four before they do. Best of three.
+          </li>
+          <li>
+            <b>Letter Lists</b> (classic): one letter, six categories, one clock. Only answers nobody else wrote score.
           </li>
         </ul>
       </Card>

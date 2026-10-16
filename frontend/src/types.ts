@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists";
   title: string;
   blurb: string;
   min_players: number;
@@ -374,6 +374,7 @@ export type GameView =
   | TriviaView
   | RatherView
   | FourView
+  | ListsView
   | JackpotView;
 
 export interface Highlight {
@@ -1407,4 +1408,26 @@ export interface FourView {
   wins: [number, number];
   scores: Record<string, number>;
   you: { side: number; turn: boolean } | null;
+}
+
+export interface ListsView {
+  game: "lists";
+  phase: "write" | "review" | "scores" | "final";
+  round: number;
+  rounds: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  letter: string;
+  categories: string[];
+  /** who has tapped Done (writing only) */
+  done: string[];
+  /** everyone's answers, from the review on */
+  answers: Record<string, string[]> | null;
+  /** "player:category" -> how many said no */
+  nopes: Record<string, number>;
+  scores: Record<string, number>;
+  you: { answers: string[]; done: boolean; noped: string[] } | null;
+  /** status per player per category: ok, same, nope or bad */
+  result?: { status: Record<string, string[]>; gains: Record<string, number> };
+  history?: { letter: string; gains: Record<string, number> }[];
 }

@@ -194,6 +194,12 @@ def v_rather(raw: Any) -> dict[str, str] | None:
     return {"a": a, "b": b}
 
 
+def v_listcat(raw: Any) -> str | None:
+    """A Letter Lists category: something most people can name a few of, for almost any letter."""
+    s = _text(raw, 4, 40)
+    return s if s and not s.endswith((".", "?")) else None
+
+
 def v_codeword(raw: Any) -> str | None:
     """A Codewords board word: one common English word, A-Z only."""
     if not isinstance(raw, str):
@@ -381,6 +387,18 @@ KINDS["rather"] = Kind(
     lambda x: f"{x['a']} | {x['b']}",
 )
 
+KINDS["lists"] = Kind(
+    C.LIST_CATEGORIES,
+    _key,
+    v_listcat,
+    _S,
+    "Letter Lists (Scattergories-style) categories: broad, everyday categories most people can name "
+    "several things in for almost any letter of the alphabet (e.g. 'Things in a kitchen', 'Animals', "
+    "'Things that are round'). Kind and family-friendly, no brands, no proper names of real people. "
+    "4-40 characters, capitalised like a title's first word, no full stop.",
+    lambda x: x,
+)
+
 KINDS["codewords"] = Kind(
     C.CODEWORDS,
     lambda x: x,
@@ -482,6 +500,7 @@ GAME_KINDS: dict[str, str | tuple[str, ...]] = {
     "wits": "wits",
     "trivia": "trivia",
     "rather": "rather",
+    "lists": "lists",
     "codewords": "codewords",
     "truthdare": ("truth_mild", "truth_cheeky", "dare_mild", "dare_cheeky"),
     "drawguess": "drawword",
