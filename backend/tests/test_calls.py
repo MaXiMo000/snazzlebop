@@ -41,6 +41,7 @@ class TokenTests(unittest.TestCase):
             (v["room"], v["roomJoin"], v["canPublish"], v["canPublishData"]), ("snz-abc", True, True, False)
         )
         self.assertLessEqual(claims["exp"] - claims["nbf"], calls.TOKEN_TTL + 10)
+        self.assertLessEqual(calls.TOKEN_TTL, 15 * 60)  # a pass taken before a kick soon stops working
 
     def test_room_name_hides_the_code(self):
         s = Settings(secret_key="k" * 40, **LK)

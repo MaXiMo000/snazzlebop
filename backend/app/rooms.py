@@ -57,7 +57,8 @@ CHAT_MAX = 200
 CHAT_KEEP = 80
 CHAT_SHOWN = 40
 CHAT_GAP = 0.9  # seconds between messages from one person
-CHAT_ROOM_BURST = (12, 5.0)  # at most 12 messages per 5 seconds room-wide
+CHAT_ROOM_BURST = (12, 5.0)  # at most 12 messages per 5 seconds from the players
+CHAT_AUDIENCE_BURST = (6, 5.0)  # and 6 from the whole audience
 INK_BACKLOG = 300  # queued pen strokes per screen; past this it just gets told to redraw from scratch
 KICKED = 4001  # WebSocket close code: "the host removed you" (app range 4000-4999)
 MAX_TV_PER_ROOM = 2  # big-screen viewers; issuing a third evicts the oldest
@@ -167,6 +168,7 @@ class Room:
     chat_seq: int = 0
     chat_last: dict[str, float] = field(default_factory=dict)
     chat_window: list[float] = field(default_factory=list)
+    audience_chat_window: list[float] = field(default_factory=list)
     call_last: dict[str, float] = field(default_factory=dict)
     call_hush: int = 0  # goes up when the host mutes everyone; each screen mutes its own microphone
     faces: dict[str, list[int]] = field(default_factory=dict)  # pid -> [face, tone], picked by that person
@@ -882,8 +884,10 @@ class Hub:
             totals = {t: sum(v for p, v in scores.items() if room.teams.get(p) == t) for t in (0, 1)}
             team_place = coinlib.places({str(t): v for t, v in totals.items()})
             placed = {p: team_place[str(room.teams[p])] for p in scores if p in room.teams}
+            all_tied = len(set(totals.values())) == 1
         else:
             placed = coinlib.places(scores)
+            all_tied = len(set(scores.values())) == 1
         best: dict[int, dict[str, Any]] = {}
         for pid, place in placed.items():
             uid = room.accounts.get(pid)
@@ -896,7 +900,7 @@ class Hub:
                 "place": place,
                 "players": len(scores),
                 "points": scores[pid],
-                "coins": coinlib.coins_for(place, len(scores)),
+                "coins": coinlib.coins_for(place, len(scores), all_tied=all_tied),
             }
             if uid not in best or place < best[uid]["place"]:
                 best[uid] = row
@@ -1768,8 +1772,12 @@ class Hub:
         text = clean_chat(msg.get("text"))
         game = self._chat_game(room)
         seated = pid in room.players
-        if game is not None and seated and pid in game.round_scores and game.chat_muted(pid):
-            raise HubError("muted", game.CHAT_MUTED_NOTE)
+        if game is not None and seated and pid in game.round_scores:
+            if game.chat_muted(pid):
+                raise HubError("muted", game.CHAT_MUTED_NOTE)
+            blocked = game.chat_blocked(pid, text)
+            if blocked:
+                raise HubError("gives_away", blocked)
         team = None
         if to == "team":
             channel = (
@@ -1781,12 +1789,17 @@ class Hub:
         now = self.clock()
         if now - room.chat_last.get(pid, -1e9) < CHAT_GAP:
             raise HubError("slow_down", "Slow down a little")
-        burst, window = CHAT_ROOM_BURST
-        room.chat_window = [t for t in room.chat_window if now - t < window]
-        if len(room.chat_window) >= burst:
+        # The audience has its own budget, so a crowd of watchers can't crowd the players out.
+        burst, window = CHAT_ROOM_BURST if seated else CHAT_AUDIENCE_BURST
+        recent = [t for t in (room.chat_window if seated else room.audience_chat_window) if now - t < window]
+        if len(recent) >= burst:
             raise HubError("slow_down", "The chat is busy: try again in a moment")
         room.chat_last[pid] = now
-        room.chat_window.append(now)
+        recent.append(now)
+        if seated:
+            room.chat_window = recent
+        else:
+            room.audience_chat_window = recent
         who = room.players.get(pid) or room.audience.get(pid)
         room.chat_seq += 1
         room.chat = [

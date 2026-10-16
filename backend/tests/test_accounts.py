@@ -227,6 +227,7 @@ def test_places_and_coins():
     assert coins.places({"a": 300, "b": 300, "c": 100, "d": 0}) == {"a": 1, "b": 1, "c": 3, "d": 4}
     assert [coins.coins_for(p, 5) for p in (1, 2, 3, 4, 5)] == [50, 30, 20, 10, 5]
     assert coins.coins_for(1, 1) == 0  # no coins for playing alone
+    assert coins.coins_for(1, 2, all_tied=True) == 0  # a game everyone ties (0-0 skip-throughs) pays nothing
     assert len(coins.season_of()) == 7
 
 
@@ -292,7 +293,12 @@ class PowerUpTests(unittest.IsolatedAsyncioTestCase):
         for _ in range(40):
             if room.phase != "game":
                 break
-            await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": room.game.stage})
+            if room.game.phase == "pick":  # someone has to win: a game everyone ties pays no coins
+                for pid, n in ((host, 1), (guest, 2), (anon, 1)):
+                    with contextlib.suppress(HubError):
+                        await hub.handle_message(room, pid, conns[pid], {"t": "act", "a": "pick", "n": n})
+            if room.phase == "game":
+                await hub.handle_message(room, host, conns[host], {"t": "skip", "stage": room.game.stage})
         await asyncio.gather(*list(hub._tasks))
         assert room.phase == "results"
         assert [n["card"] for n in room.card_news] == ["double"]

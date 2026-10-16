@@ -7,7 +7,8 @@ room learns who was lost, talks it over, and votes someone out. A removed player
 
 The town wins when every Mafia member is out; the Mafia win when they are at least half of the players
 left. Roles, night choices and the Detective's findings live on the server and reach only the people the
-rules say may know them. Removed players become ghosts: they see every role but can no longer chat.
+rules say may know them. Removed players become ghosts: they can no longer chat, and they learn the roles
+only when the game ends, like everyone else (on a voice call a ghost could otherwise say who the Mafia are).
 """
 
 from __future__ import annotations
@@ -263,7 +264,7 @@ class MafiaNight(Game):
     def view_for(self, pid: str) -> dict[str, Any]:
         role = self.roles.get(pid)
         ghost = role is not None and pid not in self.alive
-        open_book = self.phase == "final" or ghost  # everything is on the table for ghosts and at the end
+        open_book = self.phase == "final"  # everything is on the table at the end
         view: dict[str, Any] = {
             "game": self.game_id,
             "phase": self.phase,

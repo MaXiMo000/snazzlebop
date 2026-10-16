@@ -29,7 +29,9 @@ from .config import Settings
 
 log = logging.getLogger("snazzlebop.calls")
 
-TOKEN_TTL = 2 * 3600  # seconds a call token stays valid for joining (a call already joined continues)
+# Seconds a call pass stays valid for joining. Short, so a pass taken before the host removes someone is
+# soon useless; every join asks for a fresh one, and LiveKit refreshes the pass of anyone in the call.
+TOKEN_TTL = 10 * 60
 
 
 def enabled(settings: Settings) -> bool:

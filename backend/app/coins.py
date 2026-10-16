@@ -1,8 +1,9 @@
 """Coins and power-ups: the rules, kept pure (no I/O) so the hub and the HTTP layer share them.
 
 Finishing places in any game with 2+ players earn coins: 1st 50, 2nd 30, 3rd 20, 4th 10, everyone
-else 5. Ties share the better place. At most DAILY_COIN_CAP coins a day per account (a brake on
-farming with spare accounts). Coins buy power-ups: the show's power cards, one per game.
+else 5. Ties share the better place, but a game where everyone ties (nobody beat anybody, e.g. two
+accounts skipping through a game at 0-0) pays nothing. At most DAILY_COIN_CAP coins a day per account
+(a brake on farming with spare accounts). Coins buy power-ups: the show's power cards, one per game.
 """
 
 from __future__ import annotations
@@ -21,8 +22,8 @@ def places(scores: dict[str, int]) -> dict[str, int]:
     return {pid: order.index(v) + 1 for pid, v in scores.items()}
 
 
-def coins_for(place: int, players: int) -> int:
-    if players < 2:
+def coins_for(place: int, players: int, *, all_tied: bool = False) -> int:
+    if players < 2 or all_tied:
         return 0
     return PLACE_COINS[place - 1] if place <= len(PLACE_COINS) else EVERYONE_ELSE
 

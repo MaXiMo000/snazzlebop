@@ -455,7 +455,11 @@ class Database:
         try:
             async with self.sessions() as session:
                 since = datetime.now(UTC) - timedelta(days=1)
-                for r in rows:
+                # Lock each account (in id order: no deadlocks) before reading its day's total, so two
+                # rooms finishing at the same moment can't both pay up to the cap. (SQLite ignores the
+                # lock; it serialises writers anyway.)
+                for r in sorted(rows, key=lambda r: r["user_id"]):
+                    await session.execute(select(User.id).where(User.id == r["user_id"]).with_for_update())
                     got = await session.execute(
                         select(func.coalesce(func.sum(Result.coins), 0)).where(
                             Result.user_id == r["user_id"], Result.played_at >= since

@@ -25,6 +25,7 @@ SIZES = 4
 MAX_POINTS_PER_OP = 120  # numbers per message (60 points): well under the socket's 2 KB cap
 MAX_OPS = 4000
 MAX_POINTS = 60000
+UNDO_ROOM = 200  # undos still allowed on a full canvas (a hard cap on the log all the same)
 
 
 class InkLog:
@@ -38,7 +39,8 @@ class InkLog:
     def add(self, msg: dict[str, Any]) -> dict[str, Any]:
         """Validate one operation from the drawer and append it. Returns the stored operation."""
         kind = msg.get("op")
-        if len(self.ops) >= MAX_OPS or self.points >= self.max_points:
+        full = len(self.ops) >= MAX_OPS or self.points >= self.max_points
+        if (full and kind in ("line", "more")) or len(self.ops) >= MAX_OPS + UNDO_ROOM:
             raise GameError("canvas_full", "The canvas is full: clear it to keep drawing")
         if kind == "line":
             c, w = msg.get("c"), msg.get("w")
@@ -55,6 +57,10 @@ class InkLog:
         elif kind in ("undo", "clear"):
             op = {"op": kind}
             self.open = False
+            if kind == "clear":
+                # Nothing before a clear is ever drawn again: drop it, so a full canvas really empties.
+                # The clear becomes operation 0, which tells every screen to start a blank canvas.
+                self.ops, self.points = [], 0
         else:
             raise GameError("bad_ink", "Unknown drawing action")
         self.points += len(op.get("p", ())) // 2

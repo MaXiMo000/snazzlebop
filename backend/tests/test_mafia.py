@@ -259,7 +259,7 @@ class SecrecyTests(unittest.TestCase):
         for viewer in [p for p in g.alive if p != detective] + list(SPECTATORS):
             self.assertNotIn("findings", g.view_for(viewer).get("you") or {})
 
-    def test_the_dead_are_named_and_ghosts_see_everything(self):
+    def test_the_dead_are_named_and_ghosts_learn_roles_only_at_the_end(self):
         g, _ = make(6)
         g.advance()
         victim = who(g, VILLAGER)[0]
@@ -268,7 +268,7 @@ class SecrecyTests(unittest.TestCase):
             view = g.view_for(viewer)
             self.assertEqual(view["dead"], [{"id": victim, "role": VILLAGER, "how": "night", "round": 1}])
             self.assertIsNone(view["roles"])
-        self.assertEqual(g.view_for(victim)["roles"], g.roles)
+        self.assertIsNone(g.view_for(victim)["roles"])  # they could tell the room on the call
 
     def test_final_shows_all(self):
         g, clock = make(4)

@@ -248,6 +248,12 @@ class DrawGuess(Game):
             view["history"] = self.history
         return view
 
+    def chat_blocked(self, pid: str, text: str) -> str | None:
+        """The artist and anyone who has guessed know the word: they can't type it into the chat."""
+        if self.phase != "draw" or (pid != self.drawer and pid not in self.guessed):
+            return None
+        return "No giving the word away!" if squash(self.word) in squash(text) else None
+
     def peek(self, pid: str) -> str | None:
         if self.phase != "draw" or pid == self.drawer or pid in self.guessed:
             return None

@@ -194,6 +194,18 @@ class TurnTests(unittest.TestCase):
 
 
 class InkTests(unittest.TestCase):
+    def test_a_full_canvas_can_still_be_undone_and_cleared(self):
+        ink = InkLog(max_points=4)
+        ink.add({"op": "line", "c": 0, "w": 1, "p": [0, 0, 5, 5, 9, 9, 12, 12]})
+        with self.assertRaises(GameError):
+            ink.add({"op": "line", "c": 0, "w": 1, "p": [1, 1, 2, 2]})  # full
+        ink.add({"op": "undo"})  # still allowed
+        ink.add({"op": "clear"})
+        self.assertEqual(ink.ops, [{"op": "clear"}])  # what came before is dropped; screens restart blank
+        self.assertEqual(ink.view(), {"id": ink.id, "count": 1})
+        ink.add({"op": "line", "c": 0, "w": 1, "p": [1, 1, 2, 2]})  # room to draw again
+        self.assertEqual(len(ink.ops), 2)
+
     def test_ops_and_validation(self):
         ink = InkLog()
         ink.add({"op": "line", "c": 0, "w": 1, "p": [0, 0, 800, 600]})

@@ -127,3 +127,39 @@ class ChatTests(HubHarness):
             await self.hub.disconnect(room, p, conns[p])
         await self.hub.handle_message(room, host, conns[host], {"t": "start", "game": "chess"})
         self.assertIsNone(conns[host].last["chat"]["team"])
+
+    async def test_the_draw_and_guess_word_cannot_be_typed_by_those_who_know_it(self):
+        self.hub = self.make_hub()
+        room, host, conns = await self.party(self.hub, 3)
+        await self.hub.handle_message(room, host, conns[host], {"t": "start", "game": "drawguess"})
+        g = room.game
+        g.phase, g.word = "draw", "hot dog"
+        artist = g.drawer
+        guesser = next(p for p in conns if p != artist)
+        await self.say(room, artist, conns[artist], "it's a HOT-DOG lol")
+        self.assertIn("gives_away", conns[artist].errors())
+        await self.say(room, guesser, conns[guesser], "is it a hotdog?")  # still guessing: fine
+        self.assertEqual(texts(conns[host])[-1], "is it a hotdog?")
+        g.guessed.append(guesser)
+        self.clock.t += 2
+        await self.say(room, guesser, conns[guesser], "hot dog obviously")
+        self.assertIn("gives_away", conns[guesser].errors())
+        self.clock.t += 2
+        await self.say(room, artist, conns[artist], "nice drawing time")  # anything else is fine
+        self.assertEqual(texts(conns[host])[-1], "nice drawing time")
+
+    async def test_the_audience_cannot_crowd_the_players_out(self):
+        self.hub = self.make_hub()
+        room, host, conns = await self.party(self.hub, 2)
+        fans = []
+        for i in range(4):
+            _, fan, _ = self.hub.join_audience(room.code, f"Fan{i}")
+            fans.append((fan.id, FakeConn()))
+            await self.hub.connect(room, fans[-1][0], fans[-1][1])
+        for i in range(12):
+            self.clock.t += 0.25
+            fid, fconn = fans[i % 4]
+            await self.hub.handle_message(room, fid, fconn, {"t": "chat", "text": f"woo {i}"})
+        self.assertLess(len(room.chat), 12)  # the audience hit its own cap...
+        await self.say(room, host, conns[host], "players still get through")
+        self.assertEqual(texts(conns[host])[-1], "players still get through")  # ...not the players'

@@ -1428,8 +1428,9 @@ async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
 
 async def play_mafia(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     """Random nights and days until someone wins. Every frame is checked: nobody alive sees another
-    role, night choices or the Detective's findings; a removed player's role becomes public; ghosts and
-    the final screen see everything. The night's result must follow from what the bots sent."""
+    role, night choices or the Detective's findings; a removed player's role becomes public; only the
+    final screen shows everything (a ghost on the call could otherwise tell). The night's result must
+    follow from what the bots sent."""
     by_id = {b.pid: b for b in bots}
     start = {b.pid: len(b.raw) for b in bots}
     await all_until(bots, game_is("mafia", "roles"), "mafia roles")
@@ -1503,16 +1504,14 @@ async def play_mafia(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     left = [p for p in g["alive"] if p in mafia]
     check((g["winner"] == "town") == (not left), "mafia: the wrong side won")
     for b in bots:
-        gone = False
         for raw in b.raw[start[b.pid] :]:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") != "mafia":
                 continue
-            gone = gone or b.pid not in gg["alive"]
             you = gg["you"]
             check(you["role"] == role[b.pid], f"mafia: {b.name}'s role changed")
-            if gg["phase"] != "final" and not gone:
-                check(gg["roles"] is None, f"mafia: {b.name} saw every role while still in the game")
+            if gg["phase"] != "final":
+                check(gg["roles"] is None, f"mafia: {b.name} saw every role before the end")
             check("findings" not in you or role[b.pid] == "detective", f"mafia: {b.name} saw findings")
             check("mate_picks" not in you or role[b.pid] == "mafia", f"mafia: {b.name} saw the Mafia's picks")
             public = {

@@ -244,6 +244,11 @@ class Game(ABC):
         team = self.teams.get(pid)
         return None if team is None else (f"team:{team}", ("Team Tangerine", "Team Teal")[team])
 
+    def chat_blocked(self, pid: str, text: str) -> str | None:
+        """Why this chat message can't be posted right now (shown to the sender), or None. For secrets a
+        player may know but mustn't type out, like the Draw & Guess word once you've guessed it."""
+        return None
+
     def chat_muted(self, pid: str) -> bool:
         """True while the rules say this player must stay silent (a Codewords Spymaster mid-game)."""
         return False
