@@ -11208,3 +11208,33 @@ details.game-options > div {
     animation: none;
   }
 }
+
+/* Home: how a show works, numbered in the show's lights. */
+.how-steps {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.how-steps li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  text-wrap: pretty;
+}
+.how-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: var(--line);
+  border-radius: 50%;
+  background: var(--tangerine);
+  color: var(--plum);
+  font: 400 1.1rem / 1 var(--display);
+}

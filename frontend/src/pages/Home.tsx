@@ -31,6 +31,21 @@ export function Home({ go }: { go: (path: string) => void }) {
   };
 
   const nameOk = name.trim().length >= 1;
+  const host = () => {
+    if (!nameOk) return;
+    void wrap(async () => {
+      const r = await createRoom(name.trim());
+      go(`/r/${r.code}`);
+    });
+  };
+  const join = () => {
+    if (!nameOk || code.length < 3) return;
+    void wrap(async () => {
+      const c = code.toUpperCase();
+      await joinRoom(c, name.trim());
+      go(`/r/${c}`);
+    });
+  };
 
   return (
     <div className="stack enter">
@@ -41,7 +56,30 @@ export function Home({ go }: { go: (path: string) => void }) {
 
       <Card tone="stage" className="center">
         <p className="lead">Thirty games. One room code. No sign-up needed.</p>
-        <p className="muted">Grab 3 to 8 friends, put the show on the big screen, play from your phones.</p>
+        <p className="muted">Grab up to 8 friends, put the show on the big screen, play from your phones.</p>
+      </Card>
+
+      <Card aria-labelledby="name-h">
+        <h2 id="name-h">First, your name</h2>
+        <label className="field" htmlFor="host-name">
+          What should the show call you?
+        </label>
+        <input
+          id="host-name"
+          type="text"
+          value={name}
+          maxLength={16}
+          autoComplete="nickname"
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter: join the room whose code is typed below, or start a new one.
+            if (e.key !== "Enter" || busy) return;
+            e.preventDefault();
+            if (code.length >= 3) join();
+            else host();
+          }}
+          placeholder="Up to 16 characters"
+        />
       </Card>
 
       {user && <Friends name={name} go={go} />}
@@ -53,29 +91,12 @@ export function Home({ go }: { go: (path: string) => void }) {
             className="stack-sm"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!nameOk) return;
-              void wrap(async () => {
-                const r = await createRoom(name.trim());
-                go(`/r/${r.code}`);
-              });
+              host();
             }}
           >
-            <div>
-              <label className="field" htmlFor="host-name">
-                Your name
-              </label>
-              <input
-                id="host-name"
-                type="text"
-                value={name}
-                maxLength={16}
-                autoComplete="nickname"
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Up to 16 characters"
-              />
-            </div>
+            <p className="muted">Start a room and get a code for your friends.</p>
             <Btn type="submit" size="big" block disabled={busy || !nameOk}>
-              Create room
+              {nameOk ? "Create room" : "Type your name first"}
             </Btn>
           </form>
         </Card>
@@ -86,12 +107,7 @@ export function Home({ go }: { go: (path: string) => void }) {
             className="stack-sm"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!nameOk || code.length < 3) return;
-              void wrap(async () => {
-                const c = code.toUpperCase();
-                await joinRoom(c, name.trim());
-                go(`/r/${c}`);
-              });
+              join();
             }}
           >
             <div>
@@ -113,10 +129,10 @@ export function Home({ go }: { go: (path: string) => void }) {
               />
             </div>
             <Btn type="submit" variant="go" size="big" block disabled={busy || !nameOk || code.length < 3}>
-              Join
+              {nameOk ? "Join" : "Type your name first"}
             </Btn>
             <p id="join-hint" className="muted">
-              Uses the name you typed under “Host a show”.
+              The host sees the code on their screen. An invite link works too.
             </p>
           </form>
         </Card>
@@ -127,6 +143,32 @@ export function Home({ go }: { go: (path: string) => void }) {
           {error}
         </p>
       )}
+
+      <Card tone="soft" aria-labelledby="how-h">
+        <h2 id="how-h">How it works</h2>
+        <ol className="how-steps">
+          <li>
+            <span>
+              <b>One of you hosts.</b> You get a five-letter room code.
+            </span>
+          </li>
+          <li>
+            <span>
+              <b>Everyone joins on their phone</b> with the code or the invite link. No app, no sign-up.
+            </span>
+          </li>
+          <li>
+            <span>
+              <b>Optional: the big screen.</b> Open TV mode on a laptop or smart TV so the room watches together.
+            </span>
+          </li>
+          <li>
+            <span>
+              <b>Pick a game.</b> The rules show before every game, and you can play one game or a whole show night.
+            </span>
+          </li>
+        </ol>
+      </Card>
 
       <InstallApp />
 
