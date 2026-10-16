@@ -102,6 +102,7 @@ def test_games_catalog(client):
         "ships",
         "trivia",
         "rather",
+        "four",
     }
 
 

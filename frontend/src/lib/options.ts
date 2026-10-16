@@ -1,5 +1,14 @@
 /** What the host's game options say in the lobby and on the intro screen (keys and values from the server). */
 export const OPTION_LABELS: Record<string, Record<string, string>> = {
+  match: {
+    "3": "Best of 3 rounds",
+    "1": "One round",
+  },
+  turn: {
+    "30": "30 seconds a turn",
+    "15": "15 seconds a turn (quick)",
+    "60": "1 minute a turn (relaxed)",
+  },
   laps: {
     "1": "Everyone in the hot seat once",
     "2": "Everyone in the hot seat twice",

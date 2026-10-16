@@ -66,6 +66,7 @@ class RegistryTests(unittest.TestCase):
                 "ships",
                 "trivia",
                 "rather",
+                "four",
             },
         )
 

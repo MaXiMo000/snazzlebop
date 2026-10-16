@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four";
   title: string;
   blurb: string;
   min_players: number;
@@ -373,6 +373,7 @@ export type GameView =
   | ShipsView
   | TriviaView
   | RatherView
+  | FourView
   | JackpotView;
 
 export interface Highlight {
@@ -1384,4 +1385,26 @@ export interface RatherView {
   you: { pick: number | null; guess: number | null; hot: boolean } | null;
   result?: RatherResult;
   history?: (RatherResult & { a: string; b: string })[];
+}
+
+export interface FourView {
+  game: "four";
+  phase: "play" | "over" | "final";
+  round: number;
+  rounds: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  /** side 0 = Red, side 1 = Yellow */
+  sides: [string[], string[]];
+  /** grid[row][col], row 0 at the bottom: null, 0 or 1 */
+  grid: (number | null)[][];
+  turn: number;
+  mover: string | null;
+  last: { col: number; row: number; side: number; by: string | null } | null;
+  /** the winning four: [col, row] pairs */
+  line: [number, number][];
+  winner: number | null;
+  wins: [number, number];
+  scores: Record<string, number>;
+  you: { side: number; turn: boolean } | null;
 }

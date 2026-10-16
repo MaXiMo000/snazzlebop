@@ -12,6 +12,7 @@ from .codewords import Codewords
 from .crossword import CrosswordRace
 from .dice import LiarsDice
 from .drawguess import DrawGuess
+from .four import FourInARow
 from .frenemy import FrenemyRadar
 from .lastcard import LastCard
 from .lonely import LowestLonely
@@ -67,6 +68,7 @@ REGISTRY: dict[str, type[Game]] = {
         ReactionDuel,
         SnakesAndLadders,
         Battleships,
+        FourInARow,
     )
 }
 

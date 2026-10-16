@@ -49,6 +49,7 @@ import { Snakes } from "../games/Snakes";
 import { Reflex } from "../games/Reflex";
 import { Trivia } from "../games/Trivia";
 import { Rather } from "../games/Rather";
+import { Four } from "../games/Four";
 import { Bomb } from "../games/Bomb";
 import { Mafia } from "../games/Mafia";
 import { Roulette } from "../games/Roulette";
@@ -392,6 +393,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Snakes view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "ships":
       return <Ships view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "four":
+      return <Four view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "rather":
       return <Rather view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "trivia":

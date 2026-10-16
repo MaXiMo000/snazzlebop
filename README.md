@@ -48,6 +48,7 @@ code, no sign-up needed. Put the show on a TV and play from your phones.
 | **Reaction Duel** | A reflex test with fake-outs | 2-8 |
 | **Snakes and Ladders** | Snakes and Ladders | 2-8 |
 | **Battleships** | Battleships (teams share a fleet) | 2-8 |
+| **Four in a Row** | Connect Four (best of 3, teams take turns) | 2-8 |
 | **Codewords** | Two-team word association | 4-8 |
 
 Many games have a **Teams** switch: two teams, combined scores, with official partner rules where the

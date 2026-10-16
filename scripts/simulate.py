@@ -38,6 +38,7 @@ TIMEOUT = 15.0
 EXPECTED_ERRORS = {"already_known", "no_asks", "wrong"}  # wrong: the deliberate crossword miss
 # Per game: a Chicken Run tap that lands just after the bomb is refused, and that's the point.
 EXPECTED_BY_GAME = {
+    "four": {"not_your_turn"},
     "chicken": {"too_late", "wrong_phase"},
     "lastcard": {"no_catch"},
     "bomb": {"not_yours", "used"},
@@ -278,6 +279,19 @@ for _phase in ("pick", "reveal", "final"):
         "you",
         "result",
         "history",
+    }
+for _phase in ("play", "over", "final"):
+    ALLOWED_KEYS[("four", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "sides",
+        "grid",
+        "turn",
+        "mover",
+        "last",
+        "line",
+        "winner",
+        "wins",
+        "scores",
+        "you",
     }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
@@ -1404,6 +1418,46 @@ async def play_rather(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") == "rather" and gg["phase"] == "pick":
                 check("result" not in gg, f"rather: {b.name} saw a result early")
+
+
+async def play_four(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Whoever's turn it is drops a disc in a random open column (others try too and are refused).
+    Every frame keeps gravity; the scores must be 300 a round win for each side member, 100 a draw."""
+    by_id = {b.pid: b for b in bots}
+    start = {b.pid: len(b.raw) for b in bots}
+    want = {b.pid: 0 for b in bots}
+    for _ in range(400):
+        await all_until(bots, lambda st: st["game"]["phase"] in ("play", "over", "final"), "four live")
+        g = host.state["game"]  # type: ignore[index]
+        if g["phase"] == "final":
+            break
+        stage, last = host.state["stage"], g["last"]  # type: ignore[index]
+        if g["phase"] == "over":
+            for pid in g["sides"][g["winner"]] if g["winner"] is not None else want:
+                want[pid] += 300 if g["winner"] is not None else 100
+            check(g["scores"] == want, f"four: scores {g['scores']} != {want}")
+            await skip(host)
+        else:
+            open_cols = [c for c in range(7) if g["grid"][5][c] is None]
+            if rng.random() < 0.2:
+                other = next(b for b in bots if b.pid != g["mover"])
+                await other.send(t="act", a="drop", col=open_cols[0])  # refused: not_your_turn
+            await by_id[g["mover"]].send(t="act", a="drop", col=rng.choice(open_cols))
+        await all_until(
+            bots,
+            lambda st, s0=stage, m=last: st["stage"] != s0 or st["game"]["last"] != m,
+            "four next",
+        )
+    check(host.state["game"]["phase"] == "final", "four: the match didn't end")  # type: ignore[index]
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "four":
+                continue
+            for c in range(7):
+                column = [gg["grid"][r][c] for r in range(6)]
+                filled = [v for v in column if v is not None]
+                check(column[: len(filled)] == filled, f"four: {b.name} saw a floating disc")
 
 
 async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -2715,7 +2769,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         games += ["bomb", "reflex", "snakes", "ships"]
-        games += ["rather"]
+        games += ["rather", "four"]
         games += ["trivia", "trivia-fastest", "trivia-survival", "trivia-wager", "trivia-draft"]
         if len(bots) >= 4:
             games.append("mafia")
@@ -2728,6 +2782,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 "telephone-pairs",
                 "tycoon-pairs",
                 "trivia-pairs",
+                "four-pairs",
             ]  # the Teams switch
         if len(bots) == 4:
             games.append("ludo-pairs")  # Ludo teams are exactly 2 v 2
@@ -2819,6 +2874,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_trivia(host, bots, rng)
             elif game == "rather":
                 await play_rather(host, bots, rng)
+            elif game == "four":
+                await play_four(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -2861,7 +2918,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 want = tycoon_scores(host.state["game"], [b.pid for b in bots])  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"tycoon: scores {got} != net worth {want}")
-            elif game in ("mafia", "bomb", "reflex", "snakes", "ships", "trivia", "rather"):
+            elif game in ("mafia", "bomb", "reflex", "snakes", "ships", "trivia", "rather", "four"):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}
                 check(got == want, f"{game}: scoreboard {got} != the game's {want}")
