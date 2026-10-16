@@ -22,6 +22,7 @@ from .lonely import LowestLonely
 from .ludo import Ludo
 from .mafia import MafiaNight
 from .mural import MoleInTheMural
+from .onhead import OnYourHead
 from .price import PriceIsWeird
 from .rather import WouldYouRather
 from .reflex import ReactionDuel
@@ -75,6 +76,7 @@ REGISTRY: dict[str, type[Game]] = {
         LetterLists,
         Hangman,
         FiveDice,
+        OnYourHead,
     )
 }
 

@@ -1,5 +1,14 @@
 /** What the host's game options say in the lobby and on the intro screen (keys and values from the server). */
 export const OPTION_LABELS: Record<string, Record<string, string>> = {
+  goes: {
+    "1": "Everyone guesses once",
+    "2": "Everyone guesses twice",
+  },
+  seconds: {
+    "60": "60 seconds a turn",
+    "45": "45 seconds (quick)",
+    "90": "90 seconds (relaxed)",
+  },
   card: {
     "13": "Full scorecard (13 rounds)",
     "7": "Quick card (7 rounds)",

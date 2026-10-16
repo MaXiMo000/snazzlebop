@@ -53,6 +53,7 @@ import { Four } from "../games/Four";
 import { Lists } from "../games/Lists";
 import { Hangman } from "../games/Hangman";
 import { FiveDice } from "../games/FiveDice";
+import { OnHead } from "../games/OnHead";
 import { Bomb } from "../games/Bomb";
 import { Mafia } from "../games/Mafia";
 import { Roulette } from "../games/Roulette";
@@ -396,6 +397,8 @@ function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt:
       return <Snakes view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "ships":
       return <Ships view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
+    case "onhead":
+      return <OnHead view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "fivedice":
       return <FiveDice view={g} you={state.you} receivedAt={receivedAt} send={send} tv={tv} />;
     case "hangman":

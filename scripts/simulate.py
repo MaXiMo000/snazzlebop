@@ -328,6 +328,19 @@ for _phase in ("play", "final"):
         "you",
         "last",
     }
+for _phase in ("ready", "play", "result", "final"):
+    ALLOWED_KEYS[("onhead", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "seconds",
+        "guesser",
+        "word",
+        "n",
+        "forehead",
+        "got",
+        "passed",
+        "count",
+        "scores",
+        "history",
+    }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1644,6 +1657,42 @@ async def play_fivedice(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         )
 
 
+async def play_onhead(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Clue-givers mark every word of each turn (two at once now and then: the second tap must not
+    count); the guesser never sees a word; points are 100 to the guesser and 25 to each clue-giver."""
+    start = {b.pid: len(b.raw) for b in bots}
+    want = {b.pid: 0 for b in bots}
+    rounds = host.state["game"]["rounds"]  # type: ignore[index]
+    for rnd in range(1, rounds + 1):
+        await all_until(bots, game_is("onhead", "ready", rnd), f"onhead ready {rnd}")
+        await skip(host)
+        await all_until(bots, game_is("onhead", "play", rnd), f"onhead play {rnd}")
+        guesser = host.state["game"]["guesser"]  # type: ignore[index]
+        givers = [b for b in bots if b.pid != guesser]
+        for n in range(40):
+            kind = "got" if rng.random() < 0.6 else "pass"
+            tappers = givers[:2] if rng.random() < 0.15 else [rng.choice(givers)]
+            for b in tappers:
+                await b.send(t="act", a=kind, n=n)
+            if kind == "got":
+                want[guesser] += 100
+                for b in givers:
+                    want[b.pid] += 25
+            await all_until(
+                bots, lambda st, k=n: st["game"]["phase"] != "play" or st["game"]["n"] > k, "onhead mark"
+            )
+        await all_until(bots, game_is("onhead", "result", rnd), f"onhead result {rnd}")
+        check(
+            host.state["game"]["scores"] == want, f"onhead: scores {host.state['game']['scores']} != {want}"
+        )  # type: ignore[index]
+        await skip(host)
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") == "onhead" and gg["phase"] == "play" and gg["guesser"] == b.pid:
+                check(gg["word"] is None, f"onhead: {b.name} saw their own word")
+
+
 async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     """The holder answers and the bomb moves to the next player still in; a repeat or a non-holder is
     refused; the host's skip sets it off, which costs the holder a life. No frame ever carries the fuse."""
@@ -2953,7 +3002,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         games += ["bomb", "reflex", "snakes", "ships"]
-        games += ["rather", "four", "lists", "hangman", "fivedice"]
+        games += ["rather", "four", "lists", "hangman", "fivedice", "onhead"]
         games += ["trivia", "trivia-fastest", "trivia-survival", "trivia-wager", "trivia-draft"]
         if len(bots) >= 4:
             games.append("mafia")
@@ -3066,6 +3115,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_hangman(host, bots, rng)
             elif game == "fivedice":
                 await play_fivedice(host, bots, rng)
+            elif game == "onhead":
+                await play_onhead(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -3120,6 +3171,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 "lists",
                 "hangman",
                 "fivedice",
+                "onhead",
             ):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

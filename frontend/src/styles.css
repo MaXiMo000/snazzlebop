@@ -12453,3 +12453,151 @@ button.fd-box:focus-visible {
       "state state";
   }
 }
+
+/* ---- on your head --------------------------------------------------------------------------------- */
+.seg-onhead {
+  --accent: #b5501a;
+  --accent-ink: #fff;
+  --accent-soft: #f8e1d1;
+}
+.oh-count {
+  margin: 8px 0 0;
+  font-weight: 700;
+}
+.oh-count b {
+  font: 400 1.4rem / 1 var(--display);
+}
+.oh-word {
+  margin: 14px 0;
+  font: 400 clamp(2rem, 11vw, 3.6rem) / 1.05 var(--display);
+  overflow-wrap: break-word;
+  text-wrap: balance;
+  animation: tq-pop 0.35s ease-out;
+}
+.oh-marks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.oh-guess {
+  margin: 0 0 8px;
+  font: 400 clamp(2.4rem, 12vw, 4rem) / 1 var(--display);
+  text-wrap: balance;
+}
+.oh-switch {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.oh-switch .muted {
+  margin: 0;
+  text-wrap: balance;
+}
+/* Forehead mode: the whole phone is the word, for the room to read. */
+.oh-forehead {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  grid-template-rows: 1fr auto auto auto;
+  justify-items: center;
+  gap: 12px;
+  padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom))
+    calc(16px + var(--safe-left));
+  background: #b5501a;
+  color: #fff;
+  text-align: center;
+}
+.oh-head-word {
+  align-self: center;
+  margin: 0;
+  font: 400 clamp(2.6rem, 16vw, 7rem) / 1 var(--display);
+  overflow-wrap: break-word;
+  text-wrap: balance;
+  animation: tq-pop 0.35s ease-out;
+}
+.oh-head-hint {
+  margin: 0;
+  font-weight: 700;
+}
+.oh-head-marks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+}
+.oh-head-btn {
+  min-height: 64px;
+  border: 4px solid #fff;
+  border-radius: 20px;
+  color: #fff;
+  font: 400 1.4rem / 1 var(--display);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.oh-head-btn.pass {
+  background: #6d1b2f;
+}
+.oh-head-btn.got {
+  background: #146b3a;
+}
+.oh-head-btn:focus-visible,
+.oh-head-exit:focus-visible {
+  outline: 4px solid var(--mustard);
+  outline-offset: 2px;
+}
+.oh-head-exit {
+  min-height: 44px;
+  padding: 6px 16px;
+  border: 2px solid #fff;
+  border-radius: 22px;
+  background: none;
+  color: #fff;
+  font: 700 0.95rem / 1 var(--body);
+  cursor: pointer;
+}
+.oh-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.oh-words li {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.oh-words li.got {
+  background: var(--teal);
+  color: #fff;
+}
+.oh-words li.passed {
+  background: var(--field);
+  color: var(--ink);
+}
+.oh.big .oh-guess {
+  font-size: 5.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .oh-word,
+  .oh-head-word {
+    animation: none;
+  }
+}
+
+/* Narrow phones: Pass and Got it stack, so neither label wraps. */
+@media (max-width: 379px) {
+  .oh-marks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.oh-marks .btn {
+  white-space: nowrap;
+}
+.oh-switch .btn {
+  white-space: nowrap;
+}

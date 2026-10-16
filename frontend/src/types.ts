@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists" | "hangman" | "fivedice";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists" | "hangman" | "fivedice" | "onhead";
   title: string;
   blurb: string;
   min_players: number;
@@ -377,6 +377,7 @@ export type GameView =
   | ListsView
   | HangmanView
   | FiveDiceView
+  | OnHeadView
   | JackpotView;
 
 export interface Highlight {
@@ -1485,4 +1486,25 @@ export interface FiveDiceView {
   /** the boxes your dice may go in now, with their points */
   you: { options: Record<string, number> } | null;
   last: { by: string; box: string; points: number; dice: number[]; round: number }[];
+}
+
+export interface OnHeadView {
+  game: "onhead";
+  phase: "ready" | "play" | "result" | "final";
+  round: number;
+  rounds: number;
+  remaining: number | null;
+  seconds: number;
+  players: { id: string; name: string }[];
+  guesser: string;
+  /** the word up now: never on the guesser's screen (unless forehead mode) or the TV */
+  word: string | null;
+  /** which word is up (sent with Got it / Pass so a double tap counts once) */
+  n: number;
+  forehead: boolean;
+  got: string[];
+  passed: string[];
+  count: number;
+  scores: Record<string, number>;
+  history: { guesser: string; got: string[]; passed: string[] }[] | null;
 }

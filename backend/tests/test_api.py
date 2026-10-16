@@ -106,6 +106,7 @@ def test_games_catalog(client):
         "lists",
         "hangman",
         "fivedice",
+        "onhead",
     }
 
 

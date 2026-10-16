@@ -70,6 +70,7 @@ class RegistryTests(unittest.TestCase):
                 "lists",
                 "hangman",
                 "fivedice",
+                "onhead",
             },
         )
 
