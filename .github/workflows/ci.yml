@@ -66,7 +66,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Pull base images (ECR, mirror fallback)
-        run: bash scripts/pull-images.sh public.ecr.aws/docker/library/node:22-alpine public.ecr.aws/docker/library/python:3.13-slim
+        run: bash scripts/pull-images.sh public.ecr.aws/docker/library/node:22-alpine public.ecr.aws/docker/library/python:3.13-slim public.ecr.aws/docker/library/node:22-bookworm-slim
       - run: docker build -t snazzlebop:ci .
       - name: Scan image
         run: |
