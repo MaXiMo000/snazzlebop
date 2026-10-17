@@ -19,7 +19,7 @@ Only the latest version on `main` (the live deployment) is supported.
 - **Signed, scoped tokens.** Seat tokens are signed, tied to one room and seat, expire, and travel in
   the first WebSocket message, never in a URL. Accounts use scrypt password hashes and HttpOnly,
   SameSite=Strict session cookies.
-- **Abuse limits.** Rate limits per client on HTTP, room joins, sign-in and WebSocket messages, caps
+- **Abuse limits.** Rate limits per client on the API, room joins, sign-in and WebSocket messages, caps
   on connections, rooms, players and message size, and idle and age limits for rooms.
 - **Browser hardening.** A strict Content Security Policy (same origin only, no inline scripts or
   styles), plus framing, sniffing, referrer and cross-origin isolation headers, and HSTS in

@@ -326,8 +326,16 @@ class HttpRateLimit:
             return "auth"
         return "default"
 
+    @staticmethod
+    def static_file(scope: Scope) -> bool:
+        """The app's own files (page, scripts, styles, fonts, icons): a party of phones on one home
+        connection loads them all at once, and they are cheap and cacheable. Only the API is limited
+        (and the WebSocket handshake, which takes from the same bucket)."""
+        path = scope.get("path", "")
+        return scope.get("method", "GET") in ("GET", "HEAD") and not path.startswith(("/api/", "/ws/"))
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope.get("path") == "/healthz":
+        if scope["type"] != "http" or scope.get("path") == "/healthz" or self.static_file(scope):
             return await self.app(scope, receive, send)
         ip = client_ip(scope, self.hops, self.ip_header)
         name = self.bucket_for(scope)

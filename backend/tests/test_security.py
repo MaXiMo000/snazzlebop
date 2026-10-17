@@ -217,6 +217,16 @@ class MiddlewareTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(json.loads(body)["error"]["code"], "rate_limited")
         self.assertIn(b"retry-after", h)
 
+    async def test_static_files_are_not_rate_limited_but_the_api_is(self):
+        limiters = {k: RateLimiter(0, 0) for k in ("default", "create", "join")}
+        app = HttpRateLimit(ok_app, limiters, trusted_hops=0)
+        for path in ("/", "/r/ABCDE", "/assets/index-x.js", "/favicon.svg", "/manifest.webmanifest"):
+            s, _, _ = await run_asgi(app, {"method": "GET", "path": path})
+            self.assertEqual(s, 200, path)  # nine phones on one home connection all load the app
+        for scope in ({"method": "GET", "path": "/api/games"}, {"method": "POST", "path": "/"}):
+            s, _, _ = await run_asgi(app, scope)
+            self.assertEqual(s, 429, scope)
+
     async def test_health_check_not_rate_limited(self):
         limiters = {k: RateLimiter(0, 0) for k in ("default", "create", "join")}
         app = HttpRateLimit(ok_app, limiters, trusted_hops=0)
