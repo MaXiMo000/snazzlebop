@@ -65,10 +65,13 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           persist-credentials: false
+      - name: Pull base images (ECR, mirror fallback)
+        run: bash scripts/pull-images.sh public.ecr.aws/docker/library/node:22-alpine public.ecr.aws/docker/library/python:3.13-slim
       - run: docker build -t snazzlebop:ci .
       - name: Scan image
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock             public.ecr.aws/aquasecurity/trivy@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa             image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 snazzlebop:ci # v0.75.0
+          trivy=$(bash scripts/pull-images.sh public.ecr.aws/aquasecurity/trivy@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa) # v0.75.0
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$trivy" image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 snazzlebop:ci
       - name: Smoke test
         run: |
           # No proxy in front of the CI container, so trust no X-Forwarded-For hops.
@@ -126,6 +129,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           persist-credentials: false
+      - name: Pull base images (ECR, mirror fallback)
+        run: bash scripts/pull-images.sh public.ecr.aws/docker/library/node:22-alpine public.ecr.aws/docker/library/python:3.13-slim
       - name: Abuse suite (Locust) on a private Docker network
         run: bash scripts/loadtest/run.sh
 
