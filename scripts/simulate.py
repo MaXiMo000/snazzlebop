@@ -44,6 +44,9 @@ EXPECTED_BY_GAME = {
     "bomb": {"not_yours", "used"},
     "snakes": {"not_your_turn"},
     "ships": {"not_your_turn"},
+    # On a slow runner the 15 s choose clock can pick the word before the artist's pick arrives. The
+    # canvas, guessers and points checks still catch a refused stroke or guess.
+    "drawguess": {"wrong_phase"},
 }
 
 ALLOWED_KEYS = {
