@@ -34,6 +34,7 @@ ALLOWED_MESSAGE_TYPES = {
     *("shuffle", "ink", "inksync", "chat", "call", "avatar", "hush", "crown", "forfeit", "wheel"),
 }
 TEAM_MIN_PLAYERS = 4  # two teams of at least two
+HOST_GRACE = 300.0  # seconds a host may be away (app switched, phone locked) before someone takes over
 AUDIENCE_MESSAGE_TYPES = {"ping", "react", "predict", "trade", "mvp", "inksync", "chat", "call", "avatar"}
 # The loser's wheel: the host's group writes its own forfeits; these fill the wheel until they have.
 DEFAULT_FORFEITS = (
@@ -198,6 +199,9 @@ class Room:
     # The prank: how many scares each matching person has been sent (only they ever see their count).
     scares: dict[str, int] = field(default_factory=dict)
     last_active: float = 0.0
+    # When the host's last screen dropped (None while they're here). Switching apps or locking a phone
+    # drops the socket; the host keeps the room unless they stay away for HOST_GRACE seconds.
+    host_away: float | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     # Accounts (private: never in any view): seat -> account id, for coins, stats and power-ups.
     accounts: dict[str, int] = field(default_factory=dict)
@@ -538,6 +542,8 @@ class Hub:
             previous = room.conns.get(pid)
             room.conns[pid] = conn
             room.players[pid].connected = True
+            if pid == room.host_id:
+                room.host_away = None
             room.last_active = self.clock()
         if previous is not None:
             with contextlib.suppress(Exception):  # already gone
@@ -563,9 +569,7 @@ class Hub:
             if player:
                 player.connected = False
             if room.host_id == pid:
-                heir = next((p.id for p in room.players.values() if p.connected), None)
-                if heir:
-                    room.host_id = heir
+                room.host_away = self.clock()  # the ticker hands the room on only if they stay away
             room.last_active = self.clock()
         await self.broadcast(room)
 
@@ -1887,8 +1891,30 @@ class Hub:
         self._pay_coins(room, game, scores)
 
     # -- timers -------------------------------------------------------------
+    def _hand_over(self, room: Room) -> bool:
+        """The host has been gone longer than HOST_GRACE: the first connected player takes over."""
+        host = room.players.get(room.host_id)
+        if host is not None and host.connected:
+            room.host_away = None
+            return False
+        if room.host_away is None:  # e.g. a room restored after a restart, host not back yet
+            room.host_away = self.clock()
+        if self.clock() - room.host_away < HOST_GRACE:
+            return False
+        heir = next((p.id for p in room.players.values() if p.connected), None)
+        if heir is None:
+            return False  # nobody here to take over: keep waiting
+        room.host_id = heir
+        room.host_away = None
+        return True
+
     async def tick(self) -> None:
         for room in list(self.rooms.values()):
+            if not (host := room.players.get(room.host_id)) or not host.connected:
+                async with room.lock:
+                    moved = self._hand_over(room)
+                if moved:
+                    await self.broadcast(room)
             if room.phase == "market" and self.clock() >= room.market_until:
                 async with room.lock:
                     self._close_market(room)

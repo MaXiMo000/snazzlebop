@@ -8,7 +8,7 @@ import unittest
 from typing import Any
 
 from app.config import Settings
-from app.rooms import INTRO_SECONDS, Hub, HubError, clean_name
+from app.rooms import HOST_GRACE, INTRO_SECONDS, Hub, HubError, clean_name
 
 FAST = {
     "frenemy": {"rank": 5, "reveal": 2},
@@ -221,10 +221,26 @@ class HubTests(HubHarness):
         await hub.tick()
         self.assertEqual(room.game.phase, "guess")
 
-    async def test_host_transfers_on_disconnect_and_reconnect_replaces_connection(self):
+    async def test_host_keeps_the_room_through_a_short_drop(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 3)
+        await hub.disconnect(room, host, conns[host])  # switched apps, locked the phone
+        self.clock.t += HOST_GRACE - 1
+        await hub.tick()
+        self.assertEqual(room.host_id, host)
+        back = FakeConn()
+        await hub.connect(room, host, back)
+        self.clock.t += HOST_GRACE * 2
+        await hub.tick()
+        self.assertEqual(room.host_id, host)
+        self.assertIsNone(room.host_away)
+
+    async def test_host_hands_over_after_a_long_absence_and_reconnect_replaces_connection(self):
         hub = self.make_hub()
         room, host, conns = await self.party(hub, 3)
         await hub.disconnect(room, host, conns[host])
+        self.clock.t += HOST_GRACE + 1
+        await hub.tick()
         self.assertNotEqual(room.host_id, host)
         self.assertTrue(room.players[room.host_id].connected)
         # reconnect: old connection is closed, new one takes over
@@ -234,6 +250,26 @@ class HubTests(HubHarness):
         self.assertEqual(first.closed, 1000)
         await hub.disconnect(room, room.host_id, first)  # stale socket closing must not drop the new one
         self.assertTrue(room.players[room.host_id].connected)
+
+    async def test_a_restored_room_hands_over_if_the_host_never_returns(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 3)
+        room.host_away = None  # as after a restart: everyone offline, no clock started
+        room.players[host].connected = False
+        await hub.tick()
+        self.assertEqual(room.host_id, host)
+        self.clock.t += HOST_GRACE + 1
+        await hub.tick()
+        self.assertNotEqual(room.host_id, host)
+
+    async def test_nobody_takes_over_an_empty_room(self):
+        hub = self.make_hub()
+        room, host, conns = await self.party(hub, 2)
+        for pid, conn in conns.items():
+            await hub.disconnect(room, pid, conn)
+        self.clock.t += HOST_GRACE + 1
+        await hub.tick()
+        self.assertEqual(room.host_id, host)
 
     async def test_cannot_join_mid_game_and_idle_rooms_expire(self):
         hub = self.make_hub(room_idle_seconds=100)
