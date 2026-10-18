@@ -596,7 +596,7 @@ test("the newer games: first screens, a real move each, axe and targets", async 
       break;
     }
   }
-  await expect(host.getByText(/says there are at least/)).toBeVisible();
+  await expect(host.getByText(/on the table there are/)).toBeVisible();
   await back();
 
   // Split or Steal
