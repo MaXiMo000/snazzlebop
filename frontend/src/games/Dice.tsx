@@ -28,6 +28,35 @@ function bidText(qty: number, face: number): string {
   return `${qty} × ${FACE_NAME[face]}${qty === 1 ? "" : "s"}`;
 }
 
+/** Does this die count toward a bid on `face`? Ones are wild unless it's palifico (or the bid is on ones). */
+const counts = (d: number, face: number, wild: boolean) => d === face || (wild && face !== 1 && d === 1);
+
+/** What you know: how many of `face` you hold, and how many the rest of the table probably holds. */
+function estimate(view: DiceView, face: number) {
+  const wild = !view.palifico;
+  const mine = view.you.dice.filter((d) => counts(d, face, wild)).length;
+  const others = view.total - view.you.dice.length;
+  const likely = Math.round(mine + others * (wild && face !== 1 ? 1 / 3 : 1 / 6));
+  return { mine, others, likely };
+}
+
+/** A bid shown as dice: "at least 5 × ⚃". */
+function BidDice({ qty, face, wild }: { qty: number; face: number; wild: boolean }) {
+  return (
+    <span className="bid-dice">
+      <span className="bid-least">at least</span>
+      <span className="bid-qty">{qty}</span>
+      <span aria-hidden="true">×</span>
+      <Die face={face} />
+      {wild && face !== 1 && (
+        <span className="bid-wild">
+          (counting wild <Die face={1} />)
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function Dice({ view, you, receivedAt, send, tv = false }: Props) {
   const show = useShow();
   const myTurn = !tv && view.turn === you;
@@ -69,9 +98,14 @@ export function Dice({ view, you, receivedAt, send, tv = false }: Props) {
         <Card tone="stage" className="center">
           <p className="sign">Current bid</p>
           {view.bid ? (
-            <p className="lead space-top">
-              <b>{nameOf(view.players, view.bid.player)}</b> says there are at least <b>{bidText(view.bid.qty, view.bid.face)}</b>
-            </p>
+            <>
+              <p className="lead space-top">
+                <b>{nameOf(view.players, view.bid.player)}</b> says that among <b>all {view.total} dice</b> on the table there are
+              </p>
+              <p className="lead">
+                <BidDice qty={view.bid.qty} face={view.bid.face} wild={!view.palifico} />
+              </p>
+            </>
           ) : (
             <p className="lead space-top">No bid yet. {view.phase === "bid" ? "Opening bid coming up…" : ""}</p>
           )}
@@ -80,12 +114,13 @@ export function Dice({ view, you, receivedAt, send, tv = false }: Props) {
 
       {!tv && view.phase === "bid" && view.you.dice.length > 0 && (
         <Card tone="soft">
-          <h3>Your dice</h3>
+          <h3>Your secret dice</h3>
           <p className="dice-row" role="group" aria-label="Your dice">
             {view.you.dice.map((d, i) => (
-              <Die key={i} face={d} />
+              <Die key={i} face={d} hot={!!view.bid && counts(d, view.bid.face, !view.palifico)} />
             ))}
           </p>
+          {view.bid && <Hint view={view} face={view.bid.face} />}
           {myTurn && <BidForm view={view} send={send} />}
         </Card>
       )}
@@ -137,6 +172,17 @@ export function Dice({ view, you, receivedAt, send, tv = false }: Props) {
   );
 }
 
+/** Plain odds: what you hold for this face and what the hidden dice probably add. */
+function Hint({ view, face }: { view: DiceView; face: number }) {
+  const { mine, others, likely } = estimate(view, face);
+  return (
+    <p className="muted dice-hint">
+      You hold <b>{mine}</b> that count. The other {others} hidden {others === 1 ? "die" : "dice"} probably add about {likely - mine}, so about{" "}
+      <b>{likely}</b> is likely in all.
+    </p>
+  );
+}
+
 function BidForm({ view, send }: { view: DiceView; send: Props["send"] }) {
   // Default to the smallest legal raise: same count with the next face, or one more die of twos.
   // Palifico: the opening bid fixes the face (ones allowed), and every raise adds dice.
@@ -153,11 +199,23 @@ function BidForm({ view, send }: { view: DiceView; send: Props["send"] }) {
   const [face, setFace] = useState(start.face);
   const faces = pal ? (bid ? [bid.face] : [1, 2, 3, 4, 5, 6]) : [2, 3, 4, 5, 6];
   const legal = !bid || (pal ? qty > bid.qty && face === bid.face : qty > bid.qty || (qty === bid.qty && face > bid.face));
+  const mineFor = estimate(view, face).likely;
+  const risk = qty <= mineFor ? "looks safe" : qty === mineFor + 1 ? "is a bit of a stretch" : "is a big bluff";
+  const theirs = bid ? estimate(view, bid.face).likely : 0;
   return (
     <div className="stack-sm space-top">
       <p>
-        <b>Your move.</b> Raise the bid, or call it.
+        <b>Your move.</b> {bid ? "Raise the bid, or call it." : "Open the bidding: say how many of one face you think are on the whole table."}
       </p>
+      {bid && (
+        <p className="dice-advice">
+          {bid.qty > theirs
+            ? `${bidText(bid.qty, bid.face)} is more than the ${theirs} you’d expect: calling Liar! looks good.`
+            : bid.qty === theirs
+              ? `${bidText(bid.qty, bid.face)} is about what you’d expect: Spot on! could pay, or raise.`
+              : `${bidText(bid.qty, bid.face)} is fewer than the ${theirs} you’d expect: probably true, so raise.`}
+        </p>
+      )}
       <div className="row" role="group" aria-label="How many dice">
         <Btn size="small" variant="ghost" aria-label="One fewer" disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
           −
@@ -201,7 +259,14 @@ function BidForm({ view, send }: { view: DiceView; send: Props["send"] }) {
           </>
         )}
       </div>
-      {!legal && <p className="muted">{pal ? "Palifico: same face, more dice." : "Raise it: more dice, or the same number of a higher face."}</p>}
+      {legal ? (
+        <p className="muted">
+          Your bid {risk}: about {mineFor} {FACE_NAME[face]}
+          {mineFor === 1 ? "" : "s"} are likely.
+        </p>
+      ) : (
+        <p className="muted">{pal ? "Palifico: same face, more dice." : "Raise it: more dice, or the same number of a higher face."}</p>
+      )}
     </div>
   );
 }

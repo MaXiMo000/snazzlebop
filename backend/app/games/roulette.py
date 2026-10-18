@@ -69,6 +69,7 @@ class RouletteRoyale(Game):
     )
     min_players: ClassVar[int] = 3
     max_players: ClassVar[int] = 8
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"spins": ["6", "4", "8"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Bet on the wheel: red/black, odd/even, high/low (1:1), a dozen (2:1) or a number (35:1).",
         "Each spin one of you is secretly the House: they don't bet, they win what the table loses.",
@@ -77,6 +78,10 @@ class RouletteRoyale(Game):
         "Score: your final chips minus the 1,000 you started with.",
     )
     READING: ClassVar[frozenset[str]] = frozenset(["spin"])
+
+    @property
+    def n_rounds(self) -> int:
+        return self.option_int("spins")
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
@@ -194,7 +199,7 @@ class RouletteRoyale(Game):
         self.bump()
 
     def _next(self) -> None:
-        if self.round + 1 >= ROUNDS:
+        if self.round + 1 >= self.n_rounds:
             for pid in self.player_ids:
                 self.round_scores[pid] = self.chips[pid] - START_CHIPS
             self.phase = "final"
@@ -254,7 +259,7 @@ class RouletteRoyale(Game):
             "game": self.game_id,
             "phase": self.phase,
             "round": self.round + 1,
-            "rounds": ROUNDS,
+            "rounds": self.n_rounds,
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],
             "chips": dict(self.chips),

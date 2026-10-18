@@ -107,6 +107,7 @@ def test_games_catalog(client):
         "hangman",
         "fivedice",
         "onhead",
+        "imposter",
     }
 
 

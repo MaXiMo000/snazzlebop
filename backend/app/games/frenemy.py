@@ -21,6 +21,7 @@ class FrenemyRadar(Game):
     )
     min_players: ClassVar[int] = 3
     max_players: ClassVar[int] = 8
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"rankings": ["3", "2", "5"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Each round names a trait, like 'most likely to survive a zombie movie'.",
         "Secretly rank EVERYONE on it, yourself included, then lock in.",
@@ -32,17 +33,21 @@ class FrenemyRadar(Game):
 
     ROUNDS = 3
 
+    @property
+    def n_rounds(self) -> int:
+        return self.option_int("rankings")
+
     @classmethod
     def default_timings(cls) -> dict[str, float]:
         return {"rank": 75.0, "reveal": 25.0}
 
     def start(self) -> None:
-        self.prompts = [PROMPTS[i] for i in self.deal("prompts", len(PROMPTS), self.ROUNDS, kind="frenemy")]
+        self.prompts = [PROMPTS[i] for i in self.deal("prompts", len(PROMPTS), self.n_rounds, kind="frenemy")]
         self.round = 0
         # rankings[round][ranker_id] = ordered list of player ids, index 0 = "most"
-        self.rankings: list[dict[str, list[str]]] = [{} for _ in range(self.ROUNDS)]
+        self.rankings: list[dict[str, list[str]]] = [{} for _ in range(self.n_rounds)]
         # predictions[round][player] = where they think the room will rank them (secret until the reveal)
-        self.predictions: list[dict[str, int]] = [{} for _ in range(self.ROUNDS)]
+        self.predictions: list[dict[str, int]] = [{} for _ in range(self.n_rounds)]
         self.results: list[dict[str, dict[str, float]]] = []
         self.final: dict[str, Any] | None = None
         self._enter_rank()
@@ -64,7 +69,7 @@ class FrenemyRadar(Game):
         self.bump()
 
     def _enter_next(self) -> None:
-        if self.round + 1 >= self.ROUNDS:
+        if self.round + 1 >= self.n_rounds:
             self.final = self._score_final()
             self.phase = "final"
             self.deadline = None
@@ -213,7 +218,7 @@ class FrenemyRadar(Game):
             "game": self.game_id,
             "phase": self.phase,
             "round": self.round + 1,
-            "rounds": self.ROUNDS,
+            "rounds": self.n_rounds,
             "prompt": self.prompts[self.round],
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],

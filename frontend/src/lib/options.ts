@@ -1,5 +1,14 @@
 /** What the host's game options say in the lobby and on the intro screen (keys and values from the server). */
 export const OPTION_LABELS: Record<string, Record<string, string>> = {
+  // How many rounds: one key per game (keys are shared across games, so each game names its own).
+  runs: { "5": "5 runs", "3": "3 runs (quick)", "8": "8 runs (long)" },
+  deals: { "5": "5 deals", "3": "3 deals (quick)", "7": "7 deals (long)" },
+  bets: { "6": "6 questions", "4": "4 questions (quick)", "8": "8 questions (long)" },
+  spins: { "6": "6 spins", "4": "4 spins (quick)", "8": "8 spins (long)" },
+  picks: { "8": "8 rounds", "5": "5 rounds (quick)", "12": "12 rounds (long)" },
+  rankings: { "3": "3 rankings", "2": "2 rankings (quick)", "5": "5 rankings (long)" },
+  minds: { "6": "6 categories", "4": "4 categories (quick)", "8": "8 categories (long)" },
+  items: { "5": "5 rounds", "3": "3 rounds (quick)", "7": "7 rounds (long)" },
   goes: {
     "1": "Everyone guesses once",
     "2": "Everyone guesses twice",

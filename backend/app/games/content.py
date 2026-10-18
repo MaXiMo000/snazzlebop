@@ -38,6 +38,28 @@ def _dilemmas(file: str) -> list[dict[str, str]]:
 RATHER: list[dict[str, str]] = _dilemmas("rather.txt")
 
 
+def _imposter_words(file: str) -> list[dict[str, str]]:
+    """Imposter cards ("category | secret word | close word" per line), checked on import."""
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for n, raw in enumerate((Path(__file__).with_name(file)).read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [x.strip() for x in line.split(" | ")]
+        if len(parts) != 3 or not all(0 < len(x) <= 24 for x in parts) or parts[1] == parts[2]:
+            raise ValueError(f"{file}:{n}: expected a category and two different words of 1-24 characters")
+        if parts[1].casefold() in seen:
+            raise ValueError(f"{file}:{n}: duplicate word")
+        seen.add(parts[1].casefold())
+        out.append({"category": parts[0], "word": parts[1], "close": parts[2]})
+    return out
+
+
+# Imposter: the crew's secret word and the Undercover twist's close word (imposter.txt).
+IMPOSTER_WORDS: list[dict[str, str]] = _imposter_words("imposter.txt")
+
+
 def _lines(file: str, most: int) -> list[str]:
     """One item per line (comments and blanks skipped), each at most `most` characters, no repeats."""
     out: list[str] = []

@@ -3,7 +3,7 @@
 Each round, after a short "get ready", the pot starts climbing: value(t) = 20 x 1.15^t points. Tap
 CASH OUT to bank the value at the moment the server gets your tap. Somewhere between 4 and 24
 seconds a hidden bomb goes off: anyone still in gets nothing. The round's biggest cash-out takes a
-+50 bonus for nerve. Five rounds.
++50 bonus for nerve. Five rounds by default (the host can pick 3 or 8).
 
 While everyone gets ready, two dirty tricks (paid for from this game's points):
 - Insurance (30): if you blow up this round, you still get 25% of what the pot had reached.
@@ -14,7 +14,8 @@ Taps are credited at the moment the player tapped (the client sends the time it 
 short window: the claim can only be up to TAP_LAG seconds before the server got it, never after. So
 phone lag doesn't cost points or turn an in-time tap into a boom, and nobody can claim more than lag.
 
-Secrecy: the bomb time lives only here until it goes off. The run phase deliberately has no public
+Secrecy: the bomb time lives only here until it goes off, and during the run each player sees only
+their own cash-out (others' stay hidden until the bang). The run phase deliberately has no public
 deadline (a countdown would give the bomb away); clients animate the value from `started_ago`.
 """
 
@@ -44,17 +45,22 @@ class ChickenRun(Game):
     title: ClassVar[str] = "Chicken Run"
     blurb: ClassVar[str] = (
         "The pot grows every second. Cash out before the hidden bomb goes off, or lose the lot. "
-        "Twenty seconds of screaming, five times over."
+        "Twenty seconds of screaming, round after round."
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"runs": ["5", "3", "8"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "The pot climbs every second. Tap CASH OUT to bank what it's worth right then.",
         "A hidden bomb goes off somewhere between 4 and 24 seconds. Still in? You get nothing.",
-        "Biggest cash-out of the round gets +50 for nerve.",
+        "Nobody sees who's out until the bang. Biggest cash-out of the round gets +50 for nerve.",
         "Before each run: buy insurance (keep 25% if you blow up), or once a game shorten a rival's fuse.",
     )
     READING: ClassVar[frozenset[str]] = frozenset(["boom", "ready"])
+
+    @property
+    def n_rounds(self) -> int:
+        return self.option_int("runs")
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
@@ -132,7 +138,7 @@ class ChickenRun(Game):
         self.bump()
 
     def _next(self) -> None:
-        if self.round + 1 >= ROUNDS:
+        if self.round + 1 >= self.n_rounds:
             self.phase = "final"
             self.deadline = None
             self.finished = True
@@ -220,13 +226,14 @@ class ChickenRun(Game):
             "game": self.game_id,
             "phase": self.phase,
             "round": self.round + 1,
-            "rounds": ROUNDS,
+            "rounds": self.n_rounds,
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],
             "base": BASE,
             "growth": GROWTH,
             "started_ago": round(self.elapsed(), 3) if self.phase == "run" else None,
-            "cashed": {p: dict(c) for p, c in self.cashed.items()},  # who's out, and for how much: public
+            # Who's out stays secret until the bang (or you could just cash out a beat after a rival).
+            "cashed": {p: dict(c) for p, c in self.cashed.items() if self.phase != "run" or p == pid},
             "insured": sorted(self.insured),  # public: everyone can see who's nervous
             "costs": {"insure": INSURANCE_COST, "fuse": FUSE_COST},
             "you": {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Btn, Card, ShowHead, nameOf } from "../components/ui";
 import { useOnChange, useShow } from "../components/fx";
 import { sfx } from "../lib/sfx";
@@ -57,6 +58,72 @@ function Grid({
         );
       })}
     </div>
+  );
+}
+
+const SHIP_NAMES = ["Battleship", "Cruiser", "Submarine", "Destroyer", "Patrol boat"];
+const across = (ship: number[]) => ship.length < 2 || ship[1]! - ship[0]! === 1;
+
+/** Your own waters while placing: tap a ship to pick it up, tap a square to drop it there (its
+ *  top-left end goes on that square), and turn it with the button. The server checks every move. */
+function PlaceGrid({ ships, size, send }: { ships: number[][]; size: number; send: Props["send"] }) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const owner = new Map<number, number>();
+  ships.forEach((ship, i) => ship.forEach((c) => owner.set(c, i)));
+  const move = (ship: number, cell: number, flat: boolean) => {
+    sfx.tick();
+    send({ t: "act", a: "move", ship, cell, across: flat });
+  };
+  const tap = (cell: number) => {
+    const on = owner.get(cell);
+    if (picked === null || (on !== undefined && on !== picked)) {
+      setPicked(on ?? null);
+      return;
+    }
+    if (on === picked) {
+      setPicked(null);
+      return;
+    }
+    move(picked, cell, across(ships[picked]!));
+  };
+  const name = (i: number) => `${SHIP_NAMES[i] ?? "Ship"} (${ships[i]!.length})`;
+  return (
+    <>
+      <div className="sh-grid place" role="group" aria-label="Your fleet: pick a ship, then a square">
+        {Array.from({ length: size * size }, (_, cell) => {
+          const on = owner.get(cell);
+          const cls = ["sh-cell", on !== undefined ? `ship s${on}` : "", on !== undefined && on === picked ? "picked" : ""].join(" ");
+          const label =
+            on !== undefined
+              ? `${cellName(cell, size)}, ${name(on)}${on === picked ? ", picked up" : ""}`
+              : picked !== null
+                ? `Move the ${name(picked)} to ${cellName(cell, size)}`
+                : `${cellName(cell, size)}, water`;
+          return <button key={cell} type="button" className={cls} aria-label={label} aria-pressed={on !== undefined ? on === picked : undefined} onClick={() => tap(cell)} />;
+        })}
+      </div>
+      <p className="muted center sh-hint" role="status">
+        {picked === null ? "Tap a ship to move it." : `${name(picked)} picked up: tap a square to put it there.`}
+      </p>
+      <div className="row center sh-buttons">
+        <Btn variant="ghost" disabled={picked === null} onClick={() => picked !== null && move(picked, ships[picked]![0]!, !across(ships[picked]!))}>
+          🔄 Turn it
+        </Btn>
+        <Btn
+          variant="ghost"
+          onClick={() => {
+            setPicked(null);
+            sfx.rattle();
+            send({ t: "act", a: "shuffle" });
+          }}
+        >
+          🔀 Shuffle
+        </Btn>
+        <Btn variant="go" onClick={() => send({ t: "act", a: "ready" })}>
+          ⚓ Lock it in
+        </Btn>
+      </div>
+    </>
   );
 }
 
@@ -131,24 +198,12 @@ export function Ships({ view, you, receivedAt, send, tv = false }: Props) {
         <Card tone="soft" className="sh-place">
           <h3>Your fleet</h3>
           <p className="muted">
-            {view.boards[mine]!.ready ? "Locked in. Waiting for the other side…" : "Shuffle until you like it, then lock it in. The enemy can’t see this."}
+            {view.boards[mine]!.ready ? "Locked in. Waiting for the other side…" : "Move your ships where you want them, then lock in. The enemy can’t see this."}
           </p>
-          <Grid board={view.boards[mine]!} size={view.size} label="Your fleet" last={null} />
-          {!view.boards[mine]!.ready && (
-            <div className="row center sh-buttons">
-              <Btn
-                variant="ghost"
-                onClick={() => {
-                  sfx.rattle();
-                  send({ t: "act", a: "shuffle" });
-                }}
-              >
-                🔀 Shuffle
-              </Btn>
-              <Btn variant="go" onClick={() => send({ t: "act", a: "ready" })}>
-                ⚓ Lock it in
-              </Btn>
-            </div>
+          {view.boards[mine]!.ready ? (
+            <Grid board={view.boards[mine]!} size={view.size} label="Your fleet" last={null} />
+          ) : (
+            <PlaceGrid ships={view.boards[mine]!.ships ?? []} size={view.size} send={send} />
           )}
         </Card>
       )}

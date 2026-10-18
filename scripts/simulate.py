@@ -344,6 +344,20 @@ for _phase in ("ready", "play", "result", "final"):
         "scores",
         "history",
     }
+for _phase in ("cards", "clue", "vote", "guess", "result", "final"):
+    ALLOWED_KEYS[("imposter", _phase)] = {"game", "phase", "round", "rounds", "remaining", "players"} | {
+        "twist",
+        "category",
+        "order",
+        "turn",
+        "clues",
+        "voted",
+        "accused",
+        "scores",
+        "you",
+        "result",
+        "history",
+    }
 for _phase in ("pass", "boom", "final"):
     ALLOWED_KEYS[("bomb", _phase)] = {"game", "phase", "round", "remaining", "players"} | {
         "order",
@@ -1256,7 +1270,19 @@ async def play_ships(host: Bot, bots: list[Bot], rng: random.Random) -> None:
     sides = g["sides"]
     for side in (0, 1):
         captain = by_id[sides[side][0]]
+        before = captain.state["game"]["boards"][side]["ships"]  # type: ignore[index]
         await captain.send(t="act", a="shuffle")
+        # Move the patrol boat to the first free spot (top-left square, lying across).
+        await captain.until(
+            lambda st, s=side, b=before: st["game"]["boards"][s]["ships"] != b, "ships shuffled"
+        )
+        ships = captain.state["game"]["boards"][side]["ships"]  # type: ignore[index]
+        taken = {c for sh in ships[:-1] for c in sh}
+        spot = next(c for c in range(64) if c % 8 < 7 and not {c, c + 1} & taken)
+        await captain.send(t="act", a="move", ship=len(ships) - 1, cell=spot, across=True)
+        await captain.until(
+            lambda st, s=side, c=spot: st["game"]["boards"][s]["ships"][-1] == [c, c + 1], "ships moved"
+        )
         await captain.send(t="act", a="ready")
     await all_until(bots, game_is("ships", "battle"), "ships battle")
     fleets = [by_id[sides[side][0]].state["game"]["boards"][side]["ships"] for side in (0, 1)]  # type: ignore[index]
@@ -1469,6 +1495,67 @@ async def play_rather(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") == "rather" and gg["phase"] == "pick":
                 check("result" not in gg, f"rather: {b.name} saw a result early")
+
+
+async def play_imposter(host: Bot, bots: list[Bot], rng: random.Random) -> None:
+    """Every bot gives a clue on its turn, the crew mostly votes for the imposter, and a caught imposter
+    sometimes knows the word. Points must follow from the votes; before each result no frame may give
+    the imposter the word (Undercover: only their close word), name the imposter, or carry a vote."""
+    start = {b.pid: len(b.raw) for b in bots}
+    rounds = host.state["game"]["rounds"]  # type: ignore[index]
+    undercover = host.state["game"]["twist"] == "undercover"  # type: ignore[index]
+    want = {b.pid: 0 for b in bots}
+    for rnd in range(1, rounds + 1):
+        await all_until(bots, game_is("imposter", "cards", rnd), f"imposter cards {rnd}")
+        words = {b.pid: b.state["game"]["you"]["word"] for b in bots}  # type: ignore[index]
+        told = [b.pid for b in bots if b.state["game"]["you"]["imposter"]]  # type: ignore[index]
+        if undercover:
+            check(not told, "imposter: the Undercover imposter was told")
+            common = max(set(words.values()), key=list(words.values()).count)
+            imp = next(p for p, w in words.items() if w != common)
+        else:
+            check(len(told) == 1, f"imposter: {len(told)} players were told they're the imposter")
+            imp = told[0]
+            check(words[imp] is None, "imposter: the imposter got the word")
+            common = next(w for p, w in words.items() if p != imp)
+        check(
+            all(w == common for p, w in words.items() if p != imp), "imposter: the crew got different words"
+        )
+        await skip(host)
+        await all_until(bots, game_is("imposter", "clue", rnd), f"imposter clues {rnd}")
+        for n in range(len(host.state["game"]["order"])):  # type: ignore[index]
+            await all_until(bots, lambda st, k=n: len(st["game"]["clues"]) == k, f"imposter clue {rnd}.{n}")
+            g = host.state["game"]  # type: ignore[index]
+            if g["phase"] != "clue":
+                break
+            speaker = next(b for b in bots if b.pid == g["turn"])
+            await speaker.send(t="act", a="clue", text=f"hint{'abcdefghijklmnopqrstuvwx'[n]}")
+        await all_until(bots, game_is("imposter", "vote", rnd), f"imposter vote {rnd}")
+        votes = {}
+        for b in bots:
+            others = [o.pid for o in bots if o.pid != b.pid]
+            votes[b.pid] = imp if b.pid != imp and rng.random() < 0.7 else rng.choice(others)
+            await b.send(t="act", a="vote", target=votes[b.pid])
+        await all_until(bots, lambda st: st["game"]["phase"] in ("guess", "result"), f"imposter count {rnd}")
+        if host.state["game"]["phase"] == "guess":  # type: ignore[index]
+            check(not undercover, "imposter: an Undercover imposter got a last guess")
+            guess = common if rng.random() < 0.4 else "no idea"
+            await next(b for b in bots if b.pid == imp).send(t="act", a="guess", text=guess)
+        await all_until(bots, game_is("imposter", "result", rnd), f"imposter result {rnd}")
+        r = host.state["game"]["result"]  # type: ignore[index]
+        check(r["imposter"] == imp and r["votes"] == votes, "imposter: the result doesn't match the round")
+        for p, gain in r["gains"].items():
+            want[p] += gain
+        check(host.state["game"]["scores"] == want, f"imposter: scores != {want}")  # type: ignore[index]
+        await skip(host)
+    for b in bots:
+        for raw in b.raw[start[b.pid] :]:
+            gg = json.loads(raw).get("game") or {}
+            if gg.get("game") != "imposter" or gg["phase"] in ("result", "final"):
+                continue
+            check("result" not in gg and '"votes"' not in json.dumps(gg), f"imposter: {b.name} saw a result early")
+            if gg["phase"] != "guess":
+                check(gg["accused"] is None, f"imposter: {b.name} saw who was accused early")
 
 
 async def play_four(host: Bot, bots: list[Bot], rng: random.Random) -> None:
@@ -3005,7 +3092,16 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
         if len(bots) >= 3:
             games.insert(6, "blackjack-tournament")
         games += ["bomb", "reflex", "snakes", "ships"]
-        games += ["rather", "four", "lists", "hangman", "fivedice", "onhead"]
+        games += [
+            "rather",
+            "four",
+            "lists",
+            "hangman",
+            "fivedice",
+            "onhead",
+            "imposter",
+            "imposter-undercover",
+        ]
         games += ["trivia", "trivia-fastest", "trivia-survival", "trivia-wager", "trivia-draft"]
         if len(bots) >= 4:
             games.append("mafia")
@@ -3035,6 +3131,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await host.send(t="start", game=game, options={"mode": "tournament"})
             elif name == "crossword-teams":
                 await host.send(t="start", game=game, options={"mode": "teams"})
+            elif name == "imposter-undercover":
+                await host.send(t="start", game=game, options={"twist": "undercover", "words": "1"})
             elif game == "trivia" and not name.endswith("-pairs"):
                 style = name.split("-")[1] if "-" in name else "classic"
                 await host.send(t="start", game=game, options={"style": style, "questions": "5"})
@@ -3120,6 +3218,8 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 await play_fivedice(host, bots, rng)
             elif game == "onhead":
                 await play_onhead(host, bots, rng)
+            elif game == "imposter":
+                await play_imposter(host, bots, rng)
             else:
                 await play_mural(host, bots, rng)
             await all_until(bots, lambda s: s["room"]["phase"] == "results", f"{game} results")
@@ -3175,6 +3275,7 @@ async def run(base: str, n_bots: int, seed: int, only: list[str] | None = None) 
                 "hangman",
                 "fivedice",
                 "onhead",
+                "imposter",
             ):
                 want = host.state["game"]["scores"]  # type: ignore[index]
                 got = {pid: after[pid] - before[pid] for pid in after}

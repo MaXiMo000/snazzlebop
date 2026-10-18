@@ -155,6 +155,10 @@ class Game(ABC):
         self.round_scores: dict[str, int] = {p.id: 0 for p in players}
 
     # --- helpers -----------------------------------------------------------
+    def option_int(self, key: str) -> int:
+        """A numeric host option (the hub only lets through values listed in OPTIONS)."""
+        return int(self.options.get(key, self.OPTIONS[key][0]))
+
     @classmethod
     def default_timings(cls) -> dict[str, float]:
         return {}

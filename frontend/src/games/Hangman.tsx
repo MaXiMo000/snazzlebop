@@ -140,7 +140,7 @@ function Word({ view }: { view: HangmanView }) {
   }
   const shown = view.pattern.map((c) => c ?? "_").join("").replace(/_/g, " blank ");
   return (
-    <p className="hm-word">
+    <p className={`hm-word ${sizeClass(Math.max(...words.map((w) => w.length)))}`}>
       <span className="sr-only">The word: {shown}</span>
       {words.map((w, i) => (
         <span key={i} className="hm-chunk" aria-hidden="true">
@@ -153,6 +153,14 @@ function Word({ view }: { view: HangmanView }) {
       ))}
     </p>
   );
+}
+
+/** Tiles shrink so the longest word fits on one line where it can (it wraps as a last resort). */
+function sizeClass(longest: number): string {
+  if (longest > 16) return "len-24";
+  if (longest > 11) return "len-16";
+  if (longest > 7) return "len-11";
+  return "";
 }
 
 function Keyboard({ view, send, active }: { view: HangmanView; send: Props["send"]; active: boolean }) {

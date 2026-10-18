@@ -4,7 +4,8 @@ Each round asks a question with a whole-number answer. Everyone answers in secre
 on a board, sorted, with a "lower than all of them" slot in front. Then everyone places two free
 chips on whichever answers they think are closest *without going over*. Odds grow from 2:1 in the
 middle of the board to 5:1 at the edges; "lower than all" pays 6:1. Each chip on the winning slot
-pays 100 x its odds, and whoever wrote the winning answer gets +100. Six rounds.
+pays 100 x its odds, and whoever wrote the winning answer gets +100. Six rounds by default (the host
+can pick 4 or 8).
 
 The last question is ALL IN: instead of free chips, everyone wagers their own points on one slot (up
 to everything they've won this game, or 200 if that's less). Right: the wager times the odds. Wrong:
@@ -45,6 +46,7 @@ class WagerWits(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"bets": ["6", "4", "8"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "A question with a number for an answer. Everyone writes a guess.",
         "The guesses go on a board. Bet your 2 free chips on the one closest WITHOUT going over "
@@ -54,13 +56,17 @@ class WagerWits(Game):
     )
     READING: ClassVar[frozenset[str]] = frozenset(["reveal"])
 
+    @property
+    def n_rounds(self) -> int:
+        return self.option_int("bets")
+
     @classmethod
     def default_timings(cls) -> dict[str, float]:
         return {"answer": 45.0, "bet": 35.0, "reveal": 15.0}
 
     def start(self) -> None:
         self.questions = [
-            WITS_QUESTIONS[i] for i in self.deal("questions", len(WITS_QUESTIONS), ROUNDS, kind="wits")
+            WITS_QUESTIONS[i] for i in self.deal("questions", len(WITS_QUESTIONS), self.n_rounds, kind="wits")
         ]
         self.history: list[dict[str, Any]] = []
         self.round = 0
@@ -121,7 +127,7 @@ class WagerWits(Game):
         self.bump()
 
     def _next(self) -> None:
-        if self.round + 1 >= ROUNDS:
+        if self.round + 1 >= self.n_rounds:
             self.phase = "final"
             self.deadline = None
             self.finished = True
@@ -166,7 +172,7 @@ class WagerWits(Game):
 
     @property
     def all_in(self) -> bool:
-        return self.round == ROUNDS - 1
+        return self.round == self.n_rounds - 1
 
     def max_wager(self, pid: str) -> int:
         return max(self.round_scores.get(pid, 0), ALL_IN_FLOOR)
@@ -199,7 +205,7 @@ class WagerWits(Game):
             "game": self.game_id,
             "phase": self.phase,
             "round": self.round + 1,
-            "rounds": ROUNDS,
+            "rounds": self.n_rounds,
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],
             "question": {"q": q["q"], "unit": q["unit"]},  # never the answer before the reveal

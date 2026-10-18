@@ -7,7 +7,7 @@ export interface PlayerInfo {
 }
 
 export interface GameCard {
-  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists" | "hangman" | "fivedice" | "onhead";
+  id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists" | "hangman" | "fivedice" | "onhead" | "imposter";
   title: string;
   blurb: string;
   min_players: number;
@@ -378,6 +378,7 @@ export type GameView =
   | HangmanView
   | FiveDiceView
   | OnHeadView
+  | ImposterView
   | JackpotView;
 
 export interface Highlight {
@@ -1389,6 +1390,43 @@ export interface RatherView {
   you: { pick: number | null; guess: number | null; hot: boolean } | null;
   result?: RatherResult;
   history?: (RatherResult & { a: string; b: string })[];
+}
+
+export interface ImposterResult {
+  imposter: string;
+  word: string;
+  /** the Undercover twist's close word (the imposter's), else null */
+  close: string | null;
+  votes: Record<string, string>;
+  accused: string | null;
+  caught: boolean;
+  guess: string | null;
+  stole: boolean;
+  gains: Record<string, number>;
+}
+
+export interface ImposterView {
+  game: "imposter";
+  phase: "cards" | "clue" | "vote" | "guess" | "result" | "final";
+  round: number;
+  rounds: number;
+  remaining: number | null;
+  players: { id: string; name: string }[];
+  twist: "classic" | "undercover";
+  category: string;
+  /** clue order (twice round with two clues each) */
+  order: string[];
+  turn: string | null;
+  /** given so far; "" = ran out of time */
+  clues: { by: string; text: string }[];
+  /** who has voted (never for whom) */
+  voted: string[];
+  /** the caught imposter, while they guess */
+  accused: string | null;
+  scores: Record<string, number>;
+  you: { word: string | null; imposter: boolean; vote: string | null } | null;
+  result?: ImposterResult;
+  history?: (ImposterResult & { category: string; clues: { by: string; text: string }[] })[];
 }
 
 export interface FourView {

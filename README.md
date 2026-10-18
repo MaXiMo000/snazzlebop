@@ -53,6 +53,7 @@ code, no sign-up needed. Put the show on a TV and play from your phones.
 | **Hangman** | Hangman (everyone sets a word in turn) | 2-8 |
 | **Five Dice** | Yahtzee (everyone plays their own card at once) | 1-8 |
 | **On Your Head** | The forehead guessing game (tilt to answer) | 2-8 |
+| **Imposter** | The word imposter game (one player has no word, or a close one) | 3-8 |
 | **Codewords** | Two-team word association | 4-8 |
 
 Many games have a **Teams** switch: two teams, combined scores, with official partner rules where the

@@ -38,6 +38,7 @@ class LowestLonely(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"picks": ["8", "5", "12"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Everyone secretly picks a number from 1 to 20.",
         "The LOWEST number that NOBODY ELSE picked wins the pot.",
@@ -45,6 +46,10 @@ class LowestLonely(Game):
         "No lonely number? The pot rolls over. The last round pays double.",
     )
     READING: ClassVar[frozenset[str]] = frozenset(["reveal"])
+
+    @property
+    def n_rounds(self) -> int:
+        return self.option_int("picks")
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
@@ -57,7 +62,7 @@ class LowestLonely(Game):
         self._begin()
 
     def pot(self) -> int:
-        base = POT * (LAST_ROUND_MULTIPLIER if self.round == ROUNDS - 1 else 1)
+        base = POT * (LAST_ROUND_MULTIPLIER if self.round == self.n_rounds - 1 else 1)
         return base + self.rollover
 
     def _begin(self) -> None:
@@ -74,7 +79,7 @@ class LowestLonely(Game):
             self.add_points(winner, pot)
             self.rollover = 0
         else:
-            self.rollover = pot if self.round < ROUNDS - 1 else 0
+            self.rollover = pot if self.round < self.n_rounds - 1 else 0
         self.result = {"picks": dict(self.picks), "winner": winner, "pot": pot}
         self.history.append(self.result)
         self.phase = "reveal"
@@ -103,7 +108,7 @@ class LowestLonely(Game):
             return
         if self.phase == "pick":
             self._reveal()
-        elif self.round + 1 >= ROUNDS:
+        elif self.round + 1 >= self.n_rounds:
             self.phase = "final"
             self.deadline = None
             self.finished = True
@@ -124,7 +129,7 @@ class LowestLonely(Game):
             "game": self.game_id,
             "phase": self.phase,
             "round": self.round + 1,
-            "rounds": ROUNDS,
+            "rounds": self.n_rounds,
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],
             "top": TOP,

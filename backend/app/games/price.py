@@ -43,6 +43,7 @@ class PriceIsWeird(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"items": ["5", "3", "7"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Guess the price of a weird item. Closest WITHOUT going over wins the pot.",
         "Then a sealed chaos spin multiplies the real price (x0.5, x1 or x2): it was locked in "
@@ -55,13 +56,17 @@ class PriceIsWeird(Game):
 
     ROUNDS = 5
 
+    @property
+    def n_rounds(self) -> int:
+        return self.option_int("items")
+
     @classmethod
     def default_timings(cls) -> dict[str, float]:
         return {"guess": 35.0, "reveal": 15.0, "duel": 18.0}
 
     def start(self) -> None:
         # Single items for rounds 1-4, a 3-prize Showcase for the last, and a pair per Price Duel.
-        n_single, n_duels = self.ROUNDS - 1, self.ROUNDS - 1
+        n_single, n_duels = self.n_rounds - 1, self.n_rounds - 1
         dealt = [
             ITEMS[i]
             for i in self.deal("items", len(ITEMS), n_single + SHOWCASE_SIZE + 2 * n_duels, kind="price")
@@ -84,7 +89,7 @@ class PriceIsWeird(Game):
         self.chips = {p.id: CHIPS_PER_GAME for p in self.players}
         self.rollover = 0
         self.history: list[dict[str, Any]] = []
-        self.rigged_round = self.rng.randrange(1, self.ROUNDS - 1)  # never the opener or the final
+        self.rigged_round = self.rng.randrange(1, self.n_rounds - 1)  # never the opener or the final
         self.sabotage_left = {p.id: 1 for p in self.players}
         self._begin_round()
 
@@ -95,7 +100,7 @@ class PriceIsWeird(Game):
     @property
     def is_final(self) -> bool:
         """The last item is Double or Nothing."""
-        return self.round == self.ROUNDS - 1
+        return self.round == self.n_rounds - 1
 
     # -- round lifecycle ----------------------------------------------------
     def _begin_round(self) -> None:
@@ -168,7 +173,7 @@ class PriceIsWeird(Game):
         self.bump()
 
     def _next(self) -> None:
-        if self.round + 1 >= self.ROUNDS:
+        if self.round + 1 >= self.n_rounds:
             self.phase = "final"
             self.deadline = None
             self.finished = True
@@ -286,7 +291,7 @@ class PriceIsWeird(Game):
             "game": self.game_id,
             "phase": self.phase,
             "round": self.round + 1,
-            "rounds": self.ROUNDS,
+            "rounds": self.n_rounds,
             "remaining": self.remaining(),
             "item": {"name": item["name"], "blurb": item["blurb"], "emoji": item["emoji"]},
             "commit": self.commit,

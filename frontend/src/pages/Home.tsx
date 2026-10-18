@@ -55,7 +55,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Thirty-six games. One room code. No sign-up needed.</p>
+        <p className="lead">Thirty-seven games. One room code. No sign-up needed.</p>
         <p className="muted">Grab up to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
 
@@ -273,6 +273,9 @@ export function Home({ go }: { go: (path: string) => void }) {
           </li>
           <li>
             <b>On Your Head</b> (classic): phone on your forehead, friends shout clues. Tilt to answer.
+          </li>
+          <li>
+            <b>Imposter</b> (classic): everyone gets the secret word but one. Give a clue, then vote out the faker.
           </li>
         </ul>
       </Card>

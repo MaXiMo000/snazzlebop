@@ -33,6 +33,7 @@ class TelepathyTax(Game):
     )
     min_players: ClassVar[int] = 3
     max_players: ClassVar[int] = 8
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"minds": ["6", "4", "8"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Each round: a category and six answers. Secretly pick one.",
         "You score 100 for every other player who picked the same thing as you.",
@@ -44,6 +45,10 @@ class TelepathyTax(Game):
 
     ROUNDS = 6
 
+    @property
+    def n_rounds(self) -> int:
+        return self.option_int("minds")
+
     @classmethod
     def default_timings(cls) -> dict[str, float]:
         return {"pick": 35.0, "reveal": 15.0}
@@ -51,13 +56,13 @@ class TelepathyTax(Game):
     def start(self) -> None:
         self.categories = [
             TELEPATHY_CATEGORIES[i]
-            for i in self.deal("categories", len(TELEPATHY_CATEGORIES), self.ROUNDS, kind="telepathy")
+            for i in self.deal("categories", len(TELEPATHY_CATEGORIES), self.n_rounds, kind="telepathy")
         ]
         self.round = 0
         self.results: list[dict[str, Any]] = []
         self.final: dict[str, Any] | None = None
         self.streaks: dict[str, int] = {p.id: 0 for p in self.players}
-        self.contrarian_round = self.rng.randrange(1, self.ROUNDS - 1)  # never the first or last
+        self.contrarian_round = self.rng.randrange(1, self.n_rounds - 1)  # never the first or last
         self._enter_pick()
 
     @property
@@ -107,7 +112,7 @@ class TelepathyTax(Game):
         self.bump()
 
     def _next(self) -> None:
-        if self.round + 1 >= self.ROUNDS:
+        if self.round + 1 >= self.n_rounds:
             self.final = {"history": self.results, "mind_meld": self._mind_meld()}
             self.phase = "final"
             self.deadline = None
@@ -166,12 +171,12 @@ class TelepathyTax(Game):
         return f"{others.count(top)} of the picks so far are on {name}."
 
     def view_for(self, pid: str) -> dict[str, Any]:
-        cat = self.categories[min(self.round, self.ROUNDS - 1)]
+        cat = self.categories[min(self.round, self.n_rounds - 1)]
         view: dict[str, Any] = {
             "game": self.game_id,
             "phase": self.phase,
             "round": self.round + 1,
-            "rounds": self.ROUNDS,
+            "rounds": self.n_rounds,
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],
             "category": {"title": cat["title"], "options": list(cat["options"])},

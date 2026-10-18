@@ -1,0 +1,292 @@
+# Imposter words: "category | secret word | close word" per line.
+# The crew all get the secret word. In the Undercover twist the imposter gets the close word instead:
+# near enough that their clues sound right, different enough to give them away.
+# Everyday words everyone knows, kind and silly, at most 24 characters each.
+Food | pizza | burger
+Food | pancakes | waffles
+Food | spaghetti | noodles
+Food | sushi | dumplings
+Food | popcorn | crisps
+Food | ice cream | frozen yoghurt
+Food | chocolate | caramel
+Food | doughnut | bagel
+Food | taco | burrito
+Food | cheese | butter
+Food | banana | mango
+Food | strawberry | raspberry
+Food | watermelon | pineapple
+Food | lemon | lime
+Food | carrot | parsnip
+Food | potato | sweet potato
+Food | soup | stew
+Food | sandwich | wrap
+Food | cupcake | muffin
+Food | cookie | brownie
+Food | honey | jam
+Food | omelette | scrambled eggs
+Food | hot dog | sausage roll
+Food | curry | chilli
+Food | salad | coleslaw
+Food | toast | crumpet
+Food | cereal | porridge
+Food | pie | tart
+Food | birthday cake | cheesecake
+Food | apple | pear
+Drinks | coffee | tea
+Drinks | lemonade | orange juice
+Drinks | milkshake | smoothie
+Drinks | hot chocolate | warm milk
+Drinks | cola | root beer
+Animals | dog | wolf
+Animals | cat | lion
+Animals | horse | donkey
+Animals | dolphin | whale
+Animals | shark | crocodile
+Animals | penguin | puffin
+Animals | owl | eagle
+Animals | rabbit | hamster
+Animals | elephant | rhino
+Animals | giraffe | zebra
+Animals | monkey | gorilla
+Animals | frog | toad
+Animals | snake | lizard
+Animals | bee | wasp
+Animals | butterfly | moth
+Animals | spider | ant
+Animals | octopus | squid
+Animals | turtle | tortoise
+Animals | kangaroo | koala
+Animals | panda | polar bear
+Animals | parrot | flamingo
+Animals | duck | swan
+Animals | chicken | turkey
+Animals | cow | goat
+Animals | pig | sheep
+Animals | fox | raccoon
+Animals | camel | llama
+Animals | crab | lobster
+Animals | goldfish | jellyfish
+Animals | bat | pigeon
+Animals | snail | slug
+Places | beach | swimming pool
+Places | library | bookshop
+Places | airport | train station
+Places | hospital | pharmacy
+Places | cinema | theatre
+Places | zoo | farm
+Places | castle | palace
+Places | museum | art gallery
+Places | supermarket | market
+Places | school | university
+Places | restaurant | cafe
+Places | playground | park
+Places | desert | jungle
+Places | mountain | volcano
+Places | island | lighthouse
+Places | camping | caravan
+Places | bakery | butcher
+Places | gym | sports hall
+Places | hairdresser | barber
+Places | bowling alley | arcade
+Places | aquarium | water park
+Places | haunted house | graveyard
+Jobs | doctor | nurse
+Jobs | firefighter | police officer
+Jobs | teacher | headteacher
+Jobs | chef | waiter
+Jobs | pilot | astronaut
+Jobs | farmer | gardener
+Jobs | dentist | vet
+Jobs | builder | plumber
+Jobs | singer | dancer
+Jobs | magician | clown
+Jobs | detective | spy
+Jobs | pirate | sailor
+Jobs | photographer | painter
+Jobs | librarian | author
+Jobs | mail carrier | delivery driver
+Jobs | scientist | inventor
+Jobs | lifeguard | swimmer
+Jobs | referee | coach
+Sports | football | rugby
+Sports | tennis | badminton
+Sports | basketball | netball
+Sports | swimming | diving
+Sports | skiing | snowboarding
+Sports | golf | mini golf
+Sports | boxing | wrestling
+Sports | cycling | running
+Sports | baseball | cricket
+Sports | ice skating | roller skating
+Sports | surfing | sailing
+Sports | table tennis | squash
+Sports | karate | judo
+Sports | volleyball | dodgeball
+Sports | horse riding | rodeo
+Sports | skateboarding | scooter
+Sports | climbing | hiking
+Home | sofa | armchair
+Home | bed | hammock
+Home | fridge | freezer
+Home | oven | microwave
+Home | shower | bath
+Home | toothbrush | hairbrush
+Home | pillow | blanket
+Home | lamp | candle
+Home | mirror | window
+Home | television | radio
+Home | washing machine | dishwasher
+Home | kettle | toaster
+Home | fork | spoon
+Home | cup | glass
+Home | sock drawer | wardrobe
+Home | doorbell | alarm clock
+Home | umbrella | raincoat
+Home | vacuum cleaner | broom
+Home | scissors | knife
+Home | stairs | lift
+Home | garden | balcony
+Home | chimney | fireplace
+Transport | car | taxi
+Transport | bus | tram
+Transport | train | underground
+Transport | bicycle | motorbike
+Transport | aeroplane | helicopter
+Transport | boat | submarine
+Transport | rocket | spaceship
+Transport | hot air balloon | parachute
+Transport | tractor | digger
+Transport | ambulance | fire engine
+Transport | skateboard | rollerblades
+Transport | canoe | raft
+Transport | cable car | rollercoaster
+Nature | rainbow | sunset
+Nature | thunderstorm | hurricane
+Nature | snow | hail
+Nature | river | lake
+Nature | waterfall | fountain
+Nature | forest | orchard
+Nature | cave | tunnel
+Nature | rose | tulip
+Nature | sunflower | daisy
+Nature | tree | bush
+Nature | cactus | palm tree
+Nature | moon | sun
+Nature | star | comet
+Nature | fog | cloud
+Nature | iceberg | glacier
+Nature | sand | mud
+Nature | seashell | pebble
+Music | guitar | violin
+Music | piano | keyboard
+Music | drums | tambourine
+Music | trumpet | trombone
+Music | flute | recorder
+Music | microphone | speaker
+Music | concert | festival
+Music | karaoke | choir
+Music | lullaby | birthday song
+Music | headphones | earbuds
+Party | balloon | bubble
+Party | birthday | anniversary
+Party | wedding | prom
+Party | fireworks | sparklers
+Party | piñata | treasure hunt
+Party | costume | mask
+Party | disco | dance floor
+Party | present | card
+Party | confetti | glitter
+Party | sleepover | campfire
+Party | barbecue | picnic
+Party | magic trick | puppet show
+Holidays | christmas tree | snowman
+Holidays | halloween | bonfire night
+Holidays | easter egg | advent calendar
+Holidays | suitcase | backpack
+Holidays | passport | ticket
+Holidays | sandcastle | snow angel
+Holidays | sunglasses | sun hat
+Holidays | postcard | souvenir
+Holidays | hotel | tent
+Holidays | cruise | road trip
+School | homework | exam
+School | pencil | crayon
+School | ruler | calculator
+School | backpack | lunchbox
+School | blackboard | whiteboard
+School | maths | science
+School | spelling | reading
+School | break time | lunch time
+School | sports day | school trip
+School | glue | sticky tape
+Clothes | hat | helmet
+Clothes | scarf | tie
+Clothes | gloves | mittens
+Clothes | boots | trainers
+Clothes | jeans | shorts
+Clothes | pyjamas | dressing gown
+Clothes | jumper | hoodie
+Clothes | dress | skirt
+Clothes | swimsuit | wetsuit
+Clothes | crown | tiara
+Clothes | slippers | flip flops
+Clothes | watch | bracelet
+Fantasy | dragon | dinosaur
+Fantasy | wizard | witch
+Fantasy | unicorn | pegasus
+Fantasy | mermaid | fairy
+Fantasy | ghost | zombie
+Fantasy | vampire | werewolf
+Fantasy | robot | alien
+Fantasy | superhero | ninja
+Fantasy | knight | king
+Fantasy | giant | troll
+Fantasy | treasure | gold coin
+Fantasy | magic wand | broomstick
+Fantasy | time machine | teleporter
+Fantasy | genie | elf
+Tech | phone | tablet
+Tech | laptop | computer
+Tech | video game | board game
+Tech | camera | binoculars
+Tech | email | text message
+Tech | selfie | video call
+Tech | remote control | game controller
+Tech | battery | charger
+Tech | password | key
+Tech | printer | photocopier
+Tech | drone | kite
+Hobbies | painting | drawing
+Hobbies | knitting | sewing
+Hobbies | baking | cooking
+Hobbies | fishing | birdwatching
+Hobbies | jigsaw puzzle | crossword
+Hobbies | chess | draughts
+Hobbies | gardening | camping
+Hobbies | magic | juggling
+Hobbies | photography | filming
+Hobbies | reading | writing
+Hobbies | yoga | dancing
+Hobbies | lego | building blocks
+Hobbies | origami | colouring
+Things | clock | calendar
+Things | map | compass
+Things | rope | chain
+Things | ladder | stepping stool
+Things | lock | padlock
+Things | torch | lantern
+Things | bucket | spade
+Things | wheelbarrow | trolley
+Things | tent | sleeping bag
+Things | money | piggy bank
+Things | book | magazine
+Things | newspaper | comic
+Things | letter | parcel
+Things | trophy | medal
+Things | flag | banner
+Things | soap | shampoo
+Things | sponge | towel
+Things | crayons | paint
+Things | balloon animal | teddy bear
+Things | yo-yo | spinning top
+Things | snow globe | music box

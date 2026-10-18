@@ -57,6 +57,22 @@ class ChickenTests(unittest.TestCase):
         self.assertEqual(g.scores(), {"p0": 40, "p1": 80 + NERVE_BONUS})
         self.assertEqual(g.result["bomb"], 15.0)
 
+    def test_who_cashed_out_is_secret_until_the_bang(self):
+        g, clock = make(3)
+        g.bomb = 15.0
+        run(g, clock)
+        clock.t += 5.0
+        g.handle("p0", {"a": "cash"})
+        self.assertEqual(g.view_for("p0")["cashed"], {"p0": {"t": 5.0, "value": 40}})
+        for viewer in ("p1", "p2", *SPECTATORS):
+            self.assertEqual(g.view_for(viewer)["cashed"], {}, viewer)
+            self.assertNotIn("5.0", json.dumps(g.view_for(viewer)["cashed"]))
+        clock.t += 11.0
+        g.tick()  # the bang: now everyone sees who got out
+        self.assertEqual(g.phase, "boom")
+        for viewer in ("p1", *SPECTATORS):
+            self.assertIn("p0", g.view_for(viewer)["cashed"])
+
     def test_the_bomb_is_secret_and_no_countdown_gives_it_away(self):
         g, clock = make(3)
         g.bomb = 17.25

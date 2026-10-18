@@ -41,6 +41,7 @@ class SplitOrSteal(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"deals": ["5", "3", "7"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Each round you're paired with someone over a pot of points.",
         "Talk first (canned lines only), then secretly choose SPLIT or STEAL.",
@@ -49,6 +50,10 @@ class SplitOrSteal(Game):
         "Last round is the Golden Pot: everyone in one pot. One thief takes it all, two or more get nothing.",
     )
     READING: ClassVar[frozenset[str]] = frozenset(["reveal", "talk"])
+
+    @property
+    def n_rounds(self) -> int:
+        return self.option_int("deals")
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
@@ -84,7 +89,7 @@ class SplitOrSteal(Game):
 
     @property
     def golden(self) -> bool:
-        return self.round == ROUNDS - 1
+        return self.round == self.n_rounds - 1
 
     def golden_pot(self) -> int:
         return GOLDEN_PER_PLAYER * len(self.players)
@@ -163,7 +168,7 @@ class SplitOrSteal(Game):
         self.bump()
 
     def _next(self) -> None:
-        if self.round + 1 >= ROUNDS:
+        if self.round + 1 >= self.n_rounds:
             self.phase = "final"
             self.deadline = None
             self.finished = True
@@ -232,7 +237,7 @@ class SplitOrSteal(Game):
             "game": self.game_id,
             "phase": self.phase,
             "round": self.round + 1,
-            "rounds": ROUNDS,
+            "rounds": self.n_rounds,
             "remaining": self.remaining(),
             "players": [{"id": p.id, "name": p.name} for p in self.players],
             "pairs": [{"players": [a, b], "pot": self.pots[frozenset((a, b))]} for a, b in self.pairs],

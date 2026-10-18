@@ -71,9 +71,36 @@ class PlaceTests(unittest.TestCase):
         g.handle(g.sides[1][0], {"a": "ready"})
         self.assertEqual(g.phase, "battle")
 
+    def test_move_and_turn_your_own_ships(self):
+        g, _ = make()
+        p = g.sides[0][0]
+        g.fleets[0] = [[0, 1, 2, 3], [16, 17, 18], [32, 33, 34], [48, 49], [56, 57]]
+        g.handle(p, {"a": "move", "ship": 4, "cell": 60, "across": True})
+        self.assertEqual(g.fleets[0][4], [60, 61])
+        g.handle(p, {"a": "move", "ship": 0, "cell": 7, "across": False})  # turned upright on the edge
+        self.assertEqual(g.fleets[0][0], [7, 15, 23, 31])
+        bad = [
+            ({"ship": 1, "cell": 6, "across": True}, "off_grid"),  # would hang off the right edge
+            ({"ship": 1, "cell": 54, "across": False}, "off_grid"),  # off the bottom
+            ({"ship": 3, "cell": 15, "across": False}, "overlap"),  # onto the carrier
+            ({"ship": 5, "cell": 0, "across": True}, "bad_input"),
+            ({"ship": 1, "cell": 64, "across": True}, "bad_input"),
+            ({"ship": 1, "cell": 0, "across": "yes"}, "bad_input"),
+        ]
+        for action, code in bad:
+            with self.assertRaises(GameError) as e:
+                g.handle(p, {"a": "move", **action})
+            self.assertEqual(e.exception.code, code, action)
+        self.assertEqual(g.fleets[0][1], [16, 17, 18])
+        other = g.fleets[1][0]
+        lock_in(g)
+        with self.assertRaises(GameError):
+            g.handle(p, {"a": "move", "ship": 1, "cell": 40, "across": True})
+        self.assertEqual(g.fleets[1][0], other)
+
     def test_the_clock_starts_the_battle(self):
         g, clock = make(2)
-        clock.t += 41
+        clock.t += g.timings["place"] + 1
         g.tick()
         self.assertEqual(g.phase, "battle")
 

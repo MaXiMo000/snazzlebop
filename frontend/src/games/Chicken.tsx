@@ -163,7 +163,13 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
                 <li key={p.id}>
                   <b>{p.name}</b>
                   {p.id === you ? " (you)" : ""}:{" "}
-                  {c ? `banked ${c.value} at ${c.t.toFixed(1)}s` : boomed ? "💥 blown up" : view.phase === "run" ? "still in…" : "waiting"}
+                  {c
+                    ? `banked ${c.value} at ${c.t.toFixed(1)}s`
+                    : boomed
+                      ? "💥 blown up"
+                      : view.phase === "run"
+                        ? "🤐 secret till the bang"
+                        : "waiting"}
                   {view.insured.includes(p.id) ? " · 🛟 insured" : ""}
                 </li>
               );

@@ -304,10 +304,12 @@ a {
   padding: 4px var(--gutter) 64px;
 }
 
-.stack > * + * {
+/* The gap between stacked blocks. Written as :not(:first-child) (same elements as "* + *") so it
+   outranks a component's own `margin: 0` reset, which used to glue blocks together. */
+.stack > :not(:first-child):not(.space-top) {
   margin-top: 18px;
 }
-.stack-sm > * + * {
+.stack-sm > :not(:first-child):not(.space-top) {
   margin-top: 10px;
 }
 .row {
@@ -858,6 +860,7 @@ button.alert {
     grid-column: 1;
     grid-row: 2;
     align-self: center;
+    font-size: clamp(1.15rem, 6.6vw, 1.45rem); /* "Battleships" fits beside the clock at 320px */
   }
   .show-head .timer {
     grid-column: 2;
@@ -1497,7 +1500,7 @@ details summary {
 .bj-anchor {
   scroll-margin-top: 12px;
 }
-.stack > .bj-anchor + * {
+.stack > .bj-anchor + :not(:first-child):not(.space-top) {
   margin-top: 0;
 }
 .chip.bj-result {
@@ -2355,6 +2358,41 @@ h4 {
   font-size: 1.8rem;
   line-height: 1;
 }
+.bid-dice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+}
+.bid-least {
+  font-weight: 700;
+}
+.bid-qty {
+  font: 400 2.6rem / 1 var(--display);
+}
+.bid-wild {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.bid-wild .die {
+  width: 32px;
+  height: 32px;
+  font-size: 1.7rem;
+}
+.dice-hint,
+.dice-advice {
+  margin: 8px 0 0;
+}
+.dice-advice {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-weight: 700;
+}
 .dice-table,
 .dice-reveal {
   display: grid;
@@ -3041,6 +3079,7 @@ details.how-to[open] summary {
 
 /* The board: 5x5 on every screen. Cards shrink their type to fit long words on phones. */
 .cw-board {
+  container-type: inline-size; /* card text is sized from the real card width (19cqi each) */
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: clamp(5px, 1.4vw, 12px);
@@ -3055,7 +3094,10 @@ details.how-to[open] summary {
   padding: 6px 2px;
   font-family: var(--body);
   font-weight: 700;
-  font-size: clamp(0.72rem, 3.3vw, 1.2rem);
+  --n: 7; /* letters the card must fit: longer words set more */
+  --max: 1.2rem;
+  --min: 0.5rem;
+  font-size: clamp(var(--min), calc((19cqi - 8px) / (var(--n) * 0.72)), var(--max));
   line-height: 1.05;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -3069,13 +3111,18 @@ details.how-to[open] summary {
 }
 /* Longer words get smaller type so they fit on one line, even on a 360 px phone. */
 .cw-card.l8 {
-  font-size: clamp(0.62rem, 2.75vw, 1.1rem);
+  --n: 8;
+  --max: 1.1rem;
 }
 .cw-card.l9 {
-  font-size: clamp(0.56rem, 2.45vw, 1.05rem);
+  --n: 9;
+  --max: 1.05rem;
 }
 .cw-card.l10 {
-  font-size: clamp(0.5rem, 2.15vw, 1rem);
+  --n: 11;
+  --min: 0.6rem;
+  --max: 1rem;
+  hyphens: auto; /* "CATER-PILLAR" on a small phone rather than unreadable type */
 }
 button.cw-card {
   cursor: pointer;
@@ -10199,6 +10246,37 @@ button.sh-cell {
   background: #6f7f91;
   background-image: linear-gradient(#8b9aab, #5c6b7c);
 }
+.sh-grid.place button.sh-cell {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.sh-grid.place button.sh-cell:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -3px;
+  z-index: 1;
+}
+/* Placing: each ship its own colour, so ships lying side by side stay easy to tell apart. */
+.sh-grid.place .sh-cell.ship.s0 {
+  background: linear-gradient(#9aa7b5, #6b7886);
+}
+.sh-grid.place .sh-cell.ship.s1 {
+  background: linear-gradient(#7c9a7a, #557254);
+}
+.sh-grid.place .sh-cell.ship.s2 {
+  background: linear-gradient(#a08a6a, #77644a);
+}
+.sh-grid.place .sh-cell.ship.s3 {
+  background: linear-gradient(#8f7fa6, #67597d);
+}
+.sh-grid.place .sh-cell.ship.s4 {
+  background: linear-gradient(#6f8fa6, #4d6b80);
+}
+.sh-grid.place .sh-cell.ship.picked,
+.sh-cell.picked {
+  background: #ffb84d;
+  background-image: linear-gradient(#ffd08a, #f29a1f);
+  box-shadow: 0 0 0 3px #fff inset;
+}
 .sh-cell.miss {
   background-color: #1d5ea8;
 }
@@ -10313,6 +10391,28 @@ button.sh-cell {
   }
   .sh-board .sh-grid.small {
     margin-bottom: 10px;
+  }
+  /* Placing your fleet: the same edge-to-edge sea. */
+  .sh-place {
+    gap: 8px;
+    padding: 12px 0;
+    overflow: hidden;
+  }
+  .sh-place > :not(.sh-grid) {
+    padding-inline: 12px;
+  }
+  .sh-place .sh-grid.place {
+    gap: 0;
+    max-width: none;
+    padding: 0;
+    border-radius: 0;
+  }
+  .sh-place .sh-grid.place .sh-cell {
+    border-radius: 0;
+    box-shadow: inset 0 0 0 1px #0b2a55;
+  }
+  .sh-place .sh-grid.place .sh-cell.picked {
+    box-shadow: inset 0 0 0 3px #fff;
   }
 }
 
@@ -12057,8 +12157,13 @@ button.c4-col:focus-visible {
   .hm-stage {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
+  /* A long word gets the whole width (keyboard below) so it stays on one line. */
+  .hm-stage:has(.hm-word.len-16, .hm-word.len-24) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .hm-board {
+  min-width: 0;
   display: grid;
   justify-items: center;
   gap: 14px;
@@ -12090,29 +12195,50 @@ button.c4-col:focus-visible {
 }
 /* The blanks: words wrap between each other, never inside one. */
 .hm-word {
+  --fit: 7; /* tiles per line the longest word needs */
+  --max: 38px;
+  container-type: inline-size;
+  justify-self: stretch;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px 22px;
   margin: 0;
 }
+.hm-word.len-11 {
+  --fit: 11;
+}
+.hm-word.len-16 {
+  --fit: 16;
+}
+.hm-word.len-24 {
+  --fit: 24;
+}
+/* A word too long for the line even at the smallest tile wraps inside itself rather than spilling
+   over the keyboard. */
 .hm-chunk {
   display: inline-flex;
-  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 4px;
+  max-width: 100%;
 }
 .hm-tile {
+  --w: clamp(18px, calc((100cqi - 4px * (var(--fit) - 1)) / var(--fit)), var(--max));
   display: grid;
   place-items: end center;
-  width: clamp(22px, 7vw, 38px);
-  height: clamp(32px, 9vw, 48px);
+  width: var(--w);
+  height: calc(var(--w) * 1.3);
   border-bottom: 4px solid var(--bulb);
   color: #fff;
-  font: 400 clamp(1.2rem, 5vw, 1.9rem) / 1.2 var(--display);
+  font: 400 calc(var(--w) * 0.8) / 1.2 var(--display);
 }
 .hm-tile.shown {
   animation: tq-pop 0.35s ease-out;
 }
 .hm-yours {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   margin: 0;
   padding: 4px 12px;
   border-radius: 14px;
@@ -12200,10 +12326,8 @@ button.c4-col:focus-visible {
 .hm.big .hm-gallows {
   width: min(340px, 30vw);
 }
-.hm.big .hm-tile {
-  width: 56px;
-  height: 72px;
-  font-size: 2.8rem;
+.hm.big .hm-word {
+  --max: 56px;
 }
 @media (min-width: 1100px) {
   .tv-split:has(.seg-hangman) {
@@ -12600,4 +12724,138 @@ button.fd-box:focus-visible {
 }
 .oh-switch .btn {
   white-space: nowrap;
+}
+
+/* ---- imposter ----------------------------------------------------------------------------------- */
+.seg-imposter {
+  --accent: #3d3a8c;
+  --accent-ink: #fff;
+  --accent-soft: #e3e1f7;
+}
+.ip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+.ip-big {
+  margin: 0;
+  font-size: 3.4rem;
+  line-height: 1;
+}
+.ip-card .btn {
+  margin-inline: auto;
+}
+.ip-card.fake {
+  outline: 4px solid var(--cherry);
+  outline-offset: -4px;
+}
+.ip-word {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font: 400 clamp(2rem, 9vw, 3.4rem) / 1.1 var(--display);
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.ip-word-inline {
+  font-family: var(--display);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.ip-clues {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ip-clues li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 12px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.ip-clues li.now {
+  background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+.ip-clues li.later {
+  border-style: dashed;
+}
+/* Name and clue side by side where they fit, the clue under the name where they don't. */
+.ip-clue-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 14px;
+  min-width: 0;
+}
+.ip-clue-name {
+  flex: 0 0 auto;
+  min-width: min(9rem, 100%);
+  font-weight: 700;
+}
+.ip-clue-text {
+  font: 400 1.15rem / 1.2 var(--display);
+}
+.ip-votes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ip-vote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 10px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 1rem / 1.2 var(--body);
+  text-align: left;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+button.ip-vote {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button.ip-vote:hover {
+  filter: brightness(1.06);
+}
+button.ip-vote:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+button.ip-vote:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.ip-vote.static {
+  box-shadow: none;
+}
+.ip-vote.picked {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent);
+}
+.ip-vote-name {
+  flex: 1;
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  .ip .ask-form {
+    grid-template-columns: 1fr auto;
+  }
 }

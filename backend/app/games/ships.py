@@ -1,7 +1,8 @@
 """Battleships: two hidden fleets, one shot at a time.
 
 Two sides: one player each, or two teams that share a fleet and take turns at the guns. Each side's
-ships are placed at random on an 8 x 8 grid; reshuffle until you like it, then lock in. Sides then fire
+ships start at random on an 8 x 8 grid; move and turn them (or reshuffle) until you like it, then lock
+in. Sides then fire
 at each other's waters: a hit earns another shot, a miss passes the turn. Sink every ship to win.
 
 A fleet's layout lives on the server and is sent only to its own side. The other side (and the TV and
@@ -21,17 +22,22 @@ SIDE_NAMES = ("Fleet Tangerine", "Fleet Teal")
 HIT, SINK, WIN = 50, 100, 300
 
 
+def ship_cells(start: int, length: int, across: bool) -> list[int] | None:
+    """The squares of a ship whose top-left square is `start`, or None if it would leave the grid."""
+    row, col = divmod(start, SIZE)
+    if (col + length if across else row + length) > SIZE:
+        return None
+    return [start + (i if across else i * SIZE) for i in range(length)]
+
+
 def place(rng: random.Random) -> list[list[int]]:
     """A random legal layout: ships in straight lines, inside the grid, never overlapping."""
     taken: set[int] = set()
     ships: list[list[int]] = []
     for length in FLEET:
         while True:
-            across = rng.random() < 0.5
-            row = rng.randrange(SIZE if across else SIZE - length + 1)
-            col = rng.randrange(SIZE - length + 1 if across else SIZE)
-            cells = [(row + (0 if across else i)) * SIZE + col + (i if across else 0) for i in range(length)]
-            if not taken & set(cells):
+            cells = ship_cells(rng.randrange(SIZE * SIZE), length, rng.random() < 0.5)
+            if cells is not None and not taken & set(cells):
                 taken |= set(cells)
                 ships.append(cells)
                 break
@@ -49,7 +55,7 @@ class Battleships(Game):
     max_players: ClassVar[int] = 8
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Two sides, each with five hidden ships. With more than two players you share a fleet as a team.",
-        "First, shuffle your fleet until you like where it sits, then lock it in.",
+        "First, place your fleet: tap a ship, then tap where it should go (or turn it, or shuffle). Lock in.",
         "Take turns firing at the enemy's waters. Hit: fire again. Miss: the other side fires.",
         "A sunk ship shows its outline. Sink all five to win.",
     )
@@ -58,7 +64,7 @@ class Battleships(Game):
 
     @classmethod
     def default_timings(cls) -> dict[str, float]:
-        return {"place": 40.0, "turn": 20.0}
+        return {"place": 75.0, "turn": 20.0}
 
     # -- setup ----------------------------------------------------------------------------------------
     def start(self) -> None:
@@ -134,7 +140,7 @@ class Battleships(Game):
         self.require_player(pid)
         kind = action.get("a")
         side = self.side_of[pid]
-        if kind in ("shuffle", "ready"):
+        if kind in ("shuffle", "move", "ready"):
             if self.phase != "place":
                 raise GameError("wrong_phase", "The fleets are already at sea")
             if self.ready[side]:
@@ -142,6 +148,8 @@ class Battleships(Game):
             if kind == "shuffle":
                 self.fleets[side] = place(self.rng)
                 self.bump()
+            elif kind == "move":
+                self._move(side, action)
             else:
                 self.ready[side] = True
                 self.bump()
@@ -158,6 +166,22 @@ class Battleships(Game):
             self._fire(pid, cell)
         else:
             raise GameError("bad_action", "Unknown action")
+
+    def _move(self, side: int, action: dict[str, Any]) -> None:
+        """Put one of your ships somewhere else: `ship` (index), `cell` (its top-left square), `across`."""
+        i = as_int(action.get("ship"), lo=0, hi=len(FLEET) - 1, field="Ship")
+        start = as_int(action.get("cell"), lo=0, hi=SIZE * SIZE - 1, field="Square")
+        across = action.get("across")
+        if not isinstance(across, bool):
+            raise GameError("bad_input", "Across or down?")
+        cells = ship_cells(start, FLEET[i], across)
+        if cells is None:
+            raise GameError("off_grid", "That ship won't fit there")
+        others = {c for j, ship in enumerate(self.fleets[side]) if j != i for c in ship}
+        if others & set(cells):
+            raise GameError("overlap", "Ships can't overlap")
+        self.fleets[side][i] = cells
+        self.bump()
 
     def _auto(self) -> None:
         """Out of time: a random square nobody has tried."""

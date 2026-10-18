@@ -16,6 +16,7 @@ from .fivedice import FiveDice
 from .four import FourInARow
 from .frenemy import FrenemyRadar
 from .hangman import Hangman
+from .imposter import Imposter
 from .lastcard import LastCard
 from .lists import LetterLists
 from .lonely import LowestLonely
@@ -77,6 +78,7 @@ REGISTRY: dict[str, type[Game]] = {
         Hangman,
         FiveDice,
         OnYourHead,
+        Imposter,
     )
 }
 
