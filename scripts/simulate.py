@@ -1553,7 +1553,8 @@ async def play_imposter(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             gg = json.loads(raw).get("game") or {}
             if gg.get("game") != "imposter" or gg["phase"] in ("result", "final"):
                 continue
-            check("result" not in gg and '"votes"' not in json.dumps(gg), f"imposter: {b.name} saw a result early")
+            early = "result" in gg or '"votes"' in json.dumps(gg)
+            check(not early, f"imposter: {b.name} saw a result early")
             if gg["phase"] != "guess":
                 check(gg["accused"] is None, f"imposter: {b.name} saw who was accused early")
 
