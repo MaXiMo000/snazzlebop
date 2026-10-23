@@ -147,6 +147,21 @@ cd frontend && npm run e2e                 # Playwright against a running contai
 python scripts/simulate.py                 # bots play every game over real WebSockets
 ```
 
+### Database migrations
+
+The schema is managed with Alembic (`backend/app/migrations/`). The app applies new migrations itself at
+startup, so a deploy needs no extra step. After changing a model in `app/db.py`:
+
+```bash
+cd backend
+alembic revision --autogenerate -m "add clubs"   # writes app/migrations/versions/<rev>_add_clubs.py
+alembic upgrade head                             # apply it to DATABASE_URL (default: local SQLite)
+alembic downgrade -1                             # every migration must roll back cleanly
+```
+
+Review the generated file before committing. `tests/test_migrations.py` fails if the models and the
+migrations drift apart, and CI runs it on SQLite and on Postgres.
+
 CI runs all of this on every push, plus:
 
 - container, dependency and secret scans

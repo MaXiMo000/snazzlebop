@@ -22,6 +22,15 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      # Production's database: the migration tests run on it as well as on SQLite.
+      postgres:
+        image: mirror.gcr.io/library/postgres@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36 # 16-alpine
+        env:
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: snz
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres -d snz" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
@@ -37,6 +46,10 @@ jobs:
       - run: bandit -q -r app -c pyproject.toml
       - run: pip-audit --require-hashes --disable-pip -r requirements.lock
       - run: pytest
+      - name: Migrations on Postgres (up, stamp an older database, down, no drift from the models)
+        run: pytest tests/test_migrations.py
+        env:
+          MIGRATION_TEST_URL: postgresql+asyncpg://postgres:ci-only@localhost:5432/snz
 
   frontend:
     runs-on: ubuntu-latest

@@ -9,10 +9,15 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
+from alembic import command
+from alembic.config import Config
+from alembic.runtime.migration import MigrationContext
 from sqlalchemy import (
     JSON,
+    Connection,
     DateTime,
     ForeignKey,
     Integer,
@@ -21,6 +26,7 @@ from sqlalchemy import (
     UniqueConstraint,
     delete,
     func,
+    inspect,
     or_,
     select,
     update,
@@ -31,6 +37,9 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
 
 log = logging.getLogger("snazzlebop.db")
+
+MIGRATIONS = Path(__file__).with_name("migrations")
+BASELINE = "0001"  # the schema as it stood before migrations: older databases are stamped with it
 
 
 class Base(DeclarativeBase):
@@ -147,6 +156,17 @@ def make_engine(url: str) -> AsyncEngine:
     return create_async_engine(url, pool_size=5, max_overflow=5, pool_recycle=1800, pool_pre_ping=True)
 
 
+def migrate(conn: Connection) -> None:
+    """Bring the schema up to the newest migration. A database made before migrations existed (it has
+    the tables but no revision) is stamped as the baseline first, so nothing is created twice."""
+    cfg = Config()
+    cfg.set_main_option("script_location", str(MIGRATIONS))
+    cfg.attributes["connection"] = conn
+    if MigrationContext.configure(conn).get_current_revision() is None and inspect(conn).has_table("users"):
+        command.stamp(cfg, BASELINE)
+    command.upgrade(cfg, "head")
+
+
 class Database:
     def __init__(self, url: str) -> None:
         self.engine = make_engine(url)
@@ -156,7 +176,7 @@ class Database:
     async def init(self) -> None:
         try:
             async with self.engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
+                await conn.run_sync(migrate)
             self.ready = True
         except Exception:
             log.exception("database unavailable; continuing without persistence")
