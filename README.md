@@ -162,6 +162,20 @@ alembic downgrade -1                             # every migration must roll bac
 Review the generated file before committing. `tests/test_migrations.py` fails if the models and the
 migrations drift apart, and CI runs it on SQLite and on Postgres.
 
+### API contract
+
+Every HTTP route declares its response model (`backend/app/schemas.py`). The OpenAPI document generated
+from them is committed as `frontend/openapi.json`, and the web app's API types are generated from it
+(`frontend/src/lib/api.gen.ts`, used through `src/lib/contract.ts`). After changing a route or a schema:
+
+```bash
+python scripts/export_openapi.py        # refresh frontend/openapi.json
+cd frontend && npm run gen:api           # regenerate the TypeScript types
+```
+
+`tests/test_contract.py` calls every route and validates the real responses against their models; CI
+fails if `openapi.json` or the generated types are out of date.
+
 CI runs all of this on every push, plus:
 
 - container, dependency and secret scans

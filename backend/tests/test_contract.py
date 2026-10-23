@@ -1,0 +1,125 @@
+"""The HTTP contract: every API route is called for real and each response body is validated against
+the model its route declares (app/schemas.py, strict: an undeclared field fails), errors against
+ErrorBody. A route nobody calls here fails too, so a new route can't skip the contract."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+
+pytest.importorskip("fastapi")
+pytest.importorskip("httpx")
+
+from fastapi.routing import APIRoute  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from pydantic import TypeAdapter  # noqa: E402
+
+from app import coins, schemas  # noqa: E402
+from app.main import create_app  # noqa: E402
+from tests.test_api import settings  # noqa: E402
+
+PW = "correct horse battery"
+
+
+@pytest.fixture()
+def client(tmp_path):
+    with TestClient(create_app(settings(tmp_path, rate_auth_burst=1000))) as c:
+        yield c
+
+
+def api_routes(routes: list[Any]) -> list[APIRoute]:
+    """Every APIRoute, including those inside included routers (wrapped in newer FastAPI versions)."""
+    out: list[APIRoute] = []
+    for route in routes:
+        inner = getattr(route, "original_router", None)
+        if inner is not None:
+            out += api_routes(inner.routes)
+        elif isinstance(route, APIRoute):
+            out.append(route)
+    return out
+
+
+class Contract:
+    def __init__(self, client: TestClient) -> None:
+        self.client = client
+        self.models = {
+            (method, route.path): route.response_model
+            for route in api_routes(client.app.routes)
+            if route.path.startswith("/api/")
+            for method in route.methods
+        }
+        self.called: set[tuple[str, str]] = set()
+
+    def call(self, method: str, path: str, template: str | None = None, **kw: Any) -> Any:
+        r = self.client.request(method, path, **kw)
+        key = (method, template or path)
+        assert key in self.models, f"{key} is not a declared API route"
+        self.called.add(key)
+        body = r.json()
+        if r.status_code >= 400:
+            schemas.ErrorBody.model_validate(body)
+        else:
+            TypeAdapter(self.models[key]).validate_python(body, strict=False)
+        return body
+
+
+def test_every_route_matches_its_declared_model(client):
+    c = Contract(client)
+    games = c.call("GET", "/api/games")
+    assert {g["id"] for g in games} >= {"trivia", "imposter"}
+    c.call("GET", "/api/stats")
+
+    room = c.call("POST", "/api/rooms", json={"name": "Host"})
+    code = room["code"]
+    c.call("POST", f"/api/rooms/{code}/join", "/api/rooms/{code}/join", json={"name": "Guest"})
+    c.call("POST", f"/api/rooms/{code}/tv", "/api/rooms/{code}/tv")
+    c.call("POST", f"/api/rooms/{code}/audience", "/api/rooms/{code}/audience", json={"name": "Fan"})
+    c.call("POST", "/api/rooms/ZZZZZ/join", "/api/rooms/{code}/join", json={"name": "Lost"})  # an error body
+
+    assert c.call("GET", "/api/me")["user"] is None
+    c.call("GET", "/api/me/stats")  # 401 for a guest: the error body
+    made = c.call("POST", "/api/auth/signup", json={"username": "Ana_99", "password": PW})
+    c.call("POST", "/api/auth/signup", json={"username": "Ana_99", "password": PW})  # taken: error
+    c.call("GET", "/api/me")
+    db = client.app.state.db
+    user = client.portal.call(db.user_by_name, "Ana_99")
+    rows = [{"user_id": user.id, "game_id": "trivia", "place": 1, "players": 4, "points": 300, "coins": 50}]
+    client.portal.call(db.record_results, rows, coins.season_of(), coins.DAILY_COIN_CAP)
+    c.call("GET", "/api/me/stats")
+    c.call("GET", "/api/shop")
+    c.call("POST", "/api/shop/buy", json={"item": "peek"})
+    c.call("GET", "/api/leaderboard")
+
+    c.call("POST", "/api/auth/signup", json={"username": "Bo_42", "password": PW})
+    c.call("POST", "/api/friends", json={"username": "Ana_99"})
+    c.call("POST", "/api/auth/logout")
+    c.call("POST", "/api/auth/login", json={"username": "Ana_99", "password": PW})
+    c.call("POST", "/api/friends", json={"username": "Bo_42"})
+    friends = c.call("GET", "/api/friends")
+    assert friends["friends"] and friends["friends"][0]["username"] == "Bo_42"
+    c.call("POST", "/api/friends/remove", json={"username": "Bo_42"})
+    c.call("POST", "/api/me/password", json={"password": PW, "new_password": PW + "!"})
+    c.call(
+        "POST",
+        "/api/auth/recover",
+        json={"username": "Ana_99", "recovery_code": made["recovery_code"], "new_password": PW},
+    )
+    c.call("POST", "/api/me/delete", json={"password": PW})
+
+    missed = set(c.models) - c.called
+    assert not missed, f"routes the contract test never called: {sorted(missed)}"
+
+
+def test_the_openapi_document_names_every_response():
+    """Each API route's 200/201 response points at a named schema the apps can generate a type from."""
+    from app.config import Settings
+
+    doc = create_app(Settings(secret_key="t" * 40)).openapi()
+    for path, ops in doc["paths"].items():
+        if not path.startswith("/api/"):
+            continue
+        for method, op in ops.items():
+            ok = op["responses"].get("201") or op["responses"].get("200")
+            schema = ok["content"]["application/json"]["schema"]
+            assert schema != {}, f"{method.upper()} {path} has no response schema"

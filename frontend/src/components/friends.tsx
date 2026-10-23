@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, joinRoom, request } from "../lib/api";
+import type { FriendList, Ok } from "../lib/contract";
 import { Btn, Card } from "./ui";
 
-type FriendList = { friends: { username: string; room: string | null }[]; sent: string[]; asked: string[] };
 const post = (path: string, username: string) =>
-  request<{ ok: boolean }>(path, { method: "POST", body: JSON.stringify({ username }) });
+  request<Ok>(path, { method: "POST", body: JSON.stringify({ username }) });
 
 /**
  * Home page, signed in: your friends, and a Join button next to anyone hosting right now. Someone's room

@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "e2e": "playwright test",
-    "contrast": "node scripts/contrast.mjs"
+    "contrast": "node scripts/contrast.mjs",
+    "gen:api": "openapi-typescript openapi.json -o src/lib/api.gen.ts",
+    "check:api": "openapi-typescript openapi.json -o src/lib/api.gen.ts --check"
   },
   "dependencies": {
     "@fontsource-variable/fredoka": "^5.3.0",
@@ -24,6 +26,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "openapi-typescript": "^7.13.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.6"
   }

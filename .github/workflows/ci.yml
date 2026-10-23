@@ -46,6 +46,8 @@ jobs:
       - run: bandit -q -r app -c pyproject.toml
       - run: pip-audit --require-hashes --disable-pip -r requirements.lock
       - run: pytest
+      - name: API contract is current (frontend/openapi.json matches the routes and schemas)
+        run: python ../scripts/export_openapi.py --check
       - name: Migrations on Postgres (up, stamp an older database, down, no drift from the models)
         run: pytest tests/test_migrations.py
         env:
@@ -66,6 +68,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci --ignore-scripts
+      - run: npm run check:api # the generated API types match frontend/openapi.json
       - run: npm run typecheck
       - run: npm run contrast # every text/background pair >= 4.5:1
       - run: npm run build

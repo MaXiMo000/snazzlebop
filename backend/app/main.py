@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import accounts, calls
+from . import accounts, calls, schemas
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
 from .contentgen import ContentGenerator, add_items, claude_caller, known, split_kind
@@ -166,11 +166,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def healthz() -> dict[str, bool]:
         return {"ok": True}
 
-    @app.get("/api/games")
+    @app.get("/api/games", response_model=list[schemas.GameCard])
     async def games() -> list[dict[str, Any]]:
         return catalog()
 
-    @app.get("/api/stats")
+    @app.get("/api/stats", response_model=dict[str, int])
     async def stats() -> dict[str, int]:
         return await db.stats()
 
@@ -180,14 +180,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         user = await accounts.session_user(request, db)
         return user.id if user is not None else None
 
-    @app.post("/api/rooms", status_code=201)
+    @app.post("/api/rooms", status_code=201, response_model=schemas.RoomPass, responses=schemas.ERRORS)
     async def create_room(body: NameBody, request: Request) -> dict[str, str]:
         uid = await account_id(request)
         circle = await db.circle(uid) if uid is not None and db.ready else None
         room, player, token = hub.create_room(body.name, uid, circle)
         return {"code": room.code, "player_id": player.id, "token": token}
 
-    @app.post("/api/rooms/{code}/join")
+    @app.post("/api/rooms/{code}/join", response_model=schemas.RoomPass, responses=schemas.ERRORS)
     async def join_room(code: str, body: NameBody, request: Request) -> dict[str, str]:
         try:
             await hub.fetch(code.upper())  # back from a restart: restore it first
@@ -201,7 +201,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         return {"code": room.code, "player_id": player.id, "token": token}
 
-    @app.post("/api/rooms/{code}/tv")
+    @app.post("/api/rooms/{code}/tv", response_model=schemas.TvPass, responses=schemas.ERRORS)
     async def tv_seat(code: str, request: Request) -> dict[str, str]:
         """Read-only big-screen view (TV mode). Rate limited and penalised exactly like join."""
         try:
@@ -215,7 +215,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         return {"code": room.code, "token": token}
 
-    @app.post("/api/rooms/{code}/audience")
+    @app.post("/api/rooms/{code}/audience", response_model=schemas.RoomPass, responses=schemas.ERRORS)
     async def audience_seat(code: str, body: NameBody, request: Request) -> dict[str, str]:
         """A named seat in the crowd (react, predict). Rate limited and penalised exactly like join."""
         try:

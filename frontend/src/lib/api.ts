@@ -1,4 +1,5 @@
 import type { GameCard, Session } from "../types";
+import type { ApiErrorBody, RoomPass, TvPass } from "./contract";
 
 export class ApiError extends Error {
   constructor(
@@ -23,16 +24,10 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = (body as { error?: { code?: string; message?: string } }).error;
+    const err = (body as Partial<ApiErrorBody>).error;
     throw new ApiError(err?.code ?? "error", err?.message ?? "Something went wrong", res.status);
   }
   return body as T;
-}
-
-interface JoinResponse {
-  code: string;
-  player_id: string;
-  token: string;
 }
 
 const key = (code: string) => `snazzlebop:${code}`;
@@ -63,14 +58,14 @@ export function clearSession(code: string): void {
 }
 
 export async function createRoom(name: string): Promise<{ code: string; session: Session }> {
-  const r = await request<JoinResponse>("/api/rooms", { method: "POST", body: JSON.stringify({ name }) });
+  const r = await request<RoomPass>("/api/rooms", { method: "POST", body: JSON.stringify({ name }) });
   const session = { token: r.token, playerId: r.player_id };
   saveSession(r.code, session);
   return { code: r.code, session };
 }
 
 export async function joinRoom(code: string, name: string): Promise<Session> {
-  const r = await request<JoinResponse>(`/api/rooms/${encodeURIComponent(code)}/join`, {
+  const r = await request<RoomPass>(`/api/rooms/${encodeURIComponent(code)}/join`, {
     method: "POST",
     body: JSON.stringify({ name }),
   });
@@ -81,7 +76,7 @@ export async function joinRoom(code: string, name: string): Promise<Session> {
 
 /** A named seat in the crowd: react and predict winners, no game seat. Works when the room is full. */
 export async function audienceSeat(code: string, name: string): Promise<Session> {
-  const r = await request<JoinResponse>(`/api/rooms/${encodeURIComponent(code)}/audience`, {
+  const r = await request<RoomPass>(`/api/rooms/${encodeURIComponent(code)}/audience`, {
     method: "POST",
     body: JSON.stringify({ name }),
   });
@@ -94,7 +89,7 @@ export async function audienceSeat(code: string, name: string): Promise<Session>
 export async function tvSeat(code: string): Promise<Session> {
   const saved = loadSession(`tv:${code}`);
   if (saved) return saved;
-  const r = await request<{ code: string; token: string }>(`/api/rooms/${encodeURIComponent(code)}/tv`, { method: "POST" });
+  const r = await request<TvPass>(`/api/rooms/${encodeURIComponent(code)}/tv`, { method: "POST" });
   const session = { token: r.token, playerId: "" };
   saveSession(`tv:${r.code}`, session);
   return session;

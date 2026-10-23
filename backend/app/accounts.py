@@ -38,6 +38,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.requests import HTTPConnection
 
+from . import schemas
 from .coins import POWERUP_PRICES, season_of
 from .config import Settings
 from .rooms import HubError
@@ -271,7 +272,9 @@ def router(
         if not limiter.allow(ip(request)):
             raise HubError("rate_limited", "Too many tries. Wait a minute and try again", 429)
 
-    @api.post("/api/auth/signup", status_code=201)
+    @api.post(
+        "/api/auth/signup", status_code=201, response_model=schemas.NewAccount, responses=schemas.ERRORS
+    )
     async def signup(body: SignupBody, request: Request) -> JSONResponse:
         same_origin(request)
         throttle(request)
@@ -288,7 +291,7 @@ def router(
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
-    @api.post("/api/auth/login")
+    @api.post("/api/auth/login", response_model=schemas.UserBody, responses=schemas.ERRORS)
     async def login(body: LoginBody, request: Request) -> JSONResponse:
         same_origin(request)
         throttle(request)
@@ -311,7 +314,7 @@ def router(
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
-    @api.post("/api/auth/recover")
+    @api.post("/api/auth/recover", response_model=schemas.NewAccount, responses=schemas.ERRORS)
     async def recover(body: RecoverBody, request: Request) -> JSONResponse:
         same_origin(request)
         throttle(request)
@@ -339,7 +342,7 @@ def router(
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
-    @api.post("/api/auth/logout")
+    @api.post("/api/auth/logout", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def logout(request: Request) -> JSONResponse:
         same_origin(request)
         token = request.cookies.get(SESSION_COOKIE)
@@ -349,7 +352,7 @@ def router(
         resp.delete_cookie(SESSION_COOKIE, path="/", samesite="strict", secure=settings.is_production)
         return resp
 
-    @api.get("/api/me")
+    @api.get("/api/me", response_model=schemas.Me)
     async def me(request: Request) -> JSONResponse:
         user = await current(request)
         return JSONResponse(
@@ -357,12 +360,12 @@ def router(
             headers={"Cache-Control": "no-store"},
         )
 
-    @api.get("/api/me/stats")
+    @api.get("/api/me/stats", response_model=schemas.MyStats, responses=schemas.ERRORS)
     async def my_stats(request: Request) -> JSONResponse:
         user = await require_user(request)
         return JSONResponse(await db.user_stats(user.id, season_of()), headers={"Cache-Control": "no-store"})
 
-    @api.post("/api/me/password")
+    @api.post("/api/me/password", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def change_password(body: PasswordBody, request: Request) -> JSONResponse:
         same_origin(request)
         throttle(request)
@@ -377,7 +380,7 @@ def router(
         set_session(resp, await start_session(user.id))
         return resp
 
-    @api.post("/api/me/delete")
+    @api.post("/api/me/delete", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def delete_me(body: ConfirmBody, request: Request) -> JSONResponse:
         same_origin(request)
         throttle(request)
@@ -400,7 +403,7 @@ def router(
             raise HubError("bad_friend", "That's you!")
         return other
 
-    @api.get("/api/friends")
+    @api.get("/api/friends", response_model=schemas.Friends, responses=schemas.ERRORS)
     async def friends(request: Request) -> JSONResponse:
         user = await require_user(request)
         lists = await db.friends(user.id)
@@ -414,7 +417,7 @@ def router(
             headers={"Cache-Control": "no-store"},
         )
 
-    @api.post("/api/friends")
+    @api.post("/api/friends", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def add_friend(body: FriendBody, request: Request) -> JSONResponse:
         same_origin(request)
         throttle(request)
@@ -424,7 +427,7 @@ def router(
             raise HubError("friends_full", "Your friends list is full")
         return JSONResponse({"ok": True})
 
-    @api.post("/api/friends/remove")
+    @api.post("/api/friends/remove", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def remove_friend(body: FriendBody, request: Request) -> JSONResponse:
         same_origin(request)
         user = await require_user(request)
@@ -432,11 +435,11 @@ def router(
         await db.remove_friend(user.id, other.id)
         return JSONResponse({"ok": True})
 
-    @api.get("/api/shop")
+    @api.get("/api/shop", response_model=schemas.Shop)
     async def shop() -> dict[str, Any]:
         return {"items": [{"id": k, "price": v, **CARDS[k]} for k, v in POWERUP_PRICES.items()]}
 
-    @api.post("/api/shop/buy")
+    @api.post("/api/shop/buy", response_model=schemas.UserBody, responses=schemas.ERRORS)
     async def buy(body: BuyBody, request: Request) -> JSONResponse:
         same_origin(request)
         user = await require_user(request)
@@ -447,7 +450,7 @@ def router(
             raise HubError("not_enough_coins", "Not enough coins for that yet")
         return JSONResponse({"user": public_user(updated)}, headers={"Cache-Control": "no-store"})
 
-    @api.get("/api/leaderboard")
+    @api.get("/api/leaderboard", response_model=schemas.Leaderboard)
     async def leaderboard() -> JSONResponse:
         season = season_of()
         rows = await db.leaderboard(season, 10) if db.ready else []

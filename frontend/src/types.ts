@@ -1,3 +1,5 @@
+import type { ApiGameCard } from "./lib/contract";
+
 export interface PlayerInfo {
   id: string;
   name: string;
@@ -6,28 +8,9 @@ export interface PlayerInfo {
   total: number;
 }
 
-export interface GameCard {
+/** A game's lobby card: the API contract's card (lib/contract.ts), with its id narrowed to the games we know. */
+export interface GameCard extends Omit<ApiGameCard, "id"> {
   id: "frenemy" | "alibi" | "price" | "telepathy" | "mural" | "blackjack" | "crossword" | "codewords" | "boxes" | "lonely" | "roulette" | "codes" | "wits" | "chicken" | "split" | "dice" | "truthdare" | "wordrace" | "lastcard" | "ludo" | "chess" | "drawguess" | "telephone" | "tycoon" | "mafia" | "bomb" | "reflex" | "snakes" | "ships" | "trivia" | "rather" | "four" | "lists" | "hangman" | "fivedice" | "onhead" | "imposter";
-  title: string;
-  blurb: string;
-  min_players: number;
-  max_players: number;
-  /** host-chosen settings: name -> allowed values (first is the default) */
-  options: Record<string, string[]>;
-  /** plain-language rules */
-  how_to: string[];
-  /** false for team games, which are played on their own rather than in a show */
-  show: boolean;
-  /** the classics everyone knows (board, card and party games): their own lobby section */
-  classic: boolean;
-  /** the host can switch on Teams: two teams, the combined score wins */
-  teams: boolean;
-  /** the shelf it sits on (a GameCategory id) */
-  category: string;
-  /** its place in the "Start here" row for newcomers, or null */
-  featured: number | null;
-  /** skill decides it, so it can be played ranked */
-  ranked: boolean;
 }
 
 /** A lobby shelf: chip label, section title and what it feels like. */
