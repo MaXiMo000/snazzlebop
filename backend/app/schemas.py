@@ -146,6 +146,18 @@ class Leaderboard(Strict):
     rows: list[LeaderRow]
 
 
+# Spelled out, not taken from Python's HTTP status table: its wording changes between versions (422 is
+# "Unprocessable Entity" in 3.12, "Unprocessable Content" in 3.13), which would change the contract.
+ERROR_DESCRIPTIONS = {
+    400: "Bad request",
+    401: "Not signed in",
+    403: "Not allowed",
+    404: "Not found",
+    409: "Conflict",
+    422: "Invalid request",
+    429: "Too many requests",
+    503: "Unavailable",
+}
 ERRORS: dict[int | str, dict[str, object]] = {
-    status: {"model": ErrorBody} for status in (400, 401, 403, 404, 409, 422, 429, 503)
+    status: {"model": ErrorBody, "description": text} for status, text in ERROR_DESCRIPTIONS.items()
 }

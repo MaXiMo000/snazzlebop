@@ -4,6 +4,7 @@ change without touching a game. Every registered game must have an entry (tests 
 
 from __future__ import annotations
 
+from functools import cache
 from typing import Final
 
 # (id, chip label, title, what it feels like), in shelf order.
@@ -79,6 +80,7 @@ def entry(game_id: str) -> dict[str, object]:
     }
 
 
+@cache
 def categories() -> list[dict[str, str]]:
     return [
         {"id": cid, "label": label, "title": title, "blurb": blurb} for cid, label, title, blurb in CATEGORIES

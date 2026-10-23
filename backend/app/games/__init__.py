@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import cache
+
 from . import catalogue
 from .alibi import Alibi
 from .base import Game, GameError, Player
@@ -84,6 +86,7 @@ REGISTRY: dict[str, type[Game]] = {
 }
 
 
+@cache  # built once: it never changes while the server runs, and every lobby frame carries it
 def catalog() -> list[dict[str, object]]:
     return [
         {

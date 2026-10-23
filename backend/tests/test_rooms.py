@@ -390,6 +390,9 @@ class HubTests(HubHarness):
         import asyncio
         import time
 
+        # This test measures wall-clock time: asyncio's debug mode (on in tests) records a stack trace
+        # for every task, which costs more than the work being timed, so it is off here.
+        asyncio.get_running_loop().set_debug(False)
         hub = self.make_hub()
         hub.send_timeout = 0.3
         room, host, conns = await self.party(hub, 3)

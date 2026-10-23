@@ -39,6 +39,9 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
+      # Production's exact, hash-checked versions first (as the Dockerfile installs them), then the dev
+      # tools: tests and the API contract must run against what ships, not the newest releases.
+      - run: pip install --require-hashes --no-deps -r requirements.lock
       - run: pip install -r requirements-dev.txt
       - run: ruff check .
       - run: ruff format --check .
