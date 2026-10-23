@@ -31,7 +31,7 @@ class ReactionDuel(Game):
     )
     min_players: ClassVar[int] = 2
     max_players: ClassVar[int] = 8
-    OPTIONS: ClassVar[dict[str, list[str]]] = {"rounds": ["7", "5", "10"]}
+    OPTIONS: ClassVar[dict[str, list[str]]] = {"signals": ["7", "5", "10"]}
     HOW_TO: ClassVar[tuple[str, ...]] = (
         "Everyone gets a big pad. It says “Wait…” for a few seconds.",
         "When it says TAP! in green, hit it. Fastest wins 100, then 60, then 40.",
@@ -47,7 +47,7 @@ class ReactionDuel(Game):
         return {"wait_min": 2.5, "wait_max": 7.0, "go": 3.0, "result": 7.0}
 
     def start(self) -> None:
-        self.rounds = int(self.options.get("rounds", "7"))
+        self.rounds = self.option_int("signals")
         self.history: list[dict[str, Any]] = []
         self.best: dict[str, float] = {}  # each player's fastest tap, in seconds
         self.round = 0

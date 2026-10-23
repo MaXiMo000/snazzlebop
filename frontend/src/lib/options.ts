@@ -1,5 +1,14 @@
 /** What the host's game options say in the lobby and on the intro screen (keys and values from the server). */
 export const OPTION_LABELS: Record<string, Record<string, string>> = {
+  day: { "90": "90 seconds of daytime debate", "60": "60 seconds (quick)", "120": "2 minutes", "180": "3 minutes (relaxed)" },
+  lives: { "3": "3 lives each", "2": "2 lives each", "1": "1 life (sudden death)", "5": "5 lives (long)" },
+  signals: { "7": "7 signals", "5": "5 signals (quick)", "10": "10 signals (long)" },
+  twist: {
+    classic: "Classic (the imposter has no word)",
+    undercover: "Undercover (the imposter gets a close word)",
+  },
+  words: { "3": "3 words", "1": "1 word (quick)", "5": "5 words (long)" },
+  clues: { "1": "One clue each", "2": "Two clues each" },
   // How many rounds: one key per game (keys are shared across games, so each game names its own).
   runs: { "5": "5 runs", "3": "3 runs (quick)", "8": "8 runs (long)" },
   deals: { "5": "5 deals", "3": "3 deals (quick)", "7": "7 deals (long)" },
@@ -119,8 +128,8 @@ export const OPTION_LABELS: Record<string, Record<string, string>> = {
   },
   rounds: {
     "3": "3 words",
-    "5": "5 words",
-    "1": "1 word",
+    "5": "5 words (long)",
+    "1": "1 word (quick)",
   },
   turns: {
     "2": "Everyone draws twice",

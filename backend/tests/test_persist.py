@@ -106,6 +106,26 @@ class SnapshotTests(HubHarness):
         self.assertEqual(back.show.games, room.show.games)
         self.assertEqual(back.show.cards, room.show.cards)
 
+    async def test_snapshots_from_before_rooms_became_a_package_still_load(self):
+        # Rooms saved before the split name their classes app.rooms.Room / app.rooms.Watcher.
+        from app.rooms import models
+
+        store, clock = MemoryStore(), Clock()
+        hub = hub_for(store, clock)
+        room, _, _ = await self.party(hub, 2)
+        hub.join_audience(room.code, "Fan")
+        shared = {"rng": hub.rng, "clock": hub.clock}
+        try:
+            models.Room.__module__ = models.Watcher.__module__ = "app.rooms"
+            blob = persist.dump_room(room, "s" * 40, shared)
+        finally:
+            models.Room.__module__ = models.Watcher.__module__ = "app.rooms.models"
+        self.assertIn(b"app.rooms\x94", blob)  # the old module path really is what was written
+        back = persist.load_room(blob, "s" * 40, shared)
+        self.assertIsNotNone(back)
+        self.assertEqual(sorted(back.players), sorted(room.players))
+        self.assertEqual(len(back.audience), 1)
+
     async def test_a_snapshot_must_be_this_servers(self):
         store, clock = MemoryStore(), Clock()
         hub = hub_for(store, clock)

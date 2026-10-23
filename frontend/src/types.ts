@@ -22,6 +22,20 @@ export interface GameCard {
   classic: boolean;
   /** the host can switch on Teams: two teams, the combined score wins */
   teams: boolean;
+  /** the shelf it sits on (a GameCategory id) */
+  category: string;
+  /** its place in the "Start here" row for newcomers, or null */
+  featured: number | null;
+  /** skill decides it, so it can be played ranked */
+  ranked: boolean;
+}
+
+/** A lobby shelf: chip label, section title and what it feels like. */
+export interface GameCategory {
+  id: string;
+  label: string;
+  title: string;
+  blurb: string;
 }
 
 export interface ChatMessage {
@@ -538,6 +552,8 @@ export interface RoomState {
   last_standings: { id: string; name: string; total: number }[];
   players: PlayerInfo[];
   games: GameCard[];
+  /** the shelves, in order (lobby and between games only) */
+  categories: GameCategory[];
   game: GameView | null;
   stage: string | null;
   /** true on a TV-mode (read-only big screen) connection */

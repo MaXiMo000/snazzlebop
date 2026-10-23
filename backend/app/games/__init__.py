@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from . import catalogue
 from .alibi import Alibi
 from .base import Game, GameError, Player
 from .blackjack import BlackjackShowdown
@@ -96,6 +97,7 @@ def catalog() -> list[dict[str, object]]:
             "show": cls.SHOW,
             "classic": cls.CLASSIC,
             "teams": cls.TEAMS,
+            **catalogue.entry(cls.game_id),
         }
         for cls in REGISTRY.values()
     ]

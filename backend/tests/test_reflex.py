@@ -134,7 +134,7 @@ class ReflexTests(unittest.TestCase):
             g.handle("p0", {"a": "tap"})  # result screen
 
     def test_rounds_option_final_and_host_skip(self):
-        g, clock = make(3, rounds="5")
+        g, clock = make(3, signals="5")
         for rnd in range(1, 6):
             self.assertEqual((g.phase, g.round), ("wait", rnd))
             g.advance()  # skip the wait: the signal comes now

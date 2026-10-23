@@ -741,35 +741,39 @@ function StartGame({ game, enough, online, send, prefix, teamsFirst }: { game: G
   );
 }
 
-type Shelf = "all" | "show" | "classic" | "teams" | "fits";
-const SHELVES: [Shelf, string][] = [
-  ["all", "All games"],
-  ["fits", "Fits the room now"],
-  ["show", "Show games"],
-  ["classic", "Classics"],
-  ["teams", "Team games"],
-];
-const onShelf = (g: GameCard, shelf: Shelf, online: number): boolean =>
-  shelf === "all" ||
-  (shelf === "show" && g.show) ||
-  (shelf === "classic" && g.classic) ||
-  (shelf === "teams" && (g.teams || (!g.show && !g.classic))) ||
-  (shelf === "fits" && online >= g.min_players && online <= g.max_players);
+/** "all" shows every shelf as its own section, "start" the newcomers' row, else one category. */
+type ShelfPick = "all" | "start" | string;
+const fitsRoom = (g: GameCard, online: number) => online >= g.min_players && online <= g.max_players;
+// Team games: those with a Teams switch, plus the games that are played in two teams anyway (Codewords).
+const teamGame = (g: GameCard) => g.teams || (!g.show && !g.classic);
 
-/** Every game in one place: filter by kind or by who's here, search by name, or let fate pick. */
 function GameShelf({ state, online, isHost, send }: { state: RoomState; online: number; isHost: boolean; send: Send }) {
-  const [shelf, setShelf] = useState<Shelf>("all");
+  const [pick, setPick] = useState<ShelfPick>("all");
+  const [fits, setFits] = useState(false);
+  const [teams, setTeams] = useState(false);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const q = query.trim().toLowerCase();
-  const shown = state.games.filter(
-    (g) => onShelf(g, shelf, online) && (!q || g.title.toLowerCase().includes(q) || g.blurb.toLowerCase().includes(q)),
-  );
+  const passes = (g: GameCard) =>
+    (!fits || fitsRoom(g, online)) && (!teams || teamGame(g)) && (!q || g.title.toLowerCase().includes(q) || g.blurb.toLowerCase().includes(q));
+  const featured = state.games.filter((g) => g.featured !== null && passes(g)).sort((a, b) => (a.featured ?? 0) - (b.featured ?? 0));
+  const sections = [
+    ...((pick === "all" && !q) || pick === "start"
+      ? [{ id: "start", title: "Start here", blurb: "Learned in a minute and great with people you just met.", games: featured }]
+      : []),
+    ...state.categories
+      .filter((c) => pick === "all" || pick === c.id)
+      .map((c) => ({ id: c.id, title: c.title, blurb: c.blurb, games: state.games.filter((g) => g.category === c.id && passes(g)) })),
+  ].filter((s) => s.games.length > 0);
+  const count = (id: ShelfPick) => (id === "start" ? featured.length : state.games.filter((g) => (id === "all" || g.category === id) && passes(g)).length);
+  const chips: [ShelfPick, string][] = [["all", "All games"], ["start", "Start here"], ...state.categories.map((c): [string, string] => [c.id, c.label])];
   const surprise = () => {
-    const pool = state.games.filter((g) => online >= g.min_players && online <= g.max_players);
+    const pool = state.games.filter((g) => fitsRoom(g, online));
     const g = pool[Math.floor(Math.random() * pool.length)];
     if (!g) return;
-    setShelf("all");
+    setPick(g.category);
+    setFits(false);
+    setTeams(false);
     setQuery("");
     setPicked(g.id);
     window.setTimeout(() => {
@@ -789,13 +793,21 @@ function GameShelf({ state, online, isHost, send }: { state: RoomState; online: 
         )}
       </div>
       <div className="shelf-tools">
-        <div className="shelf-filters" role="group" aria-label="Show">
-          {SHELVES.map(([id, label]) => (
-            <button key={id} type="button" className="shelf-chip" aria-pressed={shelf === id} onClick={() => setShelf(id)}>
+        <div className="shelf-filters" role="group" aria-label="Shelf">
+          {chips.map(([id, label]) => (
+            <button key={id} type="button" className="shelf-chip" aria-pressed={pick === id} onClick={() => setPick(id)}>
               {label}
-              <span className="shelf-count">{state.games.filter((g) => onShelf(g, id, online)).length}</span>
+              <span className="shelf-count">{count(id)}</span>
             </button>
           ))}
+        </div>
+        <div className="shelf-filters" role="group" aria-label="Only show">
+          <button type="button" className="shelf-chip toggle" aria-pressed={fits} onClick={() => setFits((v) => !v)}>
+            <span aria-hidden="true">{fits ? "✓" : "+"}</span> Fits the room now
+          </button>
+          <button type="button" className="shelf-chip toggle" aria-pressed={teams} onClick={() => setTeams((v) => !v)}>
+            <span aria-hidden="true">{teams ? "✓" : "+"}</span> Team games
+          </button>
         </div>
         <label className="sr-only" htmlFor="shelf-search">
           Find a game
@@ -810,14 +822,29 @@ function GameShelf({ state, online, isHost, send }: { state: RoomState; online: 
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-      {shown.length === 0 ? (
-        <p className="muted center">No game matches that. Try another filter.</p>
+      {sections.length === 0 ? (
+        <p className="muted center">No game matches that. Try another shelf or filter.</p>
       ) : (
-        <div className="grid">
-          {shown.map((g) => (
-            <GameCardTile key={g.id} g={g} online={online} isHost={isHost} send={send} highlight={picked === g.id} teamsFirst={shelf === "teams" && g.teams} />
-          ))}
-        </div>
+        sections.map((s) => (
+          <section key={s.id} className="shelf-section" aria-labelledby={`shelf-${s.id}`}>
+            <h3 id={`shelf-${s.id}`}>{s.title}</h3>
+            <p className="muted shelf-blurb">{s.blurb}</p>
+            <div className="grid">
+              {s.games.map((g) => (
+                <GameCardTile
+                  key={g.id}
+                  g={g}
+                  online={online}
+                  isHost={isHost}
+                  send={send}
+                  prefix={s.id === "start" ? "start-" : ""}
+                  highlight={picked === g.id && s.id !== "start"}
+                  teamsFirst={teams && g.teams}
+                />
+              ))}
+            </div>
+          </section>
+        ))
       )}
     </section>
   );
@@ -865,7 +892,7 @@ function GameCardTile({
 }) {
   const enough = online >= g.min_players && online <= g.max_players;
   return (
-    <Card as="article" id={`tile-${g.id}`} className={`segment-card seg-${g.id} game-card ${highlight ? "picked" : ""}`} aria-labelledby={`${prefix}seg-${g.id}`}>
+    <Card as="article" id={`${prefix}tile-${g.id}`} className={`segment-card seg-${g.id} game-card ${highlight ? "picked" : ""}`} aria-labelledby={`${prefix}seg-${g.id}`}>
       <div className="band">
         <span className="chip plum">
           {g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`} players

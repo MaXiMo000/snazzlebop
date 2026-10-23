@@ -11236,6 +11236,17 @@ button.sh-cell {
   background: var(--plum);
   color: var(--bulb);
 }
+/* One section per shelf: a heading, what it feels like, its tiles. */
+.shelf-section h3 {
+  margin: 0;
+  text-wrap: balance;
+}
+.shelf-blurb {
+  margin: 4px 0 12px;
+}
+.shelf-chip.toggle {
+  padding-right: 16px;
+}
 /* The surprise pick: a lit border that pulses twice. */
 .game-card.picked {
   outline: 5px solid var(--mustard);
