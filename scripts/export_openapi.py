@@ -1,5 +1,5 @@
-"""Write the HTTP API contract (OpenAPI) to frontend/openapi.json, the source the apps generate their API
-types from (frontend: `npm run gen:api`).
+"""Write the API contract (OpenAPI, plus the WebSocket state frame) to frontend/openapi.json, the source
+the apps generate their API types from (frontend: `npm run gen:api`).
 
     python scripts/export_openapi.py           # rewrite it after changing a route or app/schemas.py
     python scripts/export_openapi.py --check   # CI: fail if the committed copy is out of date
@@ -14,8 +14,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
+from pydantic import TypeAdapter  # noqa: E402
+
 from app.config import Settings  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.schemas import RoomFrame  # noqa: E402
 
 OUT = ROOT / "frontend" / "openapi.json"
 
@@ -23,6 +26,13 @@ OUT = ROOT / "frontend" / "openapi.json"
 def document() -> str:
     doc = create_app(Settings(secret_key="x" * 40)).openapi()
     doc["info"] = {"title": "Snazzlebop API", "version": "1"}
+    # The WebSocket "state" frame isn't an HTTP response, so it is added to the shared schemas by hand.
+    frame = TypeAdapter(RoomFrame).json_schema(ref_template="#/components/schemas/{model}")
+    schemas = doc["components"]["schemas"]
+    for name, schema in {**frame.pop("$defs", {}), "RoomFrame": frame}.items():
+        if name in schemas and schemas[name] != schema:
+            raise SystemExit(f"schema {name} differs between the HTTP and realtime contracts")
+        schemas[name] = schema
     return json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 

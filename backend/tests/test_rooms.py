@@ -9,6 +9,7 @@ from typing import Any
 
 from app.config import Settings
 from app.rooms import HOST_GRACE, INTRO_SECONDS, Hub, HubError, clean_name
+from app.schemas import RoomFrame
 
 FAST = {
     "frenemy": {"rank": 5, "reveal": 2},
@@ -23,6 +24,8 @@ class FakeConn:
         self.closed: int | None = None
 
     async def send_json(self, data: dict[str, Any]) -> None:
+        if data.get("t") == "state":  # every frame any room test sends must match the realtime contract
+            RoomFrame.model_validate(data)
         self.sent.append(data)
 
     async def close(self, code: int = 1000) -> None:

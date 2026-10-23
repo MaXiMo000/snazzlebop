@@ -129,7 +129,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await targets(host, "lobby", a11y);
 
   // Frenemy Radar
-  await host.locator("article.game-card.seg-frenemy").getByRole("button", { name: "Start!" }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-frenemy").getByRole("button", { name: "Start!" }).click();
   // The "how to play" screen comes first, on every phone.
   await expect(host.getByText("The rules")).toBeVisible();
   await expect(bo.getByRole("button", { name: /I’m ready/ })).toBeVisible();
@@ -145,7 +145,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await skipToResults(host, () => axe(host, "frenemy final", a11y));
 
   // Alibi
-  await host.locator("article.game-card.seg-alibi").getByRole("button", { name: "Start!" }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-alibi").getByRole("button", { name: "Start!" }).click();
   await startNow(host);
   await expect(host.getByRole("heading", { name: "Read your card!" })).toBeVisible();
   await expect(others[0]!.getByRole("heading", { name: "Your alibi" })).toBeVisible();
@@ -155,7 +155,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await skipToResults(host, () => axe(host, "alibi result", a11y));
 
   // Price Is Weird
-  await host.locator("article.game-card.seg-price").getByRole("button", { name: "Start!" }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-price").getByRole("button", { name: "Start!" }).click();
   await startNow(host);
   await expect(host.getByLabel("Your price ($)")).toBeVisible();
   await expect(others[1]!.getByLabel("Your price ($)")).toBeVisible();
@@ -165,7 +165,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await skipToResults(host, () => axe(host, "price final", a11y));
 
   // Telepathy Tax
-  await host.locator("article.game-card.seg-telepathy").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-telepathy").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
   await expect(host.getByRole("group", { name: /Answers for/ })).toBeVisible();
   await expect(bo.getByRole("group", { name: /Answers for/ }).getByRole("button")).toHaveCount(6);
@@ -175,7 +175,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await skipToResults(host, () => axe(host, "telepathy final", a11y));
 
   // Mole in the Mural
-  await host.locator("article.game-card.seg-mural").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-mural").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
   await expect(host.getByRole("group", { name: "The mural, 16 tiles" }).getByRole("button")).toHaveCount(16);
   await expect(host.getByRole("heading", { name: "How it works" })).toBeVisible();
@@ -185,7 +185,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await skipToResults(host, () => axe(host, "mural final", a11y));
 
   // Blackjack Showdown
-  await host.locator("article.game-card.seg-blackjack").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-blackjack").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
   await expect(host.getByRole("heading", { name: "Place your bet" })).toBeVisible();
   await expect(bo.getByRole("group", { name: "Bet size" }).getByRole("button")).toHaveCount(4);
@@ -195,7 +195,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   await skipToResults(host, () => axe(host, "blackjack final", a11y));
 
   // Crossword Race
-  await host.locator("article.game-card.seg-crossword").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-crossword").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
   await expect(host.getByLabel(/\d+ (Across|Down) \(\d+ letters\)/)).toBeVisible();
   await expect(host.getByRole("heading", { name: "Across" })).toBeVisible();
@@ -229,7 +229,7 @@ test("keyboard only: skip link, create a room, start a game, guess", async ({ pa
   await expect(page.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
 
   // Tab to Price Is Weird's start button and press Enter.
-  const start = page.locator("article.game-card.seg-price").getByRole("button", { name: /Start!/ });
+  const start = page.locator("article.game-card:not(.start-copy).seg-price").getByRole("button", { name: /Start!/ });
   for (let i = 0; i < 200 && !(await start.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press("Tab");
   await expect(start).toBeFocused();
   // The focus ring must be visible (outline, not removed).
@@ -273,7 +273,7 @@ test("TV mode: read-only big screen of the public state", async ({ page: host, b
   // The TV is not a contestant: the host still sees exactly two players.
   await expect(host.getByRole("heading", { name: /In the room \(2 online\)/ })).toBeVisible();
 
-  await host.locator("article.game-card.seg-price").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-price").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
   await expect(tv.getByText(/0 of 2 guesses locked in/)).toBeVisible();
   await expect(tv.getByLabel("Your price ($)")).toHaveCount(0); // nothing to type into on the TV
@@ -309,7 +309,7 @@ test("reduced motion: the spin lands at once, no stingers or confetti; sound tog
   await guest.goto(`/r/${code}`);
   await guest.getByLabel("Your name").fill("Sol");
   await guest.getByRole("button", { name: "Join as a contestant" }).click();
-  await host.locator("article.game-card.seg-price").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-price").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
   for (const [p, amount] of [[host, "1"], [guest, "2"]] as const) {
     await p.getByLabel("Your price ($)").fill(amount);
@@ -346,7 +346,7 @@ test("Frenemy result card draws on the device and downloads as a PNG", async ({ 
     players.push(p);
   }
   await expect(host.getByRole("heading", { name: /In the room \(3 online\)/ })).toBeVisible();
-  await host.locator("article.game-card.seg-frenemy").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-frenemy").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
   for (let round = 0; round < 3; round++) {
     for (const p of players) {
@@ -570,7 +570,7 @@ test("the newer games: first screens, a real move each, axe and targets", async 
   const shot = shots(host, info.project.name);
   const [bo, cy] = await table(browser, baseURL!, host, ["Bo", "Cy"], problems);
   const start = async (id: string) => {
-    await host.locator(`article.game-card.seg-${id}`).getByRole("button", { name: /Start!/ }).click();
+    await host.locator(`article.game-card:not(.start-copy).seg-${id}`).getByRole("button", { name: /Start!/ }).click();
     await startNow(host);
   };
   const back = async () => {
@@ -801,7 +801,7 @@ test("Codewords: team game from the lobby, setup, a clue, marks and a reveal", a
   // It's under the "Team games" filter, and isn't offered for show nights.
   await host.getByRole("button", { name: /^Team games/ }).click();
   await expect(host.getByRole("group", { name: "Games in this show, in order" }).getByRole("button", { name: "Codewords" })).toHaveCount(0);
-  await host.locator("article.game-card.seg-codewords").getByRole("button", { name: /Start!/ }).click();
+  await host.locator("article.game-card:not(.start-copy).seg-codewords").getByRole("button", { name: /Start!/ }).click();
   await startNow(host);
 
   await expect(host.getByText("Pick your teams")).toBeVisible();

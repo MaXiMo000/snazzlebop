@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { sfx } from "../lib/sfx";
 import { Avatar, toneOf } from "./avatar";
 
-export type EntranceInfo = { id: number; pid: string; name: string; kind?: "belt" };
+export type EntranceInfo = { id: number; pid: string; name: string; kind?: string | null };
 
 const INTROS = [
   "The one, the only…",

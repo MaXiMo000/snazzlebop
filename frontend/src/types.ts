@@ -1,4 +1,4 @@
-import type { ApiGameCard } from "./lib/contract";
+import type { ApiGameCard, ApiRoomFrame } from "./lib/contract";
 
 export interface PlayerInfo {
   id: string;
@@ -383,7 +383,7 @@ export interface Highlight {
   title: string;
   text: string;
   /** the game it happened in (show reel only) */
-  game?: string;
+  game?: string | null;
 }
 
 export interface ShowState {
@@ -474,73 +474,15 @@ export interface Crowd {
 
 export type Role = "player" | "tv" | "audience";
 
-export interface RoomState {
-  t: "state";
-  you: string;
-  role: Role;
-  room: {
-    code: string;
-    phase: "lobby" | "intro" | "game" | "results" | "finale" | "market";
-    host: string;
-    title: string;
-    locked: boolean;
-    theme: string;
-  };
-  themes: Record<string, string>;
-  show: ShowState | null;
-  highlights: Highlight[];
-  quip: string;
-  reactions: Reaction[];
-  chat: ChatState;
-  /** voice/video calls are set up on this server */
-  call: { available: boolean; allowed: boolean; hush: number };
-  /** picked looks: id -> [face, colour] */
-  faces: Record<string, number[]>;
-  /** the latest walk-on (names on the server's private list) */
-  entrance: { id: number; pid: string; name: string; kind?: "belt" } | null;
-  /** the champion's belt and the loser's forfeit wheel */
-  night: {
-    belt: { name: string; holder: string | null };
-    /** the clear leader / the last-placed player by tonight's totals (null while tied or pointless) */
-    leader: string | null;
-    last: string | null;
-    forfeits: string[];
-    wheel: { n: number; pid: string; name: string; options: string[]; pick: number } | null;
-  };
-  crowd: Crowd;
-  market: MarketState | null;
-  cards: CardsState | null;
-  /** a team game: the two teams (also on the intro screen before it starts) */
-  teams: TeamsState | null;
-  rivals: RivalsState;
-  season: SeasonState | null;
-  /** the "how to play" screen before a game */
-  intro: {
-    game: string;
-    title: string;
-    blurb: string;
-    how_to: string[];
-    options: Record<string, string>;
-    closes_in: number;
-    ready: string[];
-    needed: number;
-  } | null;
-  /** a results screen everyone can skip together */
-  ready: { open: boolean; stage: string; votes: string[]; needed: number };
-  /** the running game's rules */
-  how_to: string[];
-  /** the prank: how many jump scares the server has queued for this viewer */
-  scare: number;
-  /** lobby: the last show's final standings */
-  last_standings: { id: string; name: string; total: number }[];
-  players: PlayerInfo[];
+/**
+ * One screen's view of the room: the realtime contract's RoomFrame (lib/contract.ts, generated from the
+ * backend), with the lobby cards' ids and the game's own view (`game`) typed here.
+ */
+export interface RoomState extends Omit<ApiRoomFrame, "games" | "game" | "show"> {
   games: GameCard[];
-  /** the shelves, in order (lobby and between games only) */
-  categories: GameCategory[];
   game: GameView | null;
-  stage: string | null;
-  /** true on a TV-mode (read-only big screen) connection */
-  tv: boolean;
+  /** as the contract's Show, with the playlist's ids narrowed to the games we know */
+  show: ShowState | null;
 }
 
 export interface Session {

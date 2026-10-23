@@ -338,15 +338,182 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Belt */
+        Belt: {
+            /** Holder */
+            holder: string | null;
+            /** Name */
+            name: string;
+        };
         /** BuyBody */
         BuyBody: {
             /** Item */
             item: string;
         };
+        /** Call */
+        Call: {
+            /** Allowed */
+            allowed: boolean;
+            /** Available */
+            available: boolean;
+            /** Hush */
+            hush: number;
+        };
+        /** CardInfo */
+        CardInfo: {
+            /** Icon */
+            icon: string;
+            /** Name */
+            name: string;
+            /** Text */
+            text: string;
+        };
+        /** CardPlay */
+        CardPlay: {
+            /**
+             * Bought
+             * @default false
+             */
+            bought: boolean;
+            /** Card */
+            card: string;
+            /** Effect */
+            effect: number;
+            /** Game */
+            game: number;
+            /** Pid */
+            pid: string;
+            /**
+             * Target
+             * @default null
+             */
+            target: string | null;
+        };
+        /** Cards */
+        Cards: {
+            /** Catalog */
+            catalog: {
+                [key: string]: components["schemas"]["CardInfo"];
+            };
+            /** Coins */
+            coins: {
+                [key: string]: components["schemas"]["CoinNews"];
+            };
+            /** In Play */
+            in_play: number;
+            /** News */
+            news: components["schemas"]["CardPlay"][];
+            you: components["schemas"]["CardsYou"] | null;
+        };
+        /** CardsYou */
+        CardsYou: {
+            /** Boost */
+            boost: string | null;
+            /** Card */
+            card: string | null;
+            /** Peek */
+            peek: string | null;
+            /** Played */
+            played: string | null;
+            /** Signed In */
+            signed_in: boolean;
+        };
+        /** CategoryInfo */
+        CategoryInfo: {
+            /** Blurb */
+            blurb: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Title */
+            title: string;
+        };
+        /** Chat */
+        Chat: {
+            /** Can Send */
+            can_send: boolean;
+            /** Messages */
+            messages: components["schemas"]["ChatMessage"][];
+            /** Muted */
+            muted: boolean;
+            /** Muted Note */
+            muted_note: string;
+            /** Team */
+            team: string | null;
+        };
+        /** ChatMessage */
+        ChatMessage: {
+            /** By */
+            by: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Team */
+            team: boolean;
+            /** Text */
+            text: string;
+        };
+        /** CoinNews */
+        CoinNews: {
+            /** Coins */
+            coins: number;
+            /** Place */
+            place: number;
+        };
         /** ConfirmBody */
         ConfirmBody: {
             /** Password */
             password: string;
+        };
+        /** Contestant */
+        Contestant: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** Crowd */
+        Crowd: {
+            /** Contestants */
+            contestants: components["schemas"]["Contestant"][];
+            /** Members */
+            members: components["schemas"]["CrowdMember"][];
+            mvp: components["schemas"]["Mvp"];
+            /** Open */
+            open: boolean;
+            /** Picks */
+            picks: {
+                [key: string]: number;
+            };
+            /** You Picked */
+            you_picked: string | null;
+        };
+        /** CrowdMember */
+        CrowdMember: {
+            /** Connected */
+            connected: boolean;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Points */
+            points: number;
+        };
+        /** Entrance */
+        Entrance: {
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @default null
+             */
+            kind: string | null;
+            /** Name */
+            name: string;
+            /** Pid */
+            pid: string;
         };
         /**
          * ErrorBody
@@ -425,6 +592,41 @@ export interface components {
             /** Wins */
             wins: number;
         };
+        /** Highlight */
+        Highlight: {
+            /**
+             * Game
+             * @default null
+             */
+            game: string | null;
+            /** Icon */
+            icon: string;
+            /** Text */
+            text: string;
+            /** Title */
+            title: string;
+        };
+        /** Intro */
+        Intro: {
+            /** Blurb */
+            blurb: string;
+            /** Closes In */
+            closes_in: number;
+            /** Game */
+            game: string;
+            /** How To */
+            how_to: string[];
+            /** Needed */
+            needed: number;
+            /** Options */
+            options: {
+                [key: string]: string;
+            };
+            /** Ready */
+            ready: string[];
+            /** Title */
+            title: string;
+        };
         /** LeaderRow */
         LeaderRow: {
             /** Played */
@@ -452,11 +654,85 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** Market */
+        Market: {
+            /** Bonus */
+            bonus: {
+                [key: string]: number;
+            };
+            /** Books */
+            books: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            /** Closes In */
+            closes_in: number | null;
+            /** Crowd */
+            crowd: {
+                [key: string]: string;
+            };
+            /** Dividend */
+            dividend: number;
+            /** Dividends */
+            dividends: {
+                [key: string]: number;
+            };
+            /** History */
+            history: {
+                [key: string]: number;
+            }[];
+            /** Moves */
+            moves: {
+                [key: string]: number;
+            };
+            /** Next */
+            next: string;
+            /** Open */
+            open: boolean;
+            /** Prices */
+            prices: {
+                [key: string]: number;
+            };
+            /** Trades */
+            trades: number;
+            /** Worth */
+            worth: {
+                [key: string]: number;
+            };
+            you: components["schemas"]["MarketBook"] | null;
+        };
+        /** MarketBook */
+        MarketBook: {
+            /** Cash */
+            cash: number;
+            /** Holdings */
+            holdings: {
+                [key: string]: number;
+            };
+            /** Tip */
+            tip: string;
+            /** Worth */
+            worth: number;
+        };
         /** Me */
         Me: {
             /** Accounts */
             accounts: boolean;
             user: components["schemas"]["PublicUser"] | null;
+        };
+        /** Mvp */
+        Mvp: {
+            /** Bonus */
+            bonus: number;
+            /** Open */
+            open: boolean;
+            /** Votes */
+            votes: {
+                [key: string]: number;
+            };
+            /** You Voted */
+            you_voted: string | null;
         };
         /** MyStats */
         MyStats: {
@@ -481,6 +757,17 @@ export interface components {
             recovery_code: string;
             user: components["schemas"]["PublicUser"];
         };
+        /** Night */
+        Night: {
+            belt: components["schemas"]["Belt"];
+            /** Forfeits */
+            forfeits: string[];
+            /** Last */
+            last: string | null;
+            /** Leader */
+            leader: string | null;
+            wheel: components["schemas"]["Wheel"] | null;
+        };
         /** Ok */
         Ok: {
             /** Ok */
@@ -493,6 +780,26 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** PlayerRow */
+        PlayerRow: {
+            /** Connected */
+            connected: boolean;
+            /** Host */
+            host: boolean;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Total */
+            total: number;
+        };
+        /** PlaylistItem */
+        PlaylistItem: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+        };
         /** PublicUser */
         PublicUser: {
             /** Coins */
@@ -504,6 +811,26 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** Reaction */
+        Reaction: {
+            /** By */
+            by: string;
+            /** E */
+            e: string;
+            /** Id */
+            id: number;
+        };
+        /** Ready */
+        Ready: {
+            /** Needed */
+            needed: number;
+            /** Open */
+            open: boolean;
+            /** Stage */
+            stage: string;
+            /** Votes */
+            votes: string[];
+        };
         /** RecoverBody */
         RecoverBody: {
             /** New Password */
@@ -512,6 +839,106 @@ export interface components {
             recovery_code: string;
             /** Username */
             username: string;
+        };
+        /** RivalResult */
+        RivalResult: {
+            /** Players */
+            players: string[];
+            /** Winner */
+            winner: string | null;
+        };
+        /** Rivals */
+        Rivals: {
+            /** Bonus */
+            bonus: number;
+            /** News */
+            news: components["schemas"]["RivalResult"][];
+            /** Pairs */
+            pairs: string[][];
+        };
+        /**
+         * RoomFrame
+         * @description The room as one screen sees it. Secrets are filtered per viewer before this is built.
+         */
+        RoomFrame: {
+            call: components["schemas"]["Call"];
+            cards: components["schemas"]["Cards"] | null;
+            /** Categories */
+            categories: components["schemas"]["CategoryInfo"][];
+            chat: components["schemas"]["Chat"];
+            crowd: components["schemas"]["Crowd"];
+            entrance: components["schemas"]["Entrance"] | null;
+            /** Faces */
+            faces: {
+                [key: string]: number[];
+            };
+            /** Game */
+            game: {
+                [key: string]: unknown;
+            } | null;
+            /** Games */
+            games: components["schemas"]["GameCard"][];
+            /** Highlights */
+            highlights: components["schemas"]["Highlight"][];
+            /** How To */
+            how_to: string[];
+            intro: components["schemas"]["Intro"] | null;
+            /** Last Standings */
+            last_standings: components["schemas"]["Standing"][];
+            market: components["schemas"]["Market"] | null;
+            night: components["schemas"]["Night"];
+            /** Players */
+            players: components["schemas"]["PlayerRow"][];
+            /** Quip */
+            quip: string;
+            /** Reactions */
+            reactions: components["schemas"]["Reaction"][];
+            ready: components["schemas"]["Ready"];
+            rivals: components["schemas"]["Rivals"];
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "player" | "audience" | "tv";
+            room: components["schemas"]["RoomInfo"];
+            /** Scare */
+            scare: number;
+            season: components["schemas"]["Season"] | null;
+            show: components["schemas"]["Show"] | null;
+            /** Stage */
+            stage: string | null;
+            /**
+             * T
+             * @constant
+             */
+            t: "state";
+            teams: components["schemas"]["Teams"] | null;
+            /** Themes */
+            themes: {
+                [key: string]: string;
+            };
+            /** Tv */
+            tv: boolean;
+            /** You */
+            you: string;
+        };
+        /** RoomInfo */
+        RoomInfo: {
+            /** Code */
+            code: string;
+            /** Host */
+            host: string;
+            /** Locked */
+            locked: boolean;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "lobby" | "intro" | "market" | "game" | "results" | "finale";
+            /** Theme */
+            theme: string;
+            /** Title */
+            title: string;
         };
         /**
          * RoomPass
@@ -524,6 +951,22 @@ export interface components {
             player_id: string;
             /** Token */
             token: string;
+        };
+        /** Season */
+        Season: {
+            /** Number */
+            number: number;
+            /** Table */
+            table: {
+                [key: string]: components["schemas"]["SeasonRow"];
+            };
+        };
+        /** SeasonRow */
+        SeasonRow: {
+            /** Points */
+            points: number;
+            /** Wins */
+            wins: number;
         };
         /** SeasonStat */
         SeasonStat: {
@@ -556,12 +999,70 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** Show */
+        Show: {
+            /** Awards */
+            awards: components["schemas"]["Highlight"][];
+            /** Can Rematch */
+            can_rematch: boolean;
+            /** Finished */
+            finished: boolean;
+            /** Games */
+            games: components["schemas"]["ShowGame"][];
+            /** Jackpot */
+            jackpot: boolean;
+            /** Market */
+            market: boolean;
+            /** Next */
+            next: string | null;
+            /** Playlist */
+            playlist: components["schemas"]["PlaylistItem"][];
+            /** Reel */
+            reel: components["schemas"]["Highlight"][];
+            /** Started */
+            started: number;
+        };
+        /** ShowGame */
+        ShowGame: {
+            /** Game */
+            game: string;
+            /** Scores */
+            scores: {
+                [key: string]: number;
+            };
+            /** Title */
+            title: string;
+        };
         /** SignupBody */
         SignupBody: {
             /** Password */
             password: string;
             /** Username */
             username: string;
+        };
+        /** Standing */
+        Standing: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Total */
+            total: number;
+        };
+        /** TeamNews */
+        TeamNews: {
+            /** Scores */
+            scores: number[];
+            /** Winner */
+            winner: number | null;
+        };
+        /** Teams */
+        Teams: {
+            /** Members */
+            members: string[][];
+            news: components["schemas"]["TeamNews"] | null;
+            /** You */
+            you: number | null;
         };
         /** Totals */
         Totals: {
@@ -582,6 +1083,19 @@ export interface components {
         /** UserBody */
         UserBody: {
             user: components["schemas"]["PublicUser"];
+        };
+        /** Wheel */
+        Wheel: {
+            /** N */
+            n: number;
+            /** Name */
+            name: string;
+            /** Options */
+            options: string[];
+            /** Pick */
+            pick: number;
+            /** Pid */
+            pid: string;
         };
     };
     responses: never;

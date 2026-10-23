@@ -892,7 +892,7 @@ function GameCardTile({
 }) {
   const enough = online >= g.min_players && online <= g.max_players;
   return (
-    <Card as="article" id={`${prefix}tile-${g.id}`} className={`segment-card seg-${g.id} game-card ${highlight ? "picked" : ""}`} aria-labelledby={`${prefix}seg-${g.id}`}>
+    <Card as="article" id={`${prefix}tile-${g.id}`} className={`segment-card seg-${g.id} game-card ${prefix === "start-" ? "start-copy" : ""} ${highlight ? "picked" : ""}`} aria-labelledby={`${prefix}seg-${g.id}`}>
       <div className="band">
         <span className="chip plum">
           {g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`} players

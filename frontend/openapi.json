@@ -1,6 +1,32 @@
 {
   "components": {
     "schemas": {
+      "Belt": {
+        "additionalProperties": false,
+        "properties": {
+          "holder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holder"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "holder"
+        ],
+        "title": "Belt",
+        "type": "object"
+      },
       "BuyBody": {
         "additionalProperties": false,
         "properties": {
@@ -16,6 +42,337 @@
         "title": "BuyBody",
         "type": "object"
       },
+      "Call": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "hush": {
+            "title": "Hush",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "available",
+          "allowed",
+          "hush"
+        ],
+        "title": "Call",
+        "type": "object"
+      },
+      "CardInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "icon",
+          "text"
+        ],
+        "title": "CardInfo",
+        "type": "object"
+      },
+      "CardPlay": {
+        "additionalProperties": false,
+        "properties": {
+          "bought": {
+            "default": false,
+            "title": "Bought",
+            "type": "boolean"
+          },
+          "card": {
+            "title": "Card",
+            "type": "string"
+          },
+          "effect": {
+            "title": "Effect",
+            "type": "integer"
+          },
+          "game": {
+            "title": "Game",
+            "type": "integer"
+          },
+          "pid": {
+            "title": "Pid",
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
+          }
+        },
+        "required": [
+          "pid",
+          "card",
+          "game",
+          "effect"
+        ],
+        "title": "CardPlay",
+        "type": "object"
+      },
+      "Cards": {
+        "additionalProperties": false,
+        "properties": {
+          "catalog": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CardInfo"
+            },
+            "title": "Catalog",
+            "type": "object"
+          },
+          "coins": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CoinNews"
+            },
+            "title": "Coins",
+            "type": "object"
+          },
+          "in_play": {
+            "title": "In Play",
+            "type": "integer"
+          },
+          "news": {
+            "items": {
+              "$ref": "#/components/schemas/CardPlay"
+            },
+            "title": "News",
+            "type": "array"
+          },
+          "you": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardsYou"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "catalog",
+          "in_play",
+          "news",
+          "coins",
+          "you"
+        ],
+        "title": "Cards",
+        "type": "object"
+      },
+      "CardsYou": {
+        "additionalProperties": false,
+        "properties": {
+          "boost": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boost"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card"
+          },
+          "peek": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peek"
+          },
+          "played": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Played"
+          },
+          "signed_in": {
+            "title": "Signed In",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "card",
+          "played",
+          "peek",
+          "signed_in",
+          "boost"
+        ],
+        "title": "CardsYou",
+        "type": "object"
+      },
+      "CategoryInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "blurb": {
+            "title": "Blurb",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "title",
+          "blurb"
+        ],
+        "title": "CategoryInfo",
+        "type": "object"
+      },
+      "Chat": {
+        "additionalProperties": false,
+        "properties": {
+          "can_send": {
+            "title": "Can Send",
+            "type": "boolean"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "muted": {
+            "title": "Muted",
+            "type": "boolean"
+          },
+          "muted_note": {
+            "title": "Muted Note",
+            "type": "string"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          }
+        },
+        "required": [
+          "messages",
+          "team",
+          "muted",
+          "muted_note",
+          "can_send"
+        ],
+        "title": "Chat",
+        "type": "object"
+      },
+      "ChatMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "by",
+          "name",
+          "text",
+          "team"
+        ],
+        "title": "ChatMessage",
+        "type": "object"
+      },
+      "CoinNews": {
+        "additionalProperties": false,
+        "properties": {
+          "coins": {
+            "title": "Coins",
+            "type": "integer"
+          },
+          "place": {
+            "title": "Place",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "coins",
+          "place"
+        ],
+        "title": "CoinNews",
+        "type": "object"
+      },
       "ConfirmBody": {
         "additionalProperties": false,
         "properties": {
@@ -29,6 +386,144 @@
           "password"
         ],
         "title": "ConfirmBody",
+        "type": "object"
+      },
+      "Contestant": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Contestant",
+        "type": "object"
+      },
+      "Crowd": {
+        "additionalProperties": false,
+        "properties": {
+          "contestants": {
+            "items": {
+              "$ref": "#/components/schemas/Contestant"
+            },
+            "title": "Contestants",
+            "type": "array"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/CrowdMember"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "mvp": {
+            "$ref": "#/components/schemas/Mvp"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "picks": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Picks",
+            "type": "object"
+          },
+          "you_picked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "You Picked"
+          }
+        },
+        "required": [
+          "members",
+          "contestants",
+          "picks",
+          "open",
+          "you_picked",
+          "mvp"
+        ],
+        "title": "Crowd",
+        "type": "object"
+      },
+      "CrowdMember": {
+        "additionalProperties": false,
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "points",
+          "connected"
+        ],
+        "title": "CrowdMember",
+        "type": "object"
+      },
+      "Entrance": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Kind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pid": {
+            "title": "Pid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "pid",
+          "name"
+        ],
+        "title": "Entrance",
         "type": "object"
       },
       "ErrorBody": {
@@ -257,6 +752,100 @@
         "title": "GameStat",
         "type": "object"
       },
+      "Highlight": {
+        "additionalProperties": false,
+        "properties": {
+          "game": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Game"
+          },
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "icon",
+          "title",
+          "text"
+        ],
+        "title": "Highlight",
+        "type": "object"
+      },
+      "Intro": {
+        "additionalProperties": false,
+        "properties": {
+          "blurb": {
+            "title": "Blurb",
+            "type": "string"
+          },
+          "closes_in": {
+            "title": "Closes In",
+            "type": "number"
+          },
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "how_to": {
+            "items": {
+              "type": "string"
+            },
+            "title": "How To",
+            "type": "array"
+          },
+          "needed": {
+            "title": "Needed",
+            "type": "integer"
+          },
+          "options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "object"
+          },
+          "ready": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ready",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game",
+          "title",
+          "blurb",
+          "how_to",
+          "options",
+          "closes_in",
+          "ready",
+          "needed"
+        ],
+        "title": "Intro",
+        "type": "object"
+      },
       "LeaderRow": {
         "additionalProperties": false,
         "properties": {
@@ -334,6 +923,160 @@
         "title": "LoginBody",
         "type": "object"
       },
+      "Market": {
+        "additionalProperties": false,
+        "properties": {
+          "bonus": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Bonus",
+            "type": "object"
+          },
+          "books": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "title": "Books",
+            "type": "object"
+          },
+          "closes_in": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closes In"
+          },
+          "crowd": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Crowd",
+            "type": "object"
+          },
+          "dividend": {
+            "title": "Dividend",
+            "type": "integer"
+          },
+          "dividends": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Dividends",
+            "type": "object"
+          },
+          "history": {
+            "items": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "moves": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Moves",
+            "type": "object"
+          },
+          "next": {
+            "title": "Next",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "prices": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Prices",
+            "type": "object"
+          },
+          "trades": {
+            "title": "Trades",
+            "type": "integer"
+          },
+          "worth": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Worth",
+            "type": "object"
+          },
+          "you": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarketBook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "open",
+          "closes_in",
+          "next",
+          "prices",
+          "history",
+          "moves",
+          "dividends",
+          "dividend",
+          "trades",
+          "you",
+          "crowd",
+          "worth",
+          "books",
+          "bonus"
+        ],
+        "title": "Market",
+        "type": "object"
+      },
+      "MarketBook": {
+        "additionalProperties": false,
+        "properties": {
+          "cash": {
+            "title": "Cash",
+            "type": "integer"
+          },
+          "holdings": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Holdings",
+            "type": "object"
+          },
+          "tip": {
+            "title": "Tip",
+            "type": "string"
+          },
+          "worth": {
+            "title": "Worth",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cash",
+          "holdings",
+          "worth",
+          "tip"
+        ],
+        "title": "MarketBook",
+        "type": "object"
+      },
       "Me": {
         "additionalProperties": false,
         "properties": {
@@ -357,6 +1100,45 @@
           "accounts"
         ],
         "title": "Me",
+        "type": "object"
+      },
+      "Mvp": {
+        "additionalProperties": false,
+        "properties": {
+          "bonus": {
+            "title": "Bonus",
+            "type": "integer"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "votes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Votes",
+            "type": "object"
+          },
+          "you_voted": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "You Voted"
+          }
+        },
+        "required": [
+          "open",
+          "you_voted",
+          "votes",
+          "bonus"
+        ],
+        "title": "Mvp",
         "type": "object"
       },
       "MyStats": {
@@ -419,6 +1201,62 @@
         "title": "NewAccount",
         "type": "object"
       },
+      "Night": {
+        "additionalProperties": false,
+        "properties": {
+          "belt": {
+            "$ref": "#/components/schemas/Belt"
+          },
+          "forfeits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Forfeits",
+            "type": "array"
+          },
+          "last": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last"
+          },
+          "leader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leader"
+          },
+          "wheel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Wheel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "belt",
+          "leader",
+          "last",
+          "forfeits",
+          "wheel"
+        ],
+        "title": "Night",
+        "type": "object"
+      },
       "Ok": {
         "additionalProperties": false,
         "properties": {
@@ -454,6 +1292,59 @@
         "title": "PasswordBody",
         "type": "object"
       },
+      "PlayerRow": {
+        "additionalProperties": false,
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "host": {
+            "title": "Host",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "connected",
+          "host",
+          "total"
+        ],
+        "title": "PlayerRow",
+        "type": "object"
+      },
+      "PlaylistItem": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "PlaylistItem",
+        "type": "object"
+      },
       "PublicUser": {
         "additionalProperties": false,
         "properties": {
@@ -479,6 +1370,62 @@
           "powerups"
         ],
         "title": "PublicUser",
+        "type": "object"
+      },
+      "Reaction": {
+        "additionalProperties": false,
+        "properties": {
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "e": {
+            "title": "E",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "by",
+          "e"
+        ],
+        "title": "Reaction",
+        "type": "object"
+      },
+      "Ready": {
+        "additionalProperties": false,
+        "properties": {
+          "needed": {
+            "title": "Needed",
+            "type": "integer"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "votes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Votes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "open",
+          "stage",
+          "votes",
+          "needed"
+        ],
+        "title": "Ready",
         "type": "object"
       },
       "RecoverBody": {
@@ -508,6 +1455,366 @@
         "title": "RecoverBody",
         "type": "object"
       },
+      "RivalResult": {
+        "additionalProperties": false,
+        "properties": {
+          "players": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Players",
+            "type": "array"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "players",
+          "winner"
+        ],
+        "title": "RivalResult",
+        "type": "object"
+      },
+      "Rivals": {
+        "additionalProperties": false,
+        "properties": {
+          "bonus": {
+            "title": "Bonus",
+            "type": "integer"
+          },
+          "news": {
+            "items": {
+              "$ref": "#/components/schemas/RivalResult"
+            },
+            "title": "News",
+            "type": "array"
+          },
+          "pairs": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Pairs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pairs",
+          "news",
+          "bonus"
+        ],
+        "title": "Rivals",
+        "type": "object"
+      },
+      "RoomFrame": {
+        "additionalProperties": false,
+        "description": "The room as one screen sees it. Secrets are filtered per viewer before this is built.",
+        "properties": {
+          "call": {
+            "$ref": "#/components/schemas/Call"
+          },
+          "cards": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Cards"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryInfo"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "crowd": {
+            "$ref": "#/components/schemas/Crowd"
+          },
+          "entrance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Entrance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "faces": {
+            "additionalProperties": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "title": "Faces",
+            "type": "object"
+          },
+          "game": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game"
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/GameCard"
+            },
+            "title": "Games",
+            "type": "array"
+          },
+          "highlights": {
+            "items": {
+              "$ref": "#/components/schemas/Highlight"
+            },
+            "title": "Highlights",
+            "type": "array"
+          },
+          "how_to": {
+            "items": {
+              "type": "string"
+            },
+            "title": "How To",
+            "type": "array"
+          },
+          "intro": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Intro"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_standings": {
+            "items": {
+              "$ref": "#/components/schemas/Standing"
+            },
+            "title": "Last Standings",
+            "type": "array"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Market"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "night": {
+            "$ref": "#/components/schemas/Night"
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerRow"
+            },
+            "title": "Players",
+            "type": "array"
+          },
+          "quip": {
+            "title": "Quip",
+            "type": "string"
+          },
+          "reactions": {
+            "items": {
+              "$ref": "#/components/schemas/Reaction"
+            },
+            "title": "Reactions",
+            "type": "array"
+          },
+          "ready": {
+            "$ref": "#/components/schemas/Ready"
+          },
+          "rivals": {
+            "$ref": "#/components/schemas/Rivals"
+          },
+          "role": {
+            "enum": [
+              "player",
+              "audience",
+              "tv"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "room": {
+            "$ref": "#/components/schemas/RoomInfo"
+          },
+          "scare": {
+            "title": "Scare",
+            "type": "integer"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Season"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "show": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Show"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "t": {
+            "const": "state",
+            "title": "T",
+            "type": "string"
+          },
+          "teams": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Teams"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "themes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Themes",
+            "type": "object"
+          },
+          "tv": {
+            "title": "Tv",
+            "type": "boolean"
+          },
+          "you": {
+            "title": "You",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "you",
+          "tv",
+          "role",
+          "room",
+          "themes",
+          "show",
+          "highlights",
+          "quip",
+          "reactions",
+          "chat",
+          "call",
+          "faces",
+          "night",
+          "entrance",
+          "crowd",
+          "market",
+          "cards",
+          "rivals",
+          "season",
+          "intro",
+          "teams",
+          "ready",
+          "last_standings",
+          "scare",
+          "players",
+          "games",
+          "categories",
+          "game",
+          "stage",
+          "how_to"
+        ],
+        "title": "RoomFrame",
+        "type": "object"
+      },
+      "RoomInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "phase": {
+            "enum": [
+              "lobby",
+              "intro",
+              "market",
+              "game",
+              "results",
+              "finale"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "theme": {
+            "title": "Theme",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "phase",
+          "host",
+          "title",
+          "locked",
+          "theme"
+        ],
+        "title": "RoomInfo",
+        "type": "object"
+      },
       "RoomPass": {
         "additionalProperties": false,
         "description": "A seat (player or audience): the room code, your id in it, and the token the socket sends first.",
@@ -531,6 +1838,47 @@
           "token"
         ],
         "title": "RoomPass",
+        "type": "object"
+      },
+      "Season": {
+        "additionalProperties": false,
+        "properties": {
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "table": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SeasonRow"
+            },
+            "title": "Table",
+            "type": "object"
+          }
+        },
+        "required": [
+          "number",
+          "table"
+        ],
+        "title": "Season",
+        "type": "object"
+      },
+      "SeasonRow": {
+        "additionalProperties": false,
+        "properties": {
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          },
+          "wins": {
+            "title": "Wins",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "wins",
+          "points"
+        ],
+        "title": "SeasonRow",
         "type": "object"
       },
       "SeasonStat": {
@@ -625,6 +1973,111 @@
         "title": "ShopItem",
         "type": "object"
       },
+      "Show": {
+        "additionalProperties": false,
+        "properties": {
+          "awards": {
+            "items": {
+              "$ref": "#/components/schemas/Highlight"
+            },
+            "title": "Awards",
+            "type": "array"
+          },
+          "can_rematch": {
+            "title": "Can Rematch",
+            "type": "boolean"
+          },
+          "finished": {
+            "title": "Finished",
+            "type": "boolean"
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/ShowGame"
+            },
+            "title": "Games",
+            "type": "array"
+          },
+          "jackpot": {
+            "title": "Jackpot",
+            "type": "boolean"
+          },
+          "market": {
+            "title": "Market",
+            "type": "boolean"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "playlist": {
+            "items": {
+              "$ref": "#/components/schemas/PlaylistItem"
+            },
+            "title": "Playlist",
+            "type": "array"
+          },
+          "reel": {
+            "items": {
+              "$ref": "#/components/schemas/Highlight"
+            },
+            "title": "Reel",
+            "type": "array"
+          },
+          "started": {
+            "title": "Started",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "playlist",
+          "jackpot",
+          "started",
+          "next",
+          "finished",
+          "games",
+          "reel",
+          "awards",
+          "market",
+          "can_rematch"
+        ],
+        "title": "Show",
+        "type": "object"
+      },
+      "ShowGame": {
+        "additionalProperties": false,
+        "properties": {
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "scores": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Scores",
+            "type": "object"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game",
+          "title",
+          "scores"
+        ],
+        "title": "ShowGame",
+        "type": "object"
+      },
       "SignupBody": {
         "additionalProperties": false,
         "properties": {
@@ -644,6 +2097,102 @@
           "password"
         ],
         "title": "SignupBody",
+        "type": "object"
+      },
+      "Standing": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "total"
+        ],
+        "title": "Standing",
+        "type": "object"
+      },
+      "TeamNews": {
+        "additionalProperties": false,
+        "properties": {
+          "scores": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Scores",
+            "type": "array"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "scores",
+          "winner"
+        ],
+        "title": "TeamNews",
+        "type": "object"
+      },
+      "Teams": {
+        "additionalProperties": false,
+        "properties": {
+          "members": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "news": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamNews"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "you": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "You"
+          }
+        },
+        "required": [
+          "members",
+          "you",
+          "news"
+        ],
+        "title": "Teams",
         "type": "object"
       },
       "Totals": {
@@ -700,6 +2249,43 @@
           "user"
         ],
         "title": "UserBody",
+        "type": "object"
+      },
+      "Wheel": {
+        "additionalProperties": false,
+        "properties": {
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "pick": {
+            "title": "Pick",
+            "type": "integer"
+          },
+          "pid": {
+            "title": "Pid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "n",
+          "pid",
+          "name",
+          "options",
+          "pick"
+        ],
+        "title": "Wheel",
         "type": "object"
       }
     }
