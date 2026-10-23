@@ -1,10 +1,24 @@
-# Everything needs the owner's review; the security-sensitive paths are listed so that stays true
-# even if a broader rule is added above later.
-*                       @MaXiMo000
-/.github/               @MaXiMo000
-/Dockerfile             @MaXiMo000
-/render.yaml            @MaXiMo000
-/backend/app/security.py @MaXiMo000
-/backend/app/ws.py      @MaXiMo000
-/backend/requirements.lock @MaXiMo000
-/SECURITY.md            @MaXiMo000
+# Reviewers by area: a pull request touching an area asks its owners (add team members per line).
+# Everything needs the owner's review; the security-sensitive paths are listed so that stays true even if
+# a broader rule is added above later.
+*                           @MaXiMo000
+
+# Backend areas
+/backend/app/games/         @MaXiMo000
+/backend/app/rooms/         @MaXiMo000
+/backend/app/migrations/    @MaXiMo000
+/backend/app/schemas.py     @MaXiMo000
+/backend/app/accounts.py    @MaXiMo000
+
+# Web app and the API contract
+/frontend/src/              @MaXiMo000
+/frontend/openapi.json      @MaXiMo000
+
+# Security-sensitive
+/.github/                   @MaXiMo000
+/Dockerfile                 @MaXiMo000
+/render.yaml                @MaXiMo000
+/backend/app/security.py    @MaXiMo000
+/backend/app/ws.py          @MaXiMo000
+/backend/requirements.lock  @MaXiMo000
+/SECURITY.md                @MaXiMo000
