@@ -1,0 +1,145 @@
+/* ---- alibi --------------------------------------------------------------------------- */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.slot {
+  display: grid;
+  grid-template-columns: 82px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: var(--line);
+  border-radius: 16px;
+}
+.slot .time {
+  font-family: var(--display);
+  font-size: 0.95rem;
+}
+.slot.murder {
+  background: var(--accent-soft);
+  border-style: dashed;
+}
+.slot.lie {
+  background: var(--cherry-light);
+}
+.slot .marks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+@media (max-width: 480px) {
+  .slot {
+    grid-template-columns: 1fr auto;
+  }
+  .slot .time {
+    grid-column: 1 / -1;
+  }
+}
+
+.ask-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  .ask-form {
+    grid-template-columns: 1fr 1fr auto;
+    align-items: end;
+  }
+}
+/* A picker and its button side by side, the explanation underneath (Price's sabotage). */
+@media (min-width: 640px) {
+  .ask-form.pick-and-go {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ask-form.pick-and-go > p {
+    grid-column: 1 / -1;
+  }
+}
+
+.evidence {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.evidence li {
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 2.5px solid var(--edge);
+  border-radius: 14px;
+}
+.evidence li.flag {
+  background: var(--cherry);
+  color: #fff;
+  font-weight: 700;
+}
+.evidence li.clue {
+  background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+
+.vote-grid {
+  display: grid;
+  gap: 12px;
+  /* Wide enough for a 16-letter name on one line: one column on phones, more on bigger screens. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+}
+
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  border-radius: 14px;
+}
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--field);
+  border: var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.table th,
+.table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--rule);
+  white-space: nowrap;
+}
+.table tr:last-child td {
+  border-bottom: 0;
+}
+.table th {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 0.85rem;
+  background: var(--stage);
+  color: var(--bulb);
+}
+.table tbody th {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 1rem;
+  background: transparent;
+  color: var(--ink);
+}
+.table td.lie {
+  background: var(--cherry-light);
+  font-weight: 700;
+}
+.table .over {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+

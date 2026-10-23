@@ -1,0 +1,105 @@
+/* ---- liar's dice ---------------------------------------------------------------------------- */
+.seg-dice {
+  --accent: #8c2f39;
+  --accent-ink: #fff;
+  --accent-soft: #f8dde0;
+}
+.dice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+.die {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--line);
+  border-radius: 12px;
+  box-shadow: var(--lift-sm);
+}
+.die.wild {
+  background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+.die.hot {
+  background: var(--accent);
+  color: #fff;
+}
+.die-btn {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.bid-dice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+}
+.bid-least {
+  font-weight: 700;
+}
+.bid-qty {
+  font: 400 2.6rem / 1 var(--display);
+}
+.bid-wild {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.bid-wild .die {
+  width: 32px;
+  height: 32px;
+  font-size: 1.7rem;
+}
+.dice-hint,
+.dice-advice {
+  margin: 8px 0 0;
+}
+.dice-advice {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-weight: 700;
+}
+.dice-table,
+.dice-reveal {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dice-table li,
+.dice-reveal li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.dice-table li.turn {
+  background: var(--bulb);
+  box-shadow: var(--lift-sm);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+.dice-table li.out {
+  border-style: dashed;
+}
+

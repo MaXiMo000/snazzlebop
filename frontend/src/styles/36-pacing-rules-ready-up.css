@@ -1,0 +1,49 @@
+/* ---- pacing: rules, ready-up ------------------------------------------------------------------ */
+.how-to-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 1.4em;
+  font-size: 1.05rem;
+  text-align: left;
+}
+.card.stage .how-to-list li::marker {
+  color: var(--bulb);
+  font-family: var(--display);
+}
+details.how-to {
+  padding: 10px 18px;
+  box-shadow: var(--lift-sm);
+}
+details.how-to summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+details.how-to[open] summary {
+  margin-bottom: 10px;
+}
+/* Ready for the next round: pinned to the bottom of the screen on phones and tablets so it's always
+   in reach (laptops have the room to show it where it is). */
+@media (max-width: 899px) {
+  .ready-bar {
+    position: sticky;
+    bottom: calc(12px + var(--safe-bottom));
+    z-index: 30;
+  }
+}
+.ready-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: var(--surface);
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+}
+

@@ -1,0 +1,107 @@
+/* ---- price ----------------------------------------------------------------------------- */
+.prize {
+  text-align: center;
+}
+.prize .emoji {
+  display: block;
+  font-size: clamp(4rem, 18vw, 6.5rem);
+  line-height: 1.1;
+}
+.prize h3 {
+  font-size: clamp(1.3rem, 5vw, 1.9rem);
+  margin: 6px 0;
+}
+.seal {
+  display: inline-block;
+  max-width: 100%;
+  padding: 4px 12px;
+  background: var(--stage);
+  color: var(--bulb);
+  border-radius: 10px;
+}
+
+/* The chaos-spin reel: a strip of multipliers that spins and lands on the sealed one. */
+.reel-window {
+  --cell: 92px;
+  position: relative;
+  width: min(100%, 220px);
+  height: var(--cell);
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--field);
+  border: 4px solid var(--edge);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 14px 12px -10px rgba(43, 27, 51, 0.45),
+    inset 0 -14px 12px -10px rgba(43, 27, 51, 0.45),
+    var(--lift);
+}
+.reel-window::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 50%;
+  border-top: 3px dashed var(--cherry);
+  opacity: 0.5;
+}
+.reel {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: spin 2.2s cubic-bezier(0.12, 0.6, 0.22, 1) both;
+}
+.reel li {
+  display: grid;
+  place-items: center;
+  height: var(--cell);
+  font-family: var(--display);
+  font-size: 2.6rem;
+}
+.reel li.half {
+  color: var(--teal);
+}
+.reel li.one {
+  color: var(--ink);
+}
+.reel li.two {
+  color: var(--cherry);
+}
+@keyframes spin {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-17 * var(--cell)));
+  }
+}
+.price-tag {
+  display: inline-block;
+  padding: 6px 18px;
+  font-family: var(--display);
+  font-size: clamp(1.8rem, 8vw, 2.8rem);
+  background: var(--mustard);
+  color: var(--plum);
+  border: var(--line);
+  border-radius: 14px;
+  box-shadow: var(--lift);
+  transform: rotate(-2deg);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+}
+details summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.winner-row td,
+.table .winner-row th {
+  background: var(--bulb);
+  font-weight: 700;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+

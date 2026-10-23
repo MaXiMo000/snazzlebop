@@ -1,0 +1,6 @@
+/* ---- lobby: team games -------------------------------------------------------------------------- */
+.team-games {
+  border-top-width: 8px;
+  border-top-color: var(--cw-red, #c8203a);
+}
+

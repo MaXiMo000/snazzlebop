@@ -1,0 +1,8 @@
+/* ---- split: who faces whom ------------------------------------------------------------------------ */
+.split-vs {
+  font-family: var(--display);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+

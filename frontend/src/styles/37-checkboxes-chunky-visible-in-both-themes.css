@@ -1,0 +1,31 @@
+/* ---- checkboxes: chunky, visible in both themes ------------------------------------------------ */
+.check input {
+  appearance: none;
+  display: inline-grid;
+  place-items: center;
+  border: 3px solid var(--edge);
+  border-radius: 8px;
+  background: var(--field);
+  cursor: pointer;
+}
+:root:not([data-theme="light"]) .check input {
+  border-color: #9a7aab;
+}
+.check input::after {
+  content: "";
+  width: 12px;
+  height: 7px;
+  margin-top: -3px;
+  border-left: 3.5px solid var(--plum);
+  border-bottom: 3.5px solid var(--plum);
+  transform: rotate(-45deg);
+  opacity: 0;
+}
+.check input:checked {
+  background: var(--bulb);
+  border-color: var(--bulb);
+}
+.check input:checked::after {
+  opacity: 1;
+}
+

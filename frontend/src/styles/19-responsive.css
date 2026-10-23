@@ -1,0 +1,15 @@
+/* ---- responsive ---------------------------------------------------------------- */
+@media (max-width: 480px) {
+  :root {
+    --radius: 18px;
+  }
+  .card {
+    box-shadow: var(--lift-sm);
+  }
+  .timer {
+    width: 58px;
+    height: 58px;
+    font-size: 1.4rem;
+  }
+}
+

@@ -1,0 +1,112 @@
+/* ---- frenemy ------------------------------------------------------------------------ */
+.prompt {
+  font-family: var(--display);
+  font-size: clamp(1.3rem, 5.4vw, 2rem);
+  line-height: 1.15;
+  margin: 0;
+}
+.rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 10px;
+  background: var(--surface);
+  border: var(--line);
+  border-radius: 18px;
+  box-shadow: var(--lift-sm);
+}
+.rank-item.me {
+  background: var(--teal-light);
+}
+.rank-item .num {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  font-family: var(--display);
+  font-size: 1.2rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: var(--line);
+  border-radius: 50%;
+}
+.rank-item .name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.rank-item .arrows {
+  display: flex;
+  gap: 6px;
+}
+.arrow {
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+  color: var(--plum);
+  background: var(--bulb);
+  border: var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+}
+.arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.verdict {
+  padding: 14px 16px;
+  background: var(--surface);
+  border: var(--line);
+  border-radius: 18px;
+}
+.verdict.top {
+  background: var(--accent-soft);
+}
+.gauge {
+  display: block;
+  width: 100%;
+  height: 18px;
+  margin-top: 8px;
+}
+.gauge .track {
+  fill: var(--field);
+  stroke: var(--edge);
+  stroke-width: 3px;
+}
+.gauge .fill {
+  fill: var(--cherry);
+}
+.gauge .fill.good {
+  fill: var(--teal);
+}
+
+.share-canvas {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  margin: 12px auto 0;
+  border: var(--line);
+  border-radius: 18px;
+  box-shadow: var(--lift);
+}
+
+.trophy {
+  text-align: center;
+}
+.trophy .cup {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+

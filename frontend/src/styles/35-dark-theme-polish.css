@@ -1,0 +1,56 @@
+/* ---- dark theme polish ----------------------------------------------------------------------- */
+/* Neon after hours: the stage glows, lit things glow, pressed buttons light up like bulbs. */
+:root:not([data-theme="light"]) .card.stage {
+  box-shadow: var(--lift), var(--glow);
+}
+:root:not([data-theme="light"]) .btn[aria-pressed="true"] {
+  --bg: var(--bulb);
+  --fg: var(--plum);
+}
+:root:not([data-theme="light"]) .sign,
+:root:not([data-theme="light"]) .price-tag {
+  box-shadow: var(--lift-sm), 0 0 22px rgba(255, 231, 161, 0.28);
+}
+:root:not([data-theme="light"]) .logo .badge {
+  box-shadow: 0 0 18px rgba(255, 107, 44, 0.55);
+}
+:root:not([data-theme="light"]) .hero h1 {
+  text-shadow:
+    3px 3px 0 var(--tangerine),
+    0 0 28px rgba(255, 107, 44, 0.45);
+}
+:root:not([data-theme="light"]) body {
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(124, 58, 160, 0.35), transparent 70%),
+    radial-gradient(ellipse at 50% -10%, transparent 0, var(--bg) 70%),
+    repeating-conic-gradient(from -90deg at 50% -8%, var(--rays) 0 7deg, transparent 7deg 14deg);
+}
+
+.theme-toggle .knob {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+.theme-toggle:hover .knob {
+  transform: rotate(-20deg);
+}
+.topbar .row {
+  gap: 8px;
+}
+.topbar .row {
+  flex-wrap: nowrap;
+}
+/* Phones: the top bar toggles go icon-only (the label stays for screen readers). */
+@media (max-width: 480px) {
+  .topbar .btn {
+    padding: 8px 12px;
+  }
+  .topbar .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+

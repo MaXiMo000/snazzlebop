@@ -1,0 +1,98 @@
+/* ---- shell ---------------------------------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 14px var(--gutter);
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  font-family: var(--display);
+  font-size: clamp(1.15rem, 4.5vw, 1.6rem);
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.logo .bang {
+  color: var(--cherry);
+}
+.logo .badge {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--tangerine);
+  border: var(--line);
+  box-shadow: var(--lift-sm);
+  font-size: 1.1rem;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+
+.app {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 4px var(--gutter) 64px;
+}
+
+/* The gap between stacked blocks. Written as :not(:first-child) (same elements as "* + *") so it
+   outranks a component's own `margin: 0` reset, which used to glue blocks together. */
+.stack > :not(:first-child):not(.space-top) {
+  margin-top: 18px;
+}
+.stack-sm > :not(:first-child):not(.space-top) {
+  margin-top: 10px;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.row.between {
+  justify-content: space-between;
+}
+.row.center {
+  justify-content: center;
+}
+.nowrap {
+  flex-wrap: nowrap;
+}
+.grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+.center {
+  text-align: center;
+}
+.muted {
+  color: var(--muted);
+}
+.mono {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.lead {
+  font-size: clamp(1.1rem, 3.6vw, 1.35rem);
+  font-weight: 600;
+}
+.space-top {
+  margin-top: 28px;
+}
+

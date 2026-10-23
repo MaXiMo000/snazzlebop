@@ -1,0 +1,93 @@
+/* ---- buttons --------------------------------------------------------------- */
+.btn {
+  --bg: var(--tangerine);
+  --fg: var(--plum);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 10px 22px;
+  font-family: var(--display);
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  color: var(--fg);
+  background: var(--bg);
+  border: var(--line);
+  /* A pill on one line (half the 48px height); a rounded box, not a lozenge, if a label must wrap. */
+  border-radius: 24px;
+  text-wrap: balance;
+  box-shadow: var(--lift);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    filter 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 7px 0 var(--shadow);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+/* A pressed button sinks 5px; this strip fills the gap above it, so a finger near the top edge still
+   lifts off on the button and the tap counts (the transform anchors the absolute strip). */
+.btn:active:not(:disabled)::before {
+  content: "";
+  position: absolute;
+  inset: -6px 0 auto;
+  height: 6px;
+}
+.btn.go {
+  --bg: var(--teal);
+  --fg: var(--cream);
+}
+.btn.gold {
+  --bg: var(--mustard);
+}
+.btn.danger {
+  --bg: var(--cherry);
+  --fg: #fff;
+}
+.btn.ghost {
+  --bg: var(--surface);
+  --fg: var(--ink);
+}
+.btn.accent {
+  --bg: var(--accent);
+  --fg: var(--accent-ink);
+}
+.btn.big {
+  min-height: 60px;
+  border-radius: 30px;
+  padding: 14px 30px;
+  font-size: 1.2rem;
+}
+.btn.small {
+  min-height: 44px;
+  padding: 6px 16px;
+  font-size: 0.9rem;
+  box-shadow: var(--lift-sm);
+}
+.btn.block {
+  width: 100%;
+}
+/* After the variants, and doubled up, so no variant colour can make a disabled button look live. */
+.btn.btn:disabled {
+  cursor: not-allowed;
+  --bg: var(--disabled-bg);
+  --fg: var(--disabled-fg);
+  box-shadow: var(--lift-sm);
+}
+.btn[aria-pressed="true"] {
+  --bg: var(--plum);
+  --fg: var(--bulb);
+}
+

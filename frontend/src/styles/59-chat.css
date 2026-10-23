@@ -1,0 +1,269 @@
+/* ---- chat ------------------------------------------------------------------------------------------- */
+.chat-button {
+  position: relative;
+}
+.chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--cherry);
+  color: #fff;
+  font: 700 0.75rem/1 var(--body);
+  border: 2px solid var(--bg);
+}
+/* A message that arrived while the chat was closed: top of the screen, out of the way of the pinned
+   action cards at the bottom, gone after a few seconds (tap to open the chat). */
+.chat-popup {
+  position: fixed;
+  top: calc(76px + var(--safe-top)); /* below the top bar: never covers its buttons (the chat button included) */
+  left: 50%;
+  z-index: 40;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 2 * var(--gutter)));
+  padding: 10px 16px;
+  border: 3px solid var(--edge);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--lift), 0 12px 30px rgba(43, 27, 51, 0.35);
+  font: inherit;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  overflow-wrap: anywhere; /* people type anything */
+  text-wrap: pretty;
+  cursor: pointer;
+  animation: chat-drop 0.25s ease-out;
+}
+.chat-popup-body {
+  display: grid;
+  min-width: 0;
+}
+.chat-popup .chat-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+@keyframes chat-drop {
+  from {
+    transform: translate(-50%, -20px);
+    opacity: 0;
+  }
+}
+/* The panel: a bottom sheet on phones, a docked card bottom-right on wider screens. */
+.chat-panel {
+  position: fixed;
+  z-index: 45;
+  right: calc(var(--gutter) + var(--safe-right));
+  bottom: calc(12px + var(--safe-bottom));
+  left: calc(var(--gutter) + var(--safe-left));
+  display: flex;
+  flex-direction: column;
+  max-height: min(70svh, 560px);
+  border: 3px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--lift), 0 16px 40px rgba(43, 27, 51, 0.4);
+}
+@media (min-width: 700px) {
+  .chat-panel {
+    left: auto;
+    width: 380px;
+  }
+}
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 2px solid var(--rule);
+}
+.chat-tabs {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.chat-tab,
+.chat-close {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--field);
+  color: var(--ink);
+  font: 700 0.95rem/1 var(--body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chat-tab[aria-pressed="true"] {
+  background: var(--plum);
+  color: var(--bulb);
+}
+.chat-close {
+  padding: 0;
+  flex: none;
+}
+.chat-tab:focus-visible,
+.chat-close:focus-visible,
+.chat-popup:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.chat-dot {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cherry);
+}
+.chat-log {
+  flex: 1 1 auto;
+  min-height: 120px;
+  padding: 10px;
+  overflow-y: auto;
+}
+.chat-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+/* Rows like a group chat: one avatar and name per run of messages from the same person. */
+.chat-msg {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  column-gap: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+.chat-msg.first {
+  margin-top: 10px;
+}
+.chat-msg:hover {
+  background: var(--surface-2);
+}
+.chat-msg .avatar {
+  grid-row: span 2;
+  align-self: start;
+  margin-top: 2px;
+}
+.chat-msg .chat-name,
+.chat-msg .chat-text {
+  grid-column: 2;
+}
+.chat-name {
+  display: block;
+  font-size: 0.9rem;
+}
+.chat-msg.mine .chat-name {
+  color: var(--muted);
+}
+.chat-text {
+  line-height: 1.35;
+}
+.chat-log li.chat-empty {
+  padding: 16px 8px;
+  text-align: center;
+}
+.chat-note {
+  margin: 0;
+  padding: 12px;
+  border-top: 2px solid var(--rule);
+}
+.chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 8px;
+  border-top: 2px solid var(--rule);
+}
+.chat-form input {
+  min-width: 0;
+  font-size: 1rem;
+}
+.chat-form .btn {
+  white-space: nowrap;
+}
+/* TV: the latest messages float bottom-left like live comments, fading after a while. */
+.chat-ticker {
+  position: fixed;
+  left: calc(24px + var(--safe-left));
+  bottom: calc(24px + var(--safe-bottom));
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  max-width: 480px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.chat-ticker li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 3px solid var(--edge);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+  box-shadow: var(--lift);
+  animation: chat-fade 12s ease-in forwards;
+}
+@keyframes chat-fade {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-popup {
+    animation: none;
+  }
+  .chat-ticker li {
+    animation: none;
+  }
+}
+/* Very narrow phones: the account button goes icon-only so the chat button fits in the top bar. */
+@media (max-width: 379px) {
+  .topbar .account-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+.acct-icon {
+  display: none;
+}
+@media (max-width: 379px) {
+  .topbar .acct-icon {
+    display: inline;
+  }
+}
+

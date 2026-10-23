@@ -1,0 +1,139 @@
+/* ---- blackjack -------------------------------------------------------------------------- */
+.card.stage.felt {
+  /* lightest point #147043 keeps cream >= 5.5:1 and bulb >= 5:1 (scripts/contrast.mjs) */
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    #147043 0,
+    #11643f 55%,
+    #0b4a2e 100%
+  );
+}
+.card.stage.felt .muted {
+  color: var(--cream);
+}
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pcard {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 74px;
+  font-family: var(--display);
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--plum);
+  background: #fff; /* a real playing card: white in both themes */
+  border: 3px solid var(--plum);
+  border-radius: 10px;
+  box-shadow: 0 4px 0 rgba(43, 27, 51, 0.6);
+  animation: deal 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.pcard.red {
+  color: var(--cherry);
+}
+.pcard.back {
+  color: var(--bulb);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--cherry) 0 6px,
+    #a0162c 6px 12px
+  );
+}
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) rotate(-8deg);
+  }
+}
+.bj-hand + .bj-hand {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px dashed var(--rule);
+}
+.bj-hand .muted {
+  margin-top: 6px;
+}
+.sign-part {
+  display: inline-block;
+  max-width: 100%;
+}
+.bj-move .bj-hand {
+  display: grid;
+  justify-items: center;
+  margin: 10px 0 12px;
+}
+/* Phones and tablets: Hit / Stand (and your hand) stay pinned to the bottom of the screen on your turn. */
+.bj-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.bj-actions .btn {
+  padding-inline: 10px;
+}
+.bj-actions .btn:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+@media (max-width: 899px) {
+  .bj-move {
+    position: sticky;
+    bottom: calc(10px + var(--safe-bottom));
+    z-index: 5;
+    box-shadow:
+      var(--lift),
+      0 10px 30px rgba(43, 27, 51, 0.35);
+  }
+}
+/* Results: big enough to read across the room. */
+.bj-anchor {
+  scroll-margin-top: 12px;
+}
+.stack > .bj-anchor + :not(:first-child):not(.space-top) {
+  margin-top: 0;
+}
+.chip.bj-result {
+  padding: 6px 14px;
+  font-size: 1.05rem;
+}
+.bj-my-head {
+  margin: 6px 0 0;
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 7vw, 2.6rem);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.bj-my-net {
+  margin: 4px 0 0;
+  font-family: var(--display);
+  font-size: clamp(2.6rem, 14vw, 4.4rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--bulb);
+}
+.bj-my-result.up .bj-my-net {
+  color: #8ee6a0;
+}
+.bj-my-result.down .bj-my-net {
+  color: #ffb3bd;
+}
+.seat.turn {
+  box-shadow:
+    0 0 0 5px var(--bulb),
+    var(--lift);
+}
+.btn.bet-chip {
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  border-radius: 50%;
+  border-style: dashed;
+  border-width: 4px;
+}
+

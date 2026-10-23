@@ -1,0 +1,121 @@
+/* ---- live reactions ------------------------------------------------------------------------- */
+/* All six on one row, even on a 320px phone (wrapping left one emoji alone on a second row). */
+.react-bar {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(44px, 52px));
+  justify-content: center;
+  gap: clamp(4px, 1.4vw, 10px); /* 6 x 44px + gaps = 288px, the content width of a 320px phone */
+}
+.react-btn {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  font-size: 1.6rem;
+  background: var(--surface);
+  border: var(--line);
+  border-radius: 50%;
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+  transition: transform 0.08s ease;
+  touch-action: manipulation;
+}
+.react-btn:active:not(:disabled) {
+  transform: translateY(3px) scale(0.94);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+.react-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.react-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+}
+.floater {
+  position: absolute;
+  bottom: -60px;
+  display: grid;
+  justify-items: center;
+  animation: float-up 2.5s ease-out forwards;
+}
+.floater-emoji {
+  font-size: 2.4rem;
+  filter: drop-shadow(0 3px 0 rgba(43, 27, 51, 0.35));
+}
+.floater-name {
+  padding: 0 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--bulb);
+  background: var(--stage);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.lane-0 {
+  left: 6%;
+}
+.lane-1 {
+  left: 18%;
+}
+.lane-2 {
+  left: 30%;
+}
+.lane-3 {
+  left: 42%;
+}
+.lane-4 {
+  left: 54%;
+}
+.lane-5 {
+  left: 66%;
+}
+.lane-6 {
+  left: 78%;
+}
+.lane-7 {
+  left: 88%;
+}
+@keyframes float-up {
+  /* Scale and travel only, never fade: the name tags keep full contrast the whole way up. */
+  0% {
+    transform: translateY(0) scale(0.2);
+  }
+  12% {
+    transform: translateY(-12vh) scale(1.1);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    /* lvh: past the top even when a phone's address bar is hidden; fade out so nothing lingers */
+    transform: translateY(-125lvh) scale(1);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No flying: reactions just sit along the bottom edge until they are removed. */
+  .floater {
+    bottom: 12px;
+    animation: none !important;
+  }
+}
+
+/* On the dark stage a plum "pressed" button would vanish: light it up gold instead. */
+.card.stage .btn[aria-pressed="true"] {
+  --bg: var(--mustard);
+  --fg: var(--plum);
+}
+.card.stage .btn[aria-pressed="true"] .order {
+  background: var(--stage);
+  color: var(--bulb);
+}
+
+.finale .trophy {
+  font-size: clamp(2.6rem, 10vw, 4rem);
+  line-height: 1;
+}
+

@@ -1,0 +1,52 @@
+/* ---- lowest lonely number ------------------------------------------------------------------- */
+.seg-lonely {
+  --accent: #0f5a73;
+  --accent-ink: #fff;
+  --accent-soft: #d4ecf3;
+}
+.number-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(44px, 1fr));
+  gap: 8px;
+}
+.number-grid .btn {
+  font-family: var(--display);
+  font-size: 1.2rem;
+}
+.lonely-picks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lonely-picks li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.lonely-picks li.crowded {
+  border-style: dashed;
+}
+.lonely-picks li.crowded .lonely-n {
+  text-decoration: line-through;
+}
+.lonely-picks li.win {
+  background: var(--bulb);
+  box-shadow: var(--lift-sm);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+.lonely-n {
+  min-width: 2.2rem;
+  font-family: var(--display);
+  font-size: 1.4rem;
+  text-align: center;
+}
+

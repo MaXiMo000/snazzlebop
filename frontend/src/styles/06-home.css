@@ -1,0 +1,32 @@
+/* ---- home ------------------------------------------------------------------- */
+.hero {
+  text-align: center;
+  padding: clamp(12px, 4vw, 30px) 0 clamp(18px, 5vw, 36px);
+}
+.hero h1 {
+  margin: 0;
+  color: var(--ink);
+  text-shadow:
+    3px 3px 0 var(--tangerine),
+    6px 6px 0 var(--shadow);
+  transform: rotate(-2deg);
+}
+.hero .tagline {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 6px 18px;
+  font-weight: 700;
+  font-size: clamp(1rem, 3.6vw, 1.25rem);
+  background: var(--stage);
+  color: var(--bulb);
+  border-radius: 22px; /* pill on one line, a rounded box when it wraps on a phone */
+  text-wrap: balance;
+}
+.lineup li {
+  margin-bottom: 8px;
+}
+.lineup {
+  padding-left: 1.2em;
+  margin: 0;
+}
+

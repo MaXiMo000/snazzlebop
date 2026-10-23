@@ -1,0 +1,171 @@
+/* ---- lobby: the game shelf ---------------------------------------------------------------------- */
+.shelf-head {
+  gap: 10px;
+}
+.shelf-head h2 {
+  margin: 0;
+  text-wrap: balance;
+}
+.shelf-tools {
+  display: grid;
+  gap: 10px;
+}
+.shelf-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.shelf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px 6px 16px;
+  border: var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 0.95rem / 1.1 var(--body);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.shelf-chip:hover {
+  filter: brightness(1.06);
+}
+.shelf-chip:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.shelf-chip[aria-pressed="true"] {
+  background: var(--tangerine);
+  color: var(--plum);
+}
+.shelf-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 14px;
+  background: var(--field);
+  color: var(--ink);
+  font: 400 0.8rem / 1 var(--display);
+}
+.shelf-chip[aria-pressed="true"] .shelf-count {
+  background: var(--plum);
+  color: var(--bulb);
+}
+/* One section per shelf: a heading, what it feels like, its tiles. */
+.shelf-section h3 {
+  margin: 0;
+  text-wrap: balance;
+}
+.shelf-blurb {
+  margin: 4px 0 12px;
+}
+.shelf-chip.toggle {
+  padding-right: 16px;
+}
+/* The surprise pick: a lit border that pulses twice. */
+.game-card.picked {
+  outline: 5px solid var(--mustard);
+  outline-offset: 3px;
+  animation: picked-glow 0.8s ease-out 2;
+}
+@keyframes picked-glow {
+  50% {
+    outline-color: var(--tangerine);
+  }
+}
+
+/* A tile's options fold away; the line under "Game options" says what will start. */
+details.game-options {
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+}
+details.game-options summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+details.game-options summary::-webkit-details-marker {
+  display: none;
+}
+details.game-options summary::after {
+  content: "▾";
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  transition: transform 0.15s;
+}
+details.game-options[open] summary::after {
+  transform: rotate(180deg);
+}
+/* "Classic · 10 questions · …": lines break between choices, never inside one. */
+.game-options-now {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.45em;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.game-options-now > span {
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.game-options-now > span:not(:last-child)::after {
+  content: " ·"; /* the dot trails its choice, so no line ever starts with one */
+}
+details.game-options[open] .game-options-now {
+  display: none;
+}
+details.game-options > div {
+  padding: 0 14px 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-card.picked {
+    animation: none;
+  }
+}
+
+/* Home: how a show works, numbered in the show's lights. */
+.how-steps {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.how-steps li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  text-wrap: pretty;
+}
+.how-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: var(--line);
+  border-radius: 50%;
+  background: var(--tangerine);
+  color: var(--plum);
+  font: 400 1.1rem / 1 var(--display);
+}
+

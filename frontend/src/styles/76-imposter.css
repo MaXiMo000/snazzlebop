@@ -1,0 +1,133 @@
+/* ---- imposter ----------------------------------------------------------------------------------- */
+.seg-imposter {
+  --accent: #3d3a8c;
+  --accent-ink: #fff;
+  --accent-soft: #e3e1f7;
+}
+.ip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+.ip-big {
+  margin: 0;
+  font-size: 3.4rem;
+  line-height: 1;
+}
+.ip-card .btn {
+  margin-inline: auto;
+}
+.ip-card.fake {
+  outline: 4px solid var(--cherry);
+  outline-offset: -4px;
+}
+.ip-word {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font: 400 clamp(2rem, 9vw, 3.4rem) / 1.1 var(--display);
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.ip-word-inline {
+  font-family: var(--display);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.ip-clues {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ip-clues li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 12px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.ip-clues li.now {
+  background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+.ip-clues li.later {
+  border-style: dashed;
+}
+/* Name and clue side by side where they fit, the clue under the name where they don't. */
+.ip-clue-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 14px;
+  min-width: 0;
+}
+.ip-clue-name {
+  flex: 0 0 auto;
+  min-width: min(9rem, 100%);
+  font-weight: 700;
+}
+.ip-clue-text {
+  font: 400 1.15rem / 1.2 var(--display);
+}
+.ip-votes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ip-vote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 10px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 1rem / 1.2 var(--body);
+  text-align: left;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+button.ip-vote {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button.ip-vote:hover {
+  filter: brightness(1.06);
+}
+button.ip-vote:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+button.ip-vote:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.ip-vote.static {
+  box-shadow: none;
+}
+.ip-vote.picked {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent);
+}
+.ip-vote-name {
+  flex: 1;
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  .ip .ask-form {
+    grid-template-columns: 1fr auto;
+  }
+}

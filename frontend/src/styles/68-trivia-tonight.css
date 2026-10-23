@@ -1,0 +1,531 @@
+/* ---- trivia tonight -------------------------------------------------------------------------------- */
+.seg-trivia {
+  --accent: #3b2f8f;
+  --accent-ink: #fff;
+  --accent-soft: #e3e0f8;
+}
+.tq-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+.tq-level.l1 {
+  background: #d6f2df;
+}
+.tq-level.l2 {
+  background: var(--bulb);
+}
+.tq-level.l3 {
+  background: #f8d3dc;
+}
+.tq-you {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+.tq-you:empty {
+  display: none;
+}
+.tq-lives {
+  font-size: 1.15rem;
+  letter-spacing: 2px;
+}
+.tq-streak {
+  background: #ffd8b0;
+}
+.tq .avatar.tiny {
+  width: 24px;
+  height: 24px;
+  font-size: 0.6rem;
+}
+.tq .avatar.tiny.face {
+  font-size: 0.9rem;
+}
+
+/* The question: readable body type (questions run long), big and balanced. */
+.tq-q .prompt {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: clamp(1.2rem, 5vw, 1.85rem);
+  line-height: 1.25;
+  text-wrap: balance;
+}
+/* The clock bar: drains left to right under the question; turns cherry for the last quarter. */
+.tq-clock {
+  display: block;
+  width: 100%;
+  height: 12px;
+  margin-top: 16px;
+  border: 2.5px solid var(--edge);
+  border-radius: 8px;
+  background: var(--field);
+  overflow: hidden;
+  appearance: none;
+}
+.tq-clock::-webkit-progress-bar {
+  background: var(--field);
+}
+.tq-clock::-webkit-progress-value {
+  background: var(--mustard);
+  transition: width 0.1s linear;
+}
+.tq-clock::-moz-progress-bar {
+  background: var(--mustard);
+}
+.tq-clock.low::-webkit-progress-value {
+  background: var(--cherry);
+}
+.tq-clock.low::-moz-progress-bar {
+  background: var(--cherry);
+}
+
+/* Four answer buttons: one column on phones, two across from 560px. Shape + colour + letter-free. */
+.tq-choices {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 560px) {
+  .tq-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.tq-choices.tf {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tq-choice {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 3px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--c);
+  color: #fff;
+  font: 700 clamp(1.02rem, 4.2vw, 1.25rem) / 1.2 var(--body);
+  text-align: left;
+  box-shadow: 0 5px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    opacity 0.2s,
+    filter 0.2s;
+}
+.tq-choice.c0 {
+  --c: #b4234a;
+}
+.tq-choice.c1 {
+  --c: #0b6477;
+}
+.tq-choice.c2 {
+  --c: #8a5300;
+}
+.tq-choice.c3 {
+  --c: #5b2c9a;
+}
+.tq-choice.ct {
+  --c: #146b3a;
+}
+.tq-choice.cf {
+  --c: #b4234a;
+}
+.tq-choices.tf .tq-choice {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+  min-height: 112px;
+  font-size: clamp(1.2rem, 5vw, 1.6rem);
+}
+.tq-choice:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.tq-choice:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+.tq-choice:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 3px;
+}
+.tq-choice:disabled {
+  cursor: default;
+}
+.tq-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.tq-choices.tf .tq-mark {
+  width: 48px;
+  height: 48px;
+  font-size: 1.6rem;
+}
+.tq-text {
+  overflow-wrap: break-word;
+  hyphens: manual;
+  text-wrap: balance;
+}
+.tq-lock,
+.tq-who {
+  grid-column: 1 / -1;
+}
+.tq-lock {
+  justify-self: start;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--plum);
+  font: 400 0.8rem / 1.4 var(--display);
+}
+.tq-choices.tf .tq-lock {
+  justify-self: center;
+}
+.tq-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tq-choices.tf .tq-who {
+  justify-content: center;
+}
+.tq-choice.mine {
+  outline: 4px solid #fff;
+  outline-offset: -8px;
+}
+.tq-choice.dim {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+.tq-choice.right {
+  --c: #146b3a;
+  animation: tq-pop 0.45s ease-out;
+  box-shadow:
+    0 5px 0 var(--shadow),
+    0 0 0 5px var(--mustard);
+}
+.tq-choice.right .tq-mark::after {
+  content: "✓";
+}
+.tq-choice.right .tq-mark,
+.tq-choice.wrong .tq-mark {
+  font-size: 0;
+}
+.tq-choice.right .tq-mark::after,
+.tq-choice.wrong .tq-mark::after {
+  font-size: 1.4rem;
+}
+.tq-choice.wrong {
+  --c: #6d1b2f;
+  animation: tq-shake 0.4s ease-out;
+}
+.tq-choice.wrong .tq-mark::after {
+  content: "✗";
+}
+@keyframes tq-pop {
+  40% {
+    transform: scale(1.04);
+  }
+}
+@keyframes tq-shake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+/* Who's locked in. */
+.tq-locks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tq-locks li {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 64px;
+}
+/* Still thinking: a dashed ring. Locked in: a solid one (no fading, so names keep their contrast). */
+.tq-locks .avatar {
+  outline: 3px dashed var(--muted);
+  outline-offset: 2px;
+}
+.tq-locks li.locked .avatar {
+  outline: 3px solid var(--teal);
+}
+.tq-locks li.locked .avatar {
+  animation: tq-pop 0.35s ease-out;
+}
+.tq-lock-name {
+  max-width: 88px;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Reveal rows and the final podium share one row layout. */
+.tq-rows,
+.tq-podium {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tq-rows li,
+.tq-podium li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+/* Podium rows: the name gets the whole line; stats and the score share the line under it. */
+.tq-podium li {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "seat name name"
+    "seat stats score";
+  row-gap: 2px;
+}
+.tq-seat {
+  position: relative;
+  grid-area: seat;
+}
+.tq-podium-name {
+  grid-area: name;
+  overflow-wrap: break-word;
+}
+.tq-podium-stats {
+  grid-area: stats;
+  align-self: center;
+  font-size: 0.9rem;
+}
+.tq-podium .score-pts {
+  grid-area: score;
+}
+.tq-rows li.ok {
+  border-color: #146b3a;
+}
+.tq-rows li.none {
+  opacity: 0.75;
+}
+.tq-row-name {
+  display: grid;
+  min-width: 0;
+}
+.tq-row-name b {
+  overflow-wrap: anywhere;
+}
+.tq-row-name .muted {
+  font-size: 0.9rem;
+}
+.tq-medal {
+  position: absolute;
+  right: -8px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 400 0.8rem / 1 var(--display);
+}
+.tq-podium li.place:nth-child(-n + 3) .tq-medal {
+  background: none;
+  font-size: 1.4rem;
+}
+.tq-podium li.p1 {
+  border-width: 4px;
+  border-color: var(--mustard);
+  animation: tq-pop 0.6s ease-out;
+}
+.tq-podium .score-pts {
+  font-family: var(--display);
+}
+.tq-fire {
+  margin: 0;
+  font-weight: 700;
+  text-align: center;
+}
+/* Name (with streak, lives, gains) wraps on its own; the score stays on the right. */
+.tq-scores li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.tq-scores li.out {
+  opacity: 0.6;
+}
+.tq-scores b {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.tq-mini {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* Draft: three category cards to pick from. */
+.tq-offers {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 560px) {
+  .tq-offers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.tq-offer {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-height: 64px;
+  padding: 14px 10px;
+  border: 3px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  box-shadow: 0 5px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tq-offer:hover {
+  filter: brightness(1.06);
+}
+.tq-offer:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 3px;
+}
+.tq-offer.idle {
+  cursor: default;
+  box-shadow: none;
+}
+.tq-offer-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+.tq-offer-label {
+  font: 400 1rem / 1.15 var(--display);
+  text-wrap: balance;
+}
+.tq-bigcat {
+  margin: 0;
+  font: 400 clamp(1.5rem, 7vw, 2.4rem) / 1.1 var(--display);
+  text-wrap: balance;
+}
+
+/* High stakes: the bet. */
+.tq-wager {
+  display: grid;
+  gap: 12px;
+  max-width: 460px;
+  margin-inline: auto;
+}
+.tq-wager input[type="range"] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--tangerine);
+}
+
+/* Final: every question, answer and who got it. */
+.tq-history {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding-left: 1.4em;
+}
+.tq-history li {
+  display: grid;
+  gap: 2px;
+}
+.tq-ha {
+  overflow-wrap: anywhere;
+}
+
+/* TV: bigger everything; the choices always two across. */
+.tq.big .tq-choices {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tq.big .tq-choice {
+  min-height: 96px;
+  font-size: clamp(1.2rem, 1.8vw, 1.9rem);
+}
+.tq.big .tq-q .prompt {
+  font-size: clamp(1.6rem, 2.8vw, 2.8rem);
+}
+.tq.big .tq-offer {
+  min-height: 160px;
+  align-content: center;
+}
+.tq.big .tq-offer-icon {
+  font-size: 3.6rem;
+}
+.tq.big .tq-offer-label {
+  font-size: clamp(1.2rem, 1.7vw, 1.8rem);
+}
+.tq.big .tq-bigcat {
+  font-size: clamp(2.2rem, 4vw, 3.6rem);
+}
+.tq.big .avatar.tiny {
+  width: 32px;
+  height: 32px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tq-choice,
+  .tq-locks li .avatar,
+  .tq-podium li {
+    animation: none !important;
+  }
+}
+
+/* Intro: the host's chosen options, one chip each. */
+.intro-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
+/* TV, Trivia: the full width; the question and answers left, who's in and the scores right. */
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-trivia) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tv .tq.tv-cols {
+    grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);
+  }
+}
+

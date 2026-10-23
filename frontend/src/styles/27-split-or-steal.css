@@ -1,0 +1,39 @@
+/* ---- split or steal ------------------------------------------------------------------------- */
+.seg-split {
+  --accent: #0b6e4f;
+  --accent-ink: #fff;
+  --accent-soft: #d3f0e4;
+}
+.split-buttons .btn {
+  min-width: 9rem;
+}
+.split-pairs {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.split-pairs li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 2.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.split-pairs li.mine {
+  background: var(--bulb);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+.split-player {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+

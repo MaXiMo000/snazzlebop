@@ -1,0 +1,230 @@
+/* ---- four in a row ------------------------------------------------------------------------------ */
+.seg-four {
+  --accent: #1d4fa8;
+  --accent-ink: #fff;
+  --accent-soft: #dbe6f8;
+  --c4-red: #d42a3c;
+  --c4-yellow: #f5c518;
+}
+.c4-series {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 4px 14px;
+  border-radius: 18px;
+  background: var(--plum);
+  color: var(--bulb);
+  font: 400 1.1rem / 1.4 var(--display);
+}
+.c4-pip {
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  vertical-align: -3px;
+}
+.c4-pip.s0 {
+  background: var(--c4-red);
+}
+.c4-pip.s1 {
+  background: var(--c4-yellow);
+}
+.c4-layout {
+  display: grid;
+  gap: 18px;
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .c4-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  }
+  /* Laptops: the whole board fits under the header without scrolling. */
+  .c4-layout .c4-board {
+    width: min(100%, 560px, max(348px, (100svh - 460px) * 7 / 6));
+    gap: 4px;
+    padding: 8px;
+  }
+  .c4-layout .c4-col {
+    gap: 4px; /* tight gaps keep each column 44px+ wide on a short laptop screen */
+  }
+}
+.c4-turn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-align: center;
+  text-wrap: balance;
+}
+.c4-turn.mine {
+  font: 400 1.2rem / 1.2 var(--display);
+}
+/* The board: a blue frame with dark holes; each column is one tall button (the whole column is the
+   target). Sized by width, capped so it fits a laptop or TV screen's height. */
+.c4-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(3px, 1vw, 8px);
+  width: min(100%, 560px, (100svh - 260px) * 7 / 6);
+  margin-inline: auto;
+  padding: clamp(6px, 1.6vw, 14px);
+  border: var(--line);
+  border-radius: 18px;
+  background: #1d4fa8;
+  box-shadow: 0 8px 0 var(--shadow);
+}
+.c4-col {
+  display: grid;
+  gap: clamp(3px, 1vw, 8px);
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button.c4-col {
+  cursor: pointer;
+}
+button.c4-col:hover,
+button.c4-col:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+}
+button.c4-col:focus-visible {
+  outline: 4px solid var(--mustard);
+  outline-offset: 2px;
+}
+.c4-hole {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #0f1b33;
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.45);
+}
+/* Your turn: a faint disc shows where a tap in that column would land. */
+.c4-board.armed button.c4-col:hover .c4-hole.next,
+.c4-board.armed button.c4-col:focus-visible .c4-hole.next {
+  background: color-mix(in srgb, var(--c4-pick) 45%, #0f1b33);
+}
+.c4-board.armed.s0 {
+  --c4-pick: var(--c4-red);
+}
+.c4-board.armed.s1 {
+  --c4-pick: var(--c4-yellow);
+}
+.c4-disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 -4px 0 rgba(0, 0, 0, 0.25),
+    inset 0 3px 0 rgba(255, 255, 255, 0.25);
+}
+.c4-disc.s0 {
+  background: var(--c4-red);
+}
+.c4-disc.s1 {
+  background: var(--c4-yellow);
+}
+/* The newest disc falls from above the board to its row (the distance is set per row). */
+.c4-disc.drop {
+  animation: c4-drop 0.42s cubic-bezier(0.5, 0, 0.75, 1);
+}
+.c4-disc.drop.r0 {
+  --c4-from: -720%;
+}
+.c4-disc.drop.r1 {
+  --c4-from: -600%;
+}
+.c4-disc.drop.r2 {
+  --c4-from: -480%;
+}
+.c4-disc.drop.r3 {
+  --c4-from: -360%;
+}
+.c4-disc.drop.r4 {
+  --c4-from: -240%;
+}
+.c4-disc.drop.r5 {
+  --c4-from: -120%;
+}
+@keyframes c4-drop {
+  from {
+    transform: translateY(var(--c4-from));
+  }
+  80% {
+    transform: translateY(4%);
+  }
+}
+.c4-disc.win {
+  outline: 4px solid #fff;
+  outline-offset: -6px;
+  animation: c4-glow 0.9s ease-in-out infinite alternate;
+}
+@keyframes c4-glow {
+  to {
+    filter: brightness(1.3);
+  }
+}
+.c4-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.c4-sidecard {
+  padding: 12px;
+}
+.c4-sidecard.active {
+  outline: 4px solid var(--mustard);
+  outline-offset: 2px;
+}
+.c4-sidename {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 400 1.1rem / 1.2 var(--display);
+}
+.c4-members {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.c4-members li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  overflow-wrap: break-word;
+}
+.c4-members li.up span:not(.sr-only):not(.avatar) {
+  text-decoration: underline 3px var(--mustard);
+  text-underline-offset: 4px;
+}
+/* TV: the board gets the screen's height; the side column stays beside it. */
+@media (min-width: 1100px) {
+  .tv-split:has(.seg-four) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .c4.big .c4-board {
+    width: min(100%, (100svh - 300px) * 7 / 6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .c4-disc.drop,
+  .c4-disc.win {
+    animation: none;
+  }
+}
+

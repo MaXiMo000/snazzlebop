@@ -1,0 +1,23 @@
+/* ---- telepathy ---------------------------------------------------------------------------- */
+.option-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+.option-grid .btn {
+  font-size: 1.05rem;
+}
+.option-grid .btn.btn:disabled[aria-pressed="false"] {
+  --bg: var(--paper);
+  --fg: var(--plum-soft);
+}
+.answer.taxed {
+  background: var(--cherry-light);
+}
+.answer h3 {
+  margin: 0;
+}
+.answer .contestants {
+  margin-top: 10px;
+}
+

@@ -1,0 +1,35 @@
+/* ---- the classics on bigger screens: laptops and the TV ------------------------------------------ */
+@media (min-width: 700px) {
+  .tod-ring {
+    width: min(100%, 460px);
+  }
+  .lc-card {
+    width: 72px;
+  }
+  .lc-card .lc-sym {
+    font-size: 1.6rem;
+  }
+  .lc-card.big {
+    width: 112px;
+  }
+  .lc-card.big .lc-sym {
+    font-size: 2.6rem;
+  }
+  .lc-card.mini {
+    width: 36px;
+  }
+}
+.tv .tod-ring {
+  width: min(100%, 620px);
+}
+.tv .lc-card.big {
+  width: 150px;
+}
+.tv .lc-card.big .lc-sym {
+  font-size: 3.4rem;
+}
+/* TV: the race cards are wide enough for a long name next to its score (no spilling into a neighbour). */
+.wr-racers.big {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+}
+

@@ -1,0 +1,398 @@
+/* ---- truth or dare ----------------------------------------------------------------------------- */
+.seg-truthdare {
+  --accent: #9c2a5c;
+  --accent-ink: #fff;
+  --accent-soft: #f9dfea;
+  --truth: var(--teal);
+  --dare: var(--cherry);
+}
+/* Everyone round the bottle. Seat angles come from the table below (no inline styles under our CSP). */
+.tod-ring {
+  position: relative;
+  container-type: inline-size;
+  width: min(100%, 340px);
+  aspect-ratio: 1;
+  margin: 8px auto 0;
+  --a: 0deg;
+}
+.tv .tod-ring {
+  width: min(100%, 520px);
+}
+.tod-ring::before {
+  /* the spotlight on the floor */
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 231, 161, 0.22), transparent 70%);
+}
+.tod-seats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tod-seat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* Wide enough for a 16-letter word at this size, so a name only ever breaks between its words. */
+  width: max-content;
+  max-width: 40cqw;
+  padding: 4px 8px;
+  font-weight: 700;
+  font-size: clamp(0.66rem, 3.5cqw, 1.2rem);
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--bulb);
+  background: #3b2546;
+  border: 2.5px solid var(--bulb-off);
+  border-radius: 14px;
+  /* out along the seat's angle, then turned back upright */
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(-36cqw) rotate(calc(-1 * var(--a)));
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.tod-seat.you {
+  border-color: var(--teal-light);
+}
+.tod-seat.on {
+  color: var(--plum);
+  background: var(--mustard);
+  border-color: var(--bulb);
+  box-shadow: 0 0 22px rgba(242, 183, 5, 0.75);
+  animation: tod-glow 1.2s ease-in-out infinite alternate;
+}
+@keyframes tod-glow {
+  to {
+    box-shadow: 0 0 36px rgba(242, 183, 5, 0.95);
+  }
+}
+.tod-bottle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14cqw;
+  height: 42cqw;
+  translate: -50% -50%;
+  transform: rotate(var(--a));
+  filter: drop-shadow(0 4px 0 rgba(5, 2, 10, 0.6));
+}
+.tod-bottle.spinning {
+  animation: tod-spin 4.2s cubic-bezier(0.12, 0.65, 0.18, 1) both;
+}
+@keyframes tod-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(calc(1440deg + var(--a)));
+  }
+}
+.tod-glass {
+  fill: #2f8f5b;
+  stroke: var(--bulb);
+  stroke-width: 2.5;
+}
+.tod-cork {
+  fill: #c8813a;
+}
+.tod-label {
+  fill: var(--bulb);
+}
+.tod-ring[data-n="2"] .tod-seat:nth-child(1),
+.tod-ring[data-n="2"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="2"] .tod-seat:nth-child(2),
+.tod-ring[data-n="2"][data-at="1"] .tod-bottle {
+  --a: 180deg;
+}
+.tod-ring[data-n="3"] .tod-seat:nth-child(1),
+.tod-ring[data-n="3"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="3"] .tod-seat:nth-child(2),
+.tod-ring[data-n="3"][data-at="1"] .tod-bottle {
+  --a: 120deg;
+}
+.tod-ring[data-n="3"] .tod-seat:nth-child(3),
+.tod-ring[data-n="3"][data-at="2"] .tod-bottle {
+  --a: 240deg;
+}
+.tod-ring[data-n="4"] .tod-seat:nth-child(1),
+.tod-ring[data-n="4"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="4"] .tod-seat:nth-child(2),
+.tod-ring[data-n="4"][data-at="1"] .tod-bottle {
+  --a: 90deg;
+}
+.tod-ring[data-n="4"] .tod-seat:nth-child(3),
+.tod-ring[data-n="4"][data-at="2"] .tod-bottle {
+  --a: 180deg;
+}
+.tod-ring[data-n="4"] .tod-seat:nth-child(4),
+.tod-ring[data-n="4"][data-at="3"] .tod-bottle {
+  --a: 270deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(1),
+.tod-ring[data-n="5"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(2),
+.tod-ring[data-n="5"][data-at="1"] .tod-bottle {
+  --a: 72deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(3),
+.tod-ring[data-n="5"][data-at="2"] .tod-bottle {
+  --a: 144deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(4),
+.tod-ring[data-n="5"][data-at="3"] .tod-bottle {
+  --a: 216deg;
+}
+.tod-ring[data-n="5"] .tod-seat:nth-child(5),
+.tod-ring[data-n="5"][data-at="4"] .tod-bottle {
+  --a: 288deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(1),
+.tod-ring[data-n="6"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(2),
+.tod-ring[data-n="6"][data-at="1"] .tod-bottle {
+  --a: 60deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(3),
+.tod-ring[data-n="6"][data-at="2"] .tod-bottle {
+  --a: 120deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(4),
+.tod-ring[data-n="6"][data-at="3"] .tod-bottle {
+  --a: 180deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(5),
+.tod-ring[data-n="6"][data-at="4"] .tod-bottle {
+  --a: 240deg;
+}
+.tod-ring[data-n="6"] .tod-seat:nth-child(6),
+.tod-ring[data-n="6"][data-at="5"] .tod-bottle {
+  --a: 300deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(1),
+.tod-ring[data-n="7"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(2),
+.tod-ring[data-n="7"][data-at="1"] .tod-bottle {
+  --a: 51.43deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(3),
+.tod-ring[data-n="7"][data-at="2"] .tod-bottle {
+  --a: 102.86deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(4),
+.tod-ring[data-n="7"][data-at="3"] .tod-bottle {
+  --a: 154.29deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(5),
+.tod-ring[data-n="7"][data-at="4"] .tod-bottle {
+  --a: 205.71deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(6),
+.tod-ring[data-n="7"][data-at="5"] .tod-bottle {
+  --a: 257.14deg;
+}
+.tod-ring[data-n="7"] .tod-seat:nth-child(7),
+.tod-ring[data-n="7"][data-at="6"] .tod-bottle {
+  --a: 308.57deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(1),
+.tod-ring[data-n="8"][data-at="0"] .tod-bottle {
+  --a: 0deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(2),
+.tod-ring[data-n="8"][data-at="1"] .tod-bottle {
+  --a: 45deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(3),
+.tod-ring[data-n="8"][data-at="2"] .tod-bottle {
+  --a: 90deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(4),
+.tod-ring[data-n="8"][data-at="3"] .tod-bottle {
+  --a: 135deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(5),
+.tod-ring[data-n="8"][data-at="4"] .tod-bottle {
+  --a: 180deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(6),
+.tod-ring[data-n="8"][data-at="5"] .tod-bottle {
+  --a: 225deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(7),
+.tod-ring[data-n="8"][data-at="6"] .tod-bottle {
+  --a: 270deg;
+}
+.tod-ring[data-n="8"] .tod-seat:nth-child(8),
+.tod-ring[data-n="8"][data-at="7"] .tod-bottle {
+  --a: 315deg;
+}
+
+/* Truth or dare: two podium doors. */
+.tod-pick {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tod-door {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 170px;
+  padding: 18px 10px;
+  font: inherit;
+  color: #fff;
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  cursor: pointer;
+  animation: tod-door-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  transition: transform 0.08s ease;
+}
+.tod-door.truth {
+  background: var(--truth);
+  color: var(--cream);
+}
+.tod-door.dare {
+  background: var(--dare);
+  animation-delay: 0.08s;
+}
+.tod-door:hover {
+  transform: translateY(-3px) rotate(-1deg);
+}
+.tod-door:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--shadow);
+}
+.tod-door-icon {
+  font-size: clamp(2.2rem, 11vw, 3.4rem);
+  line-height: 1;
+}
+.tod-door-label {
+  font-family: var(--display);
+  font-size: clamp(1.4rem, 7vw, 2.2rem);
+  letter-spacing: 0.03em;
+}
+.tod-door-pays {
+  font-weight: 700;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+@keyframes tod-door-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.9);
+  }
+}
+
+/* The card: flips in, coloured by its kind. */
+.tod-card {
+  padding: 22px 20px 26px;
+  text-align: center;
+  color: var(--ink);
+  background: var(--surface);
+  border: 4px solid var(--truth);
+  border-radius: var(--radius);
+  box-shadow:
+    var(--lift),
+    0 0 0 6px color-mix(in srgb, var(--truth) 25%, transparent);
+  animation: tod-flip 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+  transform-origin: center;
+}
+.tod-card.dare {
+  border-color: var(--dare);
+  box-shadow:
+    var(--lift),
+    0 0 0 6px color-mix(in srgb, var(--dare) 25%, transparent);
+}
+.tod-prompt {
+  margin-top: 16px;
+  font-weight: 700;
+  font-size: clamp(1.25rem, 5.4vw, 1.75rem);
+  line-height: 1.3;
+  text-wrap: balance;
+}
+@keyframes tod-flip {
+  from {
+    opacity: 0;
+    transform: perspective(700px) rotateY(85deg) scale(0.9);
+  }
+}
+.tod-votes {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+}
+.tod-verdict {
+  font-size: clamp(3rem, 16vw, 4.5rem);
+  line-height: 1;
+  animation: tod-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes tod-pop {
+  from {
+    transform: scale(0.2) rotate(-20deg);
+  }
+}
+.score-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The name keeps its width; the tally sits at the right, and only when both can't share a row does it
+   drop below, still right-aligned (never squeezing the name into a column of single words). */
+.score-rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 4px;
+  border-bottom: 2px solid var(--rule);
+}
+.score-rows li:last-child {
+  border-bottom: 0;
+}
+.score-rows li.on b {
+  color: var(--accent);
+}
+:root:not([data-theme="light"]) .score-rows li.on b {
+  color: var(--mustard);
+}
+.score-rows b {
+  flex: 1 0 auto;
+  max-width: 100%;
+}
+.score-tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.score-pts {
+  min-width: 3.2em;
+  padding: 0 8px;
+  text-align: center;
+  color: var(--bulb);
+  background: var(--stage);
+  border-radius: 999px;
+}
+

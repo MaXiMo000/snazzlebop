@@ -1,0 +1,24 @@
+/* ---- tabs ------------------------------------------------------------------------- */
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 4px 10px;
+}
+.tab {
+  min-height: 46px;
+  padding: 8px 18px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab[aria-selected="true"] {
+  background: var(--stage);
+  color: var(--bulb);
+}
+

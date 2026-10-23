@@ -1,0 +1,94 @@
+/* ---- avatars: a picked face on a picked colour, or initials ---------------------------------------- */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--tone, var(--plum));
+  color: #fff;
+  font: 700 0.85rem / 1 var(--display);
+  user-select: none;
+}
+.avatar.face {
+  font: 400 1.3rem / 1 system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+.avatar.lg {
+  width: 52px;
+  height: 52px;
+  font-size: 1.2rem;
+}
+.avatar.lg.face {
+  font-size: 1.9rem;
+}
+.avatar.xl {
+  width: 112px;
+  height: 112px;
+  border: 5px solid #fff;
+  font-size: 2.6rem;
+}
+.avatar.xl.face {
+  font-size: 4rem;
+}
+.avatar-pick {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.avatar-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 4px 18px 4px 4px;
+  border: 3px solid var(--edge);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 1rem / 1.1 var(--body);
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+}
+.avatar-pick-panel {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 3px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.avatar-faces,
+.avatar-tones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+.avatar-face,
+.avatar-tone {
+  min-width: 44px;
+  height: 44px;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  background: var(--field);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.avatar-tone {
+  border-radius: 50%;
+  background: var(--tone);
+}
+.avatar-face[aria-pressed="true"],
+.avatar-tone[aria-pressed="true"] {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--tangerine);
+}
+.avatar-pick-btn:focus-visible,
+.avatar-face:focus-visible,
+.avatar-tone:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+

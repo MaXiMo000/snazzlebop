@@ -1,0 +1,59 @@
+/* ---- TV mode: the living-room screen -------------------------------------------- */
+.tv {
+  font-size: clamp(1.05rem, 1.6vw, 1.6rem);
+}
+.tv .prompt {
+  font-size: clamp(1.6rem, 3.6vw, 3.2rem);
+}
+.tv-split > * + * {
+  margin-top: 18px;
+}
+/* TV, classics: the main stage on the left, the secondary panels stacked beside it, so nothing falls
+   below a 1080p screen while space sits empty. The last row is 1fr so the tall stage (spanning every row)
+   never stretches the gaps between the panels. */
+@media (min-width: 1100px) {
+  .tv .tv-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-rows: repeat(6, auto) 1fr;
+    column-gap: 18px;
+    align-items: start;
+  }
+  .tv .tv-cols > * {
+    grid-column: 2;
+    margin: 0 0 18px;
+  }
+  .tv .tv-cols > .card.accent {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .tv .tv-cols > .tv-main {
+    grid-column: 1;
+    grid-row: 2 / -1;
+  }
+  /* Word Race: the boards get the wider column, three across, a size down so names fit whole. */
+  .tv .tv-cols.seg-wordrace {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  }
+  .tv .tv-cols .wr-racers.big {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    font-size: 0.75em;
+  }
+}
+@media (min-width: 1100px) {
+  body:has(.tv) .topbar,
+  .app:has(.tv) {
+    max-width: 1500px;
+  }
+  .tv-split {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .tv-split > * + * {
+    margin-top: 0;
+  }
+}
+

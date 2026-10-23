@@ -1,0 +1,220 @@
+/* ---- fx --------------------------------------------------------------------------------- */
+/* Every phase change slides the new screen in. */
+.enter {
+  animation: enter 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+}
+
+.shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-8px);
+  }
+  40%,
+  60% {
+    transform: translateX(8px);
+  }
+}
+
+/* Stinger: a lit sign that slams onto the screen for reveals. Decorative (aria-hidden). */
+.stinger {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  z-index: 50;
+  pointer-events: none;
+  padding: 14px 28px;
+  font-family: var(--display);
+  font-size: clamp(1.5rem, 8vw, 4.4rem);
+  line-height: 1.1;
+  text-align: center;
+  width: max-content;
+  max-width: min(88vw, 900px);
+  overflow-wrap: anywhere;
+  color: var(--plum);
+  background: var(--bulb);
+  border: 5px solid var(--edge);
+  border-radius: 20px;
+  box-shadow:
+    0 0 0 8px var(--tangerine),
+    0 0 0 13px var(--shadow),
+    0 18px 0 6px rgba(43, 27, 51, 0.35);
+  animation: stinger 1.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+}
+.stinger.bad {
+  background: var(--cherry);
+  color: #fff;
+}
+@keyframes stinger {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2) rotate(-14deg);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08) rotate(-4deg);
+  }
+  28%,
+  78% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(-4deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.15) rotate(-4deg);
+  }
+}
+
+/* Confetti: 36 bits, positions and colours from nth-child (no inline styles under our CSP). */
+.confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+}
+.confetti i {
+  position: absolute;
+  top: -20px;
+  width: 11px;
+  height: 18px;
+  border: 2px solid var(--edge);
+  border-radius: 3px;
+  background: var(--tangerine);
+  animation: fall 2.6s cubic-bezier(0.3, 0.1, 0.6, 1) forwards;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+.confetti i:nth-child(4n + 1) {
+  background: var(--mustard);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+  color: var(--ink);
+}
+.confetti i:nth-child(4n + 2) {
+  background: var(--teal);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+}
+.confetti i:nth-child(4n + 3) {
+  background: var(--cherry);
+}
+.confetti i:nth-child(9n + 1) {
+  left: 4%;
+  animation-delay: 0s;
+}
+.confetti i:nth-child(9n + 2) {
+  left: 16%;
+  animation-delay: 0.25s;
+}
+.confetti i:nth-child(9n + 3) {
+  left: 27%;
+  animation-delay: 0.1s;
+}
+.confetti i:nth-child(9n + 4) {
+  left: 39%;
+  animation-delay: 0.4s;
+}
+.confetti i:nth-child(9n + 5) {
+  left: 50%;
+  animation-delay: 0.05s;
+}
+.confetti i:nth-child(9n + 6) {
+  left: 61%;
+  animation-delay: 0.3s;
+}
+.confetti i:nth-child(9n + 7) {
+  left: 72%;
+  animation-delay: 0.15s;
+}
+.confetti i:nth-child(9n + 8) {
+  left: 84%;
+  animation-delay: 0.45s;
+}
+.confetti i:nth-child(9n) {
+  left: 95%;
+  animation-delay: 0.2s;
+}
+.confetti i:nth-child(n + 10) {
+  margin-left: -3%;
+  animation-duration: 3s;
+}
+.confetti i:nth-child(n + 19) {
+  margin-left: 2%;
+  animation-duration: 2.3s;
+}
+.confetti i:nth-child(n + 28) {
+  margin-left: -1%;
+  animation-duration: 3.3s;
+}
+@keyframes fall {
+  to {
+    transform: translate3d(40px, 110vh, 0) rotate(720deg);
+  }
+}
+
+/* Spinning sunburst behind a winner. Always its own centred line: inside a sentence ("Bo & Cy matched
+   4 times") an inline burst made the rest of the sentence wrap around it in broken pieces on phones. */
+.burst {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 34px 30px;
+  overflow-wrap: break-word; /* only a word too long for any line may break, never mid-name otherwise */
+  text-wrap: balance;
+  isolation: isolate;
+  text-shadow:
+    0 3px 0 var(--plum),
+    0 0 18px rgba(20, 11, 27, 0.9);
+}
+/* Rays stay inside the burst's own padded box, so they never sit behind neighbouring text. The gradient's
+   angle turns, not the box: a rotating wide box (a long name) swung its corners out of the card. */
+@property --ray-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.burst::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: repeating-conic-gradient(
+    from var(--ray-turn),
+    var(--mustard) 0 12deg,
+    transparent 12deg 24deg
+  );
+  /* Clear in the middle (where the name is), rays around it. */
+  -webkit-mask: radial-gradient(closest-side, transparent 38%, #000 60%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 38%, #000 60%, transparent 100%);
+  animation: rays 8s linear infinite;
+}
+@keyframes rays {
+  to {
+    --ray-turn: 360deg;
+  }
+}
+

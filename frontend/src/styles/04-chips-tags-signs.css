@@ -1,0 +1,59 @@
+/* ---- chips, tags, signs ---------------------------------------------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 2.5px solid var(--edge);
+  /* A pill on one line; a rounded box (not a lozenge) when a long chip wraps on a phone. */
+  border-radius: 16px;
+  background: var(--bulb);
+  color: var(--plum);
+  /* Long chips (rules, banners) wrap on phones instead of running off the screen. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+}
+.chip.cherry {
+  background: var(--cherry);
+  color: #fff;
+}
+.chip.teal {
+  background: var(--teal);
+  color: var(--cream);
+}
+.chip.plum {
+  background: var(--stage);
+  color: var(--bulb);
+}
+.chip.paper {
+  background: var(--surface);
+  --ink: inherit; /* back to the page's ink: .chip sets a dark one for its lit default */
+  --muted: inherit;
+  color: var(--ink);
+}
+.chip.wrap {
+  white-space: normal;
+}
+
+/* "ON AIR"-style lit sign used for segment titles */
+.sign {
+  display: inline-block;
+  padding: 4px 14px;
+  font-family: var(--display);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  color: var(--plum);
+  background: var(--bulb);
+  border: var(--line);
+  border-radius: 10px;
+  text-wrap: balance;
+  box-shadow: 0 0 0 4px rgba(255, 231, 161, 0.35);
+  --ink: var(--plum); /* lit background: dark ink in both themes */
+  --muted: var(--plum-soft);
+}
+

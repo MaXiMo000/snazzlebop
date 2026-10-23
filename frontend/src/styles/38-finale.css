@@ -1,0 +1,31 @@
+/* ---- finale ------------------------------------------------------------------------------------- */
+.finale .burst {
+  padding-inline: 16px;
+  font-size: clamp(2rem, 8.6vw, 3.4rem);
+  line-height: 1.2;
+}
+/* Bungee runs up to 0.85em a letter (all Ms) and a phone leaves the name ~60% of the screen width, so a
+   word of n letters fits one line at 70vw / n: these cover up to 9, 12 and 16 letters (names max out at 16). */
+.finale .burst.fit-m {
+  font-size: clamp(0.8rem, 7.6vw, 3rem);
+}
+.finale .burst.fit-s {
+  font-size: clamp(0.8rem, 5.7vw, 2.5rem);
+}
+.finale .burst.fit-xs {
+  font-size: clamp(0.8rem, 4.3vw, 2rem);
+}
+.rematch small {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.btn.rematch {
+  flex-direction: column;
+  gap: 0;
+}
+

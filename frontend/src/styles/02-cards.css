@@ -1,0 +1,59 @@
+/* ---- cards ----------------------------------------------------------------- */
+.card {
+  position: relative;
+  background: var(--surface);
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  padding: clamp(16px, 4vw, 26px);
+}
+.card.accent {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.card.soft {
+  background: var(--accent-soft, var(--surface-2));
+}
+
+/* The stage: dark plum with a ring of marquee bulbs. */
+.card.stage {
+  background: var(--stage);
+  color: var(--cream);
+  border-color: var(--edge);
+  padding: clamp(30px, 7vw, 44px);
+}
+.card.stage::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: calc(var(--radius) - 3px);
+  padding: 18px; /* exactly one bulb wide, so bulbs are never cut in half */
+  background: radial-gradient(
+      circle,
+      var(--bulb) 0 3.5px,
+      rgba(255, 231, 161, 0.35) 4.5px,
+      transparent 6px
+    )
+    0 0 / 18px 18px round;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+  animation: chase 1.2s steps(1) infinite;
+}
+.card.stage > * {
+  position: relative;
+}
+.card.stage .muted {
+  color: #e7d3c4;
+}
+@keyframes chase {
+  50% {
+    opacity: 0.7;
+  }
+}
+

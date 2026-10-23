@@ -1,0 +1,106 @@
+/* ---- walk-ons: a title card for the whole room when a listed name joins --------------------------- */
+.entrance {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgba(20, 10, 28, 0.82);
+  animation: entrance-out 4.2s ease-in both;
+}
+.entrance-rays {
+  position: absolute;
+  width: 220vmax;
+  height: 220vmax;
+  background: repeating-conic-gradient(var(--tone) 0 10deg, transparent 10deg 20deg);
+  opacity: 0.55;
+  animation: entrance-spin 14s linear infinite;
+}
+.entrance-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(92vw, 720px);
+  padding: 28px 20px;
+  border: 5px solid #fff;
+  border-radius: 28px;
+  background: #1b1024;
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 0 0 8px var(--tone), 0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: entrance-in 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.entrance-intro {
+  margin: 0;
+  font: 700 clamp(1rem, 4.5vw, 1.6rem) / 1.2 var(--body);
+  color: #ffe9a8;
+  text-wrap: balance;
+}
+.entrance-name {
+  margin: 0;
+  max-width: 100%;
+  font: 400 clamp(2rem, 11vw, 5rem) / 1 var(--display);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  animation: entrance-name 0.5s 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@media (min-width: 1100px) {
+  .tv .entrance-card {
+    width: min(80vw, 1300px);
+    padding: 56px 40px;
+    gap: 20px;
+  }
+  .tv .entrance-intro {
+    font-size: 2.6rem;
+  }
+  .tv .entrance-name {
+    font-size: 9rem;
+  }
+  .tv .entrance .avatar.xl {
+    width: 200px;
+    height: 200px;
+    font-size: 5rem;
+  }
+  .tv .entrance .avatar.xl.face {
+    font-size: 7rem;
+  }
+}
+@keyframes entrance-in {
+  from {
+    transform: scale(0.3) rotate(-8deg);
+    opacity: 0;
+  }
+}
+@keyframes entrance-name {
+  from {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+@keyframes entrance-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes entrance-out {
+  0%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entrance,
+  .entrance-rays,
+  .entrance-card,
+  .entrance-name {
+    animation: none;
+  }
+}
+

@@ -1,0 +1,417 @@
+/* ---- calls ------------------------------------------------------------------------------------------ */
+.call-button {
+  position: relative;
+}
+.call-button.live {
+  background: var(--cherry);
+  border-color: var(--cherry);
+  color: #fff;
+}
+.call-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+/* Very narrow phones: a little less space between the top-bar buttons so the call button fits too. */
+@media (max-width: 379px) {
+  .topbar .row {
+    gap: 4px;
+  }
+}
+/* The voice bar: always dark, like a call app. Faces are round; whoever is speaking gets a green ring. */
+.call-strip {
+  --call-bg: #1b1024;
+  --call-tile: #2c2038;
+  --call-live: #2fbf71;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 3px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--call-bg);
+  color: #fff;
+  box-shadow: var(--lift-sm);
+}
+.call-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #7fe3a8;
+}
+.call-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--call-live, #2fbf71);
+}
+.call-tiles,
+.call-grid {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  overflow-x: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.call-tile {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 60px;
+}
+.call-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--call-tile, #2c2038);
+  box-shadow: 0 0 0 3px transparent;
+  transition: box-shadow 0.12s;
+}
+.call-tile.speaking .call-face {
+  box-shadow: 0 0 0 3px #2fbf71;
+}
+.call-avatar {
+  width: 100%;
+  height: 100%;
+  font-size: 1.1rem;
+}
+.call-avatar.face {
+  font-size: 1.7rem;
+}
+.call-video {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.call-video.mirror {
+  transform: scaleX(-1);
+}
+.call-muted {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--call-bg, #1b1024);
+  border-radius: 50%;
+  background: #d8324a;
+  color: #fff;
+}
+.call-muted .call-icon {
+  width: 13px;
+  height: 13px;
+}
+.call-name {
+  max-width: 100%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #e9defa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.call-tile audio {
+  display: none;
+}
+.call-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.call-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: none;
+  padding: 4px;
+  border-radius: 999px;
+  background: #120a19;
+}
+.call-ctl,
+.call-talk {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #3a2c49;
+  color: #fff;
+  cursor: pointer;
+}
+.call-ctl:hover,
+.call-talk:hover {
+  background: #4a3a5c;
+}
+.call-ctl[aria-pressed="true"] {
+  background: #fff;
+  color: #1b1024;
+}
+.call-ctl.warn[aria-pressed="true"],
+.call-ctl.leave {
+  background: #d8324a;
+  color: #fff;
+}
+.call-talk {
+  display: inline-flex;
+  gap: 8px;
+  width: auto;
+  padding: 0 16px;
+  border-radius: 999px;
+  font: 700 0.95rem / 1 var(--body);
+  white-space: nowrap;
+  touch-action: none; /* a held finger must not scroll or open a menu */
+  user-select: none;
+}
+.call-talk.on {
+  background: #2fbf71;
+  color: #10230f;
+}
+.call-ctl:focus-visible,
+.call-talk:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.call-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.9rem;
+  color: #d9cbe8;
+}
+.call-error .btn {
+  margin-left: 8px;
+}
+/* The big view: everyone large, over the game (Escape or the button returns). */
+.call-big {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: 12px;
+  padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom))
+    calc(16px + var(--safe-left));
+  background: #120a19;
+}
+.call-big .call-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  grid-auto-rows: minmax(120px, 1fr);
+  width: 100%;
+  overflow-y: auto;
+}
+.call-big .call-tile {
+  position: relative;
+  width: auto;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #2c2038;
+  box-shadow: inset 0 0 0 3px transparent;
+}
+.call-big .call-tile.speaking {
+  box-shadow: inset 0 0 0 4px #2fbf71;
+}
+.call-big .call-face {
+  width: min(96px, 46%);
+  height: auto;
+  aspect-ratio: 1;
+  box-shadow: none;
+}
+.call-big .call-tile.video .call-face {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.call-big .call-avatar {
+  font-size: 2rem;
+}
+.call-big .call-avatar.face {
+  font-size: 3rem;
+}
+.call-big .call-muted {
+  width: 28px;
+  height: 28px;
+  border-color: #2c2038;
+}
+.call-big .call-tile.video .call-muted {
+  right: 8px;
+  bottom: 8px;
+}
+.call-big .call-name {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 52px);
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgba(18, 10, 25, 0.8);
+  color: #fff;
+  font-size: 0.9rem;
+}
+/* TV: bigger faces across the top, no controls, no sound. */
+.call-strip.tv {
+  padding: 12px 16px;
+}
+.call-strip.tv .call-tile {
+  width: 124px;
+}
+.call-strip.tv .call-face {
+  width: 108px;
+  height: 108px;
+}
+.call-strip.tv .call-avatar {
+  font-size: 2.2rem;
+}
+.call-strip.tv .call-avatar.face {
+  font-size: 3.4rem;
+}
+.call-strip.tv .call-name {
+  font-size: 1rem;
+}
+.call-strip.tv .call-muted {
+  width: 32px;
+  height: 32px;
+  right: 0;
+  bottom: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .call-face {
+    transition: none;
+  }
+}
+/* Phones inside a room: the call and chat buttons take the account button's place in the top bar
+   (signing in isn't a mid-game thing; it's on the home page). Keeps every button on screen at 320px. */
+@media (max-width: 480px) {
+  .topbar:has(.chat-button) .acct-btn {
+    display: none;
+  }
+}
+/* Property Tycoon, the middle of the board: whose turn, the dice, the square in play, the latest news.
+   Sized in board units (cqw) so it reads on a phone and fills a TV. */
+.ty-center {
+  justify-content: center;
+  gap: 2.4cqw;
+  padding: 3cqw 4cqw;
+}
+.ty-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.6cqw;
+  margin: 0;
+  padding: 0.8cqw 2.6cqw;
+  border-radius: 999px;
+  background: #2b1b33;
+  color: #fff3d6;
+  font: 700 3.6cqw/1.1 var(--display);
+}
+.ty-turn .ty-token,
+.ty-spot-line .ty-token {
+  width: 3cqw;
+  height: 3cqw;
+}
+.ty-spot {
+  width: min(100%, 58cqw);
+  overflow: hidden;
+  border: 0.6cqw solid #2b1b33;
+  border-radius: 2.4cqw;
+  background: #fffaf1;
+  box-shadow: 0 1cqw 0 rgba(43, 27, 51, 0.35);
+  animation: ty-spot-in 0.3s ease-out;
+}
+@keyframes ty-spot-in {
+  from {
+    transform: translateY(2cqw) scale(0.94);
+    opacity: 0;
+  }
+}
+.ty-spot-band {
+  display: block;
+  height: 4.4cqw;
+  background: var(--g);
+  border-bottom: 0.5cqw solid #2b1b33;
+}
+.ty-spot-name {
+  margin: 1.4cqw 2cqw 0.4cqw;
+  font: 700 4.8cqw/1.1 var(--display);
+  color: #2b1b33;
+  text-wrap: balance;
+}
+.ty-spot-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 1.2cqw;
+  margin: 0 2cqw 1.6cqw;
+  font-size: 3.6cqw;
+  font-weight: 700;
+  color: #5b4466;
+}
+.ty-news {
+  margin: 0;
+  max-width: 64cqw;
+  font-size: 3.5cqw;
+  font-weight: 700;
+  color: #2b1b33;
+  text-wrap: balance;
+}
+/* The mover's token pops when it lands. */
+.ty-tokens .ty-token.landed {
+  animation: ty-land 0.45s cubic-bezier(0.2, 0.7, 0.3, 1.4);
+}
+@keyframes ty-land {
+  0% {
+    transform: translateY(-2cqw) scale(1.25);
+  }
+  100% {
+    transform: none;
+  }
+}
+/* A tapped square glows; its details show in the middle. */
+.ty-sq {
+  cursor: pointer;
+}
+.ty-sq.picked {
+  outline: max(2px, 0.5cqw) solid var(--teal);
+  outline-offset: -0.5cqw;
+  z-index: 2;
+}
+/* Corners: the label sits at the top, tokens gather at the bottom (GO was hidden under them). */
+.ty-side-corner {
+  justify-content: flex-start;
+  padding-top: 8%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ty-spot,
+  .ty-tokens .ty-token.landed {
+    animation: none;
+  }
+}
+

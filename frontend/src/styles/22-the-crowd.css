@@ -1,0 +1,28 @@
+/* ---- the crowd ------------------------------------------------------------------------------ */
+.audience-badge {
+  margin: 0;
+}
+.crowd-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crowd-list .away {
+  opacity: 0.75;
+}
+.crowd-list .kick {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -8px -10px -8px 2px;
+  color: #fff;
+  background: var(--cherry);
+  border: 3px solid var(--edge);
+  border-radius: 50%;
+  cursor: pointer;
+}
+

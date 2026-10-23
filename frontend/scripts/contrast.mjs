@@ -1,8 +1,11 @@
-// WCAG contrast check for every text/background pair used in src/styles.css.
+// WCAG contrast check for every text/background pair used in src/styles/ (read in cascade order).
 //   node scripts/contrast.mjs     -> exits 1 if any pair is below 4.5:1
 import { readFileSync } from "node:fs";
 
-const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
+const stylesDir = new URL("../src/styles/", import.meta.url);
+const css = [...readFileSync(new URL("index.css", stylesDir), "utf8").matchAll(/@import "\.\/([^"]+)"/g)]
+  .map((m) => readFileSync(new URL(m[1], stylesDir), "utf8"))
+  .join("\n");
 const root = css.slice(css.indexOf(":root {"), css.indexOf("}", css.indexOf(":root {")));
 const v = Object.fromEntries([...root.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})/gi)].map((m) => [m[1], m[2]]));
 const c = (x) => (x.startsWith("#") ? x : v[x] ?? (() => { throw new Error(`unknown colour ${x}`); })());
