@@ -1,0 +1,39 @@
+/* ---- account security: authenticator app, backup codes ----------------------------------------- */
+/* A QR code must stay dark-on-white in both themes or phones won't read it. */
+.qr {
+  display: block;
+  width: min(220px, 70vw);
+  height: auto;
+  margin: 4px auto;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  fill: #000;
+}
+.mfa-key {
+  font: 400 1.05rem / 1.4 var(--display);
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+.mfa-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mfa-codes li {
+  padding: 8px 10px;
+  border: 2.5px dashed var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+  font: 400 1.05rem / 1 var(--display);
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+.mfa-on {
+  margin: 0;
+  font-weight: 700;
+}

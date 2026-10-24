@@ -21,6 +21,9 @@ export type ShopItem = Schemas["ShopItem"];
 export type Shop = Schemas["Shop"];
 export type Board = Schemas["Leaderboard"];
 export type Ok = Schemas["Ok"];
+export type MfaStatus = Schemas["MfaStatus"];
+export type MfaSetup = Schemas["MfaSetup"];
+export type BackupCodes = Schemas["BackupCodes"];
 
 // The WebSocket "state" frame (backend app/schemas.py RoomFrame).
 export type ApiRoomFrame = Schemas["RoomFrame"];

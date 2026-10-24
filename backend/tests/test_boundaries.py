@@ -27,6 +27,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.logging_setup": (set(), set()),
     "app.show": ({"app.games"}, set()),
     "app.schemas": (set(), {"pydantic"}),
+    "app.mfa": (set(), {"segno"}),  # pure: the time is passed in; segno only draws the QR code
     "app.calls": ({"app.config"}, set()),
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (

@@ -4,6 +4,7 @@ ErrorBody. A route nobody calls here fails too, so a new route can't skip the co
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import pytest
@@ -15,7 +16,7 @@ from fastapi.routing import APIRoute  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from pydantic import TypeAdapter  # noqa: E402
 
-from app import coins, schemas  # noqa: E402
+from app import coins, mfa, schemas  # noqa: E402
 from app.main import create_app  # noqa: E402
 from tests.test_api import settings  # noqa: E402
 
@@ -99,6 +100,15 @@ def test_every_route_matches_its_declared_model(client):
     friends = c.call("GET", "/api/friends")
     assert friends["friends"] and friends["friends"][0]["username"] == "Bo_42"
     c.call("POST", "/api/friends/remove", json={"username": "Bo_42"})
+    c.call("GET", "/api/me/mfa")
+    setup = c.call("POST", "/api/me/mfa/setup", json={"password": PW})
+    c.call("POST", "/api/me/mfa/enable", json={"code": "000000"})  # wrong: the error body
+    code = mfa.totp_at(setup["secret"], int(time.time()) // mfa.TOTP_STEP)
+    backup = c.call("POST", "/api/me/mfa/enable", json={"code": code})["codes"]
+    c.call("POST", "/api/me/mfa/backup-codes", json={"code": backup[0]})
+    c.call("POST", "/api/me/mfa/disable", json={"password": PW, "code": "nope"})  # error body
+    fresh = mfa.totp_at(setup["secret"], int(time.time()) // mfa.TOTP_STEP + 1)  # the next step's code
+    c.call("POST", "/api/me/mfa/disable", json={"password": PW, "code": fresh})
     c.call("POST", "/api/me/password", json={"password": PW, "new_password": PW + "!"})
     c.call(
         "POST",

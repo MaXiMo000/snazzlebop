@@ -14,6 +14,17 @@ from sqlalchemy import Connection, insert, inspect, select, text
 
 from app.db import BASELINE, MIGRATIONS, Base, User, make_engine, migrate
 
+BASELINE_TABLES = {
+    "content_items",
+    "game_results",
+    "room_snapshots",
+    "users",
+    "circles",
+    "friends",
+    "results",
+    "sessions",
+}
+
 
 def config(conn: Connection) -> Config:
     cfg = Config()
@@ -51,7 +62,12 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_a_database_from_before_migrations_is_stamped_and_keeps_its_data(self):
         async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)  # how the app made its tables before
+            # How the app made its tables before migrations: the baseline's eight, not today's models.
+            await conn.run_sync(
+                lambda c: Base.metadata.create_all(
+                    c, tables=[t for t in Base.metadata.sorted_tables if t.name in BASELINE_TABLES]
+                )
+            )
             await conn.execute(
                 insert(User).values(
                     username="Ana", username_key="ana", pw_hash="x", recovery_hash="y", coins=7, powerups={}

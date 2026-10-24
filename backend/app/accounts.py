@@ -38,7 +38,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.requests import HTTPConnection
 
-from . import schemas
+from . import mfa, schemas
 from .coins import POWERUP_PRICES, season_of
 from .config import Settings
 from .rooms import HubError
@@ -174,7 +174,7 @@ class SignupBody(BaseModel):
 
 
 class LoginBody(SignupBody):
-    pass
+    code: str | None = Field(default=None, max_length=32)  # authenticator or backup code, when it is on
 
 
 class RecoverBody(BaseModel):
@@ -182,6 +182,7 @@ class RecoverBody(BaseModel):
     username: str = Field(max_length=64)
     recovery_code: str = Field(max_length=64)
     new_password: str = Field(max_length=PASSWORD_MAX)
+    code: str | None = Field(default=None, max_length=32)  # authenticator or backup code, when it is on
 
 
 class PasswordBody(BaseModel):
@@ -193,6 +194,18 @@ class PasswordBody(BaseModel):
 class ConfirmBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     password: str = Field(max_length=PASSWORD_MAX)
+    code: str | None = Field(default=None, max_length=32)  # authenticator or backup code, when it is on
+
+
+class CodeBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str = Field(max_length=32)
+
+
+class MfaOffBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    password: str = Field(max_length=PASSWORD_MAX)
+    code: str = Field(max_length=32)
 
 
 class FriendBody(BaseModel):
@@ -262,12 +275,30 @@ def router(
     async def current(request: Request) -> Any:
         return await session_user(request, db)
 
+    async def second_factor(user: Any, code: str | None, lock_key: str) -> None:
+        """When the account has an authenticator on, the code from it (or a backup code) is needed too."""
+        row = await db.mfa(user.id)
+        if row is None or row.enabled_at is None:
+            return
+        if not code or not code.strip():
+            raise HubError("mfa_required", "Enter the code from your authenticator app", 401)
+        secret = mfa.totp_secret(settings.secret_key, row.salt)
+        step = mfa.check_totp(secret, code, time.time(), row.last_step)
+        if step is not None and await db.use_step(user.id, step):
+            return
+        if await db.spend_backup(user.id, lambda h: mfa.take_backup_code(settings.secret_key, code, h)):
+            return
+        lockout.fail(lock_key)
+        raise HubError("bad_code", "That code isn't right, or it was just used. Try the next one", 401)
+
     async def require_user(request: Request) -> Any:
         user = await current(request)
         if user is None:
             raise HubError("signed_out", "Sign in first", 401)
         return user
 
+    # POST /api/auth/* is charged to this same bucket by the rate-limit middleware (security.py), so those
+    # routes don't call this: one request, one token. The /api/me/* security actions call it.
     def throttle(request: Request) -> None:
         if not limiter.allow(ip(request)):
             raise HubError("rate_limited", "Too many tries. Wait a minute and try again", 429)
@@ -277,7 +308,6 @@ def router(
     )
     async def signup(body: SignupBody, request: Request) -> JSONResponse:
         same_origin(request)
-        throttle(request)
         need_db()
         username = clean_username(body.username)
         password = check_password(body.password, username)
@@ -294,7 +324,6 @@ def router(
     @api.post("/api/auth/login", response_model=schemas.UserBody, responses=schemas.ERRORS)
     async def login(body: LoginBody, request: Request) -> JSONResponse:
         same_origin(request)
-        throttle(request)
         need_db()
         key = body.username.strip().casefold()
         if lockout.locked(key):
@@ -308,6 +337,7 @@ def router(
         if user is None or not ok:
             lockout.fail(key)
             raise HubError("bad_login", "Wrong username or password", 401)
+        await second_factor(user, body.code, key)
         lockout.ok(key)
         resp = JSONResponse({"user": public_user(user)})
         set_session(resp, await start_session(user.id))
@@ -317,7 +347,6 @@ def router(
     @api.post("/api/auth/recover", response_model=schemas.NewAccount, responses=schemas.ERRORS)
     async def recover(body: RecoverBody, request: Request) -> JSONResponse:
         same_origin(request)
-        throttle(request)
         need_db()
         key = "recover:" + body.username.strip().casefold()
         if lockout.locked(key):
@@ -331,6 +360,7 @@ def router(
         if user is None or not hmac.compare_digest(given, user.recovery_hash):
             lockout.fail(key)
             raise HubError("bad_recovery", "That username and recovery code don't match", 401)
+        await second_factor(user, body.code, key)  # a recovery code resets the password, not this
         password = check_password(body.new_password, user.username)
         code = new_recovery_code()  # a used code is spent: here's the next one
         pw = await asyncio.to_thread(hash_password, password)
@@ -387,10 +417,82 @@ def router(
         user = await require_user(request)
         if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
             raise HubError("bad_login", "That password isn't right", 401)
+        await second_factor(user, body.code, "delete:" + user.username_key)
         await db.delete_user(user.id)
         resp = JSONResponse({"ok": True})
         resp.delete_cookie(SESSION_COOKIE, path="/", samesite="strict", secure=settings.is_production)
         return resp
+
+    # Authenticator-app sign-in: set up (password first), confirm with a code, then every sign-in needs
+    # a code. Backup codes stand in for a lost phone.
+    @api.get("/api/me/mfa", response_model=schemas.MfaStatus, responses=schemas.ERRORS)
+    async def mfa_status(request: Request) -> JSONResponse:
+        user = await require_user(request)
+        row = await db.mfa(user.id)
+        on = row is not None and row.enabled_at is not None
+        return JSONResponse(
+            {"enabled": on, "backup_codes_left": len(row.backup_hashes or []) if on and row else 0},
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @api.post("/api/me/mfa/setup", response_model=schemas.MfaSetup, responses=schemas.ERRORS)
+    async def mfa_setup(body: ConfirmBody, request: Request) -> JSONResponse:
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
+            raise HubError("bad_login", "That password isn't right", 401)
+        row = await db.mfa(user.id)
+        if row is not None and row.enabled_at is not None:
+            raise HubError("mfa_on", "Your authenticator app is already set up", 409)
+        salt = mfa.new_salt()
+        await db.start_mfa(user.id, salt)
+        secret = mfa.totp_secret(settings.secret_key, salt)
+        uri = mfa.totp_uri(secret, user.username)
+        return JSONResponse(
+            {"secret": secret, "uri": uri, "qr": mfa.qr_matrix(uri)}, headers={"Cache-Control": "no-store"}
+        )
+
+    @api.post("/api/me/mfa/enable", response_model=schemas.BackupCodes, responses=schemas.ERRORS)
+    async def mfa_enable(body: CodeBody, request: Request) -> JSONResponse:
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        row = await db.mfa(user.id)
+        if row is None or row.enabled_at is not None:
+            raise HubError("no_setup", "Start the set-up first", 409)
+        secret = mfa.totp_secret(settings.secret_key, row.salt)
+        step = mfa.check_totp(secret, body.code, time.time(), row.last_step)
+        if step is None or not await db.use_step(user.id, step):
+            raise HubError("bad_code", "That code isn't right. Check the app and try the newest one", 401)
+        codes, hashes = mfa.new_backup_codes(settings.secret_key)
+        await db.enable_mfa(user.id, hashes)
+        return JSONResponse({"codes": codes}, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/me/mfa/disable", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def mfa_disable(body: MfaOffBody, request: Request) -> JSONResponse:
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
+            raise HubError("bad_login", "That password isn't right", 401)
+        await second_factor(user, body.code, "mfa:" + user.username_key)
+        await db.delete_mfa(user.id)
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/me/mfa/backup-codes", response_model=schemas.BackupCodes, responses=schemas.ERRORS)
+    async def mfa_new_codes(body: CodeBody, request: Request) -> JSONResponse:
+        """A fresh set of backup codes; the old ones stop working."""
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        row = await db.mfa(user.id)
+        if row is None or row.enabled_at is None:
+            raise HubError("mfa_off", "Set up your authenticator app first", 409)
+        await second_factor(user, body.code, "mfa:" + user.username_key)
+        codes, hashes = mfa.new_backup_codes(settings.secret_key)
+        await db.set_backup_hashes(user.id, hashes)
+        return JSONResponse({"codes": codes}, headers={"Cache-Control": "no-store"})
 
     # Friends: add by username. A friend's open room shows only once both have added each other, so
     # adding someone never reveals where they are.

@@ -8,6 +8,7 @@ The game never depends on the database: every call here fails soft.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -142,6 +143,20 @@ class Circle(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     belt: Mapped[str] = mapped_column(String(32), default="")
     forfeits: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+
+class Mfa(Base):
+    """An account's authenticator-app sign-in (app.mfa): the salt its secret is derived from (the secret
+    itself is never stored), whether it is switched on yet, the last time step accepted (so a code can't
+    be replayed), and the keyed hashes of its unused backup codes."""
+
+    __tablename__ = "mfa"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    salt: Mapped[str] = mapped_column(String(32))
+    enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_step: Mapped[int] = mapped_column(Integer, default=0)
+    backup_hashes: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
 MAX_FRIENDS = 50
@@ -350,10 +365,69 @@ class Database:
             await session.execute(delete(Session).where(Session.user_id == user_id))
             await session.execute(delete(Result).where(Result.user_id == user_id))
             await session.execute(delete(Circle).where(Circle.user_id == user_id))
+            await session.execute(delete(Mfa).where(Mfa.user_id == user_id))
             await session.execute(
                 delete(Friend).where(or_(Friend.user_id == user_id, Friend.friend_id == user_id))
             )
             await session.execute(delete(User).where(User.id == user_id))
+            await session.commit()
+
+    # -- authenticator-app sign-in ------------------------------------------------------------------
+    async def mfa(self, user_id: int) -> Mfa | None:
+        async with self.sessions() as session:
+            return await session.get(Mfa, user_id)
+
+    async def start_mfa(self, user_id: int, salt: str) -> None:
+        """A new (not yet confirmed) set-up; replaces an unconfirmed one, never a working one."""
+        async with self.sessions() as session:
+            row = await session.get(Mfa, user_id)
+            if row is None:
+                session.add(Mfa(user_id=user_id, salt=salt, last_step=0, backup_hashes=[]))
+            elif row.enabled_at is None:
+                row.salt, row.last_step, row.backup_hashes = salt, 0, []
+            await session.commit()
+
+    async def enable_mfa(self, user_id: int, backup_hashes: list[str]) -> None:
+        async with self.sessions() as session:
+            await session.execute(
+                update(Mfa)
+                .where(Mfa.user_id == user_id)
+                .values(enabled_at=datetime.now(UTC), backup_hashes=backup_hashes)
+            )
+            await session.commit()
+
+    async def use_step(self, user_id: int, step: int) -> bool:
+        """Accept a code's time step once: False if this step (or a later one) was already used. A single
+        conditional update, so two sign-ins racing with the same code can't both win."""
+        async with self.sessions() as session:
+            done = await session.execute(
+                update(Mfa).where(Mfa.user_id == user_id, Mfa.last_step < step).values(last_step=step)
+            )
+            await session.commit()
+            return bool(done.rowcount)
+
+    async def spend_backup(self, user_id: int, take: Callable[[list[str]], list[str] | None]) -> bool:
+        """Spend a backup code: `take` returns the hashes left, or None if the code isn't one. The row is
+        locked while it's checked, so a code can't be spent twice at once."""
+        async with self.sessions() as session:
+            row = (
+                await session.execute(select(Mfa).where(Mfa.user_id == user_id).with_for_update())
+            ).scalar_one_or_none()
+            left = take(list(row.backup_hashes or [])) if row is not None and row.enabled_at else None
+            if left is None:
+                return False
+            row.backup_hashes = left
+            await session.commit()
+            return True
+
+    async def set_backup_hashes(self, user_id: int, hashes: list[str]) -> None:
+        async with self.sessions() as session:
+            await session.execute(update(Mfa).where(Mfa.user_id == user_id).values(backup_hashes=hashes))
+            await session.commit()
+
+    async def delete_mfa(self, user_id: int) -> None:
+        async with self.sessions() as session:
+            await session.execute(delete(Mfa).where(Mfa.user_id == user_id))
             await session.commit()
 
     async def circle(self, user_id: int) -> dict[str, Any]:

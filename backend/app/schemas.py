@@ -89,6 +89,25 @@ class Me(Strict):
     accounts: bool  # false when the server has no database: sign-in is unavailable
 
 
+class MfaStatus(Strict):
+    enabled: bool
+    backup_codes_left: int
+
+
+class MfaSetup(Strict):
+    """Scan the QR code (rows of 1 = dark) or type the key into the authenticator app, then confirm."""
+
+    secret: str
+    uri: str
+    qr: list[str]
+
+
+class BackupCodes(Strict):
+    """Shown once: each works once if the phone is lost."""
+
+    codes: list[str]
+
+
 class GameStat(Strict):
     played: int
     wins: int

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Authenticator } from "../components/security";
 import { Btn, Card, CopyButton } from "../components/ui";
 import { ApiError, fetchGames } from "../lib/api";
 import {
@@ -22,6 +23,30 @@ import { sfx } from "../lib/sfx";
 type Tab = "in" | "up" | "forgot";
 
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : "Something went wrong");
+/** The server wants the second step: a code from the authenticator app (or a backup code). */
+const needsCode = (e: unknown) => e instanceof ApiError && e.code === "mfa_required";
+
+/** The authenticator code box, shown once the server asks for it. */
+function OtpField({ id, value, set }: { id: string; value: string; set: (v: string) => void }) {
+  return (
+    <div>
+      <label className="field" htmlFor={id}>
+        Code from your authenticator app (or a backup code)
+      </label>
+      <input
+        id={id}
+        type="text"
+        className="code-input"
+        autoComplete="one-time-code"
+        maxLength={12}
+        value={value}
+        autoFocus
+        onChange={(e) => set(e.target.value)}
+        placeholder="123 456"
+      />
+    </div>
+  );
+}
 
 export function Account({ go }: { go: (path: string) => void }) {
   const { user, loaded, available } = useAccount();
@@ -52,6 +77,7 @@ function SignIn({ onCode }: { onCode: (code: string) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
+  const [otp, setOtp] = useState<string | null>(null); // null until the server asks for a code
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,12 +86,14 @@ function SignIn({ onCode }: { onCode: (code: string) => void }) {
     setBusy(true);
     setError(null);
     try {
-      if (tab === "in") await logIn(username.trim(), password);
+      const code = otp?.trim() || undefined;
+      if (tab === "in") await logIn(username.trim(), password, code);
       else if (tab === "up") onCode(await signUp(username.trim(), password));
-      else onCode(await recover(username.trim(), recoveryCode.trim(), password));
+      else onCode(await recover(username.trim(), recoveryCode.trim(), password, code));
       sfx.ding();
     } catch (err) {
-      setError(errText(err));
+      if (needsCode(err) && otp === null) setOtp("");
+      else setError(errText(err));
     } finally {
       setBusy(false);
     }
@@ -91,6 +119,7 @@ function SignIn({ onCode }: { onCode: (code: string) => void }) {
               onClick={() => {
                 setTab(t);
                 setError(null);
+                setOtp(null);
               }}
             >
               {tabs[t]}
@@ -157,12 +186,13 @@ function SignIn({ onCode }: { onCode: (code: string) => void }) {
               </p>
             )}
           </div>
+          {otp !== null && tab !== "up" && <OtpField id="acct-otp" value={otp} set={setOtp} />}
           {error && (
             <p className="alert" role="alert">
               {error}
             </p>
           )}
-          <Btn type="submit" variant="go" size="big" block disabled={busy || !username.trim() || !password}>
+          <Btn type="submit" variant="go" size="big" block disabled={busy || !username.trim() || !password || otp?.trim() === ""}>
             {titles[tab]}
           </Btn>
         </form>
@@ -337,6 +367,7 @@ function Profile({ go }: { go: (path: string) => void }) {
         </ul>
       </Card>
 
+      <Authenticator />
       <Settings />
     </div>
   );
@@ -346,6 +377,7 @@ function Settings() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [del, setDel] = useState("");
+  const [delCode, setDelCode] = useState<string | null>(null); // asked for when the authenticator is on
   const [confirming, setConfirming] = useState(false);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const run = async (fn: () => Promise<void>, ok: string) => {
@@ -407,7 +439,15 @@ function Settings() {
           className="stack-sm space-top acct-delete"
           onSubmit={(e) => {
             e.preventDefault();
-            void run(() => deleteAccount(del), "Your account and everything in it is gone.");
+            void (async () => {
+              try {
+                await deleteAccount(del, delCode?.trim() || undefined);
+                setNote({ ok: true, text: "Your account and everything in it is gone." });
+              } catch (err) {
+                if (needsCode(err) && delCode === null) setDelCode("");
+                else setNote({ ok: false, text: errText(err) });
+              }
+            })();
           }}
         >
           <p>
@@ -419,8 +459,9 @@ function Settings() {
             </label>
             <input id="pw-del" type="password" value={del} maxLength={128} autoComplete="current-password" onChange={(e) => setDel(e.target.value)} />
           </div>
+          {delCode !== null && <OtpField id="del-otp" value={delCode} set={setDelCode} />}
           <div className="row">
-            <Btn type="submit" variant="danger" disabled={!del}>
+            <Btn type="submit" variant="danger" disabled={!del || delCode?.trim() === ""}>
               Delete forever
             </Btn>
             <Btn variant="ghost" onClick={() => setConfirming(false)}>

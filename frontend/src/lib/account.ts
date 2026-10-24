@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from "react";
 import { request } from "./api";
-import type { Account, Board, Me, NewAccount, Ok, Shop, Stats, UserBody } from "./contract";
+import type { Account, BackupCodes, Board, Me, MfaSetup, MfaStatus, NewAccount, Ok, Shop, Stats, UserBody } from "./contract";
 
 // The signed-in account (the session itself is an HttpOnly cookie: this page never sees it).
-export type { Account, Board, ShopItem, Stats } from "./contract";
+export type { Account, Board, MfaSetup, MfaStatus, ShopItem, Stats } from "./contract";
 
 // -- a tiny shared store: the top bar, the account page and the in-game panel all see the same coins
 interface AccountState {
@@ -54,16 +54,18 @@ export async function signUp(username: string, password: string): Promise<string
   return r.recovery_code;
 }
 
-export async function logIn(username: string, password: string): Promise<void> {
-  const r = await post<UserBody>("/api/auth/login", { username, password });
+/** `code`: from the authenticator app (or a backup code), once the server has asked for it. */
+export async function logIn(username: string, password: string, code?: string): Promise<void> {
+  const r = await post<UserBody>("/api/auth/login", { username, password, ...(code ? { code } : {}) });
   set({ user: r.user });
 }
 
-export async function recover(username: string, recoveryCode: string, newPassword: string): Promise<string> {
+export async function recover(username: string, recoveryCode: string, newPassword: string, code?: string): Promise<string> {
   const r = await post<NewAccount>("/api/auth/recover", {
     username,
     recovery_code: recoveryCode,
     new_password: newPassword,
+    ...(code ? { code } : {}),
   });
   set({ user: r.user });
   return r.recovery_code;
@@ -78,8 +80,8 @@ export async function changePassword(password: string, newPassword: string): Pro
   await post<Ok>("/api/me/password", { password, new_password: newPassword });
 }
 
-export async function deleteAccount(password: string): Promise<void> {
-  await post<Ok>("/api/me/delete", { password });
+export async function deleteAccount(password: string, code?: string): Promise<void> {
+  await post<Ok>("/api/me/delete", { password, ...(code ? { code } : {}) });
   set({ user: null });
 }
 
@@ -91,3 +93,10 @@ export async function buy(item: string): Promise<void> {
   const r = await post<UserBody>("/api/shop/buy", { item });
   set({ user: r.user });
 }
+
+// -- authenticator-app sign-in
+export const mfaStatus = () => request<MfaStatus>("/api/me/mfa");
+export const mfaSetup = (password: string) => post<MfaSetup>("/api/me/mfa/setup", { password });
+export const mfaEnable = (code: string) => post<BackupCodes>("/api/me/mfa/enable", { code }).then((r) => r.codes);
+export const mfaDisable = (password: string, code: string) => post<Ok>("/api/me/mfa/disable", { password, code });
+export const mfaNewCodes = (code: string) => post<BackupCodes>("/api/me/mfa/backup-codes", { code }).then((r) => r.codes);

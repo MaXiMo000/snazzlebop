@@ -325,3 +325,14 @@ class PowerUpTests(unittest.IsolatedAsyncioTestCase):
         with contextlib.suppress(HubError):
             await hub._use_boost(room, host, {"item": "steal", "target": guest})
         assert wallet.owned[(1, "steal")] == 1
+
+
+def test_each_sign_in_request_costs_one_token(tmp_path):
+    # The middleware charges POST /api/auth/* to the auth bucket; the routes must not charge it again,
+    # or a household (or a campus) behind one address runs out after a handful of sign-ins.
+    with TestClient(create_app(settings(tmp_path, rate_auth_burst=4, rate_auth_per_min=0.001))) as c:
+        assert c.post("/api/auth/signup", json={"username": "Ana_99", "password": PW}).status_code == 201
+        for _ in range(3):
+            assert c.post("/api/auth/login", json={"username": "Ana_99", "password": PW}).status_code == 200
+            assert c.post("/api/auth/logout").status_code == 200  # signing out is free
+        assert c.post("/api/auth/login", json={"username": "Ana_99", "password": PW}).status_code == 429

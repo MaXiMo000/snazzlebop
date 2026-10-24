@@ -322,7 +322,8 @@ class HttpRateLimit:
             and path.endswith(("/join", "/tv", "/audience"))
         ):
             return "join"
-        if method == "POST" and path.startswith("/api/auth/"):
+        # Signing out can't be used to guess anything, so it doesn't spend the sign-in budget.
+        if method == "POST" and path.startswith("/api/auth/") and path != "/api/auth/logout":
             return "auth"
         return "default"
 
