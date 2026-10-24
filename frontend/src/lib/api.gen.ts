@@ -557,6 +557,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integrations/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health
+         * @description For monitoring: events waiting to go out, and ones that gave up after every retry.
+         */
+        get: operations["health_api_integrations_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reports
+         * @description Cases by status (comma separated), newest first. Default: the ones waiting for a decision.
+         */
+        get: operations["list_reports_api_integrations_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/reports/{public_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report */
+        get: operations["get_report_api_integrations_reports__public_id__get"];
+        put?: never;
+        /** Update Report */
+        post: operations["update_report_api_integrations_reports__public_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/leaderboard": {
         parameters: {
             query?: never;
@@ -1618,6 +1676,15 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** HistoryRow */
+        HistoryRow: {
+            /** Actor */
+            actor: string;
+            /** At */
+            at: string;
+            /** Text */
+            text: string;
+        };
         /** Inbox */
         Inbox: {
             /** Items */
@@ -1643,6 +1710,33 @@ export interface components {
             read: boolean;
             /** Title */
             title: string;
+        };
+        /** IntegrationHealth */
+        IntegrationHealth: {
+            /** Failed */
+            failed: number;
+            /** Pending */
+            pending: number;
+            /** Sinks */
+            sinks: string[];
+        };
+        /** IntegrationReport */
+        IntegrationReport: {
+            /** Report */
+            report: {
+                [key: string]: unknown;
+            };
+            /** Timeline */
+            timeline: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** IntegrationReports */
+        IntegrationReports: {
+            /** Reports */
+            reports: {
+                [key: string]: unknown;
+            }[];
         };
         /** Intro */
         Intro: {
@@ -2092,12 +2186,21 @@ export interface components {
             can_act: boolean;
             /** Context */
             context: components["schemas"]["ChatLine"][];
+            /** History */
+            history: components["schemas"]["HistoryRow"][];
             /** Id */
             id: number;
             /** Member */
             member: boolean;
             /** Note */
             note: string;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "low" | "normal" | "high" | "urgent";
+            /** Public Id */
+            public_id: string;
             /** Reason */
             reason: string;
             /** Room */
@@ -2106,9 +2209,12 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "open" | "dismissed" | "actioned" | "escalated";
+            status: "open" | "triaged" | "escalated" | "dismissed" | "actioned";
             /** Target */
             target: string;
+            /** Tickets */
+            tickets: components["schemas"]["TicketLink"][];
+            triage: components["schemas"]["TriageInfo"] | null;
         };
         /** ResetBody */
         ResetBody: {
@@ -2407,6 +2513,22 @@ export interface components {
             /** You */
             you: number | null;
         };
+        /** Ticket */
+        Ticket: {
+            /** Key */
+            key: string;
+            /** Url */
+            url?: string | null;
+        };
+        /** TicketLink */
+        TicketLink: {
+            /** Key */
+            key: string;
+            /** System */
+            system: string;
+            /** Url */
+            url: string | null;
+        };
         /** TokenBody */
         TokenBody: {
             /** Token */
@@ -2420,6 +2542,29 @@ export interface components {
             played: number;
             /** Wins */
             wins: number;
+        };
+        /** Triage */
+        Triage: {
+            /** Label */
+            label: string;
+            /** Score */
+            score?: number | null;
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+        };
+        /** TriageInfo */
+        TriageInfo: {
+            /** By */
+            by: string;
+            /** Label */
+            label: string;
+            /** Score */
+            score: number | null;
+            /** Summary */
+            summary: string;
         };
         /** TvPass */
         TvPass: {
@@ -2444,6 +2589,27 @@ export interface components {
             game: string | null;
             /** Until */
             until: string;
+        };
+        /** UpdateBody */
+        UpdateBody: {
+            /** Assignee */
+            assignee?: string | null;
+            /** External */
+            external?: {
+                [key: string]: components["schemas"]["Ticket"];
+            } | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Priority */
+            priority?: string | null;
+            /** Source */
+            source: string;
+            /** Status */
+            status?: string | null;
+            triage?: components["schemas"]["Triage"] | null;
         };
         /** UserBody */
         UserBody: {
@@ -5653,6 +5819,385 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameCard"][];
+                };
+            };
+        };
+    };
+    health_api_integrations_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationHealth"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_reports_api_integrations_reports_get: {
+        parameters: {
+            query?: {
+                status?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationReports"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_report_api_integrations_reports__public_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationReport"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_report_api_integrations_reports__public_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationReport"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

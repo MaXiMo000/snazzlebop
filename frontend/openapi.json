@@ -1366,6 +1366,30 @@
         "title": "Highlight",
         "type": "object"
       },
+      "HistoryRow": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "actor",
+          "text"
+        ],
+        "title": "HistoryRow",
+        "type": "object"
+      },
       "Inbox": {
         "additionalProperties": false,
         "properties": {
@@ -1435,6 +1459,75 @@
           "read"
         ],
         "title": "InboxItem",
+        "type": "object"
+      },
+      "IntegrationHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "sinks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sinks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pending",
+          "failed",
+          "sinks"
+        ],
+        "title": "IntegrationHealth",
+        "type": "object"
+      },
+      "IntegrationReport": {
+        "additionalProperties": false,
+        "properties": {
+          "report": {
+            "additionalProperties": true,
+            "title": "Report",
+            "type": "object"
+          },
+          "timeline": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Timeline",
+            "type": "array"
+          }
+        },
+        "required": [
+          "report",
+          "timeline"
+        ],
+        "title": "IntegrationReport",
+        "type": "object"
+      },
+      "IntegrationReports": {
+        "additionalProperties": false,
+        "properties": {
+          "reports": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reports"
+        ],
+        "title": "IntegrationReports",
         "type": "object"
       },
       "Intro": {
@@ -2723,6 +2816,13 @@
             "title": "Context",
             "type": "array"
           },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryRow"
+            },
+            "title": "History",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -2733,6 +2833,20 @@
           },
           "note": {
             "title": "Note",
+            "type": "string"
+          },
+          "priority": {
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "urgent"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "public_id": {
+            "title": "Public Id",
             "type": "string"
           },
           "reason": {
@@ -2753,9 +2867,10 @@
           "status": {
             "enum": [
               "open",
+              "triaged",
+              "escalated",
               "dismissed",
-              "actioned",
-              "escalated"
+              "actioned"
             ],
             "title": "Status",
             "type": "string"
@@ -2763,6 +2878,23 @@
           "target": {
             "title": "Target",
             "type": "string"
+          },
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/TicketLink"
+            },
+            "title": "Tickets",
+            "type": "array"
+          },
+          "triage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TriageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2775,7 +2907,12 @@
           "room",
           "status",
           "at",
-          "can_act"
+          "can_act",
+          "public_id",
+          "priority",
+          "triage",
+          "tickets",
+          "history"
         ],
         "title": "ReportRow",
         "type": "object"
@@ -3749,6 +3886,65 @@
         "title": "Teams",
         "type": "object"
       },
+      "Ticket": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "Ticket",
+        "type": "object"
+      },
+      "TicketLink": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "system",
+          "key",
+          "url"
+        ],
+        "title": "TicketLink",
+        "type": "object"
+      },
       "TokenBody": {
         "additionalProperties": false,
         "properties": {
@@ -3786,6 +3982,77 @@
           "coins"
         ],
         "title": "Totals",
+        "type": "object"
+      },
+      "Triage": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "summary": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "Triage",
+        "type": "object"
+      },
+      "TriageInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "score",
+          "summary",
+          "by"
+        ],
+        "title": "TriageInfo",
         "type": "object"
       },
       "TvPass": {
@@ -3855,6 +4122,89 @@
           "until"
         ],
         "title": "UpSignal",
+        "type": "object"
+      },
+      "UpdateBody": {
+        "additionalProperties": false,
+        "properties": {
+          "assignee": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
+          "external": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/Ticket"
+                },
+                "maxProperties": 5,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "maxLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "source": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "triage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Triage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "UpdateBody",
         "type": "object"
       },
       "UserBody": {
@@ -7623,6 +7973,452 @@
           }
         },
         "summary": "Games"
+      }
+    },
+    "/api/integrations/health": {
+      "get": {
+        "description": "For monitoring: events waiting to go out, and ones that gave up after every retry.",
+        "operationId": "health_api_integrations_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationHealth"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/integrations/reports": {
+      "get": {
+        "description": "Cases by status (comma separated), newest first. Default: the ones waiting for a decision.",
+        "operationId": "list_reports_api_integrations_reports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open,triaged",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationReports"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "List Reports"
+      }
+    },
+    "/api/integrations/reports/{public_id}": {
+      "get": {
+        "operationId": "get_report_api_integrations_reports__public_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "title": "Public Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Get Report"
+      },
+      "post": {
+        "operationId": "update_report_api_integrations_reports__public_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "title": "Public Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Update Report"
       }
     },
     "/api/leaderboard": {

@@ -33,6 +33,8 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.presence": (set(), set()),  # pure: who's around and "up for a game", clock injected
     "app.webpush": (set(), {"cryptography"}),  # push encryption and VAPID only
     "app.notify": ({"app.config", "app.webpush"}, set()),  # rules and fan-out; storage passed in
+    "app.events": (set(), set()),  # pure: the versioned shape of events other systems receive
+    "app.outbox": ({"app.config", "app.events"}, set()),  # delivery with retries; storage passed in
     "app.calls": ({"app.config"}, set()),
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (
@@ -49,6 +51,7 @@ EDGES = {
     "app.clubs",
     "app.notifications",
     "app.safety",
+    "app.integrations",
     "app.ws",
     "app.migrations",
 }  # may use the frameworks

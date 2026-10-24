@@ -317,6 +317,25 @@ class ChatLine(Strict):
     text: str
 
 
+class TriageInfo(Strict):
+    label: str
+    score: float | None  # 0..1, when a model gave one
+    summary: str
+    by: str  # who triaged it ("ai-triage", "jira"...)
+
+
+class TicketLink(Strict):
+    system: str
+    key: str
+    url: str | None
+
+
+class HistoryRow(Strict):
+    at: str
+    actor: str
+    text: str
+
+
 class ReportRow(Strict):
     id: int
     target: str  # the name they went by
@@ -325,9 +344,15 @@ class ReportRow(Strict):
     note: str
     context: list[ChatLine]  # their last chat lines in the room, taken by the server
     room: str | None
-    status: Literal["open", "dismissed", "actioned", "escalated"]
+    status: Literal["open", "triaged", "escalated", "dismissed", "actioned"]
     at: str
     can_act: bool  # you may mute, remove or ban them (they're below your role)
+    # The case around the report (events.py)
+    public_id: str  # "rpt_...": the id other systems and support use
+    priority: Literal["low", "normal", "high", "urgent"]
+    triage: TriageInfo | None  # a person's or a model's first read
+    tickets: list[TicketLink]  # the same case in other systems (Jira...)
+    history: list[HistoryRow]  # its timeline, oldest first
 
 
 class MutedRow(Strict):
@@ -348,6 +373,21 @@ class ClubReports(Strict):
     muted: list[MutedRow]
     actions: list[ActionRow]  # the audit log, newest first
     reasons: dict[str, str]  # id -> label, for the report form
+
+
+class IntegrationReports(Strict):
+    reports: list[dict[str, Any]]  # events.report_payload, version 1
+
+
+class IntegrationReport(Strict):
+    report: dict[str, Any]
+    timeline: list[dict[str, Any]]
+
+
+class IntegrationHealth(Strict):
+    pending: int
+    failed: int
+    sinks: list[str]
 
 
 class SiteInfo(Strict):

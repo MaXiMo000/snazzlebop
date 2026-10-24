@@ -8,6 +8,7 @@ The game never depends on the database: every call here fails soft.
 from __future__ import annotations
 
 import logging
+import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -192,6 +193,47 @@ class Report(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     handled_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # A report is a case other systems can work on too (events.py): a stable public id, a priority,
+    # who's on it, links to tickets elsewhere ({"jira": {"key": ..., "url": ...}}), and triage notes
+    # from a person or a model ({"label", "score", "summary", "by"}).
+    public_id: Mapped[str] = mapped_column(String(24), unique=True, index=True)
+    priority: Mapped[str] = mapped_column(String(8), default="normal")
+    assignee: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    external: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    triage: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ReportEvent(Base):
+    """A report's timeline: everything that happened to it, by whom ("user:Cy", "integration:jira",
+    "system"), kept even after the people involved leave."""
+
+    __tablename__ = "report_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    report_id: Mapped[int] = mapped_column(ForeignKey("reports.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    actor: Mapped[str] = mapped_column(String(80))
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class OutboxItem(Base):
+    """An event waiting to be delivered to one destination (outbox.py). Written in the same transaction
+    as the change it describes, so a crash can't lose it; delivered at least once, with retries."""
+
+    __tablename__ = "outbox"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    sink: Mapped[str] = mapped_column(String(24))
+    topic: Mapped[str] = mapped_column(String(40))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str] = mapped_column(String(200), default="")
 
 
 class ModAction(Base):
@@ -655,6 +697,11 @@ class Database:
     async def drop_club(session: Any, club_id: int) -> None:
         """A club and everything in it. Spelled out rather than left to ON DELETE CASCADE, which SQLite
         only honours when foreign keys are switched on."""
+        await session.execute(
+            delete(ReportEvent).where(
+                ReportEvent.report_id.in_(select(Report.id).where(Report.club_id == club_id))
+            )
+        )
         for table in (ClubInvite, Membership, Report, ModAction):
             await session.execute(delete(table).where(table.club_id == club_id))
         await session.execute(delete(Club).where(Club.id == club_id))
@@ -782,16 +829,46 @@ class Database:
             theirs = await session.scalars(select(Block.user_id).where(Block.blocked_id == user_id))
             return set(mine.all()) | set(theirs.all())
 
-    async def add_report(self, **values: Any) -> bool:
+    # Reports are cases: every change goes through _record, which writes the timeline entry and the
+    # outbox events in the same transaction as the change. `payload(report, club)` builds the event body
+    # (events.report_payload, passed in so this module stays free of it); `sinks` are the destinations.
+    async def _record(
+        self,
+        session: Any,
+        report: Report,
+        kind: str,
+        actor: str,
+        data: dict[str, Any],
+        topic: str,
+        sinks: list[str],
+        payload: Callable[[Report, Club | None], dict[str, Any]],
+    ) -> None:
+        now = datetime.now(UTC)
+        report.updated_at = now
+        await session.flush()
+        session.add(ReportEvent(report_id=report.id, kind=kind, actor=actor[:80], data=data, created_at=now))
+        if sinks:
+            club = await session.get(Club, report.club_id) if report.club_id is not None else None
+            body = {**payload(report, club), "event": {"kind": kind, "actor": actor, "data": data}}
+            for sink in sinks:
+                session.add(OutboxItem(sink=sink, topic=topic, payload=body, next_at=now))
+
+    async def add_report(
+        self,
+        values: dict[str, Any],
+        actor: str,
+        sinks: list[str],
+        payload: Callable[[Report, Club | None], dict[str, Any]],
+    ) -> tuple[Report, bool]:
         """File a report. If this reporter already has an open one about the same person here, the new
-        chat lines and note are added to it instead (one report to read, everything in it). Returns
-        True for a new report, False when it was added to an open one."""
+        chat lines and note are added to it instead (one case to read, everything in it). Returns the
+        report and whether it's new."""
         async with self.sessions() as session:
             same = await session.scalar(
                 select(Report)
                 .where(
                     Report.reporter_id == values["reporter_id"],
-                    Report.status == "open",
+                    Report.status.in_(("open", "triaged")),
                     Report.club_id.is_(None)
                     if values.get("club_id") is None
                     else Report.club_id == values["club_id"],
@@ -804,17 +881,48 @@ class Database:
             )
             if same is not None:
                 old = list(same.context or [])
-                same.context = [*old, *(c for c in values.get("context", []) if c not in old)][-20:]
+                added = [c for c in values.get("context", []) if c not in old]
+                same.context = [*old, *added][-20:]
                 note = values.get("note", "")
                 if note and note not in same.note:
                     same.note = f"{same.note} / {note}".strip(" /")[:500]
                 if values.get("room_code") and not same.room_code:
                     same.room_code = values["room_code"]
+                data = {"note": note, "lines": len(added), "room": values.get("room_code")}
+                await self._record(session, same, "merged", actor, data, "report.updated", sinks, payload)
                 await session.commit()
-                return False
-            session.add(Report(**values))
+                return same, False
+            report = Report(**values, public_id=f"rpt_{secrets.token_urlsafe(9)}")
+            session.add(report)
+            data = {"reason": report.reason, "room": report.room_code}
+            await self._record(session, report, "created", actor, data, "report.created", sinks, payload)
             await session.commit()
-            return True
+            return report, True
+
+    async def update_report(
+        self,
+        report_id: int,
+        changes: dict[str, Any],
+        kind: str,
+        actor: str,
+        data: dict[str, Any],
+        sinks: list[str],
+        payload: Callable[[Report, Club | None], dict[str, Any]],
+    ) -> Report | None:
+        """Change a report (status, priority, assignee, handled_by...; `external` and `triage` are
+        merged into what's there) and record it. None if the report is gone."""
+        async with self.sessions() as session:
+            report = await session.get(Report, report_id, with_for_update=True)
+            if report is None:
+                return None
+            for key, value in changes.items():
+                if key in ("external", "triage"):
+                    setattr(report, key, {**(getattr(report, key) or {}), **value})
+                else:
+                    setattr(report, key, value)
+            await self._record(session, report, kind, actor, data, "report.updated", sinks, payload)
+            await session.commit()
+            return report
 
     async def reports_today(self, reporter_id: int) -> int:
         since = datetime.now(UTC) - timedelta(days=1)
@@ -825,12 +933,12 @@ class Database:
             return int(n or 0)
 
     async def club_reports(self, club_id: int) -> list[Report]:
-        """Open reports first, then the most recent handled ones."""
+        """Reports waiting for a decision first, then the most recent handled ones."""
         async with self.sessions() as session:
             rows = await session.execute(
                 select(Report)
                 .where(Report.club_id == club_id)
-                .order_by((Report.status == "open").desc(), Report.created_at.desc())
+                .order_by(Report.status.in_(("open", "triaged")).desc(), Report.created_at.desc())
                 .limit(60)
             )
             return list(rows.scalars().all())
@@ -838,7 +946,7 @@ class Database:
     async def open_reports(self, club_id: int) -> int:
         async with self.sessions() as session:
             n = await session.scalar(
-                select(func.count()).where(Report.club_id == club_id, Report.status == "open")
+                select(func.count()).where(Report.club_id == club_id, Report.status.in_(("open", "triaged")))
             )
             return int(n or 0)
 
@@ -846,14 +954,80 @@ class Database:
         async with self.sessions() as session:
             return await session.get(Report, report_id)
 
-    async def close_report(self, report_id: int, status: str, by: int) -> None:
+    async def report_by_public_id(self, public_id: str) -> tuple[Report, Club | None] | None:
+        async with self.sessions() as session:
+            report = await session.scalar(select(Report).where(Report.public_id == public_id))
+            if report is None:
+                return None
+            club = await session.get(Club, report.club_id) if report.club_id is not None else None
+            return report, club
+
+    async def reports_for_integration(
+        self, statuses: tuple[str, ...], limit: int
+    ) -> list[tuple[Report, Club | None]]:
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(Report, Club)
+                .outerjoin(Club, Club.id == Report.club_id)
+                .where(Report.status.in_(statuses))
+                .order_by(Report.created_at.desc())
+                .limit(limit)
+            )
+            return [(r, c) for r, c in rows.all()]
+
+    async def timelines(self, report_ids: list[int]) -> dict[int, list[ReportEvent]]:
+        if not report_ids:
+            return {}
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(ReportEvent)
+                .where(ReportEvent.report_id.in_(report_ids))
+                .order_by(ReportEvent.created_at, ReportEvent.id)
+            )
+            out: dict[int, list[ReportEvent]] = {}
+            for e in rows.scalars().all():
+                out.setdefault(e.report_id, []).append(e)
+            return out
+
+    # -- the outbox (outbox.py) -------------------------------------------------------------------------
+    async def outbox_due(self, limit: int) -> list[OutboxItem]:
+        now = datetime.now(UTC)
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(OutboxItem)
+                .where(
+                    OutboxItem.done_at.is_(None), OutboxItem.failed_at.is_(None), OutboxItem.next_at <= now
+                )
+                .order_by(OutboxItem.id)
+                .limit(limit)
+            )
+            return list(rows.scalars().all())
+
+    async def outbox_done(self, item_id: int) -> None:
         async with self.sessions() as session:
             await session.execute(
-                update(Report)
-                .where(Report.id == report_id)
-                .values(status=status, handled_by=by, handled_at=datetime.now(UTC))
+                update(OutboxItem).where(OutboxItem.id == item_id).values(done_at=datetime.now(UTC))
             )
             await session.commit()
+
+    async def outbox_retry(self, item_id: int, attempts: int, next_at: datetime | None, error: str) -> None:
+        """Try again at `next_at`, or give up (next_at None: it stays in the table, marked failed)."""
+        values: dict[str, Any] = {"attempts": attempts, "last_error": error[:200]}
+        if next_at is None:
+            values["failed_at"] = datetime.now(UTC)
+        else:
+            values["next_at"] = next_at
+        async with self.sessions() as session:
+            await session.execute(update(OutboxItem).where(OutboxItem.id == item_id).values(**values))
+            await session.commit()
+
+    async def outbox_stats(self) -> dict[str, int]:
+        async with self.sessions() as session:
+            pending = await session.scalar(
+                select(func.count()).where(OutboxItem.done_at.is_(None), OutboxItem.failed_at.is_(None))
+            )
+            failed = await session.scalar(select(func.count()).where(OutboxItem.failed_at.is_not(None)))
+            return {"pending": int(pending or 0), "failed": int(failed or 0)}
 
     async def log_action(
         self, club_id: int | None, actor: Any, target_name: str, action: str, note: str

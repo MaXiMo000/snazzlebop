@@ -7,6 +7,9 @@
   in a club room, go to that club's moderators; the rest wait for platform staff.
 - Moderators (and up) work the queue: dismiss, mute in the club's rooms, remove, ban, or escalate to
   staff. They act only on people below their own role, and every action is written to the audit log.
+- Every report is a case (events.py): a public id, a priority, a timeline, and events delivered to other
+  systems through the outbox (a signed webhook today), so triage by a model or tickets in Jira can be
+  added without changing this code. Those systems write back through integrations.py.
 - Your data: download everything kept about your account.
 """
 
@@ -20,24 +23,18 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import schemas
+from . import events, schemas
 from .accounts import USERNAME_RE, check_same_origin, session_user
 from .clubs import policy
 from .clubs.store import ClubStore
 from .config import Settings
 from .db import aware
+from .outbox import Outbox
 from .presence import Presence
 from .rooms import Hub, HubError
 
 E = schemas.ERRORS
-REASONS = {
-    "harassment": "Harassment or bullying",
-    "hate": "Hate or slurs",
-    "cheating": "Cheating or griefing",
-    "spam": "Spam",
-    "sexual": "Sexual content",
-    "other": "Something else",
-}
+REASONS = events.REASONS
 REPORTS_PER_DAY = 20
 MUTE_HOURS = (1, 24, 168)
 ACTIONS = ("dismiss", "mute", "remove", "ban", "escalate")
@@ -79,9 +76,73 @@ def clean_note(raw: str) -> str:
     return " ".join("".join(ch for ch in raw if ch.isprintable()).split())[:500]
 
 
-def router(settings: Settings, db: Any, hub: Hub, presence: Presence) -> APIRouter:
+def written(d: dict[str, Any]) -> str:
+    """What an integration changed, in words: "Triage: hate (93%); priority urgent; status triaged"."""
+    parts = []
+    if d.get("label"):
+        score = d.get("score")
+        parts.append(f"Triage: {d['label']}" + (f" ({score:.0%})" if isinstance(score, float) else ""))
+    parts += [f"Linked {k} {v.get('key', '')}" for k, v in (d.get("external") or {}).items()]
+    parts += [f"{k} {d[k]}" for k in ("priority", "status", "assignee") if d.get(k)]
+    return "; ".join(parts) or "Updated"
+
+
+def history(event: Any) -> dict[str, str]:
+    """One timeline entry, in words a moderator reads at a glance."""
+    who = event.actor.split(":", 1)
+    actor = f"{who[1]} (integration)" if who[0] == "integration" else who[-1]
+    d = event.data or {}
+    text = {
+        "created": "Reported",
+        "merged": "Reported again" + (f" ({d['lines']} more chat lines)" if d.get("lines") else ""),
+        "action": {
+            "mute": f"Muted for {d.get('hours')} h",
+            "remove": "Removed from the club",
+            "ban": "Banned from the club",
+            "dismiss": "Dismissed",
+            "escalate": "Sent to staff",
+        }.get(d.get("action", ""), str(d.get("action", ""))),
+        "triage": written(d),
+        "external": written(d),
+        "status": written(d),
+        "update": written(d),
+    }.get(event.kind, event.kind)
+    if d.get("note") and event.kind in ("status", "update", "triage"):
+        text += f": {d['note']}"
+    return {"at": aware(event.created_at).isoformat(), "actor": actor, "text": text}
+
+
+def case_view(r: Any) -> dict[str, Any]:
+    """The case fields the moderators' page shows next to the report itself."""
+    triage = dict(r.triage or {})
+    return {
+        "public_id": r.public_id,
+        "priority": r.priority,
+        "triage": {
+            "label": str(triage.get("label", "")),
+            "score": triage.get("score"),
+            "summary": str(triage.get("summary", "")),
+            "by": str(triage.get("by", "")),
+        }
+        if triage
+        else None,
+        "tickets": [
+            {"system": k, "key": str(v.get("key", "")), "url": v.get("url")}
+            for k, v in (r.external or {}).items()
+            if isinstance(v, dict)
+        ],
+    }
+
+
+def router(settings: Settings, db: Any, hub: Hub, presence: Presence, outbox: Outbox) -> APIRouter:
     api = APIRouter()
     clubs = ClubStore(db)
+
+    def payload(report: Any, club: Any) -> dict[str, Any]:
+        return events.report_payload(report, club, settings.site, settings.secret_key)
+
+    def actor(user: Any) -> str:
+        return f"user:{user.username}"
 
     async def me(request: Request) -> Any:
         if not db.ready:
@@ -177,16 +238,18 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence) -> APIRout
             if club is None or mine is None or mine.banned or theirs is None:
                 raise HubError("no_club", "Club not found", 404)
             club_id = club.id
-        await db.add_report(
-            reporter_id=user.id,
-            target_id=other.id,
-            target_name=other.username,
-            club_id=club_id,
-            room_code=None,
-            reason=body.reason,
-            note=clean_note(body.note),
-            context=[],
-        )
+        values = {
+            "reporter_id": user.id,
+            "target_id": other.id,
+            "target_name": other.username,
+            "club_id": club_id,
+            "room_code": None,
+            "reason": body.reason,
+            "note": clean_note(body.note),
+            "context": [],
+            "priority": events.REASON_PRIORITY.get(body.reason, "normal"),
+        }
+        await db.add_report(values, actor(user), outbox.names, payload)
         return JSONResponse({"ok": True})
 
     @api.post("/api/rooms/{code}/report", response_model=schemas.Ok, responses=E)
@@ -204,16 +267,18 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence) -> APIRout
         if account == user.id:
             raise HubError("bad_target", "That's you!")
         await under_limit(user)
-        await db.add_report(
-            reporter_id=user.id,
-            target_id=account,
-            target_name=name,
-            club_id=room.club_id,
-            room_code=room.code,
-            reason=body.reason,
-            note=clean_note(body.note),
-            context=hub.said(room, body.player_id),
-        )
+        values = {
+            "reporter_id": user.id,
+            "target_id": account,
+            "target_name": name,
+            "club_id": room.club_id,
+            "room_code": room.code,
+            "reason": body.reason,
+            "note": clean_note(body.note),
+            "context": hub.said(room, body.player_id),
+            "priority": events.REASON_PRIORITY.get(body.reason, "normal"),
+        }
+        await db.add_report(values, actor(user), outbox.names, payload)
         if body.block and account is not None:
             await do_block(user, account)
         return JSONResponse({"ok": True})
@@ -236,8 +301,10 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence) -> APIRout
         user = await me(request)
         club, role = await moderator(slug, user)
         members = await roles(club.id)
+        reports = await db.club_reports(club.id)
+        timelines = await db.timelines([r.id for r in reports])
         rows = []
-        for r in await db.club_reports(club.id):
+        for r in reports:
             target_role = members.get(r.target_id, ("", ""))[1] if r.target_id else ""
             rows.append(
                 {
@@ -253,9 +320,11 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence) -> APIRout
                     "status": r.status,
                     "at": aware(r.created_at).isoformat(),
                     # Act on people below you; a report about yourself or someone above goes up instead.
-                    "can_act": r.status == "open"
+                    "can_act": r.status in events.OPEN_STATUSES
                     and r.target_id != user.id
                     and (not target_role or policy.may_remove(role, target_role)),
+                    **case_view(r),
+                    "history": [history(e) for e in timelines.get(r.id, [])],
                 }
             )
         mutes = await db.club_mutes(club.id)
@@ -285,7 +354,7 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence) -> APIRout
         r = await db.report(report_id)
         if r is None or r.club_id != club.id:
             raise HubError("no_report", "That report isn't here", 404)
-        if r.status != "open":
+        if r.status not in events.OPEN_STATUSES:
             raise HubError("handled", "Someone already handled that report", 409)
         if body.action not in ACTIONS:
             raise HubError("bad_input", "Unknown action")
@@ -310,7 +379,17 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence) -> APIRout
             await clubs.remove(club.id, r.target_id, body.action == "ban")
             presence.leave_club(club.id, r.target_id)
         status = {"dismiss": "dismissed", "escalate": "escalated"}.get(body.action, "actioned")
-        await db.close_report(r.id, status, user.id)
+        await db.update_report(
+            r.id,
+            {"status": status, "handled_by": user.id, "handled_at": datetime.now(UTC)},
+            "action",
+            actor(user),
+            {"action": body.action, "hours": body.hours}
+            if body.action == "mute"
+            else {"action": body.action},
+            outbox.names,
+            payload,
+        )
         await db.log_action(club.id, user, r.target_name, body.action, note)
         return JSONResponse({"ok": True})
 

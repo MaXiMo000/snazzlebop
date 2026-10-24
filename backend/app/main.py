@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import accounts, calls, notifications, safety, schemas
+from . import accounts, calls, integrations, notifications, safety, schemas
 from .clubs import routes as clubs
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
@@ -26,6 +26,7 @@ from .games import catalog
 from .logging_setup import setup_logging
 from .mailer import Mailer
 from .notify import Notifier
+from .outbox import Outbox, sinks_for
 from .presence import Presence
 from .rooms import Hub, HubError
 from .security import (
@@ -98,6 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     mailer = Mailer(settings)
     presence = Presence()
     notifier = Notifier(settings, db)
+    outbox = Outbox(db, sinks_for(settings))
     statuses = notifications.Statuses(db, presence, hub)
 
     @contextlib.asynccontextmanager
@@ -112,12 +114,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log.info("content: %d saved items loaded; generator %s", loaded, "on" if generator.enabled else "off")
         await db.purge_snapshots(settings.room_max_age_seconds)
         ticker = asyncio.create_task(hub.run_ticker())
+        sender = asyncio.create_task(outbox.run())  # report events to other systems (outbox.py)
         try:
             yield
         finally:
-            ticker.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await ticker
+            for task in (ticker, sender):
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
             await hub.flush()  # live rooms carry on on the next server
             await mailer.drain()  # emails already queued still go out
             await notifier.drain()
@@ -136,6 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.db = db
     app.state.mailer = mailer
     app.state.notifier = notifier
+    app.state.outbox = outbox
     app.state.presence = presence
     app.state.content = generator
     app.state.ws_counter = ConnectionCounter()
@@ -199,7 +204,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.include_router(clubs.router(settings, db, hub, limiters["auth"], notifier, presence, statuses))
     app.include_router(notifications.router(settings, db, hub, notifier, presence, statuses))
-    app.include_router(safety.router(settings, db, hub, presence))
+    app.include_router(safety.router(settings, db, hub, presence, outbox))
+    app.include_router(integrations.router(settings, db, outbox))
 
     async def account_id(request: Request) -> int | None:
         user = await accounts.session_user(request, db)

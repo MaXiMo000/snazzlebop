@@ -167,3 +167,62 @@
 .no-break {
   white-space: nowrap;
 }
+
+/* The case around a report: priority, triage, tickets, history */
+.report-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip.priority-urgent {
+  background: var(--cherry);
+  color: #fff;
+}
+.chip.priority-high {
+  background: var(--tangerine);
+  color: var(--plum);
+}
+.report-id {
+  font-variant-numeric: tabular-nums;
+}
+.report-triage {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 2px solid var(--teal);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+}
+.report-triage p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.report-tickets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+.report-tickets a.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+}
+.report-history {
+  margin-top: 10px;
+}
+.report-history summary {
+  display: list-item;
+  padding: 10px 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+.report-history ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 1.2em;
+  overflow-wrap: anywhere;
+}

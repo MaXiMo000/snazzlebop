@@ -27,7 +27,7 @@ PW = "correct horse battery"
 
 @pytest.fixture()
 def client(tmp_path):
-    app = create_app(settings(tmp_path, rate_auth_burst=1000))
+    app = create_app(settings(tmp_path, rate_auth_burst=1000, integration_token="i" * 40))
     app.state.mailer.keep = True  # mail on (kept in memory), so the email routes answer for real
     with TestClient(app) as c:
         yield c
@@ -135,6 +135,14 @@ def test_every_route_matches_its_declared_model(client):
     c.call("POST", "/api/blocks", json={"username": "Bo_42"})
     c.call("GET", "/api/blocks")
     c.call("POST", "/api/blocks/remove", json={"username": "Bo_42"})
+    auth = {"Authorization": "Bearer " + "i" * 40}
+    cases = c.call("GET", "/api/integrations/reports", headers=auth)["reports"]
+    one = "/api/integrations/reports/{public_id}"
+    pid = cases[0]["id"]
+    c.call("GET", f"/api/integrations/reports/{pid}", one, headers=auth)
+    triage = {"source": "ai-triage", "triage": {"label": "spam", "score": 0.5, "summary": "Looks like spam"}}
+    c.call("POST", f"/api/integrations/reports/{pid}", one, json=triage, headers=auth)
+    c.call("GET", "/api/integrations/health", headers=auth)
     c.call("GET", "/api/me/export")
     c.call("GET", "/api/site")
     c.call("GET", f"/api/rooms/{room_code}/invitees", "/api/rooms/{code}/invitees")

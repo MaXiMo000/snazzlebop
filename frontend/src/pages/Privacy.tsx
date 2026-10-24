@@ -59,6 +59,7 @@ export function Privacy({ go }: { go: Go }) {
           <li>If email is on, an email delivery service sends our messages.</li>
           <li>Pushes travel through your browser maker's push service (Google, Mozilla, Apple or Microsoft). They're encrypted: only your device can read them.</li>
           <li>Voice and video calls, if used, go through our call provider while the call lasts. We don't record them.</li>
+          <li>If we use a support or ticketing tool to handle reports, a report goes to it with the reported person's name and what they said, but no emails, and the person who reported only as an anonymous reference.</li>
         </ul>
         <p className="space-top">We don't sell personal data, and there are no third-party trackers on the site.</p>
       </Card>

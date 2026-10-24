@@ -138,6 +138,30 @@ Everything is read from the environment; [.env.example](.env.example) lists ever
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | no | turns on voice and video calls |
 | `JUMPSCARE_NAMES` | no | a private, comma-separated list of friends who get a walk-on and a jump scare |
 
+## Integrations (reports)
+
+Every report is a case with a public id (`rpt_...`), a priority, a timeline and versioned events, so
+triage by a model, tickets in Jira or a support desk can be connected without code changes.
+
+- **Webhook.** Set `REPORT_WEBHOOK_URL` and `REPORT_WEBHOOK_SECRET` (32+ characters). Every change to a
+  case (`report.created`, `report.updated`) is POSTed as JSON: `{"id": <delivery id>, "topic": ...,
+  "data": {...}}`, where `data` is the case (`"v": 1`; fields are only added within a version) plus
+  `data.event` (`kind`, `actor`, `data`). Delivery is at least once, retried with growing waits for
+  about three hours, so de-duplicate on `X-Snazzlebop-Delivery`. Verify `X-Snazzlebop-Signature`, which is
+  `sha256=` + HMAC-SHA256(secret, `<X-Snazzlebop-Timestamp>.<raw body>`), and refuse old timestamps.
+  People appear as pseudonymous refs (`usr_...`); emails never leave.
+- **Integration API.** Set `INTEGRATION_TOKEN` (32+ characters) and send
+  `Authorization: Bearer <token>`:
+  - `GET /api/integrations/reports?status=open,triaged&limit=50`: cases by status
+  - `GET /api/integrations/reports/{id}`: one case and its timeline
+  - `POST /api/integrations/reports/{id}` with `source` (for example `jira` or `ai-triage`) and any of
+    `status` (open, triaged, escalated, dismissed), `priority` (low, normal, high, urgent), `assignee`,
+    `external` (`{"jira": {"key": "SNZ-12", "url": "https://..."}}`), `triage`
+    (`{"label", "score", "summary"}`) and `note`. Updates go out as `report.updated` naming the
+    `source`, so a system can ignore its own echoes.
+  - `GET /api/integrations/health`: events waiting and events that gave up.
+- Actions on people (mute, remove, ban) stay with human moderators; integrations suggest and track.
+
 ## Deploy
 
 1. Push the repo to GitHub.

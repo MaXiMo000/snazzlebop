@@ -103,6 +103,11 @@ class Settings:
     mail_outbox_dir: str = ""  # development only: write emails here as files instead of sending them
     privacy_contact: str = ""  # where privacy requests go (shown on the privacy notice)
 
+    # Optional: other systems working on reports (events.py, outbox.py, integrations.py).
+    report_webhook_url: str = ""  # each report event is POSTed here, signed
+    report_webhook_secret: str = field(default="", repr=False)
+    integration_token: str = field(default="", repr=False)  # bearer token for /api/integrations/*
+
     # The jump-scare prank. On unless JUMPSCARE=false; JUMPSCARE_NAMES (comma separated) replaces the
     # built-in list. (A plain Settings() keeps it off, so unit tests stay quiet.)
     jumpscare: bool = False
@@ -170,6 +175,15 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         # caller controls the X-Forwarded-For entry we'd trust, and walks around every rate limit.
         raise RuntimeError("TRUSTED_PROXY_HOPS >= 2 needs EDGE_SECRET in production (see SECURITY.md)")
 
+    webhook = e.get("REPORT_WEBHOOK_URL", "").strip()
+    webhook_secret = e.get("REPORT_WEBHOOK_SECRET", "").strip()
+    if webhook and not (webhook.startswith("https://") or (not production and webhook.startswith("http://"))):
+        raise ValueError("REPORT_WEBHOOK_URL must start with https:// (http:// only outside production)")
+    if webhook and len(webhook_secret) < 32:
+        raise RuntimeError("REPORT_WEBHOOK_SECRET must be at least 32 characters when the webhook is on")
+    integration_token = e.get("INTEGRATION_TOKEN", "").strip()
+    if integration_token and len(integration_token) < 32:
+        raise RuntimeError("INTEGRATION_TOKEN must be at least 32 characters")
     public_url = e.get("PUBLIC_URL", "").strip().rstrip("/") or (
         f"https://{render_host}" if render_host else ""
     )
@@ -206,6 +220,9 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         smtp_pass=e.get("SMTP_PASS", "").strip(),
         mail_outbox_dir=e.get("MAIL_OUTBOX_DIR", "").strip(),
         privacy_contact=e.get("PRIVACY_CONTACT", "").strip()[:200],
+        report_webhook_url=webhook,
+        report_webhook_secret=webhook_secret,
+        integration_token=integration_token,
         jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
         jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )

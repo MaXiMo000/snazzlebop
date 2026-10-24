@@ -97,6 +97,20 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
             await conn.run_sync(lambda c: command.upgrade(config(c), "head"))
             self.assertEqual(await conn.run_sync(drift), [])
 
+    async def test_reports_from_before_cases_get_a_public_id(self):
+        async with self.engine.begin() as conn:
+            await conn.run_sync(lambda c: command.upgrade(config(c), "0006"))
+            await conn.execute(
+                text(
+                    "INSERT INTO reports (target_name, reason, note, context, status, created_at)"
+                    " VALUES ('Bo', 'spam', '', '[]', 'open', CURRENT_TIMESTAMP)"
+                )
+            )
+            await conn.run_sync(lambda c: command.upgrade(config(c), "head"))
+            row = (await conn.execute(text("SELECT public_id, priority FROM reports"))).one()
+            self.assertTrue(row[0].startswith("rpt_"))
+            self.assertEqual(row[1], "normal")
+
     def test_the_baseline_is_the_first_revision(self):
         from alembic.script import ScriptDirectory
 

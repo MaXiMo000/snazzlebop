@@ -12,6 +12,7 @@ const when = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 const STATUS: Record<Report["status"], string> = {
   open: "Open",
+  triaged: "Triaged",
   dismissed: "Dismissed",
   actioned: "Dealt with",
   escalated: "Sent to staff",
@@ -70,8 +71,10 @@ export function ClubReports({ slug, go }: { slug: string; go: Go }) {
       </Card>
     );
   if (!queue) return <p className="muted center">Loading…</p>;
-  const open = queue.reports.filter((r) => r.status === "open");
-  const done = queue.reports.filter((r) => r.status !== "open");
+  const waiting = (r: Report) => r.status === "open" || r.status === "triaged";
+  const order = { urgent: 0, high: 1, normal: 2, low: 3 };
+  const open = queue.reports.filter(waiting).sort((a, b) => order[a.priority] - order[b.priority]);
+  const done = queue.reports.filter((r) => !waiting(r));
 
   return (
     <div className="stack enter reports-page">
@@ -147,13 +150,48 @@ function ReportCard({ r, act }: { r: Report; act: (action: string, hours?: numbe
     <Card className="report-card" aria-label={`Report about ${r.target}`}>
       <div className="report-head">
         <h3>{r.target}</h3>
-        <span className="chip cherry">{r.reason}</span>
+        <span className="report-chips">
+          {r.priority !== "normal" && <span className={`chip priority-${r.priority}`}>{r.priority === "urgent" ? "Urgent" : r.priority === "high" ? "High priority" : "Low priority"}</span>}
+          <span className="chip cherry">{r.reason}</span>
+        </span>
       </div>
       <p className="muted">
-        {when(r.at)}
-        {r.room && ` · in room ${r.room}`}
+        <span className="no-break">{when(r.at)}</span>
+        {r.room && <span className="no-break"> · in room {r.room}</span>}
         {!r.member && " · no longer in the club"}
+        {r.status === "triaged" && " · triaged"}
+        <span className="no-break report-id"> · {r.public_id}</span>
       </p>
+      {r.triage && (
+        <div className="report-triage">
+          <p>
+            <b>Suggested: {r.triage.label}</b>
+          </p>
+          <p className="muted">
+            {[typeof r.triage.score === "number" ? `${Math.round(r.triage.score * 100)}% sure` : "", r.triage.by ? `by ${r.triage.by}` : ""]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          {r.triage.summary && <p className="muted">{r.triage.summary}</p>}
+          <p className="muted acct-hint">A suggestion only: you decide.</p>
+        </div>
+      )}
+      {r.tickets.length > 0 && (
+        <p className="report-tickets">
+          {r.tickets.map((t) =>
+            t.url ? (
+              <a key={t.system} className="chip" href={t.url} target="_blank" rel="noopener noreferrer">
+                {t.system} {t.key}
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ) : (
+              <span key={t.system} className="chip">
+                {t.system} {t.key}
+              </span>
+            ),
+          )}
+        </p>
+      )}
       {r.note && <p className="report-quote">“{r.note}”</p>}
       {r.context.length > 0 && (
         <div className="report-context">
@@ -204,6 +242,18 @@ function ReportCard({ r, act }: { r: Report; act: (action: string, hours?: numbe
             Dismiss
           </Btn>
         </div>
+      )}
+      {r.history.length > 1 && (
+        <details className="report-history">
+          <summary>History ({r.history.length})</summary>
+          <ol>
+            {r.history.map((h, i) => (
+              <li key={i}>
+                <span className="muted no-break">{when(h.at)}</span> <b>{h.actor}</b>: {h.text}
+              </li>
+            ))}
+          </ol>
+        </details>
       )}
       {!r.can_act && r.member && <p className="muted acct-hint">They're at your level or above, so this one goes to staff (or the owner).</p>}
     </Card>

@@ -32,6 +32,10 @@ Only the latest version on `main` (the live deployment) is supported.
 - **Blocking and reports.** Blocks are silent and apply everywhere: friends, invites, presence,
   joining rooms and room chat. Report context is captured by the server, not supplied by the reporter.
   Moderators act only on roles below their own, and every action is recorded in an audit log.
+- **Integrations.** Report events leave only through an operator-configured webhook, signed with
+  HMAC-SHA256 and a timestamp, and carry pseudonymous ids instead of accounts or emails. The
+  integration API is off unless a 32+ character token is set and compares it in constant time; it
+  can change a case's workflow fields but never act against a person.
 - **Private clubs.** A club is visible only to its members. Invite links are random, stored only as
   keyed hashes, expire and run out; roles can act only on roles below their own, and bans stick.
 - **Abuse limits.** Rate limits per client on the API, room joins, sign-in and WebSocket messages, caps
