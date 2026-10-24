@@ -236,6 +236,16 @@ class MiddlewareTests(unittest.IsolatedAsyncioTestCase):
 
 
 class ConfigTests(unittest.TestCase):
+    def test_mail_settings_and_the_public_address(self):
+        base = {"ENV": "production", "ALLOWED_HOSTS": "a.com", "SECRET_KEY": "k" * 40}
+        s = load_settings({**base, "RENDER_EXTERNAL_HOSTNAME": "snz.onrender.com"})
+        self.assertEqual(s.site, "https://snz.onrender.com")
+        s = load_settings({**base, "PUBLIC_URL": "https://play.example.com/", "SMTP_PORT": "465"})
+        self.assertEqual((s.site, s.smtp_port), ("https://play.example.com", 465))
+        with self.assertRaises(ValueError):
+            load_settings({**base, "PUBLIC_URL": "http://play.example.com"})
+        self.assertNotIn("re_", repr(load_settings({**base, "RESEND_API_KEY": "re_secret"})))
+
     def test_client_ip_header_setting(self):
         base = {"ENV": "production", "ALLOWED_HOSTS": "a.com", "SECRET_KEY": "k" * 40}
         s = load_settings({**base, "CLIENT_IP_HEADER": "CF-Connecting-IP", "TRUSTED_PROXY_HOPS": "2"})

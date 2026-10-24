@@ -68,9 +68,13 @@ class TvPass(Strict):
 
 # -- accounts -------------------------------------------------------------------------------------------
 class PublicUser(Strict):
+    """Your own account (only ever sent to its owner)."""
+
     username: str
     coins: int
     powerups: dict[str, int]
+    email: str | None
+    email_verified: bool
 
 
 class UserBody(Strict):
@@ -87,6 +91,7 @@ class NewAccount(Strict):
 class Me(Strict):
     user: PublicUser | None
     accounts: bool  # false when the server has no database: sign-in is unavailable
+    mail: bool  # true when the server can send email: email sign-in, reset links and notices
 
 
 class MfaStatus(Strict):

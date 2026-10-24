@@ -28,6 +28,8 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.show": ({"app.games"}, set()),
     "app.schemas": (set(), {"pydantic"}),
     "app.mfa": (set(), {"segno"}),  # pure: the time is passed in; segno only draws the QR code
+    "app.emails": (set(), set()),  # pure: a description in, HTML and text out
+    "app.mailer": ({"app.config", "app.emails"}, set()),  # stdlib only: Resend over HTTPS, or SMTP
     "app.calls": ({"app.config"}, set()),
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (

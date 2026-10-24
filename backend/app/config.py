@@ -92,6 +92,16 @@ class Settings:
     livekit_api_key: str = field(default="", repr=False)
     livekit_api_secret: str = field(default="", repr=False)
 
+    # Optional: account email (see mailer.py). Unset = no email; accounts work as before.
+    public_url: str = ""  # the site's address for links in emails; defaults to the first allowed origin
+    mail_from: str = ""  # "Snazzlebop <hello@example.com>"
+    resend_api_key: str = field(default="", repr=False)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = field(default="", repr=False)
+    smtp_pass: str = field(default="", repr=False)
+    mail_outbox_dir: str = ""  # development only: write emails here as files instead of sending them
+
     # The jump-scare prank. On unless JUMPSCARE=false; JUMPSCARE_NAMES (comma separated) replaces the
     # built-in list. (A plain Settings() keeps it off, so unit tests stay quiet.)
     jumpscare: bool = False
@@ -102,6 +112,11 @@ class Settings:
     @property
     def is_production(self) -> bool:
         return self.env == "production"
+
+    @property
+    def site(self) -> str:
+        """The public address links in emails point at."""
+        return (self.public_url or (self.allowed_origins[0] if self.allowed_origins else "")).rstrip("/")
 
     @property
     def ws_hosts(self) -> tuple[str, ...]:
@@ -154,6 +169,14 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         # caller controls the X-Forwarded-For entry we'd trust, and walks around every rate limit.
         raise RuntimeError("TRUSTED_PROXY_HOPS >= 2 needs EDGE_SECRET in production (see SECURITY.md)")
 
+    public_url = e.get("PUBLIC_URL", "").strip().rstrip("/") or (
+        f"https://{render_host}" if render_host else ""
+    )
+    if public_url and not (
+        public_url.startswith("https://") or (not production and public_url.startswith("http://"))
+    ):
+        raise ValueError("PUBLIC_URL must start with https:// (http:// only outside production)")
+
     return Settings(
         env=env,
         secret_key=secret,
@@ -173,6 +196,14 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         livekit_url=livekit_url,
         livekit_api_key=e.get("LIVEKIT_API_KEY", "").strip(),
         livekit_api_secret=e.get("LIVEKIT_API_SECRET", "").strip(),
+        public_url=public_url,
+        mail_from=e.get("MAIL_FROM", "").strip(),
+        resend_api_key=e.get("RESEND_API_KEY", "").strip(),
+        smtp_host=e.get("SMTP_HOST", "").strip(),
+        smtp_port=int(num("SMTP_PORT", defaults.smtp_port)),
+        smtp_user=e.get("SMTP_USER", "").strip(),
+        smtp_pass=e.get("SMTP_PASS", "").strip(),
+        mail_outbox_dir=e.get("MAIL_OUTBOX_DIR", "").strip(),
         jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
         jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )

@@ -1,7 +1,8 @@
 """Accounts, coins and power-ups.
 
-Sign-up is a username and a password; there is no email. Instead you get a one-time recovery code
-(shown once, stored only as a keyed hash) that resets a forgotten password.
+Sign-up is a username and a password. Everyone gets a one-time recovery code (shown once, stored only
+as a keyed hash) that resets a forgotten password. An email address is optional: once confirmed, it
+also signs in, gets reset links, and is told about changes to the account (emails.py, mailer.py).
 
 Security:
 - Passwords: scrypt (stdlib), per-user salt, run off the event loop. Max 128 chars (scrypt is
@@ -38,9 +39,10 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.requests import HTTPConnection
 
-from . import mfa, schemas
+from . import emails, mfa, schemas
 from .coins import POWERUP_PRICES, season_of
 from .config import Settings
+from .mailer import Mailer
 from .rooms import HubError
 from .security import RateLimiter, client_ip
 from .show import CARDS
@@ -74,6 +76,13 @@ COMMON_PASSWORDS = frozenset(
 SCRYPT_N, SCRYPT_R, SCRYPT_P = 2**14, 8, 1  # ~16 MB and tens of milliseconds per hash
 LOCK_AFTER = 5  # failed logins for one username before it's locked for a while
 LOCK_SECONDS = 60.0
+DEVICE_COOKIE = "sb_device"
+EMAIL_MAX = 254
+_LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+EMAIL_RE = re.compile(rf"^[^@\s]{{1,64}}@{_LABEL}(?:\.{_LABEL})+$")
+VERIFY_SECONDS = 2 * 86400
+RESET_SECONDS = 30 * 60
+RESET_GAP = 60.0  # one reset email per account per minute, whatever the rate limits allow
 
 
 # -- validation --------------------------------------------------------------------------------------
@@ -84,6 +93,15 @@ def clean_username(raw: object) -> str:
     if not USERNAME_RE.fullmatch(name):
         raise HubError("bad_username", "Usernames are 3-20 letters, numbers, dots, dashes or underscores")
     return name
+
+
+def clean_email(raw: object) -> str:
+    if not isinstance(raw, str):
+        raise HubError("bad_email", "That doesn't look like an email address")
+    email = raw.strip().lower()
+    if len(email) > EMAIL_MAX or not email.isprintable() or not EMAIL_RE.fullmatch(email):
+        raise HubError("bad_email", "That doesn't look like an email address")
+    return email
 
 
 def check_password(raw: object, username: str = "") -> str:
@@ -171,10 +189,37 @@ class SignupBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Field(max_length=64)
     password: str = Field(max_length=PASSWORD_MAX)
+    email: str | None = Field(default=None, max_length=EMAIL_MAX)
 
 
-class LoginBody(SignupBody):
+class LoginBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    username: str = Field(max_length=EMAIL_MAX)  # the username, or an email confirmed on the account
+    password: str = Field(max_length=PASSWORD_MAX)
     code: str | None = Field(default=None, max_length=32)  # authenticator or backup code, when it is on
+
+
+class ForgotBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    login: str = Field(max_length=EMAIL_MAX)  # username or email
+
+
+class ResetBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(max_length=100)
+    new_password: str = Field(max_length=PASSWORD_MAX)
+    code: str | None = Field(default=None, max_length=32)
+
+
+class TokenBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(max_length=100)
+
+
+class EmailBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: str = Field(max_length=EMAIL_MAX)
+    password: str = Field(max_length=PASSWORD_MAX)
 
 
 class RecoverBody(BaseModel):
@@ -219,7 +264,14 @@ class BuyBody(BaseModel):
 
 
 def public_user(user: Any) -> dict[str, Any]:
-    return {"username": user.username, "coins": user.coins, "powerups": dict(user.powerups or {})}
+    """The signed-in account as its owner sees it (never shown to anyone else)."""
+    return {
+        "username": user.username,
+        "coins": user.coins,
+        "powerups": dict(user.powerups or {}),
+        "email": user.email,
+        "email_verified": bool(user.email_verified),
+    }
 
 
 async def session_user(request: HTTPConnection, db: Any) -> Any:
@@ -246,9 +298,13 @@ def router(
     db: Any,
     limiter: RateLimiter,
     hosting: Callable[[set[int]], dict[int, str]] = lambda ids: {},
+    mailer: Mailer | None = None,
 ) -> APIRouter:
     api = APIRouter()
     lockout = Lockout()
+    mail = mailer or Mailer(settings)
+    site = settings.site
+    reset_sent: dict[int, float] = {}  # account -> when its last reset email went out
 
     def ip(request: Request) -> str:
         return client_ip(request.scope, settings.trusted_proxy_hops, settings.client_ip_header)
@@ -278,6 +334,47 @@ def router(
 
     async def current(request: Request) -> Any:
         return await session_user(request, db)
+
+    # -- email ---------------------------------------------------------------------------------------
+    def tell(user: Any, email: emails.Email, kind: str) -> None:
+        """Send to the account's confirmed address, if it has one."""
+        if user.email and user.email_verified:
+            mail.send(user.email, email, kind)
+
+    def notice(user: Any, subject: str, what: str) -> None:
+        tell(user, emails.notice(site, user.username, subject, what), "notice")
+
+    async def send_verify(user: Any, email: str, changed: bool) -> None:
+        if not mail.enabled:
+            return
+        token = secrets.token_urlsafe(32)
+        await db.add_token(token_hash(token), user.id, "verify", email, VERIFY_SECONDS)
+        url = f"{site}/account/verify#{token}"  # the fragment never reaches a server log
+        mail.send(email, emails.verify_email(site, user.username, url, changed), "verify")
+
+    async def signed_in(resp: Response, request: Request, user: Any) -> None:
+        """A sign-in worked: remember this browser, and warn the owner about one we haven't seen."""
+        raw = request.cookies.get(DEVICE_COOKIE, "")
+        device = raw if re.fullmatch(r"[A-Za-z0-9_-]{43}", raw) else secrets.token_urlsafe(32)
+        seen, had_any = await db.note_device(user.id, token_hash(device))
+        if not seen and had_any:
+            ua = request.headers.get("user-agent", "")[:400]
+            tell(user, emails.new_device(site, user.username, emails.describe_device(ua)), "new-device")
+        resp.set_cookie(
+            DEVICE_COOKIE,
+            device,
+            max_age=400 * 86400,
+            httponly=True,
+            secure=settings.is_production,
+            samesite="strict",
+            path="/",
+        )
+
+    async def find_account(login_name: str) -> Any:
+        """The account a sign-in names: a username, or an email confirmed on it."""
+        if "@" in login_name:
+            return await db.user_by_email(login_name.lower()) if len(login_name) <= EMAIL_MAX else None
+        return await db.user_by_name(login_name) if USERNAME_RE.fullmatch(login_name) else None
 
     async def second_factor(user: Any, code: str | None, lock_key: str) -> None:
         """When the account has an authenticator on, the code from it (or a backup code) is needed too."""
@@ -315,13 +412,19 @@ def router(
         need_db()
         username = clean_username(body.username)
         password = check_password(body.password, username)
+        email = clean_email(body.email) if body.email and body.email.strip() else None
         code = new_recovery_code()
         pw = await asyncio.to_thread(hash_password, password)
         user = await db.create_user(username, pw, recovery_hash(settings.secret_key, code))
         if user is None:
             raise HubError("username_taken", "That username is taken", 409)
+        if email:
+            await db.set_email(user.id, email)
+            user = await db.user_by_id(user.id)
+            await send_verify(user, email, changed=False)
         resp = JSONResponse({"user": public_user(user), "recovery_code": code}, status_code=201)
         set_session(resp, await start_session(user.id))
+        await signed_in(resp, request, user)
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
@@ -329,22 +432,20 @@ def router(
     async def login(body: LoginBody, request: Request) -> JSONResponse:
         same_origin(request)
         need_db()
-        key = body.username.strip().casefold()
+        login_name = body.username.strip()
+        user = await find_account(login_name)
+        key = user.username_key if user is not None else login_name.casefold()  # one lock per account
         if lockout.locked(key):
             raise HubError("locked", "Too many wrong tries. Wait a minute and try again", 429)
-        user = (
-            await db.user_by_name(body.username.strip())
-            if USERNAME_RE.fullmatch(body.username.strip())
-            else None
-        )
         ok = await asyncio.to_thread(verify_password, body.password, user.pw_hash if user else DUMMY_HASH)
         if user is None or not ok:
             lockout.fail(key)
-            raise HubError("bad_login", "Wrong username or password", 401)
+            raise HubError("bad_login", "Wrong username, email or password", 401)
         await second_factor(user, body.code, key)
         lockout.ok(key)
         resp = JSONResponse({"user": public_user(user)})
         set_session(resp, await start_session(user.id))
+        await signed_in(resp, request, user)
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
@@ -371,8 +472,13 @@ def router(
         await db.set_credentials(user.id, pw, recovery_hash(settings.secret_key, code))
         await db.delete_sessions(user.id)  # sign out everywhere else
         lockout.ok(key)
+        lockout.ok(user.username_key)  # the lockout message points here, so a reset lifts it
+        notice(
+            user, "Your Snazzlebop password was reset", "Your recovery code was used to reset your password."
+        )
         resp = JSONResponse({"user": public_user(user), "recovery_code": code})
         set_session(resp, await start_session(user.id))
+        await signed_in(resp, request, user)
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
@@ -390,7 +496,7 @@ def router(
     async def me(request: Request) -> JSONResponse:
         user = await current(request)
         return JSONResponse(
-            {"user": public_user(user) if user else None, "accounts": bool(db.ready)},
+            {"user": public_user(user) if user else None, "accounts": bool(db.ready), "mail": mail.enabled},
             headers={"Cache-Control": "no-store"},
         )
 
@@ -410,6 +516,7 @@ def router(
         pw = await asyncio.to_thread(hash_password, password)
         await db.set_credentials(user.id, pw, None)
         await db.delete_sessions(user.id)
+        notice(user, "Your Snazzlebop password was changed", "The password for your account was changed.")
         resp = JSONResponse({"ok": True})
         set_session(resp, await start_session(user.id))
         return resp
@@ -422,10 +529,134 @@ def router(
         if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
             raise HubError("bad_login", "That password isn't right", 401)
         await second_factor(user, body.code, "delete:" + user.username_key)
+        tell(user, emails.goodbye(site, user.username), "goodbye")
         await db.delete_user(user.id)
         resp = JSONResponse({"ok": True})
         resp.delete_cookie(SESSION_COOKIE, path="/", samesite="strict", secure=settings.is_production)
         return resp
+
+    # -- forgotten passwords by email, confirming an address -------------------------------------------
+    BAD_LINK = "That link has expired or was already used. Ask for a new one"
+
+    @api.post("/api/auth/forgot", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def forgot(body: ForgotBody, request: Request) -> JSONResponse:
+        """Email a reset link. The same answer whether or not the account exists or has an email."""
+        same_origin(request)
+        need_db()
+        if not mail.enabled:
+            raise HubError(
+                "mail_off", "Reset by email isn't set up here. Use your recovery code instead", 503
+            )
+        user = await find_account(body.login.strip())
+        now = time.monotonic()
+        if (
+            user is not None
+            and user.email
+            and user.email_verified
+            and now - reset_sent.get(user.id, -1e9) > RESET_GAP
+        ):
+            if len(reset_sent) > 20000:
+                reset_sent.clear()  # memory bound; the per-IP limits still apply
+            reset_sent[user.id] = now
+            token = secrets.token_urlsafe(32)
+            await db.add_token(token_hash(token), user.id, "reset", user.email, RESET_SECONDS)
+            url = f"{site}/account/reset#{token}"
+            mail.send(user.email, emails.reset_password(site, user.username, url), "reset")
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/auth/reset", response_model=schemas.UserBody, responses=schemas.ERRORS)
+    async def reset(body: ResetBody, request: Request) -> JSONResponse:
+        same_origin(request)
+        need_db()
+        # Checked before the link is spent, so a weak password or a missing code doesn't burn it.
+        user = await db.peek_token(token_hash(body.token), "reset") if len(body.token) >= 20 else None
+        if user is None:
+            raise HubError("bad_link", BAD_LINK, 400)
+        password = check_password(body.new_password, user.username)
+        await second_factor(user, body.code, "reset:" + user.username_key)
+        if await db.take_token(token_hash(body.token), "reset") is None:
+            raise HubError("bad_link", BAD_LINK, 400)
+        pw = await asyncio.to_thread(hash_password, password)
+        await db.set_credentials(user.id, pw, None)
+        await db.delete_sessions(user.id)
+        lockout.ok(user.username_key)
+        notice(
+            user, "Your Snazzlebop password was reset", "Your password was reset with a link we emailed you."
+        )
+        resp = JSONResponse({"user": public_user(user)})
+        set_session(resp, await start_session(user.id))
+        await signed_in(resp, request, user)
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+
+    @api.post("/api/auth/verify", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def verify(body: TokenBody, request: Request) -> JSONResponse:
+        """The emailed confirmation link. Works signed in or out (it may open on another device)."""
+        same_origin(request)
+        need_db()
+        taken = await db.take_token(token_hash(body.token), "verify") if len(body.token) >= 20 else None
+        if taken is None:
+            raise HubError("bad_link", BAD_LINK, 400)
+        user, email = taken
+        if not await db.confirm_email(user.id, email):
+            raise HubError("email_taken", "That email is already confirmed on another account", 409)
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/me/email", response_model=schemas.UserBody, responses=schemas.ERRORS)
+    async def set_email(body: EmailBody, request: Request) -> JSONResponse:
+        """Add or change the account's email: password first, then a confirmation link goes to it."""
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        if not mail.enabled:
+            raise HubError("mail_off", "Email isn't set up on this site", 503)
+        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
+            raise HubError("bad_login", "That password isn't right", 401)
+        email = clean_email(body.email)
+        if email == user.email and user.email_verified:
+            raise HubError("same_email", "That's already your email")
+        owner = await db.user_by_email(email)
+        if owner is not None and owner.id != user.id:
+            raise HubError("email_taken", "That email is already confirmed on another account", 409)
+        if user.email and user.email_verified and user.email != email:
+            mail.send(user.email, emails.email_changed(site, user.username, email), "email-changed")
+        await db.set_email(user.id, email)
+        fresh = await db.user_by_id(user.id)
+        await send_verify(fresh, email, changed=True)
+        return JSONResponse({"user": public_user(fresh)}, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/me/email/resend", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def resend(request: Request) -> JSONResponse:
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        if not user.email:
+            raise HubError("no_email", "Add an email first", 409)
+        if user.email_verified:
+            raise HubError("already_confirmed", "Your email is already confirmed", 409)
+        await send_verify(user, user.email, changed=True)
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/me/email/remove", response_model=schemas.UserBody, responses=schemas.ERRORS)
+    async def remove_email(body: ConfirmBody, request: Request) -> JSONResponse:
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
+            raise HubError("bad_login", "That password isn't right", 401)
+        notice(user, "Your Snazzlebop email was removed", "This email address was removed from your account.")
+        await db.set_email(user.id, None)
+        fresh = await db.user_by_id(user.id)
+        return JSONResponse({"user": public_user(fresh)}, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/me/sessions/revoke", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def sign_out_others(request: Request) -> JSONResponse:
+        """Sign out every other browser; this one stays signed in."""
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        await db.delete_sessions(user.id, keep=token_hash(request.cookies.get(SESSION_COOKIE, "")))
+        return JSONResponse({"ok": True})
 
     # Authenticator-app sign-in: set up (password first), confirm with a code, then every sign-in needs
     # a code. Backup codes stand in for a lost phone.
@@ -471,6 +702,11 @@ def router(
             raise HubError("bad_code", "That code isn't right. Check the app and try the newest one", 401)
         codes, hashes = mfa.new_backup_codes(settings.secret_key)
         await db.enable_mfa(user.id, hashes)
+        notice(
+            user,
+            "Authenticator app turned on for Snazzlebop",
+            "Signing in now needs a code from your authenticator app (or a backup code).",
+        )
         return JSONResponse({"codes": codes}, headers={"Cache-Control": "no-store"})
 
     @api.post("/api/me/mfa/disable", response_model=schemas.Ok, responses=schemas.ERRORS)
@@ -482,6 +718,11 @@ def router(
             raise HubError("bad_login", "That password isn't right", 401)
         await second_factor(user, body.code, "mfa:" + user.username_key)
         await db.delete_mfa(user.id)
+        notice(
+            user,
+            "Authenticator app turned off for Snazzlebop",
+            "Signing in no longer asks for a code from your authenticator app.",
+        )
         return JSONResponse({"ok": True})
 
     @api.post("/api/me/mfa/backup-codes", response_model=schemas.BackupCodes, responses=schemas.ERRORS)
@@ -496,6 +737,11 @@ def router(
         await second_factor(user, body.code, "mfa:" + user.username_key)
         codes, hashes = mfa.new_backup_codes(settings.secret_key)
         await db.set_backup_hashes(user.id, hashes)
+        notice(
+            user,
+            "New Snazzlebop backup codes",
+            "A new set of backup codes was made for your account. The old ones no longer work.",
+        )
         return JSONResponse({"codes": codes}, headers={"Cache-Control": "no-store"})
 
     # Friends: add by username. A friend's open room shows only once both have added each other, so

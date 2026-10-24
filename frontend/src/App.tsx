@@ -3,13 +3,13 @@ import { CallButton } from "./components/call";
 import { ChatButton } from "./components/chat";
 import { SoundToggle, ThemeToggle } from "./components/ui";
 import { useAccount } from "./lib/account";
-import { Account } from "./pages/Account";
+import { Account, type AccountView } from "./pages/Account";
 import { ClubHome, Clubs, JoinClub } from "./pages/Clubs";
 import { Home } from "./pages/Home";
 import { Room } from "./pages/Room";
 
 const ROOM_PATH = /^\/r\/([A-Za-z]{3,8})\/?$/;
-const ACCOUNT_PATH = /^\/account\/?$/;
+const ACCOUNT_PATH = /^\/account(?:\/(forgot|reset|verify))?\/?$/;
 const CLUBS_PATH = /^\/clubs\/?$/;
 const CLUB_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/?$/;
 const JOIN_PATH = /^\/join\/([A-Za-z0-9-]{4,32})\/?$/;
@@ -62,6 +62,7 @@ function AccountButton({ go }: { go: (p: string) => void }) {
 export function App() {
   const [path, go] = usePath();
   const match = ROOM_PATH.exec(path);
+  const accountMatch = ACCOUNT_PATH.exec(path);
   const clubMatch = CLUB_PATH.exec(path);
   const joinMatch = JOIN_PATH.exec(path);
   return (
@@ -96,8 +97,8 @@ export function App() {
       <main id="main" className="app">
         {match ? (
           <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} tv={new URLSearchParams(window.location.search).get("tv") === "1"} />
-        ) : ACCOUNT_PATH.test(path) ? (
-          <Account go={go} />
+        ) : accountMatch ? (
+          <Account go={go} view={(accountMatch[1] as AccountView | undefined) ?? "home"} />
         ) : CLUBS_PATH.test(path) ? (
           <Clubs go={go} />
         ) : clubMatch ? (

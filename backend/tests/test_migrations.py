@@ -10,7 +10,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
-from sqlalchemy import Connection, insert, inspect, select, text
+from sqlalchemy import Connection, inspect, select, text
 
 from app.db import BASELINE, MIGRATIONS, Base, User, make_engine, migrate
 
@@ -24,6 +24,9 @@ BASELINE_TABLES = {
     "results",
     "sessions",
 }
+# Columns later migrations added to those tables: a pre-migration database doesn't have them.
+LATER_COLUMNS = {"users": ["email", "email_verified"]}
+LATER_INDEXES = ["ix_users_email"]
 
 
 def config(conn: Connection) -> Config:
@@ -68,9 +71,15 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                     c, tables=[t for t in Base.metadata.sorted_tables if t.name in BASELINE_TABLES]
                 )
             )
+            for index in LATER_INDEXES:
+                await conn.execute(text(f"DROP INDEX {index}"))
+            for table, columns in LATER_COLUMNS.items():
+                for column in columns:
+                    await conn.execute(text(f"ALTER TABLE {table} DROP COLUMN {column}"))
             await conn.execute(
-                insert(User).values(
-                    username="Ana", username_key="ana", pw_hash="x", recovery_hash="y", coins=7, powerups={}
+                text(
+                    "INSERT INTO users (username, username_key, pw_hash, recovery_hash, coins, powerups, created_at)"
+                    " VALUES ('Ana', 'ana', 'x', 'y', 7, '{}', CURRENT_TIMESTAMP)"
                 )
             )
             await conn.run_sync(migrate)

@@ -4,6 +4,7 @@ ErrorBody. A route nobody calls here fails too, so a new route can't skip the co
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -25,7 +26,9 @@ PW = "correct horse battery"
 
 @pytest.fixture()
 def client(tmp_path):
-    with TestClient(create_app(settings(tmp_path, rate_auth_burst=1000))) as c:
+    app = create_app(settings(tmp_path, rate_auth_burst=1000))
+    app.state.mailer.keep = True  # mail on (kept in memory), so the email routes answer for real
+    with TestClient(app) as c:
         yield c
 
 
@@ -135,6 +138,19 @@ def test_every_route_matches_its_declared_model(client):
     c.call("POST", "/api/me/mfa/disable", json={"password": PW, "code": "nope"})  # error body
     fresh = mfa.totp_at(setup["secret"], int(time.time()) // mfa.TOTP_STEP + 1)  # the next step's code
     c.call("POST", "/api/me/mfa/disable", json={"password": PW, "code": fresh})
+    c.call("POST", "/api/me/email", json={"email": "ana@example.com", "password": PW})
+    c.call("POST", "/api/me/email/resend")
+    mailer = client.app.state.mailer
+    client.portal.call(mailer.drain)
+    token = re.search(r"#([A-Za-z0-9_-]{20,})", mailer.sent[-1][1].text).group(1)
+    c.call("POST", "/api/auth/verify", json={"token": token})
+    c.call("POST", "/api/auth/verify", json={"token": token})  # spent: the error body
+    c.call("POST", "/api/auth/forgot", json={"login": "Ana_99"})
+    client.portal.call(mailer.drain)
+    reset = re.search(r"#([A-Za-z0-9_-]{20,})", mailer.sent[-1][1].text).group(1)
+    c.call("POST", "/api/auth/reset", json={"token": reset, "new_password": PW})
+    c.call("POST", "/api/me/sessions/revoke")
+    c.call("POST", "/api/me/email/remove", json={"password": PW})
     c.call("POST", "/api/me/password", json={"password": PW, "new_password": PW + "!"})
     c.call(
         "POST",

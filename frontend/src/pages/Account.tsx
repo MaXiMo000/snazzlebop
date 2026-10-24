@@ -1,15 +1,15 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
+import { Alert, AuthMessage, EmailCard, ForgotEmail, OtpField, PasswordField, ResetPassword, SessionCard, VerifyEmail, errText, needsCode } from "../components/auth";
 import { Authenticator } from "../components/security";
 import { Btn, Card, CopyButton } from "../components/ui";
 import { InviteWaiting } from "./Clubs";
-import { ApiError, fetchGames } from "../lib/api";
+import { fetchGames } from "../lib/api";
 import {
   buy,
   changePassword,
   deleteAccount,
   leaderboard,
   logIn,
-  logOut,
   myStats,
   recover,
   shopItems,
@@ -21,40 +21,19 @@ import {
 } from "../lib/account";
 import { sfx } from "../lib/sfx";
 
+export type AccountView = "home" | "forgot" | "reset" | "verify";
 type Tab = "in" | "up" | "forgot";
 
-const errText = (e: unknown) => (e instanceof ApiError ? e.message : "Something went wrong");
-/** The server wants the second step: a code from the authenticator app (or a backup code). */
-const needsCode = (e: unknown) => e instanceof ApiError && e.code === "mfa_required";
-
-/** The authenticator code box, shown once the server asks for it. */
-function OtpField({ id, value, set }: { id: string; value: string; set: (v: string) => void }) {
-  return (
-    <div>
-      <label className="field" htmlFor={id}>
-        Code from your authenticator app (or a backup code)
-      </label>
-      <input
-        id={id}
-        type="text"
-        className="code-input"
-        autoComplete="one-time-code"
-        maxLength={12}
-        value={value}
-        autoFocus
-        onChange={(e) => set(e.target.value)}
-        placeholder="123 456"
-      />
-    </div>
-  );
-}
-
-export function Account({ go }: { go: (path: string) => void }) {
+export function Account({ go, view = "home" }: { go: (path: string) => void; view?: AccountView }) {
   const { user, loaded, available } = useAccount();
   const [code, setCode] = useState<string | null>(null); // a fresh recovery code, shown once
+  const [signedOut, setSignedOut] = useState(false);
 
   useEffect(() => {
-    document.title = user ? `${user.username} · Snazzlebop` : "Your account · Snazzlebop";
+    if (view === "home" || view === "forgot") document.title = user ? `${user.username} · Snazzlebop` : "Your account · Snazzlebop";
+  }, [user, view]);
+  useEffect(() => {
+    if (user) setSignedOut(false);
   }, [user]);
 
   if (!loaded) return <p className="muted center">Loading…</p>;
@@ -68,19 +47,43 @@ export function Account({ go }: { go: (path: string) => void }) {
         </Btn>
       </Card>
     );
+  if (view === "reset") return <ResetPassword go={go} />;
+  if (view === "verify") return <VerifyEmail go={go} />;
   if (code) return <RecoveryCode code={code} done={() => setCode(null)} />;
-  return user ? <Profile go={go} /> : <SignIn onCode={setCode} />;
+  if (user) return <Profile go={go} onSignedOut={() => setSignedOut(true)} />;
+  if (signedOut)
+    return (
+      <AuthMessage
+        go={(p) => (setSignedOut(false), go(p))}
+        icon="👋"
+        title="You're signed out"
+        text="See you next show! Your coins, stats and power-ups are safe for when you sign back in."
+        action={["Sign in again", "/account"]}
+      />
+    );
+  return <SignIn key={view} onCode={setCode} start={view === "forgot" ? "forgot" : "in"} />;
 }
 
-/** Sign in, create an account, or reset a password with the recovery code. */
-function SignIn({ onCode }: { onCode: (code: string) => void }) {
-  const [tab, setTab] = useState<Tab>("in");
+/** Sign in, create an account, or get back in after forgetting the password. */
+function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab }) {
+  const { mail } = useAccount();
+  const [tab, setTab] = useState<Tab>(start);
+  const [byCode, setByCode] = useState(!mail); // forgot: the recovery-code form instead of the email one
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
   const [otp, setOtp] = useState<string | null>(null); // null until the server asks for a code
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const id = useId();
+
+  const pick = (t: Tab) => {
+    setTab(t);
+    setError(null);
+    setOtp(null);
+    setPassword("");
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -89,7 +92,7 @@ function SignIn({ onCode }: { onCode: (code: string) => void }) {
     try {
       const code = otp?.trim() || undefined;
       if (tab === "in") await logIn(username.trim(), password, code);
-      else if (tab === "up") onCode(await signUp(username.trim(), password));
+      else if (tab === "up") onCode(await signUp(username.trim(), password, email.trim() || undefined));
       else onCode(await recover(username.trim(), recoveryCode.trim(), password, code));
       sfx.ding();
     } catch (err) {
@@ -100,103 +103,143 @@ function SignIn({ onCode }: { onCode: (code: string) => void }) {
     }
   };
 
-  const titles: Record<Tab, string> = { in: "Sign in", up: "Create account", forgot: "Reset password" };
-  const tabs: Record<Tab, string> = { in: "Sign in", up: "Sign up", forgot: "Forgot?" };
+  const tabs: Record<Tab, string> = { in: "Sign in", up: "Sign up", forgot: "Forgot password" };
+  const lead: Record<Tab, string> = {
+    in: "Welcome back! Your coins and power-ups are waiting.",
+    up: "Takes ten seconds. Every game still works without an account.",
+    forgot: mail
+      ? "We'll email you a reset link. It only goes to an email you've confirmed on the account."
+      : "Get back in with the recovery code you saved at sign-up.",
+  };
+  const ready =
+    !!username.trim() && !!password && otp?.trim() !== "" && (tab !== "forgot" || recoveryCode.trim().length >= 10) && (tab !== "up" || password.length >= 8);
+
   return (
-    <div className="stack enter acct">
-      <Card tone="stage" className="center">
+    <div className="stack enter acct auth">
+      <Card tone="stage" className="center auth-hero">
         <p className="sign">Your account</p>
         <h2 className="space-top acct-title">Win coins. Climb the season. Buy power-ups.</h2>
-        <p className="space-top">Optional: every game works without an account. No email needed.</p>
       </Card>
-      <Card>
-        <div className="acct-tabs" role="group" aria-label="Account">
+      <Card className="auth-card">
+        <div className="auth-tabs" role="tablist" aria-label="Account">
           {(["in", "up", "forgot"] as Tab[]).map((t) => (
-            <Btn
+            <button
               key={t}
-              size="small"
-              variant={tab === t ? "gold" : "ghost"}
-              aria-pressed={tab === t}
-              onClick={() => {
-                setTab(t);
-                setError(null);
-                setOtp(null);
-              }}
+              type="button"
+              role="tab"
+              id={`${id}-tab-${t}`}
+              aria-selected={tab === t}
+              aria-controls={`${id}-panel`}
+              className={`auth-tab ${tab === t ? "on" : ""}`}
+              onClick={() => pick(t)}
             >
               {tabs[t]}
-            </Btn>
+            </button>
           ))}
         </div>
-        <form className="stack-sm space-top" onSubmit={(e) => void submit(e)}>
-          <div>
-            <label className="field" htmlFor="acct-user">
-              Username
-            </label>
-            <input
-              id="acct-user"
-              type="text"
-              value={username}
-              maxLength={20}
-              autoComplete="username"
-              autoCapitalize="off"
-              spellCheck={false}
-              aria-describedby={tab === "up" ? "acct-user-hint" : undefined}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            {tab === "up" && (
-              <p id="acct-user-hint" className="muted acct-hint">
-                3-20 letters, numbers, dots, dashes or underscores. It shows on the season leaderboard.
-              </p>
-            )}
-          </div>
-          {tab === "forgot" && (
-            <div>
-              <label className="field" htmlFor="acct-code">
-                Recovery code
-              </label>
-              <input
-                id="acct-code"
-                type="text"
-                className="code-input acct-code-input"
-                value={recoveryCode}
-                maxLength={30}
-                autoComplete="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                onChange={(e) => setRecoveryCode(e.target.value)}
-                placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
-              />
+        <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-tab-${tab}`} className="space-top">
+          <p className="auth-lead">{lead[tab]}</p>
+          {tab === "forgot" && mail && !byCode ? (
+            <div className="space-top">
+              <ForgotEmail onRecoveryCode={() => setByCode(true)} />
             </div>
+          ) : (
+            <form className="stack-sm space-top" onSubmit={(e) => void submit(e)}>
+              <div>
+                <label className="field" htmlFor={`${id}-user`}>
+                  {tab === "in" && mail ? "Username or email" : "Username"}
+                </label>
+                <input
+                  id={`${id}-user`}
+                  type="text"
+                  value={username}
+                  maxLength={tab === "in" ? 254 : 20}
+                  autoComplete="username"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  aria-describedby={tab === "up" ? `${id}-user-hint` : undefined}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+                {tab === "up" && (
+                  <p id={`${id}-user-hint`} className="muted acct-hint">
+                    3-20 letters, numbers, dots, dashes or underscores. It shows on the season leaderboard.
+                  </p>
+                )}
+              </div>
+              {tab === "up" && mail && (
+                <div>
+                  <label className="field" htmlFor={`${id}-email`}>
+                    Email <span className="muted">(optional)</span>
+                  </label>
+                  <input
+                    id={`${id}-email`}
+                    type="email"
+                    inputMode="email"
+                    value={email}
+                    maxLength={254}
+                    autoComplete="email"
+                    aria-describedby={`${id}-email-hint`}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <p id={`${id}-email-hint`} className="muted acct-hint">
+                    For reset links and a heads-up about new sign‑ins. Never shown to anyone, never used for ads.
+                  </p>
+                </div>
+              )}
+              {tab === "forgot" && (
+                <div>
+                  <label className="field" htmlFor={`${id}-code`}>
+                    Recovery code
+                  </label>
+                  <input
+                    id={`${id}-code`}
+                    type="text"
+                    className="code-input acct-code-input"
+                    value={recoveryCode}
+                    maxLength={30}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    onChange={(e) => setRecoveryCode(e.target.value)}
+                    placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+                  />
+                </div>
+              )}
+              <PasswordField
+                id={`${id}-pass`}
+                label={tab === "in" ? "Password" : "New password"}
+                value={password}
+                set={setPassword}
+                autoComplete={tab === "in" ? "current-password" : "new-password"}
+                meter={tab !== "in"}
+                hint={tab !== "in" ? "At least 8 characters. A short sentence is easy to remember and hard to guess." : undefined}
+              />
+              {tab === "in" && (
+                <button type="button" className="link-button auth-forgot" onClick={() => pick("forgot")}>
+                  Forgot your password?
+                </button>
+              )}
+              {otp !== null && tab !== "up" && <OtpField id={`${id}-otp`} value={otp} set={setOtp} />}
+              <Alert text={error} />
+              <Btn type="submit" variant="go" size="big" block disabled={busy || !ready}>
+                {busy ? "One moment…" : tab === "in" ? "Sign in" : tab === "up" ? "Create my account" : "Reset my password"}
+              </Btn>
+              {tab === "forgot" && mail && (
+                <button type="button" className="link-button" onClick={() => setByCode(false)}>
+                  Lost the code? Get a link by email instead
+                </button>
+              )}
+              {tab === "in" && (
+                <p className="muted center auth-switch">
+                  New here?{" "}
+                  <button type="button" className="link-button" onClick={() => pick("up")}>
+                    Make an account
+                  </button>
+                </p>
+              )}
+            </form>
           )}
-          <div>
-            <label className="field" htmlFor="acct-pass">
-              {tab === "in" ? "Password" : "New password"}
-            </label>
-            <input
-              id="acct-pass"
-              type="password"
-              value={password}
-              maxLength={128}
-              autoComplete={tab === "in" ? "current-password" : "new-password"}
-              aria-describedby={tab !== "in" ? "acct-pass-hint" : undefined}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {tab !== "in" && (
-              <p id="acct-pass-hint" className="muted acct-hint">
-                At least 8 characters. A short sentence is easy to remember and hard to guess.
-              </p>
-            )}
-          </div>
-          {otp !== null && tab !== "up" && <OtpField id="acct-otp" value={otp} set={setOtp} />}
-          {error && (
-            <p className="alert" role="alert">
-              {error}
-            </p>
-          )}
-          <Btn type="submit" variant="go" size="big" block disabled={busy || !username.trim() || !password || otp?.trim() === ""}>
-            {titles[tab]}
-          </Btn>
-        </form>
+        </div>
       </Card>
     </div>
   );
@@ -211,7 +254,7 @@ function RecoveryCode({ code, done }: { code: string; done: () => void }) {
       <p className="acct-code" aria-label={`Recovery code ${code.split("").join(" ")}`}>
         {code}
       </p>
-      <p>There's no email on your account, so this code is the only way back in if you forget your password.</p>
+      <p>It resets your password if you forget it, even if you lose access to your email.</p>
       <p className="space-top">It's shown once. Each code works once, and you get a new one when you use it.</p>
       <div className="row center space-top">
         <CopyButton text={code} label="Copy code" />
@@ -223,7 +266,7 @@ function RecoveryCode({ code, done }: { code: string; done: () => void }) {
   );
 }
 
-function Profile({ go }: { go: (path: string) => void }) {
+function Profile({ go, onSignedOut }: { go: (path: string) => void; onSignedOut: () => void }) {
   const { user } = useAccount();
   const [stats, setStats] = useState<Stats | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
@@ -374,7 +417,9 @@ function Profile({ go }: { go: (path: string) => void }) {
         </ul>
       </Card>
 
+      <EmailCard />
       <Authenticator />
+      <SessionCard onSignedOut={onSignedOut} />
       <Settings />
     </div>
   );
@@ -432,9 +477,6 @@ function Settings() {
         </p>
       )}
       <div className="row space-top acct-actions">
-        <Btn variant="ghost" onClick={() => void run(logOut, "Signed out.")}>
-          Sign out
-        </Btn>
         {!confirming && (
           <Btn variant="danger" onClick={() => setConfirming(true)}>
             Delete account

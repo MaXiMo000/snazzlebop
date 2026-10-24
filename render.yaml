@@ -44,6 +44,20 @@ services:
         sync: false
       - key: LIVEKIT_API_SECRET
         sync: false
+      # Optional account email: MAIL_FROM plus Resend (RESEND_API_KEY) or SMTP (host, user, pass).
+      # Unset = no email. PUBLIC_URL only for a custom domain (links default to the Render address).
+      - key: MAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
       # The jump-scare prank: only the names in JUMPSCARE_NAMES (comma list, dashboard only) are
       # pranked; with none set nobody is. JUMPSCARE=false turns it off entirely.
       - key: JUMPSCARE

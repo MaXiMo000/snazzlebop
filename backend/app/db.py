@@ -96,6 +96,31 @@ class User(Base):
     coins: Mapped[int] = mapped_column(Integer, default=0)
     powerups: Mapped[dict[str, int]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    # Optional, lower-cased. Only a confirmed address is used: for signing in, reset links and notices.
+    email: Mapped[str | None] = mapped_column(String(254), nullable=True, index=True)
+    email_verified: Mapped[bool] = mapped_column(default=False)
+
+
+class EmailToken(Base):
+    """A link we emailed (confirm an address, reset a password). Only its SHA-256 is kept; used once."""
+
+    __tablename__ = "email_tokens"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(8))  # "verify" | "reset"
+    email: Mapped[str] = mapped_column(String(254))  # the address it was sent to
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class KnownDevice(Base):
+    """Browsers an account has signed in from (a hash of a random cookie), to email about new ones."""
+
+    __tablename__ = "known_devices"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    device_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class Session(Base):
@@ -388,10 +413,111 @@ class Database:
             await session.execute(delete(Session).where(Session.token_hash == token_hash))
             await session.commit()
 
-    async def delete_sessions(self, user_id: int) -> None:
+    async def delete_sessions(self, user_id: int, keep: str | None = None) -> None:
+        """Sign the account out everywhere (except the session whose hash is `keep`)."""
         async with self.sessions() as session:
-            await session.execute(delete(Session).where(Session.user_id == user_id))
+            where = [Session.user_id == user_id] + ([Session.token_hash != keep] if keep else [])
+            await session.execute(delete(Session).where(*where))
             await session.commit()
+
+    async def user_by_id(self, user_id: int) -> User | None:
+        async with self.sessions() as session:
+            return await session.get(User, user_id)
+
+    async def user_by_email(self, email: str) -> User | None:
+        """The account this address is confirmed on (an unconfirmed address belongs to nobody)."""
+        async with self.sessions() as session:
+            row = await session.execute(
+                select(User).where(User.email == email.lower(), User.email_verified.is_(True)).limit(1)
+            )
+            return row.scalar_one_or_none()
+
+    async def set_email(self, user_id: int, email: str | None) -> None:
+        """A new (unconfirmed) address, or None to remove it. Links sent to an old address stop working."""
+        async with self.sessions() as session:
+            await session.execute(
+                update(User)
+                .where(User.id == user_id)
+                .values(email=email.lower() if email else None, email_verified=False)
+            )
+            await session.execute(delete(EmailToken).where(EmailToken.user_id == user_id))
+            await session.commit()
+
+    async def add_token(
+        self, token_hash: str, user_id: int, purpose: str, email: str, ttl_seconds: float
+    ) -> None:
+        """A new emailed link; it replaces any earlier one for the same purpose."""
+        async with self.sessions() as session:
+            now = datetime.now(UTC)
+            await session.execute(
+                delete(EmailToken).where(
+                    or_(
+                        (EmailToken.user_id == user_id) & (EmailToken.purpose == purpose),
+                        EmailToken.expires_at < now,
+                    )
+                )
+            )
+            session.add(
+                EmailToken(
+                    token_hash=token_hash,
+                    user_id=user_id,
+                    purpose=purpose,
+                    email=email.lower(),
+                    expires_at=now + timedelta(seconds=ttl_seconds),
+                )
+            )
+            await session.commit()
+
+    async def take_token(self, token_hash: str, purpose: str) -> tuple[User, str] | None:
+        """Spend an emailed link: (its account, the address it went to), or None if unknown or expired."""
+        async with self.sessions() as session:
+            row = await session.get(EmailToken, token_hash)
+            if row is None or row.purpose != purpose:
+                return None
+            user_id, email, expires = row.user_id, row.email, row.expires_at
+            # Only the request whose delete removed the row may use it: two clicks can't both spend it.
+            done = await session.execute(delete(EmailToken).where(EmailToken.token_hash == token_hash))
+            await session.commit()
+            if not done.rowcount or aware(expires) < datetime.now(UTC):
+                return None
+            user = await session.get(User, user_id)
+            return (user, email) if user is not None else None
+
+    async def peek_token(self, token_hash: str, purpose: str) -> User | None:
+        """The account a live emailed link is for, without spending it."""
+        async with self.sessions() as session:
+            row = await session.get(EmailToken, token_hash)
+            if row is None or row.purpose != purpose or aware(row.expires_at) < datetime.now(UTC):
+                return None
+            return await session.get(User, row.user_id)
+
+    async def confirm_email(self, user_id: int, email: str) -> bool:
+        """Mark the address confirmed, if it's still the account's and no other account has confirmed it."""
+        async with self.sessions() as session:
+            taken = await session.scalar(
+                select(func.count()).where(
+                    User.email == email, User.email_verified.is_(True), User.id != user_id
+                )
+            )
+            if taken:
+                return False
+            done = await session.execute(
+                update(User).where(User.id == user_id, User.email == email).values(email_verified=True)
+            )
+            await session.commit()
+            return bool(done.rowcount)
+
+    async def note_device(self, user_id: int, device_hash: str) -> tuple[bool, bool]:
+        """Remember a browser for the account: (seen before, the account had any devices before)."""
+        async with self.sessions() as session:
+            row = await session.get(KnownDevice, (user_id, device_hash))
+            had = bool(await session.scalar(select(func.count()).where(KnownDevice.user_id == user_id)))
+            if row is None:
+                session.add(KnownDevice(user_id=user_id, device_hash=device_hash))
+            else:
+                row.last_seen = datetime.now(UTC)
+            await session.commit()
+            return row is not None, had
 
     async def set_credentials(self, user_id: int, pw_hash: str, recovery_hash: str | None) -> None:
         values: dict[str, Any] = {"pw_hash": pw_hash}
@@ -408,6 +534,8 @@ class Database:
             await session.execute(delete(Result).where(Result.user_id == user_id))
             await session.execute(delete(Circle).where(Circle.user_id == user_id))
             await session.execute(delete(Mfa).where(Mfa.user_id == user_id))
+            await session.execute(delete(EmailToken).where(EmailToken.user_id == user_id))
+            await session.execute(delete(KnownDevice).where(KnownDevice.user_id == user_id))
             await self._pass_on_clubs(session, user_id)
             await session.execute(delete(Membership).where(Membership.user_id == user_id))
             await session.execute(

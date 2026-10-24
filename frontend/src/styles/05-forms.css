@@ -5,6 +5,7 @@
   margin-bottom: 6px;
 }
 input[type="text"],
+input[type="email"],
 input[type="number"],
 input[type="password"],
 .select-button {
@@ -24,6 +25,7 @@ input::placeholder {
   color: var(--placeholder);
 }
 input[type="text"]:focus-visible,
+input[type="email"]:focus-visible,
 input[type="number"]:focus-visible,
 input[type="password"]:focus-visible,
 .select-button:focus-visible {

@@ -11,8 +11,10 @@ interface AccountState {
   loaded: boolean;
   /** accounts work (the database is up) */
   available: boolean;
+  /** the server can send email: sign-in by email, reset links, notices */
+  mail: boolean;
 }
-let state: AccountState = { user: null, loaded: false, available: true };
+let state: AccountState = { user: null, loaded: false, available: true, mail: false };
 let fetching = false;
 const listeners = new Set<() => void>();
 
@@ -24,7 +26,7 @@ function set(next: Partial<AccountState>) {
 export async function refreshAccount(): Promise<Account | null> {
   try {
     const r = await request<Me>("/api/me");
-    set({ user: r.user, available: r.accounts });
+    set({ user: r.user, available: r.accounts, mail: r.mail });
   } catch {
     set({});
   }
@@ -48,8 +50,8 @@ export function useAccount(): AccountState {
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
-export async function signUp(username: string, password: string): Promise<string> {
-  const r = await post<NewAccount>("/api/auth/signup", { username, password });
+export async function signUp(username: string, password: string, email?: string): Promise<string> {
+  const r = await post<NewAccount>("/api/auth/signup", { username, password, ...(email ? { email } : {}) });
   set({ user: r.user });
   return r.recovery_code;
 }
@@ -70,6 +72,33 @@ export async function recover(username: string, recoveryCode: string, newPasswor
   set({ user: r.user });
   return r.recovery_code;
 }
+
+/** Email a reset link to the account's confirmed address (the same answer whether or not it exists). */
+export const forgotPassword = (login: string) => post<Ok>("/api/auth/forgot", { login });
+
+export async function resetPassword(token: string, newPassword: string, code?: string): Promise<void> {
+  const r = await post<UserBody>("/api/auth/reset", { token, new_password: newPassword, ...(code ? { code } : {}) });
+  set({ user: r.user });
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  await post<Ok>("/api/auth/verify", { token });
+  if (state.user) await refreshAccount();
+}
+
+export async function setEmail(email: string, password: string): Promise<void> {
+  const r = await post<UserBody>("/api/me/email", { email, password });
+  set({ user: r.user });
+}
+
+export const resendEmail = () => post<Ok>("/api/me/email/resend");
+
+export async function removeEmail(password: string): Promise<void> {
+  const r = await post<UserBody>("/api/me/email/remove", { password });
+  set({ user: r.user });
+}
+
+export const signOutOthers = () => post<Ok>("/api/me/sessions/revoke");
 
 export async function logOut(): Promise<void> {
   await post<Ok>("/api/auth/logout");

@@ -1,0 +1,167 @@
+/* ---- sign in, sign up, forgot password, reset and confirm pages, the email card ------------------ */
+.auth-card {
+  max-width: 34rem;
+  width: 100%;
+  margin-inline: auto;
+}
+.auth-title {
+  font-size: clamp(1.3rem, 5vw, 1.7rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.auth-lead {
+  margin: 0;
+  font-weight: 600;
+  text-wrap: pretty;
+}
+.auth-big {
+  margin: 0 0 10px;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+/* The three modes: a segmented switch, each segment a 44px target that never wraps its label. */
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: var(--line);
+  border-radius: 999px;
+  background: var(--field);
+}
+.auth-tab {
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: 400 clamp(0.66rem, 3.2vw, 0.82rem) / 1.1 var(--display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.auth-tab:hover {
+  background: var(--surface-2);
+}
+.auth-tab.on {
+  background: var(--mustard);
+  color: var(--plum);
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+/* A plain-text button: links that do something on this page. */
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link-button:hover {
+  color: var(--accent);
+}
+.auth-forgot {
+  justify-self: start;
+  margin-top: -6px;
+}
+.auth-switch {
+  margin: 0;
+}
+
+/* Password: the Show button sits inside the field, on the right. */
+.pw-wrap {
+  position: relative;
+}
+.pw-wrap input {
+  padding-right: 84px;
+}
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: 400 0.75rem / 1 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.pw-toggle:hover {
+  background: var(--surface-2);
+}
+.pw-caps {
+  display: inline-block;
+  margin: 8px 0 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--mustard);
+  color: var(--plum);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.pw-meter {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+}
+.pw-meter span {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rule);
+}
+.pw-meter.s1 .on {
+  background: var(--cherry);
+}
+.pw-meter.s2 .on {
+  background: var(--mustard);
+}
+.pw-meter.s3 .on,
+.pw-meter.s4 .on {
+  background: var(--teal);
+}
+.pw-score {
+  color: var(--ink);
+}
+
+.auth-sent h3 {
+  margin: 0;
+}
+.auth-who {
+  overflow-wrap: anywhere;
+}
+
+/* The email card on the profile */
+.email-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.email-address {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.auth-text {
+  text-wrap: balance;
+}

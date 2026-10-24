@@ -24,6 +24,7 @@ from .contentgen import ContentGenerator, add_items, claude_caller, known, split
 from .db import Database
 from .games import catalog
 from .logging_setup import setup_logging
+from .mailer import Mailer
 from .rooms import Hub, HubError
 from .security import (
     BodyLimit,
@@ -37,8 +38,11 @@ from .ws import ConnectionCounter, serve_socket
 
 log = logging.getLogger("snazzlebop")
 
-# The SPA's own pages (App.tsx): "/", "/r/<CODE>", "/account", "/clubs", "/clubs/<slug>", "/join/<invite>"
-SPA_ROUTE = re.compile(r"(r/[A-Za-z]{3,8}|account|clubs|clubs/[a-z0-9-]{1,48}|join/[A-Za-z0-9-]{4,32})?/?")
+# The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /clubs,
+# /clubs/<slug> and /join/<invite>.
+SPA_ROUTE = re.compile(
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify)?|clubs|clubs/[a-z0-9-]{1,48}|join/[A-Za-z0-9-]{4,32})?/?"
+)
 
 
 class NameBody(BaseModel):
@@ -89,6 +93,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         save_circle=db.save_circle,
     )
 
+    mailer = Mailer(settings)
+
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await db.init()
@@ -108,6 +114,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             with contextlib.suppress(asyncio.CancelledError):
                 await ticker
             await hub.flush()  # live rooms carry on on the next server
+            await mailer.drain()  # emails already queued still go out
             await db.close()
 
     docs = None if settings.is_production else "/docs"
@@ -121,6 +128,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.hub = hub
     app.state.db = db
+    app.state.mailer = mailer
     app.state.content = generator
     app.state.ws_counter = ConnectionCounter()
 
@@ -176,7 +184,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def stats() -> dict[str, int]:
         return await db.stats()
 
-    app.include_router(accounts.router(settings, db, limiters["auth"], hub.hosting))
+    app.include_router(accounts.router(settings, db, limiters["auth"], hub.hosting, mailer))
     app.include_router(clubs.router(settings, db, hub, limiters["auth"]))
 
     async def account_id(request: Request) -> int | None:
