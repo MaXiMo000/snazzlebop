@@ -30,6 +30,9 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.mfa": (set(), {"segno"}),  # pure: the time is passed in; segno only draws the QR code
     "app.emails": (set(), set()),  # pure: a description in, HTML and text out
     "app.mailer": ({"app.config", "app.emails"}, set()),  # stdlib only: Resend over HTTPS, or SMTP
+    "app.presence": (set(), set()),  # pure: who's around and "up for a game", clock injected
+    "app.webpush": (set(), {"cryptography"}),  # push encryption and VAPID only
+    "app.notify": ({"app.config", "app.webpush"}, set()),  # rules and fan-out; storage passed in
     "app.calls": ({"app.config"}, set()),
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (
@@ -40,7 +43,14 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.contentgen": ({"app.games"}, {"anthropic"}),
     "app.db": (set(), {"alembic", "sqlalchemy"}),
 }
-EDGES = {"app.main", "app.accounts", "app.clubs", "app.ws", "app.migrations"}  # may use the frameworks
+EDGES = {
+    "app.main",
+    "app.accounts",
+    "app.clubs",
+    "app.notifications",
+    "app.ws",
+    "app.migrations",
+}  # may use the frameworks
 
 
 def imports(path: Path, module: str) -> set[str]:

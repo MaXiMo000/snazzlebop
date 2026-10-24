@@ -50,3 +50,23 @@ export async function clubRoom(slug: string, name: string): Promise<string> {
   saveSession(r.code, { token: r.token, playerId: r.player_id });
   return r.code;
 }
+
+// -- up for a game
+export const upForGame = (slug: string, game: string | null, minutes: number) =>
+  post<ClubDetail>(`${at(slug)}/up`, { game, minutes });
+export const notUp = (slug: string) => post<ClubDetail>(`${at(slug)}/up/cancel`);
+export const muteClub = (slug: string, muted: boolean) => post<Ok>(`${at(slug)}/mute`, { muted });
+
+/** Tap through to the match: the first one in opens the room (and hosts it). Returns the room code. */
+export async function goToMatch(slug: string, name: string): Promise<string> {
+  const r = await post<RoomPass>(`${at(slug)}/up/go`, { name });
+  saveSession(r.code, { token: r.token, playerId: r.player_id });
+  return r.code;
+}
+
+export const STATUS_TEXT: Record<string, string> = {
+  up: "Up for a game",
+  online: "Online",
+  in_game: "In a room",
+  offline: "Offline",
+};

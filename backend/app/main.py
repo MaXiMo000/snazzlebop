@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import accounts, calls, schemas
+from . import accounts, calls, notifications, schemas
 from .clubs import routes as clubs
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
@@ -25,6 +25,8 @@ from .db import Database
 from .games import catalog
 from .logging_setup import setup_logging
 from .mailer import Mailer
+from .notify import Notifier
+from .presence import Presence
 from .rooms import Hub, HubError
 from .security import (
     BodyLimit,
@@ -38,10 +40,10 @@ from .ws import ConnectionCounter, serve_socket
 
 log = logging.getLogger("snazzlebop")
 
-# The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /clubs,
+# The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
 # /clubs/<slug> and /join/<invite>.
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify)?|clubs|clubs/[a-z0-9-]{1,48}|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify)?|inbox|clubs|clubs/[a-z0-9-]{1,48}|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 
@@ -94,6 +96,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     mailer = Mailer(settings)
+    presence = Presence()
+    notifier = Notifier(settings, db)
+    statuses = notifications.Statuses(db, presence, hub)
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -115,6 +120,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await ticker
             await hub.flush()  # live rooms carry on on the next server
             await mailer.drain()  # emails already queued still go out
+            await notifier.drain()
             await db.close()
 
     docs = None if settings.is_production else "/docs"
@@ -129,6 +135,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.hub = hub
     app.state.db = db
     app.state.mailer = mailer
+    app.state.notifier = notifier
+    app.state.presence = presence
     app.state.content = generator
     app.state.ws_counter = ConnectionCounter()
 
@@ -184,8 +192,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def stats() -> dict[str, int]:
         return await db.stats()
 
-    app.include_router(accounts.router(settings, db, limiters["auth"], hub.hosting, mailer))
-    app.include_router(clubs.router(settings, db, hub, limiters["auth"]))
+    app.include_router(
+        accounts.router(
+            settings, db, limiters["auth"], hub.hosting, mailer, statuses.of, presence.forget_user
+        )
+    )
+    app.include_router(clubs.router(settings, db, hub, limiters["auth"], notifier, presence, statuses))
+    app.include_router(notifications.router(settings, db, hub, notifier, presence, statuses))
 
     async def account_id(request: Request) -> int | None:
         user = await accounts.session_user(request, db)

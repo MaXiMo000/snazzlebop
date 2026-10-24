@@ -13,11 +13,12 @@ import pytest
 pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
 
+from cryptography.hazmat.primitives.asymmetric import ec  # noqa: E402
 from fastapi.routing import APIRoute  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from pydantic import TypeAdapter  # noqa: E402
 
-from app import coins, mfa, schemas  # noqa: E402
+from app import coins, mfa, schemas, webpush  # noqa: E402
 from app.main import create_app  # noqa: E402
 from tests.test_api import settings  # noqa: E402
 
@@ -113,7 +114,25 @@ def test_every_route_matches_its_declared_model(client):
     invite = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={"uses": 5})
     spare = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={})
     c.call("POST", f"/api/clubs/{slug}/invites/{spare['id']}/revoke", club + "/invites/{invite_id}/revoke")
-    c.call("POST", f"/api/clubs/{slug}/rooms", club + "/rooms", json={"name": "Ana"})
+    room_code = c.call("POST", f"/api/clubs/{slug}/rooms", club + "/rooms", json={"name": "Ana"})["code"]
+    c.call("GET", f"/api/rooms/{room_code}/invitees", "/api/rooms/{code}/invitees")
+    c.call("POST", f"/api/rooms/{room_code}/invite", "/api/rooms/{code}/invite", json={"username": "Bo_42"})
+    c.call("POST", f"/api/clubs/{slug}/up", club + "/up", json={"game": "trivia", "minutes": 30})
+    c.call("POST", f"/api/clubs/{slug}/up/go", club + "/up/go", json={"name": "Ana"})  # no match yet: error
+    c.call("POST", f"/api/clubs/{slug}/up/cancel", club + "/up/cancel")
+    c.call("POST", f"/api/clubs/{slug}/mute", club + "/mute", json={"muted": True})
+    c.call("GET", "/api/notifications")
+    c.call("POST", "/api/notifications/read", json={})
+    c.call("GET", "/api/me/notify")
+    c.call("POST", "/api/me/notify", json={"quiet": {"from": "23:00", "to": "08:00"}, "tz": 60})
+    point = webpush.b64u(webpush._point(ec.generate_private_key(ec.SECP256R1()).public_key()))
+    sub = {
+        "endpoint": "https://fcm.googleapis.com/fcm/send/x",
+        "p256dh": point,
+        "auth": webpush.b64u(b"0" * 16),
+    }
+    c.call("POST", "/api/push/subscribe", json=sub)
+    c.call("POST", "/api/push/unsubscribe", json={"endpoint": sub["endpoint"]})
     c.call("POST", "/api/auth/logout")
     c.call("POST", "/api/auth/login", json={"username": "Bo_42", "password": PW})
     c.call("POST", "/api/clubs/join", json={"code": invite["code"]})

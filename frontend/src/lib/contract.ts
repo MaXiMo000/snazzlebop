@@ -29,6 +29,10 @@ export type ClubList = Schemas["ClubList"];
 export type ClubDetail = Schemas["ClubDetail"];
 export type ClubRules = Schemas["ClubRules"];
 export type NewInvite = Schemas["NewInvite"];
+export type Inbox = Schemas["Inbox"];
+export type InboxItem = Schemas["InboxItem"];
+export type NotifyPrefs = Schemas["NotifyPrefs"];
+export type Invitees = Schemas["Invitees"];
 
 // The WebSocket "state" frame (backend app/schemas.py RoomFrame).
 export type ApiRoomFrame = Schemas["RoomFrame"];

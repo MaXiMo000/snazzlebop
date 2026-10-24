@@ -174,6 +174,22 @@ class LobbyMixin:
                 out[uid] = room.code
         return out
 
+    def playing(self, user_ids: set[int]) -> set[int]:
+        """Which of these accounts are in a room right now (connected), for "in a game" presence."""
+        out: set[int] = set()
+        for room in self.rooms.values():
+            for pid, uid in room.accounts.items():
+                if uid in user_ids and (p := room.players.get(pid)) is not None and p.connected:
+                    out.add(uid)
+        return out
+
+    def seated(self, code: str, user_id: int) -> Room | None:
+        """The room, if this account has a seat in it (to invite people there)."""
+        room = self.get(code.upper() if isinstance(code, str) else code)
+        if room is None or user_id not in {uid for pid, uid in room.accounts.items() if pid in room.players}:
+            return None
+        return room
+
     def link_account(self, room: Room, pid: str, user_id: int) -> None:
         """A guest who signed in after sitting down: their seat now belongs to their account."""
         if pid in room.accounts or not (pid in room.players or pid in room.audience):

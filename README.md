@@ -81,6 +81,10 @@ original has them.
 - **Optional accounts:** coins for top places, a power-up shop, stats and monthly seasons. Sign-in by
   username or a confirmed email, an optional authenticator app, reset links by email, and branded
   emails about security changes and new devices (Resend or any SMTP server; off when unset).
+- **Up for a game:** say you're free in a club for 30, 60 or 120 minutes; when three of you are up,
+  the club hears about it and the first one in opens the room. Friends and clubmates see who's online.
+- **Inbox and push:** an inbox for club games and room invites, plus Web Push on phones and desktops,
+  with quiet hours, per-type switches, a daily cap and grouping. No push SDK and no third-party service.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced

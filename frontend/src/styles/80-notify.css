@@ -1,0 +1,193 @@
+/* ---- presence, up for a game, the inbox, notification settings, room invites --------------------- */
+.inbox-btn {
+  position: relative;
+}
+
+/* Presence: a coloured dot, always with words beside it (or for screen readers). */
+.status-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+  border: 2px solid var(--edge);
+  background: transparent;
+  vertical-align: 1px;
+}
+.status-dot.online {
+  border-color: var(--teal);
+  background: var(--teal);
+}
+.status-dot.in_game {
+  border-color: var(--mustard);
+  background: var(--mustard);
+}
+.status-dot.up {
+  border-color: var(--tangerine);
+  background: var(--tangerine);
+  box-shadow: 0 0 0 3px rgba(255, 107, 44, 0.3);
+}
+.member-name {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Up for a game */
+.up-sign {
+  justify-self: center;
+}
+.up-card.stage {
+  text-align: center;
+}
+.up-card.stage .club-start {
+  text-align: left;
+}
+.up-lead {
+  margin: 0;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.up-form {
+  display: grid;
+  gap: 12px;
+}
+.up-minutes {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.up-tabs .auth-tab {
+  font-size: clamp(0.72rem, 3.4vw, 0.85rem);
+}
+.up-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 10px 0;
+  font-weight: 700;
+}
+.up-dots {
+  display: inline-flex;
+  gap: 6px;
+}
+.up-dots span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--edge);
+}
+.up-dots span.on {
+  border-color: var(--plum);
+  background: var(--tangerine);
+}
+.up-mute {
+  text-align: left;
+}
+
+/* The inbox */
+.inbox-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inbox-head h2 {
+  margin: 0;
+}
+.inbox-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.inbox-list li + li {
+  border-top: 2px solid var(--rule);
+}
+.inbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  text-decoration: none;
+}
+.inbox-item:hover {
+  background: var(--surface-2);
+}
+.inbox-item.unread {
+  background: var(--field);
+  box-shadow: inset 4px 0 0 var(--tangerine);
+}
+.inbox-icon {
+  flex: 0 0 auto;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.inbox-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.inbox-item:not(.unread) b {
+  font-weight: 600;
+}
+.inbox-when {
+  font-size: 0.85rem;
+}
+
+/* Notification settings */
+.notify-push {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.notify-row-text {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 14rem;
+  margin: 0;
+}
+.notify-kinds,
+.notify-quiet {
+  margin-inline: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.notify-times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+input[type="time"] {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 12px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--field);
+  border: var(--line);
+  border-radius: var(--radius-sm);
+  color-scheme: inherit;
+}
+.notify-hint {
+  display: block;
+  margin-top: 2px;
+}
+
+/* Inviting people to a room */
+.invite-panel {
+  margin-top: 10px;
+  text-align: left;
+}

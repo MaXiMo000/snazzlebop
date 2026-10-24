@@ -24,6 +24,11 @@ Only the latest version on `main` (the live deployment) is supported.
   short-lived, and carried in the link's fragment so they never reach server logs. A forgotten-password
   request answers the same whether or not the account exists. Notices about password, sign-in and
   security changes go only to a confirmed address. Logs never contain addresses or links.
+- **Notifications and presence.** Push payloads are encrypted to each browser (RFC 8291) and hold
+  only a short text and a link on this site. The server only ever sends to the browsers' own push
+  services (an allowlist, https only), so a forged subscription can't make it call anywhere else.
+  Presence is visible only to friends and clubmates, and anyone can appear offline. Inbox entries
+  and limits are per account; invites only reach friends who added you back, or clubmates.
 - **Private clubs.** A club is visible only to its members. Invite links are random, stored only as
   keyed hashes, expire and run out; roles can act only on roles below their own, and bans stick.
 - **Abuse limits.** Rate limits per client on the API, room joins, sign-in and WebSocket messages, caps

@@ -34,6 +34,10 @@ class ClubStore:
         async with self.db.sessions() as s:
             return (await s.execute(select(Club).where(Club.slug == slug))).scalar_one_or_none()
 
+    async def by_id(self, club_id: int) -> Club | None:
+        async with self.db.sessions() as s:
+            return await s.get(Club, club_id)
+
     async def membership(self, club_id: int, user_id: int) -> Membership | None:
         async with self.db.sessions() as s:
             return await s.get(Membership, (club_id, user_id))

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Btn, Card, CopyButton } from "../components/ui";
+import { UpForGame } from "../components/upgame";
 import { useAccount } from "../lib/account";
 import { ApiError, fetchGames } from "../lib/api";
 import {
@@ -21,6 +22,7 @@ import {
   ROLE_NAMES,
   saveClub,
   setRole,
+  STATUS_TEXT,
   type ClubDetail,
   type ClubSummary,
   type NewInvite,
@@ -344,6 +346,7 @@ export function ClubHome({ slug, go }: { slug: string; go: Go }) {
           </span>
         </p>
       </Card>
+      <UpForGame c={c} go={go} name={user.username} update={setC} />
       <PlayNow c={c} go={go} name={user.username} />
       {mayInvite(c.role) && <Invites c={c} refresh={refresh} />}
       <Members c={c} me={user.username} refresh={refresh} />
@@ -570,11 +573,20 @@ function Members({
             <li key={m.username}>
               <div className="club-member">
                 <span className="club-room-text">
-                  <b>
+                  <b className="member-name">
+                    <span className={`status-dot ${m.status}`} aria-hidden="true" />
                     {m.username}
                     {you && " (you)"}
                   </b>
-                  <span className="muted">{ROLE_NAMES[m.role] ?? m.role}</span>
+                  <span className="muted">
+                    {ROLE_NAMES[m.role] ?? m.role}
+                    {!you && (
+                      <>
+                        {" · "}
+                        {STATUS_TEXT[m.status]}
+                      </>
+                    )}
+                  </span>
                 </span>
                 {manage && (
                   <Btn

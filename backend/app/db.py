@@ -39,6 +39,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
 
 log = logging.getLogger("snazzlebop.db")
+INBOX_KEEP = 100  # inbox entries kept per person
 
 MIGRATIONS = Path(__file__).with_name("migrations")
 BASELINE = "0001"  # the schema as it stood before migrations: older databases are stamped with it
@@ -111,6 +112,46 @@ class EmailToken(Base):
     purpose: Mapped[str] = mapped_column(String(8))  # "verify" | "reset"
     email: Mapped[str] = mapped_column(String(254))  # the address it was sent to
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Notification(Base):
+    """One inbox entry (notify.py). `scope` is what daily limits count ("club_up:12"); `group_key` lets
+    a newer one replace an unread one about the same thing."""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    scope: Mapped[str] = mapped_column(String(40))
+    title: Mapped[str] = mapped_column(String(120))
+    body: Mapped[str] = mapped_column(String(240))
+    link: Mapped[str] = mapped_column(String(200))
+    group_key: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    pushed: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PushSub(Base):
+    """A browser that agreed to get pushes: its push-service endpoint and the keys to encrypt to."""
+
+    __tablename__ = "push_subs"
+
+    endpoint: Mapped[str] = mapped_column(String(1000), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    p256dh: Mapped[str] = mapped_column(String(120))
+    auth: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class UserPrefs(Base):
+    """Notification and presence settings (notify.clean_prefs keeps them well-formed)."""
+
+    __tablename__ = "user_prefs"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
 class KnownDevice(Base):
@@ -527,7 +568,7 @@ class Database:
             await session.execute(update(User).where(User.id == user_id).values(**values))
             await session.commit()
 
-    async def delete_user(self, user_id: int) -> None:
+    async def delete_user(self, user_id: int) -> list[int]:
         """The account and everything tied to it: sessions, results, coins, power-ups."""
         async with self.sessions() as session:
             await session.execute(delete(Session).where(Session.user_id == user_id))
@@ -536,18 +577,23 @@ class Database:
             await session.execute(delete(Mfa).where(Mfa.user_id == user_id))
             await session.execute(delete(EmailToken).where(EmailToken.user_id == user_id))
             await session.execute(delete(KnownDevice).where(KnownDevice.user_id == user_id))
-            await self._pass_on_clubs(session, user_id)
+            await session.execute(delete(Notification).where(Notification.user_id == user_id))
+            await session.execute(delete(PushSub).where(PushSub.user_id == user_id))
+            await session.execute(delete(UserPrefs).where(UserPrefs.user_id == user_id))
+            closed = await self._pass_on_clubs(session, user_id)
             await session.execute(delete(Membership).where(Membership.user_id == user_id))
             await session.execute(
                 delete(Friend).where(or_(Friend.user_id == user_id, Friend.friend_id == user_id))
             )
             await session.execute(delete(User).where(User.id == user_id))
             await session.commit()
+            return closed
 
     @staticmethod
-    async def _pass_on_clubs(session: Any, user_id: int) -> None:
+    async def _pass_on_clubs(session: Any, user_id: int) -> list[int]:
         """Clubs an account owns go to the next in line (highest role, then longest in); a club with
-        nobody else in it closes."""
+        nobody else in it closes. Returns the clubs that closed."""
+        closed: list[int] = []
         owned = await session.scalars(
             select(Membership.club_id).where(Membership.user_id == user_id, Membership.role == "owner")
         )
@@ -569,6 +615,8 @@ class Database:
                 await session.execute(delete(ClubInvite).where(ClubInvite.club_id == club_id))
                 await session.execute(delete(Membership).where(Membership.club_id == club_id))
                 await session.execute(delete(Club).where(Club.id == club_id))
+                closed.append(club_id)
+        return closed
 
     # -- authenticator-app sign-in ------------------------------------------------------------------
     async def mfa(self, user_id: int) -> Mfa | None:
@@ -627,6 +675,159 @@ class Database:
         async with self.sessions() as session:
             await session.execute(delete(Mfa).where(Mfa.user_id == user_id))
             await session.commit()
+
+    # -- notifications (notify.py) ----------------------------------------------------------------------
+    async def prefs(self, user_id: int) -> dict[str, Any]:
+        async with self.sessions() as session:
+            row = await session.get(UserPrefs, user_id)
+            return dict(row.data or {}) if row else {}
+
+    async def save_prefs(self, user_id: int, data: dict[str, Any]) -> None:
+        async with self.sessions() as session:
+            row = await session.get(UserPrefs, user_id)
+            if row is None:
+                session.add(UserPrefs(user_id=user_id, data=data))
+            else:
+                row.data = data
+            await session.commit()
+
+    async def count_notifications(self, user_id: int, scope: str, since: datetime) -> int:
+        async with self.sessions() as session:
+            n = await session.scalar(
+                select(func.count()).where(
+                    Notification.user_id == user_id,
+                    Notification.scope == scope,
+                    Notification.created_at >= since,
+                )
+            )
+            return int(n or 0)
+
+    async def count_pushed(self, user_id: int, since: datetime) -> int:
+        async with self.sessions() as session:
+            n = await session.scalar(
+                select(func.count()).where(
+                    Notification.user_id == user_id,
+                    Notification.pushed.is_(True),
+                    Notification.created_at >= since,
+                )
+            )
+            return int(n or 0)
+
+    async def add_notification(
+        self,
+        user_id: int,
+        kind: str,
+        scope: str,
+        title: str,
+        body: str,
+        link: str,
+        group_key: str | None,
+        pushed: bool,
+        group_since: datetime,
+    ) -> None:
+        """A new inbox entry, or an update to an unread one with the same group key. Keeps the newest
+        INBOX_KEEP per person."""
+        now = datetime.now(UTC)
+        async with self.sessions() as session:
+            row = None
+            if group_key:
+                found = await session.execute(
+                    select(Notification)
+                    .where(
+                        Notification.user_id == user_id,
+                        Notification.group_key == group_key,
+                        Notification.read_at.is_(None),
+                        Notification.created_at >= group_since,
+                    )
+                    .limit(1)
+                )
+                row = found.scalar_one_or_none()
+            if row is not None:
+                row.title, row.body, row.link, row.created_at = title, body, link, now
+                row.pushed = row.pushed or pushed
+            else:
+                session.add(
+                    Notification(
+                        user_id=user_id,
+                        kind=kind,
+                        scope=scope,
+                        title=title,
+                        body=body,
+                        link=link,
+                        group_key=group_key,
+                        pushed=pushed,
+                        created_at=now,
+                    )
+                )
+            await session.flush()
+            old = await session.execute(
+                select(Notification.id)
+                .where(Notification.user_id == user_id)
+                .order_by(Notification.created_at.desc(), Notification.id.desc())
+                .offset(INBOX_KEEP)
+            )
+            ids = list(old.scalars().all())
+            if ids:
+                await session.execute(delete(Notification).where(Notification.id.in_(ids)))
+            await session.commit()
+
+    async def inbox(self, user_id: int, limit: int = 50) -> tuple[list[Notification], int]:
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(Notification)
+                .where(Notification.user_id == user_id)
+                .order_by(Notification.created_at.desc(), Notification.id.desc())
+                .limit(limit)
+            )
+            unread = await session.scalar(
+                select(func.count()).where(Notification.user_id == user_id, Notification.read_at.is_(None))
+            )
+            return list(rows.scalars().all()), int(unread or 0)
+
+    async def mark_read(self, user_id: int, ids: list[int] | None) -> None:
+        async with self.sessions() as session:
+            where = [Notification.user_id == user_id, Notification.read_at.is_(None)]
+            if ids is not None:
+                where.append(Notification.id.in_(ids))
+            await session.execute(update(Notification).where(*where).values(read_at=datetime.now(UTC)))
+            await session.commit()
+
+    async def push_subs(self, user_id: int) -> list[PushSub]:
+        async with self.sessions() as session:
+            rows = await session.execute(select(PushSub).where(PushSub.user_id == user_id))
+            return list(rows.scalars().all())
+
+    async def add_push_sub(self, user_id: int, endpoint: str, p256dh: str, auth: str, keep: int = 10) -> None:
+        """Remember a browser's subscription (moving it to this account if another had it)."""
+        async with self.sessions() as session:
+            await session.execute(delete(PushSub).where(PushSub.endpoint == endpoint))
+            session.add(PushSub(endpoint=endpoint, user_id=user_id, p256dh=p256dh, auth=auth))
+            await session.flush()
+            extra = await session.execute(
+                select(PushSub.endpoint)
+                .where(PushSub.user_id == user_id)
+                .order_by(PushSub.created_at.desc())
+                .offset(keep)
+            )
+            gone = list(extra.scalars().all())
+            if gone:
+                await session.execute(delete(PushSub).where(PushSub.endpoint.in_(gone)))
+            await session.commit()
+
+    async def delete_push_sub(self, endpoint: str, user_id: int | None = None) -> None:
+        async with self.sessions() as session:
+            where = [PushSub.endpoint == endpoint]
+            if user_id is not None:
+                where.append(PushSub.user_id == user_id)
+            await session.execute(delete(PushSub).where(*where))
+            await session.commit()
+
+    async def users_by_id(self, ids: list[int]) -> dict[int, User]:
+        if not ids:
+            return {}
+        async with self.sessions() as session:
+            rows = await session.execute(select(User).where(User.id.in_(ids)))
+            return {u.id: u for u in rows.scalars().all()}
 
     async def circle(self, user_id: int) -> dict[str, Any]:
         """The host's belt holder and forfeits (empty when they have none, or the database is down)."""

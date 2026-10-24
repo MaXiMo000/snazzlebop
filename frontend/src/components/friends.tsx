@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, joinRoom, request } from "../lib/api";
 import type { FriendList, Ok } from "../lib/contract";
+import { STATUS_TEXT } from "../lib/clubs";
 import { Btn, Card } from "./ui";
 
 const post = (path: string, username: string) =>
@@ -83,7 +84,9 @@ export function Friends({ name, go }: { name: string; go: (path: string) => void
         <ul className="friend-chips">
           {list.friends.map((f) => (
             <li key={f.username}>
+              <span className={`status-dot ${f.status}`} aria-hidden="true" />
               {f.username}
+              <span className="sr-only">, {STATUS_TEXT[f.status]}</span>
               <button
                 type="button"
                 className="friend-x"

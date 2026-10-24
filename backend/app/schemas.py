@@ -143,6 +143,7 @@ class MyStats(Strict):
 class FriendRow(Strict):
     username: str
     room: str | None  # a room they're hosting that you could walk into
+    status: Literal["offline", "online", "in_game", "up"]
 
 
 class Friends(Strict):
@@ -206,6 +207,29 @@ class ClubMember(Strict):
     username: str
     role: str
     joined_at: str  # ISO 8601
+    status: Literal["offline", "online", "in_game", "up"]
+    up_game: str | None  # when up: the game they want (None: any)
+
+
+class UpSignal(Strict):
+    game: str | None
+    until: str  # ISO 8601
+
+
+class MatchInfo(Strict):
+    """Enough people are up: a room is waiting (or waiting for its first player to open it)."""
+
+    game: str | None
+    players: int
+    room: str | None
+    mine: bool  # you're one of them
+
+
+class ClubUp(Strict):
+    mine: UpSignal | None
+    count: int  # members up right now
+    needed: int  # how many make a match
+    match: MatchInfo | None
 
 
 class ClubRoom(Strict):
@@ -245,6 +269,47 @@ class ClubDetail(Strict):
     members: list[ClubMember]
     rooms: list[ClubRoom]
     invites: list[InviteInfo]  # live invite links: moderators and up only, else empty
+    up: ClubUp
+    muted: bool  # you turned off "a club game is filling up" for this club
+
+
+class InboxItem(Strict):
+    id: int
+    kind: str
+    title: str
+    body: str
+    link: str  # a path on this site
+    at: str  # ISO 8601
+    read: bool
+
+
+class Inbox(Strict):
+    items: list[InboxItem]
+    unread: int
+    push_key: str  # the VAPID public key for pushManager.subscribe()
+
+
+class KindInfo(Strict):
+    id: str
+    label: str
+    on: bool
+
+
+class NotifyPrefs(Strict):
+    hidden: bool  # appear offline
+    quiet: QuietHours | None
+    kinds: list[KindInfo]
+    devices: int  # browsers subscribed to pushes
+
+
+class Invitee(Strict):
+    username: str
+    status: Literal["offline", "online", "in_game", "up"]
+    why: Literal["friend", "club"]
+
+
+class Invitees(Strict):
+    people: list[Invitee]
 
 
 # Spelled out, not taken from Python's HTTP status table: its wording changes between versions (422 is

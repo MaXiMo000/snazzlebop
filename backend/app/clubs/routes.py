@@ -1,7 +1,10 @@
 """The clubs API. Every route needs a signed-in account and changes need the same-origin check (the
 middleware's per-address limit covers them); redeeming an invite also spends the sign-in budget, so
 codes can't be guessed in bulk. A club is invisible to non-members (404, so names can't be probed);
-the way in is an invite link from a member."""
+the way in is an invite link from a member.
+
+"Up for a game" lives here too: members say they're free, and once enough are (presence.py) the
+others are told (notify.py) and the first to tap through opens the room."""
 
 from __future__ import annotations
 
@@ -14,7 +17,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from .. import schemas
 from ..accounts import check_same_origin, session_user
 from ..config import Settings
-from ..db import Club, ClubInvite, Database
+from ..db import Club, ClubInvite, Database, aware
+from ..games import REGISTRY
+from ..notifications import Statuses, iso
+from ..notify import Notifier, merged
+from ..presence import MATCH_AT, UP_MINUTES, Presence
 from ..rooms import Hub, HubError
 from ..security import RateLimiter, client_ip
 from . import policy
@@ -69,7 +76,26 @@ class RoomBody(BaseModel):
     name: str = Field(min_length=1, max_length=64)
 
 
-def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> APIRouter:
+class UpBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    game: str | None = Field(default=None, max_length=32)  # None: any game
+    minutes: int = 60
+
+
+class MuteBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    muted: bool
+
+
+def router(
+    settings: Settings,
+    db: Database,
+    hub: Hub,
+    limiter: RateLimiter,
+    notifier: Notifier,
+    presence: Presence,
+    statuses: Statuses,
+) -> APIRouter:
     api = APIRouter()
     store = ClubStore(db)
 
@@ -93,10 +119,31 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
         return club, member.role
 
     def invite_info(i: ClubInvite) -> dict[str, Any]:
-        return {"id": i.id, "uses_left": i.uses_left, "expires_at": i.expires_at.isoformat()}
+        return {"id": i.id, "uses_left": i.uses_left, "expires_at": aware(i.expires_at).isoformat()}
 
-    async def detail(club: Club, role: str) -> dict[str, Any]:
+    def up_view(club: Club, user: Any) -> dict[str, Any]:
+        mine = presence.up_of(user.id)
+        match = presence.match_for(club.id)
+        return {
+            "mine": {"game": mine.game, "until": iso(mine.until)}
+            if mine and mine.club_id == club.id
+            else None,
+            "count": len(presence.club_ups(club.id)),
+            "needed": MATCH_AT,
+            "match": {
+                "game": match.game,
+                "players": len(match.members),
+                "room": match.room if match.room and hub.get(match.room) else None,
+                "mine": user.id in match.members,
+            }
+            if match
+            else None,
+        }
+
+    async def detail(club: Club, role: str, user: Any) -> dict[str, Any]:
         members = await store.members(club.id)
+        status = await statuses.of({m.user_id for m in members}, club.id)
+        muted = club.id in merged(await db.prefs(user.id))["muted_clubs"]
         return {
             "slug": club.slug,
             "name": club.name,
@@ -105,13 +152,21 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
             "role": role,
             "member_count": len(members),
             "members": [
-                {"username": m.username, "role": m.role, "joined_at": m.joined_at.isoformat()}
+                {
+                    "username": m.username,
+                    "role": m.role,
+                    "joined_at": aware(m.joined_at).isoformat(),
+                    "status": status[m.user_id][0],
+                    "up_game": status[m.user_id][1],
+                }
                 for m in members
             ],
             "rooms": hub.club_rooms(club.id),
             "invites": [invite_info(i) for i in await store.invites(club.id)]
             if policy.may_invite(role)
             else [],
+            "up": up_view(club, user),
+            "muted": muted,
         }
 
     def fail(exc: PolicyError) -> HubError:
@@ -145,13 +200,13 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
             club = await store.create(user.id, name, about, rules)
         except PolicyError as exc:
             raise fail(exc) from None
-        return JSONResponse(await detail(club, "owner"), status_code=201)
+        return JSONResponse(await detail(club, "owner", user), status_code=201)
 
     @api.get("/api/clubs/{slug}", response_model=schemas.ClubDetail, responses=E)
     async def show(slug: str, request: Request) -> JSONResponse:
         user = await me(request)
         club, role = await club_and_role(slug, user)
-        return JSONResponse(await detail(club, role), headers={"Cache-Control": "no-store"})
+        return JSONResponse(await detail(club, role, user), headers={"Cache-Control": "no-store"})
 
     @api.post("/api/clubs/{slug}/settings", response_model=schemas.ClubDetail, responses=E)
     async def change_settings(slug: str, body: SettingsBody, request: Request) -> JSONResponse:
@@ -173,7 +228,7 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
         if values:
             await store.update(club.id, values)
         club, role = await club_and_role(slug, user)
-        return JSONResponse(await detail(club, role))
+        return JSONResponse(await detail(club, role, user))
 
     @api.post("/api/clubs/{slug}/invites", status_code=201, response_model=schemas.NewInvite, responses=E)
     async def invite(slug: str, body: InviteBody, request: Request) -> JSONResponse:
@@ -218,7 +273,7 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
         except PolicyError as exc:
             raise fail(exc) from None
         club, role = await club_and_role(club.slug, user)
-        return JSONResponse(await detail(club, role))
+        return JSONResponse(await detail(club, role, user))
 
     @api.post("/api/clubs/{slug}/members/{username}", response_model=schemas.Ok, responses=E)
     async def set_role(slug: str, username: str, body: RoleBody, request: Request) -> JSONResponse:
@@ -240,6 +295,7 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
         if uid == user.id or not policy.may_remove(role, current):
             raise HubError("not_allowed", "You can't remove that person", 403)
         await store.remove(club.id, uid, body.ban)
+        presence.leave_club(club.id, uid)
         return JSONResponse({"ok": True})
 
     @api.post("/api/clubs/{slug}/transfer", response_model=schemas.Ok, responses=E)
@@ -269,8 +325,10 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
             if len(await store.members(club.id)) > 1:
                 raise HubError("owner_leaving", "Hand the club to someone before you leave", 409)
             await store.delete(club.id)
+            presence.forget_club(club.id)
         else:
             await store.remove(club.id, user.id, ban=False)
+            presence.leave_club(club.id, user.id)
         return JSONResponse({"ok": True})
 
     @api.post("/api/clubs/{slug}/delete", response_model=schemas.Ok, responses=E)
@@ -281,6 +339,7 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
         if role != "owner":
             raise HubError("not_allowed", "Only the owner can close the club", 403)
         await store.delete(club.id)
+        presence.forget_club(club.id)
         return JSONResponse({"ok": True})
 
     @api.post("/api/clubs/{slug}/rooms", status_code=201, response_model=schemas.RoomPass, responses=E)
@@ -293,5 +352,86 @@ def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> 
         circle = await db.circle(user.id)
         room, player, token = hub.create_room(body.name, user.id, circle, club_id=club.id, club_rules=rules)
         return JSONResponse({"code": room.code, "player_id": player.id, "token": token}, status_code=201)
+
+    # -- up for a game ----------------------------------------------------------------------------------
+    async def tell_club(club: Club, match: Any) -> None:
+        """Enough people are up: tell the club (each person's settings, limits and quiet hours apply)."""
+        members = await store.members(club.id)
+        game = REGISTRY[match.game].title if match.game in REGISTRY else "a game"
+        title = f"Game on in {club.name}!"
+        body = f"{len(match.members)} people want to play {game}. Tap to join them."
+        rules = policy.clean_rules(club.rules or None)
+        told = await notifier.notify(
+            [m.user_id for m in members],
+            "club_up",
+            title,
+            body,
+            f"/clubs/{club.slug}",
+            group=f"club_up:{club.id}:{match.id}",
+            club=(club.id, rules["quiet"]),
+        )
+        match.told.update(told)
+
+    @api.post("/api/clubs/{slug}/up", response_model=schemas.ClubDetail, responses=E)
+    async def up(slug: str, body: UpBody, request: Request) -> JSONResponse:
+        """Say you're up for a game (any, or one pick) for 30, 60 or 120 minutes."""
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        if body.minutes not in UP_MINUTES:
+            raise HubError("bad_input", "Pick 30, 60 or 120 minutes")
+        allowed = policy.clean_rules(club.rules or None)["games"]
+        if body.game is not None and (body.game not in REGISTRY or (allowed and body.game not in allowed)):
+            raise HubError("bad_game", "Pick one of the club's games")
+        match = presence.up(user.id, club.id, body.game, body.minutes)
+        if match is not None:
+            await tell_club(club, match)
+        return JSONResponse(await detail(club, role, user))
+
+    @api.post("/api/clubs/{slug}/up/cancel", response_model=schemas.ClubDetail, responses=E)
+    async def down(slug: str, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        presence.down(user.id)
+        return JSONResponse(await detail(club, role, user))
+
+    @api.post("/api/clubs/{slug}/up/go", status_code=201, response_model=schemas.RoomPass, responses=E)
+    async def go(slug: str, body: RoomBody, request: Request) -> JSONResponse:
+        """Tap through to the match: the first one in opens the room and hosts it, the rest join it.
+        Club members who weren't up can join too, as long as there's a seat."""
+        write(request)
+        user = await me(request)
+        club, _ = await club_and_role(slug, user)
+        match = presence.match_for(club.id)
+        if match is None:
+            raise HubError("no_match", "That game isn't on any more. Say you're up to start another", 404)
+        circle = await db.circle(user.id)  # before any check-then-act below: no await in between
+        room = hub.get(match.room) if match.room else None
+        if room is None:
+            rules = policy.clean_rules(club.rules or None)
+            room, player, token = hub.create_room(
+                body.name, user.id, circle, club_id=club.id, club_rules=rules
+            )
+            match.room = room.code
+        else:
+            room, player, token = hub.join_room(room.code, body.name, user.id)
+        if user.id not in match.members:
+            match.members.append(user.id)
+        presence.down(user.id)  # playing now: the signal has done its job
+        return JSONResponse({"code": room.code, "player_id": player.id, "token": token}, status_code=201)
+
+    @api.post("/api/clubs/{slug}/mute", response_model=schemas.Ok, responses=E)
+    async def mute(slug: str, body: MuteBody, request: Request) -> JSONResponse:
+        """Stop (or restart) hearing about games filling up in this club."""
+        write(request)
+        user = await me(request)
+        club, _ = await club_and_role(slug, user)
+        prefs = merged(await db.prefs(user.id))
+        muted = [c for c in prefs["muted_clubs"] if c != club.id]
+        if body.muted:
+            muted.append(club.id)
+        await db.save_prefs(user.id, {**prefs, "muted_clubs": muted[-100:]})
+        return JSONResponse({"ok": True})
 
     return api

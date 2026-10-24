@@ -222,9 +222,13 @@ def test_friends_see_each_others_rooms_only_when_both_added(client):
     assert client.post("/api/friends", json={"username": "Bo_77"}).status_code == 200
     client.cookies.clear()
     client.cookies.update(bo)
-    assert client.get("/api/friends").json()["friends"] == [{"username": "Ana_99", "room": code}]
+    assert client.get("/api/friends").json()["friends"] == [
+        {"username": "Ana_99", "room": code, "status": "in_game"}
+    ]
     room.locked = True
-    assert client.get("/api/friends").json()["friends"] == [{"username": "Ana_99", "room": None}]
+    assert client.get("/api/friends").json()["friends"] == [
+        {"username": "Ana_99", "room": None, "status": "in_game"}
+    ]
     assert client.post("/api/friends/remove", json={"username": "Ana_99"}).status_code == 200
     assert client.get("/api/friends").json() == {"friends": [], "sent": [], "asked": ["Ana_99"]}
     client.cookies.clear()

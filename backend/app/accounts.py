@@ -31,7 +31,7 @@ import re
 import secrets
 import time
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -299,6 +299,8 @@ def router(
     limiter: RateLimiter,
     hosting: Callable[[set[int]], dict[int, str]] = lambda ids: {},
     mailer: Mailer | None = None,
+    status_of: Callable[[set[int]], Awaitable[dict[int, tuple[str, str | None]]]] | None = None,
+    forget: Callable[[int, list[int]], None] = lambda user_id, closed: None,
 ) -> APIRouter:
     api = APIRouter()
     lockout = Lockout()
@@ -530,7 +532,7 @@ def router(
             raise HubError("bad_login", "That password isn't right", 401)
         await second_factor(user, body.code, "delete:" + user.username_key)
         tell(user, emails.goodbye(site, user.username), "goodbye")
-        await db.delete_user(user.id)
+        forget(user.id, await db.delete_user(user.id))  # presence: the account and clubs that closed
         resp = JSONResponse({"ok": True})
         resp.delete_cookie(SESSION_COOKIE, path="/", samesite="strict", secure=settings.is_production)
         return resp
@@ -759,10 +761,15 @@ def router(
     async def friends(request: Request) -> JSONResponse:
         user = await require_user(request)
         lists = await db.friends(user.id)
-        rooms = hosting({i for i, _ in lists["mutual"]})
+        ids = {i for i, _ in lists["mutual"]}
+        rooms = hosting(ids)
+        status = await status_of(ids) if status_of else {}
         return JSONResponse(
             {
-                "friends": [{"username": n, "room": rooms.get(i)} for i, n in lists["mutual"]],
+                "friends": [
+                    {"username": n, "room": rooms.get(i), "status": status.get(i, ("offline", None))[0]}
+                    for i, n in lists["mutual"]
+                ],
                 "sent": [n for _, n in lists["sent"]],
                 "asked": [n for _, n in lists["asked"]],
             },
