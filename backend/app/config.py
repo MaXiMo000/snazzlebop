@@ -101,6 +101,7 @@ class Settings:
     smtp_user: str = field(default="", repr=False)
     smtp_pass: str = field(default="", repr=False)
     mail_outbox_dir: str = ""  # development only: write emails here as files instead of sending them
+    privacy_contact: str = ""  # where privacy requests go (shown on the privacy notice)
 
     # The jump-scare prank. On unless JUMPSCARE=false; JUMPSCARE_NAMES (comma separated) replaces the
     # built-in list. (A plain Settings() keeps it off, so unit tests stay quiet.)
@@ -204,6 +205,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         smtp_user=e.get("SMTP_USER", "").strip(),
         smtp_pass=e.get("SMTP_PASS", "").strip(),
         mail_outbox_dir=e.get("MAIL_OUTBOX_DIR", "").strip(),
+        privacy_contact=e.get("PRIVACY_CONTACT", "").strip()[:200],
         jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
         jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )

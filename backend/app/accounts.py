@@ -782,6 +782,8 @@ def router(
         throttle(request)
         user = await require_user(request)
         other = await friend_target(body, user)
+        if other.id in await db.block_set(user.id):
+            raise HubError("cant_add", "You can't add that person", 403)
         if not await db.add_friend(user.id, other.id):
             raise HubError("friends_full", "Your friends list is full")
         return JSONResponse({"ok": True})

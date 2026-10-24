@@ -29,3 +29,16 @@
   opacity: 1;
 }
 
+/* Radios (pick one): round, with a dot instead of a tick, so they never read as checkboxes. */
+.check input[type="radio"] {
+  border-radius: 50%;
+}
+.check input[type="radio"]::after {
+  width: 12px;
+  height: 12px;
+  margin-top: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--plum);
+  transform: none;
+}

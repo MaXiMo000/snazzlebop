@@ -45,9 +45,11 @@ class Hub(
         refund_powerup: Callable[[int, str], Awaitable[None]] | None = None,
         # (host's account, belt holder's name, forfeits): remembered for that host's next rooms
         save_circle: Callable[[int, str, list[str]], Awaitable[None]] | None = None,
+        wall: Callable[[], float] = time.time,  # real time, for things that end at a set hour (mutes)
     ) -> None:
         self.settings = settings
         self.clock = clock
+        self.wall = wall
         self.rng = rng or random.SystemRandom()
         self.rooms: dict[str, Room] = {}
         self.on_game_finished = on_game_finished

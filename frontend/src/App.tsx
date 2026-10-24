@@ -6,7 +6,10 @@ import { useAccount } from "./lib/account";
 import { useInbox } from "./lib/notify";
 import { Account, type AccountView } from "./pages/Account";
 import { ClubHome, Clubs, JoinClub } from "./pages/Clubs";
+import { ClubReports } from "./pages/ClubReports";
 import { InboxPage } from "./pages/Inbox";
+import { Privacy } from "./pages/Privacy";
+import { Safety } from "./pages/Safety";
 import { Home } from "./pages/Home";
 import { Room } from "./pages/Room";
 
@@ -14,6 +17,9 @@ const ROOM_PATH = /^\/r\/([A-Za-z]{3,8})\/?$/;
 const ACCOUNT_PATH = /^\/account(?:\/(forgot|reset|verify))?\/?$/;
 const CLUBS_PATH = /^\/clubs\/?$/;
 const CLUB_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/?$/;
+const CLUB_REPORTS_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/reports\/?$/;
+const PRIVACY_PATH = /^\/privacy\/?$/;
+const SAFETY_PATH = /^\/safety\/?$/;
 const JOIN_PATH = /^\/join\/([A-Za-z0-9-]{4,32})\/?$/;
 const INBOX_PATH = /^\/inbox\/?$/;
 
@@ -94,6 +100,7 @@ export function App() {
   const match = ROOM_PATH.exec(path);
   const accountMatch = ACCOUNT_PATH.exec(path);
   const clubMatch = CLUB_PATH.exec(path);
+  const reportsMatch = CLUB_REPORTS_PATH.exec(path);
   const joinMatch = JOIN_PATH.exec(path);
   return (
     <>
@@ -132,6 +139,12 @@ export function App() {
           <Account go={go} view={(accountMatch[1] as AccountView | undefined) ?? "home"} />
         ) : CLUBS_PATH.test(path) ? (
           <Clubs go={go} />
+        ) : reportsMatch ? (
+          <ClubReports key={reportsMatch[1]} slug={reportsMatch[1]!} go={go} />
+        ) : PRIVACY_PATH.test(path) ? (
+          <Privacy go={go} />
+        ) : SAFETY_PATH.test(path) ? (
+          <Safety go={go} />
         ) : clubMatch ? (
           <ClubHome key={clubMatch[1]} slug={clubMatch[1]!} go={go} />
         ) : INBOX_PATH.test(path) ? (
@@ -142,6 +155,31 @@ export function App() {
           <Home go={go} />
         )}
       </main>
+      {!match && <SiteFooter go={go} />}
     </>
+  );
+}
+
+/** Every page but a room: the links people look for at the bottom of a site. */
+function SiteFooter({ go }: { go: (p: string) => void }) {
+  const link = (to: string, label: string) => (
+    <a
+      href={to}
+      onClick={(e) => {
+        e.preventDefault();
+        go(to);
+      }}
+    >
+      {label}
+    </a>
+  );
+  return (
+    <footer className="site-footer">
+      <nav aria-label="About this site">
+        {link("/privacy", "Privacy")}
+        {link("/safety", "Safety and data")}
+        {link("/clubs", "Clubs")}
+      </nav>
+    </footer>
   );
 }

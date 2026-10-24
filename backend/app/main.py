@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import accounts, calls, notifications, schemas
+from . import accounts, calls, notifications, safety, schemas
 from .clubs import routes as clubs
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
@@ -41,9 +41,9 @@ from .ws import ConnectionCounter, serve_socket
 log = logging.getLogger("snazzlebop")
 
 # The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
-# /clubs/<slug> and /join/<invite>.
+# /clubs/<slug> (and /reports), /join/<invite>, /privacy and /safety.
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify)?|inbox|clubs|clubs/[a-z0-9-]{1,48}|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify)?|inbox|privacy|safety|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 
@@ -199,6 +199,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.include_router(clubs.router(settings, db, hub, limiters["auth"], notifier, presence, statuses))
     app.include_router(notifications.router(settings, db, hub, notifier, presence, statuses))
+    app.include_router(safety.router(settings, db, hub, presence))
 
     async def account_id(request: Request) -> int | None:
         user = await accounts.session_user(request, db)
@@ -209,13 +210,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         uid = await account_id(request)
         circle = await db.circle(uid) if uid is not None and db.ready else None
         room, player, token = hub.create_room(body.name, uid, circle)
+        if uid is not None and db.ready:
+            hub.set_hidden(uid, await db.block_set(uid))
         return {"code": room.code, "player_id": player.id, "token": token}
 
     @app.post("/api/rooms/{code}/join", response_model=schemas.RoomPass, responses=schemas.ERRORS)
     async def join_room(code: str, body: NameBody, request: Request) -> dict[str, str]:
         try:
             await hub.fetch(code.upper())  # back from a restart: restore it first
-            room, player, token = hub.join_room(code, body.name, await account_id(request))
+            uid = await account_id(request)
+            blocks = await db.block_set(uid) if uid is not None and db.ready else set()
+            if hub.host_account(code) in blocks:  # either way round; silent about which
+                raise HubError("cant_join", "You can't join this room", 403)
+            room, player, token = hub.join_room(code, body.name, uid)
+            if uid is not None:
+                hub.set_hidden(uid, blocks)
         except HubError as exc:
             if exc.code == "room_not_found":
                 # Guessing room codes is the main enumeration vector: make it expensive.

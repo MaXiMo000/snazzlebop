@@ -31,11 +31,18 @@ class Statuses:
     def __init__(self, db: Any, presence: Presence, hub: Hub) -> None:
         self.db, self.presence, self.hub = db, presence, hub
 
-    async def of(self, user_ids: set[int], club_id: int | None = None) -> dict[int, tuple[str, str | None]]:
-        """account -> (status, the game they're up for). `club_id`: count only being up in that club."""
+    async def of(
+        self, user_ids: set[int], club_id: int | None = None, viewer: int | None = None
+    ) -> dict[int, tuple[str, str | None]]:
+        """account -> (status, the game they're up for). `club_id`: count only being up in that club.
+        `viewer`: whoever is looking; people blocked either way always look offline to them."""
         playing = self.hub.playing(user_ids)
+        blocked = await self.db.block_set(viewer) if viewer is not None else set()
         out: dict[int, tuple[str, str | None]] = {}
         for uid in user_ids:
+            if uid in blocked:
+                out[uid] = ("offline", None)
+                continue
             up = self.presence.up_of(uid)
             if up is not None and (club_id is None or up.club_id == club_id):
                 out[uid] = ("up", up.game)
@@ -78,7 +85,7 @@ class PrefsBody(BaseModel):
     clear_quiet: bool = False  # quiet: null can't be told apart from "not sent"
 
 
-class InviteBody(BaseModel):
+class RoomInviteBody(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     username: str = Field(max_length=64)
 
@@ -188,7 +195,12 @@ def router(
         for uid, name in (await db.friends(user.id))["mutual"]:
             people[uid] = (name, "friend")
         seated = {uid for pid, uid in room.accounts.items() if pid in room.players}
-        return [(uid, n, why) for uid, (n, why) in people.items() if uid != user.id and uid not in seated]
+        blocked = await db.block_set(user.id)
+        return [
+            (uid, n, why)
+            for uid, (n, why) in people.items()
+            if uid != user.id and uid not in seated and uid not in blocked
+        ]
 
     @api.get("/api/rooms/{code}/invitees", response_model=schemas.Invitees, responses=E)
     async def list_invitees(code: str, request: Request) -> JSONResponse:
@@ -206,7 +218,7 @@ def router(
         return JSONResponse({"people": people[:60]}, headers={"Cache-Control": "no-store"})
 
     @api.post("/api/rooms/{code}/invite", response_model=schemas.Ok, responses=E)
-    async def invite(code: str, body: InviteBody, request: Request) -> JSONResponse:
+    async def invite(code: str, body: RoomInviteBody, request: Request) -> JSONResponse:
         """Tell a friend or clubmate you're in a room. They get it in their inbox (and as a push)."""
         check_same_origin(request, settings)
         user = await me(request)

@@ -142,7 +142,7 @@ def router(
 
     async def detail(club: Club, role: str, user: Any) -> dict[str, Any]:
         members = await store.members(club.id)
-        status = await statuses.of({m.user_id for m in members}, club.id)
+        status = await statuses.of({m.user_id for m in members}, club.id, viewer=user.id)
         muted = club.id in merged(await db.prefs(user.id))["muted_clubs"]
         return {
             "slug": club.slug,
@@ -167,6 +167,7 @@ def router(
             else [],
             "up": up_view(club, user),
             "muted": muted,
+            "open_reports": await db.open_reports(club.id) if policy.may_invite(role) else 0,
         }
 
     def fail(exc: PolicyError) -> HubError:
@@ -350,7 +351,11 @@ def router(
         club, _ = await club_and_role(slug, user)
         rules = policy.clean_rules(club.rules or None)
         circle = await db.circle(user.id)
-        room, player, token = hub.create_room(body.name, user.id, circle, club_id=club.id, club_rules=rules)
+        mutes = {u: t.timestamp() for u, t in (await db.club_mutes(club.id)).items()}
+        room, player, token = hub.create_room(
+            body.name, user.id, circle, club_id=club.id, club_rules=rules, club_muted=mutes
+        )
+        hub.set_hidden(user.id, await db.block_set(user.id))
         return JSONResponse({"code": room.code, "player_id": player.id, "token": token}, status_code=201)
 
     # -- up for a game ----------------------------------------------------------------------------------
@@ -408,14 +413,19 @@ def router(
             raise HubError("no_match", "That game isn't on any more. Say you're up to start another", 404)
         circle = await db.circle(user.id)  # before any check-then-act below: no await in between
         room = hub.get(match.room) if match.room else None
+        blocks = await db.block_set(user.id)
+        if room is not None and room.accounts.get(room.host_id) in blocks:
+            raise HubError("cant_join", "You can't join this room", 403)
+        mutes = {u: t.timestamp() for u, t in (await db.club_mutes(club.id)).items()}
         if room is None:
             rules = policy.clean_rules(club.rules or None)
             room, player, token = hub.create_room(
-                body.name, user.id, circle, club_id=club.id, club_rules=rules
+                body.name, user.id, circle, club_id=club.id, club_rules=rules, club_muted=mutes
             )
             match.room = room.code
         else:
             room, player, token = hub.join_room(room.code, body.name, user.id)
+        hub.set_hidden(user.id, blocks)
         if user.id not in match.members:
             match.members.append(user.id)
         presence.down(user.id)  # playing now: the signal has done its job

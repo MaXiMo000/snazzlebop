@@ -1,6 +1,66 @@
 {
   "components": {
     "schemas": {
+      "ActBody": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "maxLength": 12,
+            "title": "Action",
+            "type": "string"
+          },
+          "hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "ActBody",
+        "type": "object"
+      },
+      "ActionRow": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor",
+          "target",
+          "action",
+          "note",
+          "at"
+        ],
+        "title": "ActionRow",
+        "type": "object"
+      },
       "BackupCodes": {
         "additionalProperties": false,
         "description": "Shown once: each works once if the phone is lost.",
@@ -43,6 +103,42 @@
           "holder"
         ],
         "title": "Belt",
+        "type": "object"
+      },
+      "BlockList": {
+        "additionalProperties": false,
+        "properties": {
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/BlockedPerson"
+            },
+            "title": "People",
+            "type": "array"
+          }
+        },
+        "required": [
+          "people"
+        ],
+        "title": "BlockList",
+        "type": "object"
+      },
+      "BlockedPerson": {
+        "additionalProperties": false,
+        "properties": {
+          "since": {
+            "title": "Since",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "since"
+        ],
+        "title": "BlockedPerson",
         "type": "object"
       },
       "BuyBody": {
@@ -338,6 +434,25 @@
         "title": "Chat",
         "type": "object"
       },
+      "ChatLine": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "text"
+        ],
+        "title": "ChatLine",
+        "type": "object"
+      },
       "ChatMessage": {
         "additionalProperties": false,
         "properties": {
@@ -405,6 +520,10 @@
             "title": "Name",
             "type": "string"
           },
+          "open_reports": {
+            "title": "Open Reports",
+            "type": "integer"
+          },
           "role": {
             "title": "Role",
             "type": "string"
@@ -438,7 +557,8 @@
           "rooms",
           "invites",
           "up",
-          "muted"
+          "muted",
+          "open_reports"
         ],
         "title": "ClubDetail",
         "type": "object"
@@ -505,6 +625,47 @@
           "up_game"
         ],
         "title": "ClubMember",
+        "type": "object"
+      },
+      "ClubReports": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/ActionRow"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "muted": {
+            "items": {
+              "$ref": "#/components/schemas/MutedRow"
+            },
+            "title": "Muted",
+            "type": "array"
+          },
+          "reasons": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "object"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReportRow"
+            },
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reports",
+          "muted",
+          "actions",
+          "reasons"
+        ],
+        "title": "ClubReports",
         "type": "object"
       },
       "ClubRoom": {
@@ -1334,6 +1495,35 @@
         "title": "Intro",
         "type": "object"
       },
+      "InviteBody": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "uses": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uses"
+          }
+        },
+        "title": "InviteBody",
+        "type": "object"
+      },
       "InviteInfo": {
         "additionalProperties": false,
         "properties": {
@@ -1832,6 +2022,25 @@
         "title": "MuteBody",
         "type": "object"
       },
+      "MutedRow": {
+        "additionalProperties": false,
+        "properties": {
+          "until": {
+            "title": "Until",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "until"
+        ],
+        "title": "MutedRow",
+        "type": "object"
+      },
       "Mvp": {
         "additionalProperties": false,
         "properties": {
@@ -2132,6 +2341,21 @@
           "new_password"
         ],
         "title": "PasswordBody",
+        "type": "object"
+      },
+      "PersonBody": {
+        "additionalProperties": false,
+        "properties": {
+          "username": {
+            "maxLength": 64,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "PersonBody",
         "type": "object"
       },
       "PlayerRow": {
@@ -2440,6 +2664,120 @@
           }
         },
         "title": "RemoveBody",
+        "type": "object"
+      },
+      "ReportBody": {
+        "additionalProperties": false,
+        "properties": {
+          "club": {
+            "anyOf": [
+              {
+                "maxLength": 48,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 16,
+            "title": "Reason",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 64,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "reason"
+        ],
+        "title": "ReportBody",
+        "type": "object"
+      },
+      "ReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "can_act": {
+            "title": "Can Act",
+            "type": "boolean"
+          },
+          "context": {
+            "items": {
+              "$ref": "#/components/schemas/ChatLine"
+            },
+            "title": "Context",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "member": {
+            "title": "Member",
+            "type": "boolean"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "dismissed",
+              "actioned",
+              "escalated"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "target",
+          "member",
+          "reason",
+          "note",
+          "context",
+          "room",
+          "status",
+          "at",
+          "can_act"
+        ],
+        "title": "ReportRow",
         "type": "object"
       },
       "ResetBody": {
@@ -2866,6 +3204,21 @@
         "title": "RoomInfo",
         "type": "object"
       },
+      "RoomInviteBody": {
+        "additionalProperties": false,
+        "properties": {
+          "username": {
+            "maxLength": 64,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "RoomInviteBody",
+        "type": "object"
+      },
       "RoomPass": {
         "additionalProperties": false,
         "description": "A seat (player or audience): the room code, your id in it, and the token the socket sends first.",
@@ -2971,6 +3324,53 @@
           "rank"
         ],
         "title": "SeasonStat",
+        "type": "object"
+      },
+      "SeatBody": {
+        "additionalProperties": false,
+        "properties": {
+          "player_id": {
+            "maxLength": 32,
+            "title": "Player Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "player_id"
+        ],
+        "title": "SeatBody",
+        "type": "object"
+      },
+      "SeatReportBody": {
+        "additionalProperties": false,
+        "properties": {
+          "block": {
+            "default": false,
+            "title": "Block",
+            "type": "boolean"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          },
+          "player_id": {
+            "maxLength": 32,
+            "title": "Player Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 16,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "player_id",
+          "reason"
+        ],
+        "title": "SeatReportBody",
         "type": "object"
       },
       "SettingsBody": {
@@ -3203,6 +3603,27 @@
           "password"
         ],
         "title": "SignupBody",
+        "type": "object"
+      },
+      "SiteInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "privacy_contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Contact"
+          }
+        },
+        "required": [
+          "privacy_contact"
+        ],
+        "title": "SiteInfo",
         "type": "object"
       },
       "Standing": {
@@ -3484,50 +3905,6 @@
           "pick"
         ],
         "title": "Wheel",
-        "type": "object"
-      },
-      "app__clubs__routes__InviteBody": {
-        "additionalProperties": false,
-        "properties": {
-          "days": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Days"
-          },
-          "uses": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Uses"
-          }
-        },
-        "title": "InviteBody",
-        "type": "object"
-      },
-      "app__notifications__InviteBody": {
-        "additionalProperties": false,
-        "properties": {
-          "username": {
-            "maxLength": 64,
-            "title": "Username",
-            "type": "string"
-          }
-        },
-        "required": [
-          "username"
-        ],
-        "title": "InviteBody",
         "type": "object"
       }
     }
@@ -4286,6 +4663,318 @@
         "summary": "Verify"
       }
     },
+    "/api/blocks": {
+      "get": {
+        "operationId": "blocked_api_blocks_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Blocked"
+      },
+      "post": {
+        "operationId": "block_api_blocks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Block"
+      }
+    },
+    "/api/blocks/remove": {
+      "post": {
+        "operationId": "unblock_api_blocks_remove_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Unblock"
+      }
+    },
     "/api/clubs": {
       "get": {
         "operationId": "my_clubs_api_clubs_get",
@@ -4834,7 +5523,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/app__clubs__routes__InviteBody"
+                "$ref": "#/components/schemas/InviteBody"
               }
             }
           },
@@ -5539,6 +6228,243 @@
         "summary": "Mute"
       }
     },
+    "/api/clubs/{slug}/reports": {
+      "get": {
+        "operationId": "club_reports_api_clubs__slug__reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubReports"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Club Reports"
+      }
+    },
+    "/api/clubs/{slug}/reports/{report_id}": {
+      "post": {
+        "operationId": "act_api_clubs__slug__reports__report_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "title": "Report Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Act"
+      }
+    },
     "/api/clubs/{slug}/rooms": {
       "post": {
         "description": "Open a room for the club: its members see it on the club page and can walk in.",
@@ -5895,6 +6821,125 @@
           }
         },
         "summary": "Transfer"
+      }
+    },
+    "/api/clubs/{slug}/unmute": {
+      "post": {
+        "operationId": "unmute_api_clubs__slug__unmute_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Unmute"
       }
     },
     "/api/clubs/{slug}/up": {
@@ -7037,6 +8082,107 @@
           }
         },
         "summary": "Resend"
+      }
+    },
+    "/api/me/export": {
+      "get": {
+        "description": "Everything kept about your account, as a file to download.",
+        "operationId": "export_api_me_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Export Api Me Export Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Export"
       }
     },
     "/api/me/mfa": {
@@ -8520,6 +9666,115 @@
         "summary": "Unsubscribe"
       }
     },
+    "/api/reports": {
+      "post": {
+        "description": "Report a person, optionally in a club you share (then its moderators see it).",
+        "operationId": "report_api_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Report"
+      }
+    },
     "/api/rooms": {
       "post": {
         "operationId": "create_room_api_rooms_post",
@@ -8748,6 +10003,126 @@
         "summary": "Audience Seat"
       }
     },
+    "/api/rooms/{code}/block": {
+      "post": {
+        "description": "Block someone you're in a room with (by their seat: accounts aren't shown in rooms).",
+        "operationId": "block_seat_api_rooms__code__block_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeatBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Block Seat"
+      }
+    },
     "/api/rooms/{code}/invite": {
       "post": {
         "description": "Tell a friend or clubmate you're in a room. They get it in their inbox (and as a push).",
@@ -8767,7 +10142,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/app__notifications__InviteBody"
+                "$ref": "#/components/schemas/RoomInviteBody"
               }
             }
           },
@@ -9096,6 +10471,126 @@
         "summary": "Join Room"
       }
     },
+    "/api/rooms/{code}/report": {
+      "post": {
+        "description": "Report someone in your room. Their recent chat lines go with it, taken by the server.",
+        "operationId": "report_seat_api_rooms__code__report_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeatReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Report Seat"
+      }
+    },
     "/api/rooms/{code}/tv": {
       "post": {
         "description": "Read-only big-screen view (TV mode). Rate limited and penalised exactly like join.",
@@ -9330,6 +10825,25 @@
           }
         },
         "summary": "Buy"
+      }
+    },
+    "/api/site": {
+      "get": {
+        "description": "Public facts the pages need: who to contact about privacy.",
+        "operationId": "site_api_site_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Site"
       }
     },
     "/api/stats": {

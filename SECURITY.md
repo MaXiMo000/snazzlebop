@@ -29,6 +29,9 @@ Only the latest version on `main` (the live deployment) is supported.
   services (an allowlist, https only), so a forged subscription can't make it call anywhere else.
   Presence is visible only to friends and clubmates, and anyone can appear offline. Inbox entries
   and limits are per account; invites only reach friends who added you back, or clubmates.
+- **Blocking and reports.** Blocks are silent and apply everywhere: friends, invites, presence,
+  joining rooms and room chat. Report context is captured by the server, not supplied by the reporter.
+  Moderators act only on roles below their own, and every action is recorded in an audit log.
 - **Private clubs.** A club is visible only to its members. Invite links are random, stored only as
   keyed hashes, expire and run out; roles can act only on roles below their own, and bans stick.
 - **Abuse limits.** Rate limits per client on the API, room joins, sign-in and WebSocket messages, caps

@@ -193,6 +193,10 @@ class Room:
     # The club's rules when the room opened: the games it plays (empty = all) and whether chat is on.
     club_games: list[str] = field(default_factory=list)
     club_chat: bool = True
+    # Safety. hidden: account -> accounts it must not hear from (blocks, either way), kept for the
+    # people seated here. club_muted: account -> when a club moderator's mute ends (wall-clock time).
+    hidden: dict[int, set[int]] = field(default_factory=dict)
+    club_muted: dict[int, float] = field(default_factory=dict)
     # When the host's last screen dropped (None while they're here). Switching apps or locking a phone
     # drops the socket; the host keeps the room unless they stay away for HOST_GRACE seconds.
     host_away: float | None = None

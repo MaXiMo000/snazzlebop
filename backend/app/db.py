@@ -154,6 +154,63 @@ class UserPrefs(Base):
     data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
+class Block(Base):
+    """One account blocking another. Silent: the blocked person is never told."""
+
+    __tablename__ = "blocks"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    blocked_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class Report(Base):
+    """A report about a person. `context` is captured by the server (their recent chat lines in the
+    room), never taken from the reporter. Club reports go to the club's moderators; the rest, and
+    escalated ones, to platform staff."""
+
+    __tablename__ = "reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    reporter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    target_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    target_name: Mapped[str] = mapped_column(String(40))  # as shown at the time (guests have no account)
+    club_id: Mapped[int | None] = mapped_column(
+        ForeignKey("clubs.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    room_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    reason: Mapped[str] = mapped_column(String(16))
+    note: Mapped[str] = mapped_column(String(500))
+    context: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(12), default="open", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    handled_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ModAction(Base):
+    """The audit log: every moderator action, kept even when the people involved leave."""
+
+    __tablename__ = "mod_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    club_id: Mapped[int | None] = mapped_column(
+        ForeignKey("clubs.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    actor_name: Mapped[str] = mapped_column(String(40))
+    target_name: Mapped[str] = mapped_column(String(40))
+    action: Mapped[str] = mapped_column(String(16))
+    note: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
 class KnownDevice(Base):
     """Browsers an account has signed in from (a hash of a random cookie), to email about new ones."""
 
@@ -251,6 +308,8 @@ class Membership(Base):
     )
     role: Mapped[str] = mapped_column(String(12), default="member")
     banned: Mapped[bool] = mapped_column(default=False)
+    # A moderator's mute: no chat in the club's rooms until then.
+    muted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
@@ -580,6 +639,9 @@ class Database:
             await session.execute(delete(Notification).where(Notification.user_id == user_id))
             await session.execute(delete(PushSub).where(PushSub.user_id == user_id))
             await session.execute(delete(UserPrefs).where(UserPrefs.user_id == user_id))
+            await session.execute(
+                delete(Block).where(or_(Block.user_id == user_id, Block.blocked_id == user_id))
+            )
             closed = await self._pass_on_clubs(session, user_id)
             await session.execute(delete(Membership).where(Membership.user_id == user_id))
             await session.execute(
@@ -588,6 +650,14 @@ class Database:
             await session.execute(delete(User).where(User.id == user_id))
             await session.commit()
             return closed
+
+    @staticmethod
+    async def drop_club(session: Any, club_id: int) -> None:
+        """A club and everything in it. Spelled out rather than left to ON DELETE CASCADE, which SQLite
+        only honours when foreign keys are switched on."""
+        for table in (ClubInvite, Membership, Report, ModAction):
+            await session.execute(delete(table).where(table.club_id == club_id))
+        await session.execute(delete(Club).where(Club.id == club_id))
 
     @staticmethod
     async def _pass_on_clubs(session: Any, user_id: int) -> list[int]:
@@ -612,9 +682,7 @@ class Database:
             if heir is not None:
                 heir.role = "owner"
             else:
-                await session.execute(delete(ClubInvite).where(ClubInvite.club_id == club_id))
-                await session.execute(delete(Membership).where(Membership.club_id == club_id))
-                await session.execute(delete(Club).where(Club.id == club_id))
+                await Database.drop_club(session, club_id)
                 closed.append(club_id)
         return closed
 
@@ -675,6 +743,214 @@ class Database:
         async with self.sessions() as session:
             await session.execute(delete(Mfa).where(Mfa.user_id == user_id))
             await session.commit()
+
+    # -- blocks and reports (safety.py) ---------------------------------------------------------------
+    async def block(self, user_id: int, other_id: int) -> None:
+        """Block someone: any friendship between the two ends too."""
+        async with self.sessions() as session:
+            if await session.get(Block, (user_id, other_id)) is None:
+                session.add(Block(user_id=user_id, blocked_id=other_id))
+            await session.execute(
+                delete(Friend).where(
+                    or_(
+                        (Friend.user_id == user_id) & (Friend.friend_id == other_id),
+                        (Friend.user_id == other_id) & (Friend.friend_id == user_id),
+                    )
+                )
+            )
+            await session.commit()
+
+    async def unblock(self, user_id: int, other_id: int) -> None:
+        async with self.sessions() as session:
+            await session.execute(delete(Block).where(Block.user_id == user_id, Block.blocked_id == other_id))
+            await session.commit()
+
+    async def blocked_by_me(self, user_id: int) -> list[tuple[str, datetime]]:
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(User.username, Block.created_at)
+                .join(Block, Block.blocked_id == User.id)
+                .where(Block.user_id == user_id)
+                .order_by(User.username_key)
+            )
+            return [(str(n), at) for n, at in rows.all()]
+
+    async def block_set(self, user_id: int) -> set[int]:
+        """Everyone this account must not meet: people it blocked and people who blocked it."""
+        async with self.sessions() as session:
+            mine = await session.scalars(select(Block.blocked_id).where(Block.user_id == user_id))
+            theirs = await session.scalars(select(Block.user_id).where(Block.blocked_id == user_id))
+            return set(mine.all()) | set(theirs.all())
+
+    async def add_report(self, **values: Any) -> bool:
+        """File a report. If this reporter already has an open one about the same person here, the new
+        chat lines and note are added to it instead (one report to read, everything in it). Returns
+        True for a new report, False when it was added to an open one."""
+        async with self.sessions() as session:
+            same = await session.scalar(
+                select(Report)
+                .where(
+                    Report.reporter_id == values["reporter_id"],
+                    Report.status == "open",
+                    Report.club_id.is_(None)
+                    if values.get("club_id") is None
+                    else Report.club_id == values["club_id"],
+                    (Report.target_id == values["target_id"])
+                    if values.get("target_id") is not None
+                    else (Report.target_name == values["target_name"])
+                    & (Report.room_code == values.get("room_code")),
+                )
+                .limit(1)
+            )
+            if same is not None:
+                old = list(same.context or [])
+                same.context = [*old, *(c for c in values.get("context", []) if c not in old)][-20:]
+                note = values.get("note", "")
+                if note and note not in same.note:
+                    same.note = f"{same.note} / {note}".strip(" /")[:500]
+                if values.get("room_code") and not same.room_code:
+                    same.room_code = values["room_code"]
+                await session.commit()
+                return False
+            session.add(Report(**values))
+            await session.commit()
+            return True
+
+    async def reports_today(self, reporter_id: int) -> int:
+        since = datetime.now(UTC) - timedelta(days=1)
+        async with self.sessions() as session:
+            n = await session.scalar(
+                select(func.count()).where(Report.reporter_id == reporter_id, Report.created_at >= since)
+            )
+            return int(n or 0)
+
+    async def club_reports(self, club_id: int) -> list[Report]:
+        """Open reports first, then the most recent handled ones."""
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(Report)
+                .where(Report.club_id == club_id)
+                .order_by((Report.status == "open").desc(), Report.created_at.desc())
+                .limit(60)
+            )
+            return list(rows.scalars().all())
+
+    async def open_reports(self, club_id: int) -> int:
+        async with self.sessions() as session:
+            n = await session.scalar(
+                select(func.count()).where(Report.club_id == club_id, Report.status == "open")
+            )
+            return int(n or 0)
+
+    async def report(self, report_id: int) -> Report | None:
+        async with self.sessions() as session:
+            return await session.get(Report, report_id)
+
+    async def close_report(self, report_id: int, status: str, by: int) -> None:
+        async with self.sessions() as session:
+            await session.execute(
+                update(Report)
+                .where(Report.id == report_id)
+                .values(status=status, handled_by=by, handled_at=datetime.now(UTC))
+            )
+            await session.commit()
+
+    async def log_action(
+        self, club_id: int | None, actor: Any, target_name: str, action: str, note: str
+    ) -> None:
+        async with self.sessions() as session:
+            session.add(
+                ModAction(
+                    club_id=club_id,
+                    actor_id=actor.id,
+                    actor_name=actor.username,
+                    target_name=target_name[:40],
+                    action=action,
+                    note=note[:200],
+                )
+            )
+            await session.commit()
+
+    async def club_actions(self, club_id: int, limit: int = 30) -> list[ModAction]:
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(ModAction)
+                .where(ModAction.club_id == club_id)
+                .order_by(ModAction.created_at.desc(), ModAction.id.desc())
+                .limit(limit)
+            )
+            return list(rows.scalars().all())
+
+    async def mute_member(self, club_id: int, user_id: int, until: datetime | None) -> None:
+        async with self.sessions() as session:
+            await session.execute(
+                update(Membership)
+                .where(Membership.club_id == club_id, Membership.user_id == user_id)
+                .values(muted_until=until)
+            )
+            await session.commit()
+
+    async def club_mutes(self, club_id: int) -> dict[int, datetime]:
+        """Members muted right now: account -> until when."""
+        now = datetime.now(UTC)
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(Membership.user_id, Membership.muted_until).where(
+                    Membership.club_id == club_id, Membership.muted_until.is_not(None)
+                )
+            )
+            return {int(u): aware(t) for u, t in rows.all() if t is not None and aware(t) > now}
+
+    async def export(self, user_id: int) -> dict[str, Any]:
+        """Everything kept about one account, for the person to download (the right of access)."""
+        async with self.sessions() as session:
+            user = await session.get(User, user_id)
+            if user is None:
+                return {}
+            results = (await session.execute(select(Result).where(Result.user_id == user_id))).scalars().all()
+            clubs = await session.execute(
+                select(Club.name, Membership.role, Membership.joined_at)
+                .join(Membership, Membership.club_id == Club.id)
+                .where(Membership.user_id == user_id)
+            )
+            notes = (
+                (await session.execute(select(Notification).where(Notification.user_id == user_id)))
+                .scalars()
+                .all()
+            )
+            prefs = await session.get(UserPrefs, user_id)
+        friends = await self.friends(user_id)
+        return {
+            "account": {
+                "username": user.username,
+                "email": user.email,
+                "email_verified": bool(user.email_verified),
+                "coins": user.coins,
+                "powerups": dict(user.powerups or {}),
+                "created_at": aware(user.created_at).isoformat(),
+            },
+            "games": [
+                {
+                    "game": r.game_id,
+                    "season": r.season,
+                    "place": r.place,
+                    "players": r.players,
+                    "points": r.points,
+                    "coins": r.coins,
+                    "played_at": aware(r.played_at).isoformat(),
+                }
+                for r in results
+            ],
+            "clubs": [
+                {"club": n, "role": role, "joined_at": aware(at).isoformat()} for n, role, at in clubs.all()
+            ],
+            "friends": {k: [name for _, name in v] for k, v in friends.items()},
+            "blocked": [name for name, _ in await self.blocked_by_me(user_id)],
+            "notifications": [
+                {"title": n.title, "body": n.body, "at": aware(n.created_at).isoformat()} for n in notes
+            ],
+            "settings": dict(prefs.data or {}) if prefs else {},
+        }
 
     # -- notifications (notify.py) ----------------------------------------------------------------------
     async def prefs(self, user_id: int) -> dict[str, Any]:

@@ -271,6 +271,7 @@ class ClubDetail(Strict):
     invites: list[InviteInfo]  # live invite links: moderators and up only, else empty
     up: ClubUp
     muted: bool  # you turned off "a club game is filling up" for this club
+    open_reports: int  # reports waiting for the moderators (0 unless you're one)
 
 
 class InboxItem(Strict):
@@ -300,6 +301,57 @@ class NotifyPrefs(Strict):
     quiet: QuietHours | None
     kinds: list[KindInfo]
     devices: int  # browsers subscribed to pushes
+
+
+class BlockedPerson(Strict):
+    username: str
+    since: str  # ISO 8601
+
+
+class BlockList(Strict):
+    people: list[BlockedPerson]
+
+
+class ChatLine(Strict):
+    name: str
+    text: str
+
+
+class ReportRow(Strict):
+    id: int
+    target: str  # the name they went by
+    member: bool  # still in the club
+    reason: str
+    note: str
+    context: list[ChatLine]  # their last chat lines in the room, taken by the server
+    room: str | None
+    status: Literal["open", "dismissed", "actioned", "escalated"]
+    at: str
+    can_act: bool  # you may mute, remove or ban them (they're below your role)
+
+
+class MutedRow(Strict):
+    username: str
+    until: str
+
+
+class ActionRow(Strict):
+    actor: str
+    target: str
+    action: str
+    note: str
+    at: str
+
+
+class ClubReports(Strict):
+    reports: list[ReportRow]
+    muted: list[MutedRow]
+    actions: list[ActionRow]  # the audit log, newest first
+    reasons: dict[str, str]  # id -> label, for the report form
+
+
+class SiteInfo(Strict):
+    privacy_contact: str | None
 
 
 class Invitee(Strict):

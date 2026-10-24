@@ -26,6 +26,8 @@ from .models import (
     clean_chat,
 )
 
+MOD_MUTED = "A club moderator has muted you for now"
+
 
 class SocialMixin:
     def _drop_from_call(self, room: Room, pid: str) -> None:
@@ -95,6 +97,9 @@ class SocialMixin:
             raise HubError("bad_message", "Unknown chat channel")
         if not room.club_chat:
             raise HubError("muted", CLUB_CHAT_OFF)
+        until = room.club_muted.get(room.accounts.get(pid, -1), 0.0)
+        if until > self.wall():
+            raise HubError("muted", MOD_MUTED)
         text = clean_chat(msg.get("text"))
         game = self._chat_game(room)
         seated = pid in room.players
@@ -140,7 +145,15 @@ class SocialMixin:
         playing = game is not None and pid in room.players and pid in game.round_scores
         channel = game.chat_team(pid) if game is not None and playing else None
         mine = channel[0] if channel else None
-        shown = [m for m in room.chat if m["team"] is None or (mine is not None and m["team"] == mine)]
+        modded = room.club_muted.get(room.accounts.get(pid, -1), 0.0) > self.wall()
+        # Nothing from (or to) people this account has blocked, or who blocked it.
+        hidden = room.hidden.get(room.accounts.get(pid, -1), set())
+        shown = [
+            m
+            for m in room.chat
+            if (m["team"] is None or (mine is not None and m["team"] == mine))
+            and room.accounts.get(m["by"], -1) not in hidden
+        ]
         return {
             "messages": [
                 {
@@ -153,9 +166,13 @@ class SocialMixin:
                 for m in shown[-CHAT_SHOWN * 2 :]
             ],
             "team": channel[1] if channel else None,
-            "muted": not room.club_chat or bool(game is not None and playing and game.chat_muted(pid)),
+            "muted": not room.club_chat
+            or modded
+            or bool(game is not None and playing and game.chat_muted(pid)),
             "muted_note": CLUB_CHAT_OFF
             if not room.club_chat
+            else MOD_MUTED
+            if modded
             else (game.CHAT_MUTED_NOTE if game is not None else ""),
             "can_send": pid not in room.viewers,
         }

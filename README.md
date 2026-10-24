@@ -85,6 +85,9 @@ original has them.
   the club hears about it and the first one in opens the room. Friends and clubmates see who's online.
 - **Inbox and push:** an inbox for club games and room invites, plus Web Push on phones and desktops,
   with quiet hours, per-type switches, a daily cap and grouping. No push SDK and no third-party service.
+- **Safety:** block (silent), report from a club or a room (the server attaches what was said), a
+  moderators' queue per club with mute, remove, ban and escalate, an audit log, a privacy notice, and a
+  download of your data.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced

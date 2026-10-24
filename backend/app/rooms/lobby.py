@@ -45,12 +45,14 @@ class LobbyMixin:
         circle: dict[str, Any] | None = None,
         club_id: int | None = None,
         club_rules: dict[str, Any] | None = None,
+        club_muted: dict[int, float] | None = None,
     ) -> tuple[Room, Player, str]:
         self.cleanup()
         if len(self.rooms) >= self.settings.max_rooms:
             raise HubError("busy", "The party house is full right now. Try again soon.", 503)
         name = clean_name(name)
         room = Room(code=self._new_code(), created=self.clock(), last_active=self.clock(), club_id=club_id)
+        room.club_muted = dict(club_muted or {})
         if club_rules:
             room.club_games, room.club_chat = list(club_rules["games"]), bool(club_rules["chat"])
         player = Player(id=secrets.token_urlsafe(6), name=name, connected=False)
@@ -189,6 +191,45 @@ class LobbyMixin:
         if room is None or user_id not in {uid for pid, uid in room.accounts.items() if pid in room.players}:
             return None
         return room
+
+    # -- safety ------------------------------------------------------------------------------------------
+    def host_account(self, code: str) -> int | None:
+        room = self.get(code.upper() if isinstance(code, str) else code)
+        return room.accounts.get(room.host_id) if room is not None else None
+
+    def set_hidden(self, user_id: int, others: set[int]) -> None:
+        """Who this account must not hear from (and who must not hear from it), in every room it's in."""
+        for room in self.rooms.values():
+            seated = set(room.accounts.values())
+            if user_id in seated:
+                room.hidden[user_id] = set(others)
+            for uid in seated - {user_id}:  # the other side of each block, for people already here
+                if uid in others:
+                    room.hidden.setdefault(uid, set()).add(user_id)
+                else:
+                    room.hidden.get(uid, set()).discard(user_id)
+
+    def club_mute(self, club_id: int, user_id: int, until: float | None) -> None:
+        """A moderator's mute (or its end) reaches the club's live rooms at once."""
+        for room in self.rooms.values():
+            if room.club_id == club_id:
+                if until is None:
+                    room.club_muted.pop(user_id, None)
+                else:
+                    room.club_muted[user_id] = until
+
+    def seat_of(self, code: str, pid: str) -> tuple[Room, str, int | None] | None:
+        """(room, the name they go by, their account if any) for a player or audience seat."""
+        room = self.get(code.upper() if isinstance(code, str) else code)
+        if room is None:
+            return None
+        who = room.players.get(pid) or room.audience.get(pid)
+        return (room, who.name, room.accounts.get(pid)) if who is not None else None
+
+    def said(self, room: Room, pid: str, limit: int = 10) -> list[dict[str, str]]:
+        """Their last chat lines in this room: the context a report carries (taken here, never from the
+        reporter)."""
+        return [{"name": m["name"], "text": m["text"]} for m in room.chat if m["by"] == pid][-limit:]
 
     def link_account(self, room: Room, pid: str, user_id: int) -> None:
         """A guest who signed in after sitting down: their seat now belongs to their account."""

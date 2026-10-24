@@ -114,7 +114,29 @@ def test_every_route_matches_its_declared_model(client):
     invite = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={"uses": 5})
     spare = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={})
     c.call("POST", f"/api/clubs/{slug}/invites/{spare['id']}/revoke", club + "/invites/{invite_id}/revoke")
-    room_code = c.call("POST", f"/api/clubs/{slug}/rooms", club + "/rooms", json={"name": "Ana"})["code"]
+    seat = c.call("POST", f"/api/clubs/{slug}/rooms", club + "/rooms", json={"name": "Ana"})
+    room_code = seat["code"]
+    me_in_room = {"player_id": seat["player_id"]}
+    c.call(
+        "POST",
+        f"/api/rooms/{room_code}/report",
+        "/api/rooms/{code}/report",
+        json={**me_in_room, "reason": "spam"},
+    )
+    c.call(
+        "POST", f"/api/rooms/{room_code}/block", "/api/rooms/{code}/block", json=me_in_room
+    )  # yourself: error
+    c.call("POST", "/api/reports", json={"username": "Bo_42", "reason": "spam"})
+    c.call("GET", f"/api/clubs/{slug}/reports", club + "/reports")
+    c.call(
+        "POST", f"/api/clubs/{slug}/reports/999", club + "/reports/{report_id}", json={"action": "dismiss"}
+    )
+    c.call("POST", f"/api/clubs/{slug}/unmute", club + "/unmute", json={"username": "Bo_42"})
+    c.call("POST", "/api/blocks", json={"username": "Bo_42"})
+    c.call("GET", "/api/blocks")
+    c.call("POST", "/api/blocks/remove", json={"username": "Bo_42"})
+    c.call("GET", "/api/me/export")
+    c.call("GET", "/api/site")
     c.call("GET", f"/api/rooms/{room_code}/invitees", "/api/rooms/{code}/invitees")
     c.call("POST", f"/api/rooms/{room_code}/invite", "/api/rooms/{code}/invite", json={"username": "Bo_42"})
     c.call("POST", f"/api/clubs/{slug}/up", club + "/up", json={"game": "trivia", "minutes": 30})

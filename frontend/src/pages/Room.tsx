@@ -9,6 +9,7 @@ import { ChatDock, ChatTicker } from "../components/chat";
 import { ApiError, audienceSeat, clearSession, joinRoom, loadSession, tvSeat } from "../lib/api";
 import { useRoom } from "../lib/useRoom";
 import { InviteFriends } from "../components/invite";
+import { ReportInRoom } from "../components/report";
 import { Btn, Card, Contestants, CopyButton, ErrorBanner, FlapCode } from "../components/ui";
 import {
   CrowdPanel,
@@ -626,6 +627,7 @@ function RoomSign({ state }: { state: RoomState }) {
       </div>
       {state.room.theme && <p className="chip space-top">Show pack: {state.themes[state.room.theme]}</p>}
       {state.role === "player" && <InviteFriends code={state.room.code} />}
+      {state.role === "player" && <ReportInRoom code={state.room.code} players={state.players} you={state.you} />}
     </Card>
   );
 }

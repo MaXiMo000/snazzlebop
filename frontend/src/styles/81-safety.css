@@ -1,0 +1,169 @@
+/* ---- safety: reports, the moderators' queue, privacy and data pages, the site footer -------------- */
+
+/* Reading pages (privacy notice, safety and data) */
+.prose-page {
+  max-width: 46rem;
+  width: 100%;
+  margin-inline: auto;
+}
+.prose-title {
+  font-size: clamp(1.3rem, 5vw, 1.8rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.prose-page h2 {
+  margin: 0 0 8px;
+  font-size: clamp(1.05rem, 4vw, 1.3rem);
+}
+.prose-page p:not(.space-top) {
+  margin: 0;
+  text-wrap: pretty;
+}
+.prose-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.2em;
+  text-wrap: pretty;
+}
+.prose-contact {
+  overflow-wrap: anywhere;
+}
+.prose-page a:not(.btn) {
+  color: var(--ink);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+/* The footer under every page except rooms */
+.site-footer {
+  margin: 28px auto 0;
+  padding: 12px var(--gutter, 16px) calc(16px + env(safe-area-inset-bottom, 0px));
+}
+.site-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 18px;
+}
+.site-footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--muted);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+.site-footer a:hover {
+  color: var(--ink);
+}
+
+/* Reporting someone */
+.report-reasons {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.report-reason input {
+  accent-color: var(--cherry);
+}
+.report-note {
+  width: 100%;
+  min-height: 88px;
+  padding: 10px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--field);
+  border: var(--line);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+.club-report {
+  padding: 4px 4px 14px;
+}
+.room-report {
+  text-align: left;
+}
+
+/* The moderators' entry on the club page */
+.club-mod-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 16px;
+  border: var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: var(--lift-sm);
+}
+.club-mod-link.waiting {
+  border-color: var(--cherry);
+  box-shadow: inset 6px 0 0 var(--cherry), var(--lift-sm);
+}
+.club-mod-link:hover b {
+  text-decoration: underline;
+}
+
+/* The report queue */
+.report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.report-head h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.report-quote {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-left: 4px solid var(--edge);
+  background: var(--field);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  overflow-wrap: anywhere;
+}
+.report-context {
+  margin-top: 12px;
+}
+.report-context ul {
+  margin: 0;
+  padding: 10px 14px;
+  list-style: none;
+  border: 2px dashed var(--edge);
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+.report-context li + li {
+  margin-top: 4px;
+}
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.report-actions p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.report-log {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+.no-break {
+  white-space: nowrap;
+}

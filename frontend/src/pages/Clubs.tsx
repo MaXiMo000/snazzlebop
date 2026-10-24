@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Btn, Card, CopyButton } from "../components/ui";
+import { ReportForm } from "../components/report";
 import { UpForGame } from "../components/upgame";
 import { useAccount } from "../lib/account";
 import { ApiError, fetchGames } from "../lib/api";
@@ -27,6 +28,7 @@ import {
   type ClubSummary,
   type NewInvite,
 } from "../lib/clubs";
+import { block, report } from "../lib/safety";
 import { sfx } from "../lib/sfx";
 
 type Go = (path: string) => void;
@@ -346,6 +348,22 @@ export function ClubHome({ slug, go }: { slug: string; go: Go }) {
           </span>
         </p>
       </Card>
+      {mayInvite(c.role) && (
+        <a
+          className={`club-mod-link ${c.open_reports ? "waiting" : ""}`}
+          href={`/clubs/${c.slug}/reports`}
+          onClick={(e) => {
+            e.preventDefault();
+            go(`/clubs/${c.slug}/reports`);
+          }}
+        >
+          <span aria-hidden="true">🛡️</span>
+          <span>
+            <b>Reports</b>
+            <span className="muted"> · {c.open_reports ? `${c.open_reports} waiting` : "nothing waiting"}</span>
+          </span>
+        </a>
+      )}
       <UpForGame c={c} go={go} name={user.username} update={setC} />
       <PlayNow c={c} go={go} name={user.username} />
       {mayInvite(c.role) && <Invites c={c} refresh={refresh} />}
@@ -550,6 +568,8 @@ function Members({
   refresh: () => Promise<void>;
 }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [reporting, setReporting] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const { busy, error, run } = useAction();
   const act = (fn: () => Promise<unknown>) =>
     void run(async () => {
@@ -568,7 +588,7 @@ function Members({
             : rolesYouCanGive(c.role, m.role).filter((r) => r !== m.role);
           const remove = !you && mayRemove(c.role, m.role);
           const handover = !you && c.role === "owner";
-          const manage = give.length > 0 || remove || handover;
+          const powers = give.length > 0 || remove || handover;
           return (
             <li key={m.username}>
               <div className="club-member">
@@ -588,16 +608,19 @@ function Members({
                     )}
                   </span>
                 </span>
-                {manage && (
+                {!you && (
                   <Btn
                     size="small"
                     variant="ghost"
                     aria-expanded={open === m.username}
-                    onClick={() =>
-                      setOpen(open === m.username ? null : m.username)
-                    }
+                    onClick={() => {
+                      setOpen(open === m.username ? null : m.username);
+                      setReporting(null);
+                      setNotice(null);
+                    }}
                   >
-                    Manage
+                    {powers ? "Manage" : "More"}
+                    <span className="sr-only"> {m.username}</span>
                   </Btn>
                 )}
               </div>
@@ -657,12 +680,61 @@ function Members({
                       </Btn>
                     </>
                   )}
+                  <Btn
+                    size="small"
+                    variant="ghost"
+                    aria-expanded={reporting === m.username}
+                    onClick={() => setReporting(reporting === m.username ? null : m.username)}
+                  >
+                    Report
+                  </Btn>
+                  <Btn
+                    size="small"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      window.confirm(
+                        `Block ${m.username}? They won't be told. You'll stop seeing each other's chat, and they can't invite you or join your rooms.`,
+                      ) &&
+                      void run(async () => {
+                        await block(m.username);
+                        setOpen(null);
+                        setNotice(`Blocked ${m.username}. Undo it any time on the Safety and data page.`);
+                        await refresh();
+                      })
+                    }
+                  >
+                    Block
+                  </Btn>
+                </div>
+              )}
+              {open === m.username && reporting === m.username && (
+                <div className="club-report">
+                  <ReportForm
+                    who={m.username}
+                    canBlock
+                    send={async (reason, note, alsoBlock) => {
+                      await report(m.username, reason, note, c.slug);
+                      if (alsoBlock) await block(m.username);
+                    }}
+                    done={(text) => {
+                      setOpen(null);
+                      setReporting(null);
+                      setNotice(text);
+                      void refresh();
+                    }}
+                  />
                 </div>
               )}
             </li>
           );
         })}
       </ul>
+      {notice && (
+        <p className="alert calm space-top" role="status">
+          {notice}
+        </p>
+      )}
       <Alert text={error} />
     </Card>
   );

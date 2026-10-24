@@ -58,6 +58,9 @@ services:
         sync: false
       - key: PUBLIC_URL
         sync: false
+      # Where privacy requests go, shown on the privacy notice.
+      - key: PRIVACY_CONTACT
+        sync: false
       # The jump-scare prank: only the names in JUMPSCARE_NAMES (comma list, dashboard only) are
       # pranked; with none set nobody is. JUMPSCARE=false turns it off entirely.
       - key: JUMPSCARE

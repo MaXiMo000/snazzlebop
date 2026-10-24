@@ -209,7 +209,5 @@ class ClubStore:
 
     async def delete(self, club_id: int) -> None:
         async with self.db.sessions() as s:
-            await s.execute(delete(ClubInvite).where(ClubInvite.club_id == club_id))
-            await s.execute(delete(Membership).where(Membership.club_id == club_id))
-            await s.execute(delete(Club).where(Club.id == club_id))
+            await Database.drop_club(s, club_id)
             await s.commit()
