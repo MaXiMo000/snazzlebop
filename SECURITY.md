@@ -35,6 +35,8 @@ Only the latest version on `main` (the live deployment) is supported.
 - **Staff access.** The staff console exists only for usernames listed in a server secret, and only
   while that account's authenticator app is on; to anyone else it answers "not found". Suspensions end
   every session at once, and a suspended account learns of it only after entering the right password.
+- **Places.** A college or work address is used only to send a one-time code (15 minutes, 5 tries)
+  and is never stored; a keyed hash makes one address verify one account per place.
 - **Integrations.** Report events leave only through an operator-configured webhook, signed with
   HMAC-SHA256 and a timestamp, and carry pseudonymous ids instead of accounts or emails. The
   integration API is off unless a 32+ character token is set and compares it in constant time; it

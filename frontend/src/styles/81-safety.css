@@ -248,3 +248,30 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Places: badges, the place a club is for, staff lists */
+.place-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.place-domains {
+  overflow-wrap: anywhere;
+}
+.place-kinds {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.member-places {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.chip.place-badge {
+  font-size: 0.75rem;
+}
+.club-place {
+  font-weight: 700;
+  text-wrap: balance;
+}

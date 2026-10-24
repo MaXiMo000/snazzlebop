@@ -23,6 +23,7 @@ from .accounts import USERNAME_RE, check_same_origin, session_user
 from .config import Settings
 from .db import aware
 from .outbox import Outbox
+from .places import KINDS, clean_domain, slug_for
 from .rooms import HubError
 from .safety import case_view, history
 
@@ -36,6 +37,19 @@ class StaffActBody(BaseModel):
     action: str = Field(max_length=12)  # dismiss | suspend | return
     days: int | None = None  # for suspend: 1, 7, 30, or 0 for good
     reason: str = Field(default="", max_length=200)
+
+
+class PlaceBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    slug: str | None = Field(default=None, max_length=48)  # an existing place to change; none: a new one
+    name: str = Field(min_length=2, max_length=80)
+    kind: str = Field(max_length=10)
+    domains: list[str] = Field(min_length=1, max_length=20)
+
+
+class DomainBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    domain: str = Field(max_length=120)
 
 
 class UsernameBody(BaseModel):
@@ -175,5 +189,53 @@ def router(settings: Settings, db: Any, outbox: Outbox) -> APIRouter:
         await db.suspend(target.id, None, "")
         await db.log_action(None, user, target.username, "unsuspend", "")
         return JSONResponse({"ok": True})
+
+    # -- places: the colleges and companies people can verify ------------------------------------------
+    async def places_view() -> dict[str, Any]:
+        return {
+            "places": [
+                {"slug": p.slug, "name": p.name, "kind": p.kind, "domains": domains, "members": members}
+                for p, domains, members in await db.places()
+            ],
+            "requests": [
+                {"domain": r.domain, "count": r.count, "last_at": aware(r.last_at).isoformat()}
+                for r in await db.place_requests()
+            ],
+        }
+
+    @api.get("/api/staff/places", response_model=schemas.StaffPlaces, responses=E)
+    async def list_places(request: Request) -> JSONResponse:
+        await staff_user(request)
+        return JSONResponse(await places_view(), headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/staff/places", response_model=schemas.StaffPlaces, responses=E)
+    async def save_place(body: PlaceBody, request: Request) -> JSONResponse:
+        """Add a place, or change one (its name, kind and the full list of its domains)."""
+        check_same_origin(request, settings)
+        user = await staff_user(request)
+        if body.kind not in KINDS:
+            raise HubError("bad_input", "A place is a college or a company")
+        name = " ".join(body.name.split())
+        try:
+            domains = sorted({clean_domain(d) for d in body.domains})
+        except ValueError as exc:
+            raise HubError("bad_input", str(exc)) from None
+        if body.slug is not None and await db.place_by_slug(body.slug) is None:
+            raise HubError("no_place", "That place doesn't exist", 404)
+        slug = body.slug or slug_for(name)
+        if body.slug is None and await db.place_by_slug(slug) is not None:
+            raise HubError("place_exists", "A place with that name already exists: change it instead", 409)
+        taken = await db.save_place(slug, name, body.kind, domains)
+        if taken is not None:
+            raise HubError("domain_taken", f"{taken} already belongs to another place", 409)
+        await db.log_action(None, user, name, "place", ", ".join(domains))
+        return JSONResponse(await places_view())
+
+    @api.post("/api/staff/places/requests/decline", response_model=schemas.StaffPlaces, responses=E)
+    async def decline(body: DomainBody, request: Request) -> JSONResponse:
+        check_same_origin(request, settings)
+        await staff_user(request)
+        await db.decline_place_request(body.domain.strip().lower())
+        return JSONResponse(await places_view())
 
     return api

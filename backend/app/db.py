@@ -258,6 +258,65 @@ class ModAction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
+class Place(Base):
+    """A college or company people can prove they belong to (places.py)."""
+
+    __tablename__ = "places"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(48), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    kind: Mapped[str] = mapped_column(String(10))  # "college" | "company"
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class PlaceDomain(Base):
+    """An email domain that proves membership of a place ("iitd.ac.in"; subdomains count too)."""
+
+    __tablename__ = "place_domains"
+
+    domain: Mapped[str] = mapped_column(String(120), primary_key=True)
+    place_id: Mapped[int] = mapped_column(ForeignKey("places.id", ondelete="CASCADE"), index=True)
+
+
+class UserPlace(Base):
+    """An account verified at a place. Lapses after a year (then shown as alumni) until verified again.
+    `email_hash` is a keyed hash of the address used, never the address: one address, one account."""
+
+    __tablename__ = "user_places"
+    __table_args__ = (UniqueConstraint("place_id", "email_hash"),)
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    place_id: Mapped[int] = mapped_column(ForeignKey("places.id", ondelete="CASCADE"), primary_key=True)
+    email_hash: Mapped[str] = mapped_column(String(64))
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PlaceCode(Base):
+    """A pending verification: the code emailed to a college or work address (hashed), a few tries."""
+
+    __tablename__ = "place_codes"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    place_id: Mapped[int] = mapped_column(ForeignKey("places.id", ondelete="CASCADE"))
+    email_hash: Mapped[str] = mapped_column(String(64))
+    code_hash: Mapped[str] = mapped_column(String(64))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PlaceRequest(Base):
+    """A domain people tried that no place has yet: staff decide whether to add it."""
+
+    __tablename__ = "place_requests"
+
+    domain: Mapped[str] = mapped_column(String(120), primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, default=1)
+    last_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    status: Mapped[str] = mapped_column(String(10), default="open")  # open | added | declined
+
+
 class KnownDevice(Base):
     """Browsers an account has signed in from (a hash of a random cookie), to email about new ones."""
 
@@ -688,6 +747,8 @@ class Database:
             await session.execute(delete(Notification).where(Notification.user_id == user_id))
             await session.execute(delete(PushSub).where(PushSub.user_id == user_id))
             await session.execute(delete(UserPrefs).where(UserPrefs.user_id == user_id))
+            await session.execute(delete(UserPlace).where(UserPlace.user_id == user_id))
+            await session.execute(delete(PlaceCode).where(PlaceCode.user_id == user_id))
             await session.execute(
                 delete(Block).where(or_(Block.user_id == user_id, Block.blocked_id == user_id))
             )
@@ -1174,6 +1235,188 @@ class Database:
             ],
             "settings": dict(prefs.data or {}) if prefs else {},
         }
+
+    # -- places (places.py) -----------------------------------------------------------------------------
+    async def place_for_domain(self, domain: str) -> Place | None:
+        """The place an email domain belongs to: the domain itself or any parent ("cs.iitd.ac.in" ->
+        "iitd.ac.in"), most specific first."""
+        parts = domain.split(".")
+        candidates = [".".join(parts[i:]) for i in range(len(parts) - 1)]
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(PlaceDomain.domain, Place)
+                .join(Place, Place.id == PlaceDomain.place_id)
+                .where(PlaceDomain.domain.in_(candidates))
+            )
+            found = {d: place for d, place in rows.all()}
+        return next((found[c] for c in candidates if c in found), None)
+
+    async def note_place_request(self, domain: str) -> None:
+        async with self.sessions() as session:
+            row = await session.get(PlaceRequest, domain)
+            if row is None:
+                session.add(PlaceRequest(domain=domain))
+            elif row.status == "open":
+                row.count += 1
+                row.last_at = datetime.now(UTC)
+            await session.commit()
+
+    async def place_email_owner(self, place_id: int, email_hash: str) -> int | None:
+        async with self.sessions() as session:
+            return await session.scalar(
+                select(UserPlace.user_id).where(
+                    UserPlace.place_id == place_id, UserPlace.email_hash == email_hash
+                )
+            )
+
+    async def start_place_code(
+        self, user_id: int, place_id: int, email_hash: str, code_hash: str, ttl: float
+    ) -> None:
+        async with self.sessions() as session:
+            await session.execute(delete(PlaceCode).where(PlaceCode.user_id == user_id))
+            session.add(
+                PlaceCode(
+                    user_id=user_id,
+                    place_id=place_id,
+                    email_hash=email_hash,
+                    code_hash=code_hash,
+                    expires_at=datetime.now(UTC) + timedelta(seconds=ttl),
+                )
+            )
+            await session.commit()
+
+    async def place_code(self, user_id: int) -> PlaceCode | None:
+        async with self.sessions() as session:
+            return await session.get(PlaceCode, user_id)
+
+    async def place_code_failed(self, user_id: int) -> None:
+        async with self.sessions() as session:
+            await session.execute(
+                update(PlaceCode).where(PlaceCode.user_id == user_id).values(attempts=PlaceCode.attempts + 1)
+            )
+            await session.commit()
+
+    async def verify_place(self, user_id: int, place_id: int, email_hash: str, days: int) -> bool:
+        """Record the verification (or renew it). False if that address now proves another account."""
+        now = datetime.now(UTC)
+        async with self.sessions() as session:
+            other = await session.scalar(
+                select(UserPlace.user_id).where(
+                    UserPlace.place_id == place_id,
+                    UserPlace.email_hash == email_hash,
+                    UserPlace.user_id != user_id,
+                )
+            )
+            await session.execute(delete(PlaceCode).where(PlaceCode.user_id == user_id))
+            if other is not None:
+                await session.commit()
+                return False
+            row = await session.get(UserPlace, (user_id, place_id))
+            if row is None:
+                session.add(
+                    UserPlace(
+                        user_id=user_id,
+                        place_id=place_id,
+                        email_hash=email_hash,
+                        verified_at=now,
+                        expires_at=now + timedelta(days=days),
+                    )
+                )
+            else:
+                row.email_hash, row.verified_at, row.expires_at = email_hash, now, now + timedelta(days=days)
+            await session.commit()
+            return True
+
+    async def user_places(self, user_ids: list[int]) -> dict[int, list[tuple[Place, datetime, datetime]]]:
+        """account -> [(place, verified at, expires at)] for these accounts."""
+        if not user_ids:
+            return {}
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(UserPlace.user_id, Place, UserPlace.verified_at, UserPlace.expires_at)
+                .join(Place, Place.id == UserPlace.place_id)
+                .where(UserPlace.user_id.in_(user_ids))
+                .order_by(Place.name)
+            )
+            out: dict[int, list[tuple[Place, datetime, datetime]]] = {}
+            for uid, place, at, until in rows.all():
+                out.setdefault(int(uid), []).append((place, aware(at), aware(until)))
+            return out
+
+    async def remove_user_place(self, user_id: int, place_id: int) -> None:
+        async with self.sessions() as session:
+            await session.execute(
+                delete(UserPlace).where(UserPlace.user_id == user_id, UserPlace.place_id == place_id)
+            )
+            await session.commit()
+
+    async def place_by_slug(self, slug: str) -> Place | None:
+        async with self.sessions() as session:
+            return await session.scalar(select(Place).where(Place.slug == slug))
+
+    async def places(self) -> list[tuple[Place, list[str], int]]:
+        """Every place with its domains and how many accounts are verified there now."""
+        now = datetime.now(UTC)
+        async with self.sessions() as session:
+            places = (await session.execute(select(Place).order_by(Place.name))).scalars().all()
+            domains = await session.execute(
+                select(PlaceDomain.place_id, PlaceDomain.domain).order_by(PlaceDomain.domain)
+            )
+            counts = await session.execute(
+                select(UserPlace.place_id, func.count())
+                .where(UserPlace.expires_at > now)
+                .group_by(UserPlace.place_id)
+            )
+        by_place: dict[int, list[str]] = {}
+        for pid, domain in domains.all():
+            by_place.setdefault(int(pid), []).append(str(domain))
+        members = {int(pid): int(n) for pid, n in counts.all()}
+        return [(p, by_place.get(p.id, []), members.get(p.id, 0)) for p in places]
+
+    async def save_place(self, slug: str, name: str, kind: str, domains: list[str]) -> str | None:
+        """Create or update a place and its domains. Returns a domain already used by another place
+        (nothing is saved then), else None."""
+        async with self.sessions() as session:
+            place = await session.scalar(select(Place).where(Place.slug == slug))
+            if place is None:
+                place = Place(slug=slug, name=name, kind=kind)
+                session.add(place)
+                await session.flush()
+            else:
+                place.name, place.kind = name, kind
+            taken = await session.scalar(
+                select(PlaceDomain.domain).where(
+                    PlaceDomain.domain.in_(domains), PlaceDomain.place_id != place.id
+                )
+            )
+            if taken is not None:
+                await session.rollback()
+                return str(taken)
+            await session.execute(delete(PlaceDomain).where(PlaceDomain.place_id == place.id))
+            for domain in domains:
+                session.add(PlaceDomain(domain=domain, place_id=place.id))
+            await session.execute(
+                update(PlaceRequest).where(PlaceRequest.domain.in_(domains)).values(status="added")
+            )
+            await session.commit()
+            return None
+
+    async def place_requests(self) -> list[PlaceRequest]:
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(PlaceRequest)
+                .where(PlaceRequest.status == "open")
+                .order_by(PlaceRequest.count.desc(), PlaceRequest.last_at.desc())
+                .limit(100)
+            )
+            return list(rows.scalars().all())
+
+    async def decline_place_request(self, domain: str) -> None:
+        async with self.sessions() as session:
+            await session.execute(
+                update(PlaceRequest).where(PlaceRequest.domain == domain).values(status="declined")
+            )
+            await session.commit()
 
     # -- notifications (notify.py) ----------------------------------------------------------------------
     async def prefs(self, user_id: int) -> dict[str, Any]:

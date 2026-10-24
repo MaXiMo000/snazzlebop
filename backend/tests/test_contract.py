@@ -188,6 +188,18 @@ def test_every_route_matches_its_declared_model(client):
     c.call("GET", "/api/staff/reports")  # staff, with the authenticator on
     c.call("POST", "/api/staff/reports/999", "/api/staff/reports/{report_id}", json={"action": "dismiss"})
     c.call("POST", "/api/staff/unsuspend", json={"username": "Bo_42"})
+    c.call("GET", "/api/staff/places")
+    place = {"name": "Test University", "kind": "college", "domains": ["testu.edu"]}
+    slug = c.call("POST", "/api/staff/places", json=place)["places"][0]["slug"]
+    c.call("POST", "/api/staff/places/requests/decline", json={"domain": "other.org"})
+    c.call("GET", "/api/places")
+    c.call("GET", "/api/me/places")
+    c.call("POST", "/api/me/places/start", json={"email": "ana@testu.edu"})
+    mailer = client.app.state.mailer
+    client.portal.call(mailer.drain)
+    code = re.search(r"\b(\d{6})\b", mailer.sent[-1][1].text).group(1)
+    c.call("POST", "/api/me/places/confirm", json={"code": code})
+    c.call("POST", f"/api/me/places/{slug}/remove", "/api/me/places/{slug}/remove")
     c.call("POST", "/api/me/mfa/backup-codes", json={"code": backup[0]})
     c.call("POST", "/api/me/mfa/disable", json={"password": PW, "code": "nope"})  # error body
     fresh = mfa.totp_at(setup["secret"], int(time.time()) // mfa.TOTP_STEP + 1)  # the next step's code

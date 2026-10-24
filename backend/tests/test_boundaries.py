@@ -53,6 +53,7 @@ EDGES = {
     "app.safety",
     "app.integrations",
     "app.staff",
+    "app.places",
     "app.ws",
     "app.migrations",
 }  # may use the frameworks

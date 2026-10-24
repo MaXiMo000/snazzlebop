@@ -129,6 +129,16 @@ class ClubStore:
             await s.commit()
             return bool(done.rowcount)
 
+    async def club_for_invite(self, code_hash: str) -> Club | None:
+        """The club a live invite is for (to check its entry rules before spending the invite)."""
+        async with self.db.sessions() as s:
+            invite = (
+                await s.execute(select(ClubInvite).where(ClubInvite.code_hash == code_hash))
+            ).scalar_one_or_none()
+            if invite is None or invite.uses_left <= 0 or aware(invite.expires_at) <= datetime.now(UTC):
+                return None
+            return await s.get(Club, invite.club_id)
+
     async def redeem(self, code_hash: str, user_id: int) -> Club:
         """Join the club an invite is for. The invite row is locked while it's checked and spent."""
         async with self.db.sessions() as s:

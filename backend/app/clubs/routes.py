@@ -8,6 +8,7 @@ others are told (notify.py) and the first to tap through opens the room."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -144,6 +145,12 @@ def router(
         members = await store.members(club.id)
         status = await statuses.of({m.user_id for m in members}, club.id, viewer=user.id)
         muted = club.id in merged(await db.prefs(user.id))["muted_clubs"]
+        now = datetime.now(UTC)
+        badges = {
+            uid: [p.name for p, _, until in rows if until > now]
+            for uid, rows in (await db.user_places([m.user_id for m in members])).items()
+        }
+        place = await required_place(club)
         return {
             "slug": club.slug,
             "name": club.name,
@@ -158,6 +165,7 @@ def router(
                     "joined_at": aware(m.joined_at).isoformat(),
                     "status": status[m.user_id][0],
                     "up_game": status[m.user_id][1],
+                    "places": badges.get(m.user_id, []),
                 }
                 for m in members
             ],
@@ -166,9 +174,31 @@ def router(
             if policy.may_invite(role)
             else [],
             "up": up_view(club, user),
+            "place": {"slug": place.slug, "name": place.name} if place is not None else None,
             "muted": muted,
             "open_reports": await db.open_reports(club.id) if policy.may_invite(role) else 0,
         }
+
+    async def required_place(club: Club) -> Any:
+        slug = policy.clean_rules(club.rules or None)["place"]
+        return await db.place_by_slug(slug) if slug else None
+
+    async def require_place(club: Club, user: Any) -> None:
+        """A club for one place lets in only people verified there now (members already in stay)."""
+        place = await required_place(club)
+        if place is None or await store.membership(club.id, user.id) is not None:
+            return
+        mine = (await db.user_places([user.id])).get(user.id, [])
+        if not any(p.id == place.id and until > datetime.now(UTC) for p, _, until in mine):
+            raise HubError(
+                "place_required",
+                f"This club is for people verified at {place.name}. Verify it on your Places page first",
+                403,
+            )
+
+    async def check_place_rule(rules: dict[str, Any]) -> None:
+        if rules.get("place") and await db.place_by_slug(rules["place"]) is None:
+            raise HubError("bad_input", "Pick a place from the list")
 
     def fail(exc: PolicyError) -> HubError:
         return HubError(exc.code, exc.message, exc.status)
@@ -196,6 +226,7 @@ def router(
         try:
             name, about = policy.clean_name(body.name), policy.clean_about(body.about)
             rules = policy.clean_rules(body.rules)
+            await check_place_rule(rules)
             if await store.count_owned(user.id) >= policy.MAX_OWNED:
                 raise PolicyError("too_many_clubs", f"You can own up to {policy.MAX_OWNED} clubs", 409)
             club = await store.create(user.id, name, about, rules)
@@ -224,6 +255,7 @@ def router(
                 values["about"] = policy.clean_about(body.about)
             if body.rules is not None:
                 values["rules"] = policy.clean_rules(body.rules)
+                await check_place_rule(values["rules"])
         except PolicyError as exc:
             raise fail(exc) from None
         if values:
@@ -269,8 +301,12 @@ def router(
         ):
             raise HubError("rate_limited", "Too many tries. Wait a minute and try again", 429)
         user = await me(request)
+        code_hash = policy.hash_invite(settings.secret_key, body.code)
+        target = await store.club_for_invite(code_hash)
+        if target is not None:
+            await require_place(target, user)
         try:
-            club = await store.redeem(policy.hash_invite(settings.secret_key, body.code), user.id)
+            club = await store.redeem(code_hash, user.id)
         except PolicyError as exc:
             raise fail(exc) from None
         club, role = await club_and_role(club.slug, user)

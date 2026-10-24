@@ -93,7 +93,8 @@ def slug_for(name: str) -> str:
 
 
 _TIME = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
-DEFAULT_RULES: dict[str, Any] = {"games": [], "chat": True, "battles": True, "quiet": None}
+DEFAULT_RULES: dict[str, Any] = {"games": [], "chat": True, "battles": True, "quiet": None, "place": None}
+_PLACE = re.compile(r"^[a-z0-9-]{1,48}$")
 
 
 def clean_rules(raw: Any) -> dict[str, Any]:
@@ -117,7 +118,16 @@ def clean_rules(raw: Any) -> dict[str, Any]:
             raise PolicyError("bad_input", "Quiet hours are two times like 23:00 and 08:00")
         if quiet["from"] == quiet["to"]:
             raise PolicyError("bad_input", "Quiet hours must start and end at different times")
-    return {"games": sorted(set(games)), "chat": rules["chat"], "battles": rules["battles"], "quiet": quiet}
+    place = rules["place"]
+    if place is not None and (not isinstance(place, str) or not _PLACE.fullmatch(place)):
+        raise PolicyError("bad_input", "Pick a place from the list")
+    return {
+        "games": sorted(set(games)),
+        "chat": rules["chat"],
+        "battles": rules["battles"],
+        "quiet": quiet,
+        "place": place,  # only people verified at this place can join (a place slug), or None
+    }
 
 
 # -- invite codes ----------------------------------------------------------------------------------------

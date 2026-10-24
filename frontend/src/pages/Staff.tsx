@@ -87,6 +87,9 @@ export function Staff({ go }: { go: Go }) {
       <Card tone="stage" className="center">
         <p className="sign">Staff</p>
         <p className="space-top">{waiting.length ? `${waiting.length} ${waiting.length === 1 ? "case" : "cases"} waiting.` : "Nothing waiting."}</p>
+        <Btn className="space-top" variant="ghost" onClick={() => go("/staff/places")}>
+          Places
+        </Btn>
       </Card>
       {note && <Alert text={note.text} calm={note.ok} />}
 

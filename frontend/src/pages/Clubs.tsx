@@ -28,6 +28,7 @@ import {
   type ClubSummary,
   type NewInvite,
 } from "../lib/clubs";
+import { allPlaces } from "../lib/places";
 import { block, report } from "../lib/safety";
 import { sfx } from "../lib/sfx";
 
@@ -347,6 +348,7 @@ export function ClubHome({ slug, go }: { slug: string; go: Go }) {
             {c.member_count} {c.member_count === 1 ? "member" : "members"}
           </span>
         </p>
+        {c.place && <p className="space-top club-place">🎓 For people verified at {c.place.name}</p>}
       </Card>
       {mayInvite(c.role) && (
         <a
@@ -607,6 +609,15 @@ function Members({
                       </>
                     )}
                   </span>
+                  {m.places.length > 0 && (
+                    <span className="member-places">
+                      {m.places.map((p) => (
+                        <span key={p} className="chip place-badge">
+                          {p}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                 </span>
                 {!you && (
                   <Btn
@@ -751,11 +762,14 @@ function Settings({
   const [about, setAbout] = useState(c.about);
   const [chat, setChat] = useState(c.rules.chat);
   const [games, setGames] = useState<string[]>(c.rules.games);
+  const [place, setPlace] = useState(c.rules.place ?? "");
+  const [places, setPlaces] = useState<{ slug: string; name: string }[]>([]);
   const [all, setAll] = useState<{ id: string; title: string }[]>([]);
   const [saved, setSaved] = useState(false);
   const { busy, error, run } = useAction();
 
   useEffect(() => {
+    allPlaces().then((r) => setPlaces(r.places), () => undefined);
     fetchGames().then(
       (g) =>
         setAll(
@@ -776,7 +790,7 @@ function Settings({
       await saveClub(c.slug, {
         name: name.trim(),
         about: about.trim(),
-        rules: { chat, games },
+        rules: { chat, games, place: place || null },
       });
       setSaved(true);
       sfx.pop();
@@ -819,6 +833,20 @@ function Settings({
           />
           <span>Chat in club rooms</span>
         </label>
+        <div>
+          <label className="field" htmlFor="set-place">
+            Who can join
+          </label>
+          <select id="set-place" className="select-button" value={place} onChange={(e) => setPlace(e.target.value)}>
+            <option value="">Anyone with an invite link</option>
+            {places.map((p) => (
+              <option key={p.slug} value={p.slug}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <p className="muted acct-hint">Pick a place and only people verified there can join. Members already in stay either way.</p>
+        </div>
         <details className="club-games">
           <summary>
             Games the club plays:{" "}

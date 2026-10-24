@@ -37,6 +37,10 @@ export type BlockList = Schemas["BlockList"];
 export type ClubReports = Schemas["ClubReports"];
 export type SiteInfo = Schemas["SiteInfo"];
 export type StaffQueue = Schemas["StaffQueue"];
+export type MyPlaces = Schemas["MyPlaces"];
+export type PlaceList = Schemas["PlaceList"];
+export type PlaceStarted = Schemas["PlaceStarted"];
+export type StaffPlaces = Schemas["StaffPlaces"];
 
 // The WebSocket "state" frame (backend app/schemas.py RoomFrame).
 export type ApiRoomFrame = Schemas["RoomFrame"];

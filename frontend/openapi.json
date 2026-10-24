@@ -524,6 +524,16 @@
             "title": "Open Reports",
             "type": "integer"
           },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "role": {
             "title": "Role",
             "type": "string"
@@ -558,7 +568,8 @@
           "invites",
           "up",
           "muted",
-          "open_reports"
+          "open_reports",
+          "place"
         ],
         "title": "ClubDetail",
         "type": "object"
@@ -586,6 +597,13 @@
           "joined_at": {
             "title": "Joined At",
             "type": "string"
+          },
+          "places": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Places",
+            "type": "array"
           },
           "role": {
             "title": "Role",
@@ -622,7 +640,8 @@
           "role",
           "joined_at",
           "status",
-          "up_game"
+          "up_game",
+          "places"
         ],
         "title": "ClubMember",
         "type": "object"
@@ -733,6 +752,17 @@
             "title": "Games",
             "type": "array"
           },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place"
+          },
           "quiet": {
             "anyOf": [
               {
@@ -748,7 +778,8 @@
           "games",
           "chat",
           "battles",
-          "quiet"
+          "quiet",
+          "place"
         ],
         "title": "ClubRules",
         "type": "object"
@@ -826,21 +857,6 @@
           "match"
         ],
         "title": "ClubUp",
-        "type": "object"
-      },
-      "CodeBody": {
-        "additionalProperties": false,
-        "properties": {
-          "code": {
-            "maxLength": 32,
-            "title": "Code",
-            "type": "string"
-          }
-        },
-        "required": [
-          "code"
-        ],
-        "title": "CodeBody",
         "type": "object"
       },
       "CoinNews": {
@@ -989,6 +1005,21 @@
           "connected"
         ],
         "title": "CrowdMember",
+        "type": "object"
+      },
+      "DomainBody": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "maxLength": 120,
+            "title": "Domain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "title": "DomainBody",
         "type": "object"
       },
       "EmailBody": {
@@ -2220,6 +2251,75 @@
         "title": "Mvp",
         "type": "object"
       },
+      "MyPlace": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "college",
+              "company"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "verified",
+              "alumni"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verified_at": {
+            "title": "Verified At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind",
+          "status",
+          "verified_at",
+          "expires_at"
+        ],
+        "title": "MyPlace",
+        "type": "object"
+      },
+      "MyPlaces": {
+        "additionalProperties": false,
+        "properties": {
+          "mail": {
+            "title": "Mail",
+            "type": "boolean"
+          },
+          "places": {
+            "items": {
+              "$ref": "#/components/schemas/MyPlace"
+            },
+            "title": "Places",
+            "type": "array"
+          }
+        },
+        "required": [
+          "places",
+          "mail"
+        ],
+        "title": "MyPlaces",
+        "type": "object"
+      },
       "MyStats": {
         "additionalProperties": false,
         "properties": {
@@ -2496,6 +2596,156 @@
           "username"
         ],
         "title": "PersonBody",
+        "type": "object"
+      },
+      "PlaceBody": {
+        "additionalProperties": false,
+        "properties": {
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Domains",
+            "type": "array"
+          },
+          "kind": {
+            "maxLength": 10,
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 48,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "domains"
+        ],
+        "title": "PlaceBody",
+        "type": "object"
+      },
+      "PlaceList": {
+        "additionalProperties": false,
+        "properties": {
+          "places": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceSummary"
+            },
+            "title": "Places",
+            "type": "array"
+          }
+        },
+        "required": [
+          "places"
+        ],
+        "title": "PlaceList",
+        "type": "object"
+      },
+      "PlaceRef": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "PlaceRef",
+        "type": "object"
+      },
+      "PlaceRequestRow": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "last_at": {
+            "title": "Last At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain",
+          "count",
+          "last_at"
+        ],
+        "title": "PlaceRequestRow",
+        "type": "object"
+      },
+      "PlaceStarted": {
+        "additionalProperties": false,
+        "properties": {
+          "place": {
+            "$ref": "#/components/schemas/PlaceRef"
+          },
+          "sent_to": {
+            "title": "Sent To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "place",
+          "sent_to"
+        ],
+        "title": "PlaceStarted",
+        "type": "object"
+      },
+      "PlaceSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "college",
+              "company"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind"
+        ],
+        "title": "PlaceSummary",
         "type": "object"
       },
       "PlayerRow": {
@@ -3842,6 +4092,72 @@
         "title": "StaffActBody",
         "type": "object"
       },
+      "StaffPlace": {
+        "additionalProperties": false,
+        "properties": {
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "college",
+              "company"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind",
+          "domains",
+          "members"
+        ],
+        "title": "StaffPlace",
+        "type": "object"
+      },
+      "StaffPlaces": {
+        "additionalProperties": false,
+        "properties": {
+          "places": {
+            "items": {
+              "$ref": "#/components/schemas/StaffPlace"
+            },
+            "title": "Places",
+            "type": "array"
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceRequestRow"
+            },
+            "title": "Requests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "places",
+          "requests"
+        ],
+        "title": "StaffPlaces",
+        "type": "object"
+      },
       "StaffQueue": {
         "additionalProperties": false,
         "properties": {
@@ -4040,6 +4356,21 @@
           "total"
         ],
         "title": "Standing",
+        "type": "object"
+      },
+      "StartBody": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "StartBody",
         "type": "object"
       },
       "SubscribeBody": {
@@ -4556,6 +4887,51 @@
           "pick"
         ],
         "title": "Wheel",
+        "type": "object"
+      },
+      "app__accounts__CodeBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CodeBody",
+        "type": "object"
+      },
+      "app__clubs__routes__CodeBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CodeBody",
+        "type": "object"
+      },
+      "app__places__CodeBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 12,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CodeBody",
         "type": "object"
       }
     }
@@ -6055,7 +6431,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CodeBody"
+                "$ref": "#/components/schemas/app__clubs__routes__CodeBody"
               }
             }
           },
@@ -9606,7 +9982,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CodeBody"
+                "$ref": "#/components/schemas/app__accounts__CodeBody"
               }
             }
           },
@@ -9822,7 +10198,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CodeBody"
+                "$ref": "#/components/schemas/app__accounts__CodeBody"
               }
             }
           },
@@ -10343,6 +10719,430 @@
         "summary": "Change Password"
       }
     },
+    "/api/me/places": {
+      "get": {
+        "operationId": "my_places_api_me_places_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPlaces"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "My Places"
+      }
+    },
+    "/api/me/places/confirm": {
+      "post": {
+        "operationId": "confirm_api_me_places_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__places__CodeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPlaces"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Confirm"
+      }
+    },
+    "/api/me/places/start": {
+      "post": {
+        "description": "Send a code to a college or work address.",
+        "operationId": "start_api_me_places_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Start"
+      }
+    },
+    "/api/me/places/{slug}/remove": {
+      "post": {
+        "operationId": "remove_api_me_places__slug__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPlaces"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Remove"
+      }
+    },
     "/api/me/sessions/revoke": {
       "post": {
         "description": "Sign out every other browser; this one stays signed in.",
@@ -10763,6 +11563,105 @@
           }
         },
         "summary": "Read"
+      }
+    },
+    "/api/places": {
+      "get": {
+        "description": "The places people can verify (for a club to pick the one it's for).",
+        "operationId": "all_places_api_places_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "All Places"
       }
     },
     "/api/push/subscribe": {
@@ -12159,6 +13058,319 @@
           }
         },
         "summary": "Site"
+      }
+    },
+    "/api/staff/places": {
+      "get": {
+        "operationId": "list_places_api_staff_places_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffPlaces"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "List Places"
+      },
+      "post": {
+        "description": "Add a place, or change one (its name, kind and the full list of its domains).",
+        "operationId": "save_place_api_staff_places_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffPlaces"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Save Place"
+      }
+    },
+    "/api/staff/places/requests/decline": {
+      "post": {
+        "operationId": "decline_api_staff_places_requests_decline_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DomainBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffPlaces"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Decline"
       }
     },
     "/api/staff/reports": {

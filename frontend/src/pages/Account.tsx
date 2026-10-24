@@ -316,6 +316,9 @@ function Profile({ go, onSignedOut }: { go: (path: string) => void; onSignedOut:
           <Btn variant="ghost" onClick={() => go("/clubs")}>
             Your clubs
           </Btn>
+          <Btn variant="ghost" onClick={() => go("/places")}>
+            Your places
+          </Btn>
           {staff && (
             <Btn variant="ghost" onClick={() => go("/staff")}>
               Staff console

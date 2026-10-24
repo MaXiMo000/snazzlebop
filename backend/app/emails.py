@@ -181,6 +181,23 @@ def verify_email(site: str, username: str, url: str, changed: bool = False) -> E
     )
 
 
+def place_code(site: str, username: str, place: str, code: str) -> Email:
+    return render(
+        Message(
+            subject=f"Your code to verify {place}",
+            preheader=f"Type {code} to show you're from {place}.",
+            heading=f"Verify {place}",
+            greeting=f"Hi {username},",
+            paragraphs=[f"Type this code on Snazzlebop to show you're from {place}:"],
+            code=code,
+            note="The code works for 15 minutes. We don't keep this address: it only proves where you're "
+            "from. If you didn't ask for this, ignore this email.",
+            why="You got this because this address was used to verify a place on Snazzlebop.",
+        ),
+        site,
+    )
+
+
 def sign_in_link(site: str, username: str, url: str) -> Email:
     return render(
         Message(

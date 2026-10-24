@@ -91,6 +91,9 @@ original has them.
 - **Staff console:** platform staff (named in `STAFF_USERNAMES`, authenticator required) handle
   escalated club cases and reports outside clubs: dismiss, hand back to the club, or suspend an account
   (signed out everywhere, no sign-in until the date), with a staff audit log.
+- **Places:** verify your college or company with a code sent to your address there (free email
+  providers never count); a badge for a year, then alumni; clubs can be just for one place; staff
+  manage places and see requests for new ones. Plus sign-in by an emailed link.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced

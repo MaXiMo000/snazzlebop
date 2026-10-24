@@ -190,6 +190,7 @@ class ClubRules(Strict):
     chat: bool
     battles: bool
     quiet: QuietHours | None  # no game notifications in these hours
+    place: str | None  # only people verified at this place (its slug) can join
 
 
 class ClubSummary(Strict):
@@ -210,6 +211,7 @@ class ClubMember(Strict):
     joined_at: str  # ISO 8601
     status: Literal["offline", "online", "in_game", "up"]
     up_game: str | None  # when up: the game they want (None: any)
+    places: list[str]  # places they're verified at right now (badges)
 
 
 class UpSignal(Strict):
@@ -273,6 +275,7 @@ class ClubDetail(Strict):
     up: ClubUp
     muted: bool  # you turned off "a club game is filling up" for this club
     open_reports: int  # reports waiting for the moderators (0 unless you're one)
+    place: PlaceRef | None  # the place the club is for, when it requires one
 
 
 class InboxItem(Strict):
@@ -421,6 +424,59 @@ class IntegrationHealth(Strict):
     pending: int
     failed: int
     sinks: list[str]
+
+
+class MyPlace(Strict):
+    slug: str
+    name: str
+    kind: Literal["college", "company"]
+    status: Literal["verified", "alumni"]  # alumni: the year ran out; verify again to renew
+    verified_at: str
+    expires_at: str
+
+
+class MyPlaces(Strict):
+    places: list[MyPlace]
+    mail: bool  # verifying needs email to be set up on the site
+
+
+class PlaceRef(Strict):
+    slug: str
+    name: str
+
+
+class PlaceSummary(Strict):
+    slug: str
+    name: str
+    kind: Literal["college", "company"]
+
+
+class PlaceList(Strict):
+    places: list[PlaceSummary]
+
+
+class PlaceStarted(Strict):
+    place: PlaceRef
+    sent_to: str  # the address, masked: "a***@iitd.ac.in"
+
+
+class StaffPlace(Strict):
+    slug: str
+    name: str
+    kind: Literal["college", "company"]
+    domains: list[str]
+    members: int  # verified now
+
+
+class PlaceRequestRow(Strict):
+    domain: str
+    count: int
+    last_at: str
+
+
+class StaffPlaces(Strict):
+    places: list[StaffPlace]
+    requests: list[PlaceRequestRow]
 
 
 class SiteInfo(Strict):
