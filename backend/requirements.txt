@@ -6,4 +6,4 @@ aiosqlite>=0.20,<1
 anthropic>=1.11,<2
 alembic>=1.14,<2
 segno>=1.6,<2
-cryptography>=46,<47
+cryptography>=50.0.2,<51

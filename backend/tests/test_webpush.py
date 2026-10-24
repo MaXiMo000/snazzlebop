@@ -14,13 +14,13 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from app import webpush as wp
 
-# RFC 8291 section 5 (the "watermelon" example).
+# RFC 8291 section 5 (the "watermelon" example): published test values, not secrets.
 RFC = {
     "plaintext": b"When I grow up, I want to be a watermelon",
-    "as_private": "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw",
-    "ua_private": "q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94",
+    "as_private": "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw",  # gitleaks:allow
+    "ua_private": "q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94",  # gitleaks:allow
     "ua_public": "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4",
-    "auth": "BTBZMqHH6r4Tts7J_aSIgg",
+    "auth": "BTBZMqHH6r4Tts7J_aSIgg",  # gitleaks:allow
     "salt": "DGv6ra1nlYgDCS1FRnbzlw",
     "body": "DGv6ra1nlYgDCS1FRnbzlwAAEABBBP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzA"
     "C8wEqKK6PBru3jl7A_yl95bQpu6cVPTpK4Mqgkf1CXztLVBSt2Ks3oZwbuwXPXLWyouBWLVWGNWQexSgSxsj_Qulcy4a-fN",
