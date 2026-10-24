@@ -39,13 +39,20 @@ class LobbyMixin:
         return sign_token(self.settings.secret_key, player.id, room.code, self.settings.token_ttl_seconds)
 
     def create_room(
-        self, name: str, user_id: int | None = None, circle: dict[str, Any] | None = None
+        self,
+        name: str,
+        user_id: int | None = None,
+        circle: dict[str, Any] | None = None,
+        club_id: int | None = None,
+        club_rules: dict[str, Any] | None = None,
     ) -> tuple[Room, Player, str]:
         self.cleanup()
         if len(self.rooms) >= self.settings.max_rooms:
             raise HubError("busy", "The party house is full right now. Try again soon.", 503)
         name = clean_name(name)
-        room = Room(code=self._new_code(), created=self.clock(), last_active=self.clock())
+        room = Room(code=self._new_code(), created=self.clock(), last_active=self.clock(), club_id=club_id)
+        if club_rules:
+            room.club_games, room.club_chat = list(club_rules["games"]), bool(club_rules["chat"])
         player = Player(id=secrets.token_urlsafe(6), name=name, connected=False)
         room.players[player.id] = player
         room.host_id = player.id
@@ -59,6 +66,25 @@ class LobbyMixin:
         self._scare(room, player.id, name)
         self._persist(room)
         return room, player, self._issue(room, player)
+
+    def club_rooms(self, club_id: int) -> list[dict[str, Any]]:
+        """A club's live rooms, for its members to walk into: code, host, how many, what's on."""
+        out = []
+        for room in self.rooms.values():
+            if room.club_id != club_id or not room.connected_players():
+                continue
+            host = room.players.get(room.host_id)
+            out.append(
+                {
+                    "code": room.code,
+                    "host": host.name if host else "",
+                    "players": len(room.connected_players()),
+                    "phase": room.phase,
+                    "game": room.game.title if room.game is not None else None,
+                    "open": not room.locked and room.phase == "lobby",
+                }
+            )
+        return sorted(out, key=lambda r: (not r["open"], -r["players"]))
 
     def get(self, code: str) -> Room | None:
         if not isinstance(code, str) or not ROOM_CODE_RE.match(code):

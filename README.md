@@ -79,6 +79,8 @@ original has them.
 - **Installable:** add it to a phone's home screen and it opens full-screen.
 - **TV mode:** a read-only big-screen view, with faces from the call and the latest chat.
 - **Optional accounts:** coins for top places, a power-up shop, stats and monthly seasons.
+- **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
+  games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced
   motion, keyboard play, screen readers and 4.5:1 contrast are supported.
 

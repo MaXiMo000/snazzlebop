@@ -20,6 +20,8 @@ Only the latest version on `main` (the live deployment) is supported.
   the first WebSocket message, never in a URL. Accounts use scrypt password hashes and HttpOnly,
   SameSite=Strict session cookies, with an optional authenticator-app second step (TOTP) and
   single-use backup codes.
+- **Private clubs.** A club is visible only to its members. Invite links are random, stored only as
+  keyed hashes, expire and run out; roles can act only on roles below their own, and bans stick.
 - **Abuse limits.** Rate limits per client on the API, room joins, sign-in and WebSocket messages, caps
   on connections, rooms, players and message size, and idle and age limits for rooms.
 - **Browser hardening.** A strict Content Security Policy (same origin only, no inline scripts or

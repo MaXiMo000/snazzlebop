@@ -24,6 +24,11 @@ export type Ok = Schemas["Ok"];
 export type MfaStatus = Schemas["MfaStatus"];
 export type MfaSetup = Schemas["MfaSetup"];
 export type BackupCodes = Schemas["BackupCodes"];
+export type ClubSummary = Schemas["ClubSummary"];
+export type ClubList = Schemas["ClubList"];
+export type ClubDetail = Schemas["ClubDetail"];
+export type ClubRules = Schemas["ClubRules"];
+export type NewInvite = Schemas["NewInvite"];
 
 // The WebSocket "state" frame (backend app/schemas.py RoomFrame).
 export type ApiRoomFrame = Schemas["RoomFrame"];

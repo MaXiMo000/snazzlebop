@@ -1,0 +1,98 @@
+/* ---- clubs: list, club home, members, invites, settings ---------------------------------------- */
+.club-name {
+  overflow-wrap: anywhere;
+}
+.club-list,
+.club-rooms,
+.club-members {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.club-list li + li,
+.club-rooms li + li,
+.club-members li + li {
+  border-top: 2px solid var(--rule);
+}
+.club-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  min-height: 44px;
+  padding: 10px 4px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.club-link b {
+  flex: 1 0 auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.club-link:hover b {
+  text-decoration: underline;
+}
+/* A row: text on the left, its button on the right; the button drops below only when both can't fit. */
+.club-rooms li,
+.club-member {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 8px 4px;
+}
+.club-room-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+.club-manage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 4px 10px;
+}
+.club-start,
+.club-invite-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  align-items: end;
+  gap: 10px;
+}
+.club-new-link {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 2.5px dashed var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+}
+.club-url {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.club-games {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.club-games summary {
+  display: list-item;
+  padding: 10px 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+.club-game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+.club-game-grid .check {
+  align-items: center;
+}

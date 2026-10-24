@@ -38,7 +38,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.contentgen": ({"app.games"}, {"anthropic"}),
     "app.db": (set(), {"alembic", "sqlalchemy"}),
 }
-EDGES = {"app.main", "app.accounts", "app.ws", "app.migrations"}  # may use the frameworks
+EDGES = {"app.main", "app.accounts", "app.clubs", "app.ws", "app.migrations"}  # may use the frameworks
 
 
 def imports(path: Path, module: str) -> set[str]:

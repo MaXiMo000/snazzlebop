@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import accounts, calls, schemas
+from .clubs import routes as clubs
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
 from .contentgen import ContentGenerator, add_items, claude_caller, known, split_kind
@@ -36,7 +37,8 @@ from .ws import ConnectionCounter, serve_socket
 
 log = logging.getLogger("snazzlebop")
 
-SPA_ROUTE = re.compile(r"(r/[A-Za-z]{3,8}/?|account/?)?")  # "/", "/r/<CODE>", "/account" (App.tsx)
+# The SPA's own pages (App.tsx): "/", "/r/<CODE>", "/account", "/clubs", "/clubs/<slug>", "/join/<invite>"
+SPA_ROUTE = re.compile(r"(r/[A-Za-z]{3,8}|account|clubs|clubs/[a-z0-9-]{1,48}|join/[A-Za-z0-9-]{4,32})?/?")
 
 
 class NameBody(BaseModel):
@@ -175,6 +177,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return await db.stats()
 
     app.include_router(accounts.router(settings, db, limiters["auth"], hub.hosting))
+    app.include_router(clubs.router(settings, db, hub, limiters["auth"]))
 
     async def account_id(request: Request) -> int | None:
         user = await accounts.session_user(request, db)

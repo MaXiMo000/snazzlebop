@@ -100,6 +100,32 @@ def test_every_route_matches_its_declared_model(client):
     friends = c.call("GET", "/api/friends")
     assert friends["friends"] and friends["friends"][0]["username"] == "Bo_42"
     c.call("POST", "/api/friends/remove", json={"username": "Bo_42"})
+
+    c.call("POST", "/api/clubs", json={"name": "x"})  # too short: the error body
+    slug = c.call("POST", "/api/clubs", json={"name": "Hostel Four", "about": "Quiz nights"})["slug"]
+    c.call("GET", "/api/clubs")
+    club = "/api/clubs/{slug}"
+    c.call("GET", f"/api/clubs/{slug}", club)
+    c.call("POST", f"/api/clubs/{slug}/settings", club + "/settings", json={"rules": {"chat": False}})
+    invite = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={"uses": 5})
+    spare = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={})
+    c.call("POST", f"/api/clubs/{slug}/invites/{spare['id']}/revoke", club + "/invites/{invite_id}/revoke")
+    c.call("POST", f"/api/clubs/{slug}/rooms", club + "/rooms", json={"name": "Ana"})
+    c.call("POST", "/api/auth/logout")
+    c.call("POST", "/api/auth/login", json={"username": "Bo_42", "password": PW})
+    c.call("POST", "/api/clubs/join", json={"code": invite["code"]})
+    c.call("POST", f"/api/clubs/{slug}/leave", club + "/leave")
+    c.call("POST", "/api/clubs/join", json={"code": invite["code"]})
+    c.call("POST", "/api/auth/logout")
+    c.call("POST", "/api/auth/login", json={"username": "Ana_99", "password": PW})
+    member = club + "/members/{username}"
+    c.call("POST", f"/api/clubs/{slug}/members/Bo_42", member, json={"role": "admin"})
+    c.call("POST", f"/api/clubs/{slug}/transfer", club + "/transfer", json={"username": "Bo_42"})
+    c.call("POST", f"/api/clubs/{slug}/members/Bo_42/remove", member + "/remove", json={})  # error
+    c.call("POST", f"/api/clubs/{slug}/delete", club + "/delete")  # not the owner now: error
+    second = c.call("POST", "/api/clubs", json={"name": "Night Owls"})["slug"]
+    c.call("POST", f"/api/clubs/{second}/delete", club + "/delete")
+
     c.call("GET", "/api/me/mfa")
     setup = c.call("POST", "/api/me/mfa/setup", json={"password": PW})
     c.call("POST", "/api/me/mfa/enable", json={"code": "000000"})  # wrong: the error body

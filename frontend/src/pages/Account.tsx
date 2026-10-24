@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Authenticator } from "../components/security";
 import { Btn, Card, CopyButton } from "../components/ui";
+import { InviteWaiting } from "./Clubs";
 import { ApiError, fetchGames } from "../lib/api";
 import {
   buy,
@@ -252,10 +253,16 @@ function Profile({ go }: { go: (path: string) => void }) {
             ? `${month} season: ${season.points} points${season.rank ? ` · #${season.rank}` : ""} · ${season.wins} ${season.wins === 1 ? "win" : "wins"}`
             : `Finish a game in ${month || "this month's season"} to get on the board.`}
         </p>
-        <Btn className="space-top" variant="gold" onClick={() => go("/")}>
-          Play a game
-        </Btn>
+        <div className="row center space-top">
+          <Btn variant="gold" onClick={() => go("/")}>
+            Play a game
+          </Btn>
+          <Btn variant="ghost" onClick={() => go("/clubs")}>
+            Your clubs
+          </Btn>
+        </div>
       </Card>
+      <InviteWaiting go={go} />
 
       {error && (
         <p className="alert" role="alert">

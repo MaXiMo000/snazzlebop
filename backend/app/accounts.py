@@ -230,6 +230,17 @@ async def session_user(request: HTTPConnection, db: Any) -> Any:
     return await db.user_for_session(token_hash(token))
 
 
+def check_same_origin(request: Request, settings: Settings) -> None:
+    """No cross-site writes: the browser's Origin must be ours (SameSite=Strict backs this up)."""
+    origin = request.headers.get("origin")
+    if origin is None:
+        if settings.is_production:
+            raise HubError("bad_origin", "That request came from the wrong place", 403)
+        return
+    if origin not in settings.allowed_origins:
+        raise HubError("bad_origin", "That request came from the wrong place", 403)
+
+
 def router(
     settings: Settings,
     db: Any,
@@ -243,14 +254,7 @@ def router(
         return client_ip(request.scope, settings.trusted_proxy_hops, settings.client_ip_header)
 
     def same_origin(request: Request) -> None:
-        """No cross-site writes: the browser's Origin must be ours (SameSite=Strict backs this up)."""
-        origin = request.headers.get("origin")
-        if origin is None:
-            if settings.is_production:
-                raise HubError("bad_origin", "That request came from the wrong place", 403)
-            return
-        if origin not in settings.allowed_origins:
-            raise HubError("bad_origin", "That request came from the wrong place", 403)
+        check_same_origin(request, settings)
 
     def need_db() -> None:
         if not db.ready:

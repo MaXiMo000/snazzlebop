@@ -109,6 +109,8 @@ class RoutingMixin:
             cls = REGISTRY.get(msg.get("game")) if isinstance(msg.get("game"), str) else None
             if cls is None:
                 raise HubError("bad_game", "Unknown game")
+            if room.club_games and cls.game_id not in room.club_games:
+                raise HubError("club_game", "This club doesn't play that one")
             options = self._options(cls, msg.get("options"))
             want_teams = msg.get("teams", False)
             if not isinstance(want_teams, bool):
@@ -143,6 +145,8 @@ class RoutingMixin:
                 or len(set(raw)) != len(raw)
             ):
                 raise HubError("bad_show", f"Pick {showlib.MIN_GAMES}-{showlib.MAX_GAMES} different games")
+            if room.club_games and set(raw) - set(room.club_games):
+                raise HubError("club_game", "This club doesn't play some of those")
             jackpot = msg.get("jackpot", True)
             market = msg.get("market", False)
             if not isinstance(jackpot, bool) or not isinstance(market, bool):

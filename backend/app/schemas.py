@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Strict(BaseModel):
@@ -169,6 +169,77 @@ class LeaderRow(Strict):
 class Leaderboard(Strict):
     season: str
     rows: list[LeaderRow]
+
+
+# -- clubs -----------------------------------------------------------------------------------------------
+class QuietHours(Strict):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    starts: str = Field(alias="from")  # "23:00"
+    ends: str = Field(alias="to")  # "08:00"
+
+
+class ClubRules(Strict):
+    games: list[str]  # the games the club plays; empty = all of them
+    chat: bool
+    battles: bool
+    quiet: QuietHours | None  # no game notifications in these hours
+
+
+class ClubSummary(Strict):
+    slug: str
+    name: str
+    about: str
+    role: str  # yours: owner, admin, moderator or member
+    members: int
+
+
+class ClubList(Strict):
+    clubs: list[ClubSummary]
+
+
+class ClubMember(Strict):
+    username: str
+    role: str
+    joined_at: str  # ISO 8601
+
+
+class ClubRoom(Strict):
+    """A live room of the club, for members to walk into."""
+
+    code: str
+    host: str
+    players: int
+    phase: str
+    game: str | None
+    open: bool  # still in the lobby and not locked
+
+
+class InviteInfo(Strict):
+    id: int
+    uses_left: int
+    expires_at: str
+
+
+class NewInvite(Strict):
+    """The code is shown only now (only its hash is kept)."""
+
+    id: int
+    code: str
+    path: str  # /join/<code>: the link to share
+    uses_left: int
+    expires_at: str
+
+
+class ClubDetail(Strict):
+    slug: str
+    name: str
+    about: str
+    rules: ClubRules
+    role: str
+    member_count: int
+    members: list[ClubMember]
+    rooms: list[ClubRoom]
+    invites: list[InviteInfo]  # live invite links: moderators and up only, else empty
 
 
 # Spelled out, not taken from Python's HTTP status table: its wording changes between versions (422 is

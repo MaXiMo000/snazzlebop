@@ -25,6 +25,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     UniqueConstraint,
+    case,
     delete,
     func,
     inspect,
@@ -157,6 +158,47 @@ class Mfa(Base):
     enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_step: Mapped[int] = mapped_column(Integer, default=0)
     backup_hashes: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+
+class Club(Base):
+    """A community: people from one place or one group who play together. Joined by invite for now."""
+
+    __tablename__ = "clubs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(48), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(40))
+    about: Mapped[str] = mapped_column(String(200), default="")
+    rules: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # see app.clubs.policy.clean_rules
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class Membership(Base):
+    """One account in one club: its role there (owner, admin, moderator, member) and whether it's banned."""
+
+    __tablename__ = "memberships"
+
+    club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    role: Mapped[str] = mapped_column(String(12), default="member")
+    banned: Mapped[bool] = mapped_column(default=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class ClubInvite(Base):
+    """An invite link. Only the code's keyed hash is kept; it expires and runs out of uses."""
+
+    __tablename__ = "club_invites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id", ondelete="CASCADE"), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    uses_left: Mapped[int] = mapped_column(Integer)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 MAX_FRIENDS = 50
@@ -325,7 +367,7 @@ class Database:
                 if found is None:
                     return None
                 user, expires = found
-                if _aware(expires) < datetime.now(UTC):
+                if aware(expires) < datetime.now(UTC):
                     await session.execute(delete(Session).where(Session.token_hash == token_hash))
                     await session.commit()
                     return None
@@ -366,11 +408,39 @@ class Database:
             await session.execute(delete(Result).where(Result.user_id == user_id))
             await session.execute(delete(Circle).where(Circle.user_id == user_id))
             await session.execute(delete(Mfa).where(Mfa.user_id == user_id))
+            await self._pass_on_clubs(session, user_id)
+            await session.execute(delete(Membership).where(Membership.user_id == user_id))
             await session.execute(
                 delete(Friend).where(or_(Friend.user_id == user_id, Friend.friend_id == user_id))
             )
             await session.execute(delete(User).where(User.id == user_id))
             await session.commit()
+
+    @staticmethod
+    async def _pass_on_clubs(session: Any, user_id: int) -> None:
+        """Clubs an account owns go to the next in line (highest role, then longest in); a club with
+        nobody else in it closes."""
+        owned = await session.scalars(
+            select(Membership.club_id).where(Membership.user_id == user_id, Membership.role == "owner")
+        )
+        rank = case({"admin": 0, "moderator": 1}, value=Membership.role, else_=2)
+        for club_id in owned.all():
+            heir = await session.scalar(
+                select(Membership)
+                .where(
+                    Membership.club_id == club_id,
+                    Membership.user_id != user_id,
+                    Membership.banned.is_(False),
+                )
+                .order_by(rank, Membership.joined_at)
+                .limit(1)
+            )
+            if heir is not None:
+                heir.role = "owner"
+            else:
+                await session.execute(delete(ClubInvite).where(ClubInvite.club_id == club_id))
+                await session.execute(delete(Membership).where(Membership.club_id == club_id))
+                await session.execute(delete(Club).where(Club.id == club_id))
 
     # -- authenticator-app sign-in ------------------------------------------------------------------
     async def mfa(self, user_id: int) -> Mfa | None:
@@ -652,6 +722,6 @@ class Database:
         await self.engine.dispose()
 
 
-def _aware(when: datetime) -> datetime:
+def aware(when: datetime) -> datetime:
     """SQLite hands back naive datetimes (stored as UTC); Postgres keeps the zone."""
     return when if when.tzinfo else when.replace(tzinfo=UTC)

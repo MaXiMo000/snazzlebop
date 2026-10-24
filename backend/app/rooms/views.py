@@ -74,7 +74,9 @@ class ViewsMixin:
                 }
                 for p in room.players.values()
             ],
-            "games": catalog() if between else [],
+            "games": [g for g in catalog() if not room.club_games or g["id"] in room.club_games]
+            if between
+            else [],
             "categories": catalogue.categories() if between else [],
             "game": game_view,
             "stage": room.game.stage if room.game is not None else None,

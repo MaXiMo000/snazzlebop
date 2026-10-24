@@ -1,0 +1,297 @@
+"""The clubs API. Every route needs a signed-in account and changes need the same-origin check (the
+middleware's per-address limit covers them); redeeming an invite also spends the sign-in budget, so
+codes can't be guessed in bulk. A club is invisible to non-members (404, so names can't be probed);
+the way in is an invite link from a member."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
+
+from .. import schemas
+from ..accounts import check_same_origin, session_user
+from ..config import Settings
+from ..db import Club, ClubInvite, Database
+from ..rooms import Hub, HubError
+from ..security import RateLimiter, client_ip
+from . import policy
+from .policy import PolicyError
+from .store import ClubStore
+
+E = schemas.ERRORS
+
+
+class NewClubBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    name: str = Field(max_length=80)
+    about: str | None = Field(default=None, max_length=400)
+    rules: dict[str, Any] | None = None
+
+
+class SettingsBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    name: str | None = Field(default=None, max_length=80)
+    about: str | None = Field(default=None, max_length=400)
+    rules: dict[str, Any] | None = None
+
+
+class InviteBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    days: int | None = None
+    uses: int | None = None
+
+
+class CodeBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    code: str = Field(max_length=32)
+
+
+class RoleBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    role: str = Field(max_length=12)
+
+
+class RemoveBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    ban: bool = False
+
+
+class HandOverBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    username: str = Field(max_length=64)
+
+
+class RoomBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    name: str = Field(min_length=1, max_length=64)
+
+
+def router(settings: Settings, db: Database, hub: Hub, limiter: RateLimiter) -> APIRouter:
+    api = APIRouter()
+    store = ClubStore(db)
+
+    async def me(request: Request) -> Any:
+        if not db.ready:
+            raise HubError("accounts_down", "Clubs are unavailable right now. Games still work!", 503)
+        user = await session_user(request, db)
+        if user is None:
+            raise HubError("signed_out", "Sign in first", 401)
+        return user
+
+    def write(request: Request) -> None:
+        check_same_origin(request, settings)
+
+    async def club_and_role(slug: str, user: Any) -> tuple[Club, str]:
+        """The club and your role in it; 404 for anyone who isn't a member (or was banned)."""
+        club = await store.by_slug(slug)
+        member = await store.membership(club.id, user.id) if club is not None else None
+        if club is None or member is None or member.banned:
+            raise HubError("no_club", "Club not found", 404)
+        return club, member.role
+
+    def invite_info(i: ClubInvite) -> dict[str, Any]:
+        return {"id": i.id, "uses_left": i.uses_left, "expires_at": i.expires_at.isoformat()}
+
+    async def detail(club: Club, role: str) -> dict[str, Any]:
+        members = await store.members(club.id)
+        return {
+            "slug": club.slug,
+            "name": club.name,
+            "about": club.about,
+            "rules": policy.clean_rules(club.rules or None),
+            "role": role,
+            "member_count": len(members),
+            "members": [
+                {"username": m.username, "role": m.role, "joined_at": m.joined_at.isoformat()}
+                for m in members
+            ],
+            "rooms": hub.club_rooms(club.id),
+            "invites": [invite_info(i) for i in await store.invites(club.id)]
+            if policy.may_invite(role)
+            else [],
+        }
+
+    def fail(exc: PolicyError) -> HubError:
+        return HubError(exc.code, exc.message, exc.status)
+
+    async def target(club: Club, username: str) -> tuple[int, str]:
+        """(user id, role) of a member named in a request; 404 if they aren't in the club."""
+        for m in await store.members(club.id):
+            if m.username.casefold() == username.strip().casefold():
+                return m.user_id, m.role
+        raise HubError("no_member", "That person isn't in this club", 404)
+
+    @api.get("/api/clubs", response_model=schemas.ClubList, responses=E)
+    async def my_clubs(request: Request) -> JSONResponse:
+        user = await me(request)
+        rows = await store.mine(user.id)
+        clubs = [
+            {"slug": c.slug, "name": c.name, "about": c.about, "role": r, "members": n} for c, r, n in rows
+        ]
+        return JSONResponse({"clubs": clubs}, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/clubs", status_code=201, response_model=schemas.ClubDetail, responses=E)
+    async def create(body: NewClubBody, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        try:
+            name, about = policy.clean_name(body.name), policy.clean_about(body.about)
+            rules = policy.clean_rules(body.rules)
+            if await store.count_owned(user.id) >= policy.MAX_OWNED:
+                raise PolicyError("too_many_clubs", f"You can own up to {policy.MAX_OWNED} clubs", 409)
+            club = await store.create(user.id, name, about, rules)
+        except PolicyError as exc:
+            raise fail(exc) from None
+        return JSONResponse(await detail(club, "owner"), status_code=201)
+
+    @api.get("/api/clubs/{slug}", response_model=schemas.ClubDetail, responses=E)
+    async def show(slug: str, request: Request) -> JSONResponse:
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        return JSONResponse(await detail(club, role), headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/clubs/{slug}/settings", response_model=schemas.ClubDetail, responses=E)
+    async def change_settings(slug: str, body: SettingsBody, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        if not policy.may_edit(role):
+            raise HubError("not_allowed", "Only the club's owner and admins can change that", 403)
+        values: dict[str, Any] = {}
+        try:
+            if body.name is not None:
+                values["name"] = policy.clean_name(body.name)
+            if body.about is not None:
+                values["about"] = policy.clean_about(body.about)
+            if body.rules is not None:
+                values["rules"] = policy.clean_rules(body.rules)
+        except PolicyError as exc:
+            raise fail(exc) from None
+        if values:
+            await store.update(club.id, values)
+        club, role = await club_and_role(slug, user)
+        return JSONResponse(await detail(club, role))
+
+    @api.post("/api/clubs/{slug}/invites", status_code=201, response_model=schemas.NewInvite, responses=E)
+    async def invite(slug: str, body: InviteBody, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        if not policy.may_invite(role):
+            raise HubError("not_allowed", "Only moderators and up can make invite links", 403)
+        try:
+            days = policy.clamp(body.days, policy.INVITE_DAYS, 7, "Days")
+            uses = policy.clamp(body.uses, policy.INVITE_USES, 25, "Uses")
+        except PolicyError as exc:
+            raise fail(exc) from None
+        code = policy.new_invite_code()
+        made = await store.add_invite(
+            club.id, user.id, policy.hash_invite(settings.secret_key, code), uses, days
+        )
+        body_out = {**invite_info(made), "code": code, "path": f"/join/{code}"}
+        return JSONResponse(body_out, status_code=201, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/clubs/{slug}/invites/{invite_id}/revoke", response_model=schemas.Ok, responses=E)
+    async def revoke(slug: str, invite_id: int, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        if not policy.may_invite(role):
+            raise HubError("not_allowed", "Only moderators and up can manage invite links", 403)
+        if not await store.revoke_invite(club.id, invite_id):
+            raise HubError("no_invite", "That invite link is already gone", 404)
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/clubs/join", response_model=schemas.ClubDetail, responses=E)
+    async def join(body: CodeBody, request: Request) -> JSONResponse:
+        write(request)
+        if not limiter.allow(
+            client_ip(request.scope, settings.trusted_proxy_hops, settings.client_ip_header)
+        ):
+            raise HubError("rate_limited", "Too many tries. Wait a minute and try again", 429)
+        user = await me(request)
+        try:
+            club = await store.redeem(policy.hash_invite(settings.secret_key, body.code), user.id)
+        except PolicyError as exc:
+            raise fail(exc) from None
+        club, role = await club_and_role(club.slug, user)
+        return JSONResponse(await detail(club, role))
+
+    @api.post("/api/clubs/{slug}/members/{username}", response_model=schemas.Ok, responses=E)
+    async def set_role(slug: str, username: str, body: RoleBody, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        uid, current = await target(club, username)
+        if uid == user.id or not policy.may_set_role(role, current, body.role):
+            raise HubError("not_allowed", "You can't give that role", 403)
+        await store.set_role(club.id, uid, body.role)
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/clubs/{slug}/members/{username}/remove", response_model=schemas.Ok, responses=E)
+    async def remove(slug: str, username: str, body: RemoveBody, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        uid, current = await target(club, username)
+        if uid == user.id or not policy.may_remove(role, current):
+            raise HubError("not_allowed", "You can't remove that person", 403)
+        await store.remove(club.id, uid, body.ban)
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/clubs/{slug}/transfer", response_model=schemas.Ok, responses=E)
+    async def transfer(slug: str, body: HandOverBody, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        if role != "owner":
+            raise HubError("not_allowed", "Only the owner can hand the club over", 403)
+        uid, _ = await target(club, body.username)
+        if uid == user.id:
+            raise HubError("bad_target", "Hand the club to someone else", 400)
+        try:
+            await store.transfer(club.id, user.id, uid)
+        except PolicyError as exc:
+            raise fail(exc) from None
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/clubs/{slug}/leave", response_model=schemas.Ok, responses=E)
+    async def leave(slug: str, request: Request) -> JSONResponse:
+        """Members leave freely. The owner hands the club over first, unless they're the last one in
+        (then the club closes)."""
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        if role == "owner":
+            if len(await store.members(club.id)) > 1:
+                raise HubError("owner_leaving", "Hand the club to someone before you leave", 409)
+            await store.delete(club.id)
+        else:
+            await store.remove(club.id, user.id, ban=False)
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/clubs/{slug}/delete", response_model=schemas.Ok, responses=E)
+    async def delete_club(slug: str, request: Request) -> JSONResponse:
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        if role != "owner":
+            raise HubError("not_allowed", "Only the owner can close the club", 403)
+        await store.delete(club.id)
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/clubs/{slug}/rooms", status_code=201, response_model=schemas.RoomPass, responses=E)
+    async def club_room(slug: str, body: RoomBody, request: Request) -> JSONResponse:
+        """Open a room for the club: its members see it on the club page and can walk in."""
+        write(request)
+        user = await me(request)
+        club, _ = await club_and_role(slug, user)
+        rules = policy.clean_rules(club.rules or None)
+        circle = await db.circle(user.id)
+        room, player, token = hub.create_room(body.name, user.id, circle, club_id=club.id, club_rules=rules)
+        return JSONResponse({"code": room.code, "player_id": player.id, "token": token}, status_code=201)
+
+    return api

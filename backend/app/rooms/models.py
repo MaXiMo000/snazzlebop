@@ -47,6 +47,7 @@ CHAT_MAX = 200
 CHAT_KEEP = 80
 CHAT_SHOWN = 40
 CHAT_GAP = 0.9  # seconds between messages from one person
+CLUB_CHAT_OFF = "Chat is off in this club's rooms"
 CHAT_ROOM_BURST = (12, 5.0)  # at most 12 messages per 5 seconds from the players
 CHAT_AUDIENCE_BURST = (6, 5.0)  # and 6 from the whole audience
 INK_BACKLOG = 300  # queued pen strokes per screen; past this it just gets told to redraw from scratch
@@ -188,6 +189,10 @@ class Room:
     # The prank: how many scares each matching person has been sent (only they ever see their count).
     scares: dict[str, int] = field(default_factory=dict)
     last_active: float = 0.0
+    club_id: int | None = None  # a club room: listed for that club's members
+    # The club's rules when the room opened: the games it plays (empty = all) and whether chat is on.
+    club_games: list[str] = field(default_factory=list)
+    club_chat: bool = True
     # When the host's last screen dropped (None while they're here). Switching apps or locking a phone
     # drops the socket; the host keeps the room unless they stay away for HOST_GRACE seconds.
     host_away: float | None = None

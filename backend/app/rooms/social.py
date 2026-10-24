@@ -15,6 +15,7 @@ from .models import (
     CHAT_KEEP,
     CHAT_ROOM_BURST,
     CHAT_SHOWN,
+    CLUB_CHAT_OFF,
     KEEP_REACTIONS,
     REACT_GAP,
     REACTIONS,
@@ -92,6 +93,8 @@ class SocialMixin:
         to = msg.get("to", "all")
         if to not in ("all", "team"):
             raise HubError("bad_message", "Unknown chat channel")
+        if not room.club_chat:
+            raise HubError("muted", CLUB_CHAT_OFF)
         text = clean_chat(msg.get("text"))
         game = self._chat_game(room)
         seated = pid in room.players
@@ -150,7 +153,9 @@ class SocialMixin:
                 for m in shown[-CHAT_SHOWN * 2 :]
             ],
             "team": channel[1] if channel else None,
-            "muted": bool(game is not None and playing and game.chat_muted(pid)),
-            "muted_note": game.CHAT_MUTED_NOTE if game is not None else "",
+            "muted": not room.club_chat or bool(game is not None and playing and game.chat_muted(pid)),
+            "muted_note": CLUB_CHAT_OFF
+            if not room.club_chat
+            else (game.CHAT_MUTED_NOTE if game is not None else ""),
             "can_send": pid not in room.viewers,
         }
