@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app import emails  # noqa: E402
 from app.main import create_app  # noqa: E402
 from tests.test_api import settings  # noqa: E402
+from tests.test_mfa_accounts import now_code  # noqa: E402
 
 PW = "correct horse battery"
 
@@ -239,3 +240,54 @@ def test_templates_escape_everything_and_match_in_text():
         )
     assert emails.mask("new@example.com") == "n***@example.com"
     assert emails.describe_device("") == "a browser"
+
+
+def link_from(mail: emails.Email) -> str:
+    found = re.search(r"https://snazzlebop\.test/account/link#([A-Za-z0-9_-]+)", mail.text)
+    assert found, mail.text
+    return found.group(1)
+
+
+def test_signing_in_with_an_emailed_link(client):
+    confirmed(client)
+    client.post("/api/auth/logout")
+    for nobody in ("nobody@example.com", "not an email"):
+        assert client.post("/api/auth/email-link", json={"email": nobody}).json() == {"ok": True}
+    assert outbox(client) == []  # the same answer, and nothing sent
+    assert client.post("/api/auth/email-link", json={"email": " ANA@example.com "}).json() == {"ok": True}
+    assert client.post("/api/auth/email-link", json={"email": "ana@example.com"}).json() == {"ok": True}
+    [(to, mail)] = outbox(client)  # one a minute per account
+    assert to == "ana@example.com" and mail.subject == "Your Snazzlebop sign-in link"
+    token = link_from(mail)
+    r = client.post("/api/auth/email-link/use", json={"token": token})
+    assert r.status_code == 200 and r.json()["user"]["username"] == "Ana_99"
+    assert client.get("/api/me").json()["user"]["username"] == "Ana_99"
+    client.post("/api/auth/logout")
+    r = client.post("/api/auth/email-link/use", json={"token": token})
+    assert r.json()["error"]["code"] == "bad_link"  # once only
+    assert (
+        client.post("/api/auth/email-link/use", json={"token": "x" * 30}).json()["error"]["code"]
+        == "bad_link"
+    )
+
+
+def test_a_link_still_asks_for_the_authenticator(client):
+    confirmed(client)
+    secret = client.post("/api/me/mfa/setup", json={"password": PW}).json()["secret"]
+    client.post("/api/me/mfa/enable", json={"code": now_code(secret)})
+    outbox(client)
+    client.post("/api/auth/logout")
+    client.post("/api/auth/email-link", json={"email": "ana@example.com"})
+    token = link_from(outbox(client)[0][1])
+    r = client.post("/api/auth/email-link/use", json={"token": token})
+    assert r.json()["error"]["code"] == "mfa_required"
+    r = client.post("/api/auth/email-link/use", json={"token": token, "code": now_code(secret, ahead=1)})
+    assert r.status_code == 200  # the link survived the missing code
+
+
+def test_unconfirmed_emails_get_no_sign_in_link(client):
+    signup(client)
+    outbox(client)
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/email-link", json={"email": "ana@example.com"}).json() == {"ok": True}
+    assert outbox(client) == []

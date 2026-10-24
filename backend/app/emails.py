@@ -181,6 +181,23 @@ def verify_email(site: str, username: str, url: str, changed: bool = False) -> E
     )
 
 
+def sign_in_link(site: str, username: str, url: str) -> Email:
+    return render(
+        Message(
+            subject="Your Snazzlebop sign-in link",
+            preheader="Tap to sign in. The link works for 15 minutes.",
+            heading="Sign in to Snazzlebop",
+            greeting=f"Hi {username},",
+            paragraphs=["Here's the sign-in link you asked for. Tap it on the device you want to play on."],
+            button=("Sign me in", url),
+            note="The link works once, for 15 minutes. If you didn't ask for it, ignore this email: "
+            "nobody can sign in without it.",
+            why="You got this because a sign-in link was asked for on your Snazzlebop account.",
+        ),
+        site,
+    )
+
+
 def reset_password(site: str, username: str, url: str) -> Email:
     return render(
         Message(

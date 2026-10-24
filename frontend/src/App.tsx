@@ -15,7 +15,7 @@ import { Home } from "./pages/Home";
 import { Room } from "./pages/Room";
 
 const ROOM_PATH = /^\/r\/([A-Za-z]{3,8})\/?$/;
-const ACCOUNT_PATH = /^\/account(?:\/(forgot|reset|verify))?\/?$/;
+const ACCOUNT_PATH = /^\/account(?:\/(forgot|reset|verify|link))?\/?$/;
 const CLUBS_PATH = /^\/clubs\/?$/;
 const CLUB_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/?$/;
 const CLUB_REPORTS_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/reports\/?$/;

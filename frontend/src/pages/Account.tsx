@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Alert, AuthMessage, EmailCard, ForgotEmail, OtpField, PasswordField, ResetPassword, SessionCard, VerifyEmail, errText, needsCode } from "../components/auth";
+import { Alert, AuthMessage, EmailCard, EmailLinkForm, ForgotEmail, OtpField, PasswordField, ResetPassword, SessionCard, SignInWithLink, VerifyEmail, errText, needsCode } from "../components/auth";
 import { Authenticator } from "../components/security";
 import { Btn, Card, CopyButton } from "../components/ui";
 import { InviteWaiting } from "./Clubs";
@@ -21,7 +21,7 @@ import {
 } from "../lib/account";
 import { sfx } from "../lib/sfx";
 
-export type AccountView = "home" | "forgot" | "reset" | "verify";
+export type AccountView = "home" | "forgot" | "reset" | "verify" | "link";
 type Tab = "in" | "up" | "forgot";
 
 export function Account({ go, view = "home" }: { go: (path: string) => void; view?: AccountView }) {
@@ -49,6 +49,7 @@ export function Account({ go, view = "home" }: { go: (path: string) => void; vie
     );
   if (view === "reset") return <ResetPassword go={go} />;
   if (view === "verify") return <VerifyEmail go={go} />;
+  if (view === "link") return <SignInWithLink go={go} />;
   if (code) return <RecoveryCode code={code} done={() => setCode(null)} />;
   if (user) return <Profile go={go} onSignedOut={() => setSignedOut(true)} />;
   if (signedOut)
@@ -69,6 +70,7 @@ function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab 
   const { mail } = useAccount();
   const [tab, setTab] = useState<Tab>(start);
   const [byCode, setByCode] = useState(!mail); // forgot: the recovery-code form instead of the email one
+  const [byLink, setByLink] = useState(false); // sign in: a link by email instead of the password
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -143,6 +145,10 @@ function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab 
             <div className="space-top">
               <ForgotEmail onRecoveryCode={() => setByCode(true)} />
             </div>
+          ) : tab === "in" && mail && byLink ? (
+            <div className="space-top">
+              <EmailLinkForm onPassword={() => setByLink(false)} />
+            </div>
           ) : (
             <form className="stack-sm space-top" onSubmit={(e) => void submit(e)}>
               <div>
@@ -215,9 +221,16 @@ function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab 
                 hint={tab !== "in" ? "At least 8 characters. A short sentence is easy to remember and hard to guess." : undefined}
               />
               {tab === "in" && (
-                <button type="button" className="link-button auth-forgot" onClick={() => pick("forgot")}>
-                  Forgot your password?
-                </button>
+                <div className="auth-alt">
+                  <button type="button" className="link-button" onClick={() => pick("forgot")}>
+                    Forgot your password?
+                  </button>
+                  {mail && (
+                    <button type="button" className="link-button" onClick={() => setByLink(true)}>
+                      Email me a sign-in link
+                    </button>
+                  )}
+                </div>
               )}
               {otp !== null && tab !== "up" && <OtpField id={`${id}-otp`} value={otp} set={setOtp} />}
               <Alert text={error} />

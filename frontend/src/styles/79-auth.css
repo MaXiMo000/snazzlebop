@@ -165,3 +165,10 @@
 .auth-text {
   text-wrap: balance;
 }
+.auth-alt {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 16px;
+  margin-top: -6px;
+}

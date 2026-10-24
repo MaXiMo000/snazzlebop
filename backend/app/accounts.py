@@ -83,6 +83,7 @@ _LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
 EMAIL_RE = re.compile(rf"^[^@\s]{{1,64}}@{_LABEL}(?:\.{_LABEL})+$")
 VERIFY_SECONDS = 2 * 86400
 RESET_SECONDS = 30 * 60
+LINK_SECONDS = 15 * 60  # an emailed sign-in link
 RESET_GAP = 60.0  # one reset email per account per minute, whatever the rate limits allow
 
 
@@ -212,6 +213,17 @@ class ResetBody(BaseModel):
     code: str | None = Field(default=None, max_length=32)
 
 
+class EmailOnlyBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: str = Field(max_length=EMAIL_MAX)
+
+
+class LinkBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(max_length=100)
+    code: str | None = Field(default=None, max_length=32)  # authenticator or backup code, when it is on
+
+
 class TokenBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     token: str = Field(max_length=100)
@@ -308,6 +320,7 @@ def router(
     mail = mailer or Mailer(settings)
     site = settings.site
     reset_sent: dict[int, float] = {}  # account -> when its last reset email went out
+    link_sent: dict[int, float] = {}  # account -> when its last sign-in link went out
 
     def ip(request: Request) -> str:
         return client_ip(request.scope, settings.trusted_proxy_hops, settings.client_ip_header)
@@ -548,6 +561,54 @@ def router(
 
     # -- forgotten passwords by email, confirming an address -------------------------------------------
     BAD_LINK = "That link has expired or was already used. Ask for a new one"
+
+    # -- signing in with a link sent to a confirmed email -----------------------------------------------
+    @api.post("/api/auth/email-link", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def email_link(body: EmailOnlyBody, request: Request) -> JSONResponse:
+        """Email a one-time sign-in link to a confirmed address. The same answer whether or not an
+        account has it, and at most one a minute per account."""
+        same_origin(request)
+        need_db()
+        if not mail.enabled:
+            raise HubError("mail_off", "Sign-in by email isn't set up here", 503)
+        email = body.email.strip().lower()
+        user = await db.user_by_email(email) if 3 <= len(email) <= EMAIL_MAX else None
+        now = time.monotonic()
+        if user is not None and not suspended(user) and now - link_sent.get(user.id, -1e9) > RESET_GAP:
+            if len(link_sent) > 20000:
+                link_sent.clear()  # memory bound; the per-IP limits still apply
+            link_sent[user.id] = now
+            token = secrets.token_urlsafe(32)
+            await db.add_token(token_hash(token), user.id, "login", email, LINK_SECONDS)
+            url = f"{site}/account/link#{token}"
+            mail.send(email, emails.sign_in_link(site, user.username, url), "sign-in")
+        return JSONResponse({"ok": True})
+
+    @api.post("/api/auth/email-link/use", response_model=schemas.UserBody, responses=schemas.ERRORS)
+    async def use_email_link(body: LinkBody, request: Request) -> JSONResponse:
+        """The emailed link, opened. The authenticator step still applies when it's on; the link is
+        only spent once everything checks out, so a missing code doesn't burn it."""
+        same_origin(request)
+        need_db()
+        user = await db.peek_token(token_hash(body.token), "login") if len(body.token) >= 20 else None
+        if user is None:
+            raise HubError(
+                "bad_link", "That sign-in link has expired or was already used. Ask for a new one", 400
+            )
+        if suspended(user):
+            until = aware(user.suspended_until).strftime("%d %b %Y")
+            raise HubError("suspended", f"This account is suspended until {until}", 403)
+        await second_factor(user, body.code, user.username_key)
+        if await db.take_token(token_hash(body.token), "login") is None:
+            raise HubError(
+                "bad_link", "That sign-in link has expired or was already used. Ask for a new one", 400
+            )
+        lockout.ok(user.username_key)
+        resp = JSONResponse({"user": public_user(user)})
+        set_session(resp, await start_session(user.id))
+        await signed_in(resp, request, user)
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
 
     @api.post("/api/auth/forgot", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def forgot(body: ForgotBody, request: Request) -> JSONResponse:

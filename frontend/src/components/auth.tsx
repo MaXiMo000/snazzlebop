@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ApiError } from "../lib/api";
 import {
+  emailSignInLink,
   forgotPassword,
   logOut,
   removeEmail,
@@ -9,6 +10,7 @@ import {
   setEmail,
   signOutOthers,
   useAccount,
+  signInWithLink,
   verifyEmail,
 } from "../lib/account";
 import { sfx } from "../lib/sfx";
@@ -214,6 +216,78 @@ export function ForgotEmail({ onRecoveryCode }: { onRecoveryCode: () => void }) 
   );
 }
 
+/** Sign in with a link sent to your confirmed email: no password to type. */
+export function EmailLinkForm({ onPassword }: { onPassword: () => void }) {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState<string | null>(null);
+  const [wait, setWait] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const id = useId();
+
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = window.setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [wait]);
+
+  const send = async (e?: FormEvent) => {
+    e?.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await emailSignInLink(email.trim());
+      setSent(email.trim());
+      setWait(60);
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (sent)
+    return (
+      <div className="stack-sm auth-sent" aria-live="polite">
+        <p className="auth-big" aria-hidden="true">
+          📬
+        </p>
+        <h3>Check your inbox</h3>
+        <p>
+          If <b className="auth-who">{sent}</b> is confirmed on an account, a sign-in link is on its way. It works once, for 15 minutes.
+        </p>
+        <p className="muted">Open it on the device you want to play on.</p>
+        <Alert text={error} />
+        <div className="row">
+          <Btn size="small" variant="ghost" disabled={busy || wait > 0} onClick={() => void send()}>
+            {wait > 0 ? `Send again in ${wait}s` : "Send again"}
+          </Btn>
+          <Btn size="small" variant="ghost" onClick={onPassword}>
+            Use my password
+          </Btn>
+        </div>
+      </div>
+    );
+
+  return (
+    <form className="stack-sm" onSubmit={(e) => void send(e)}>
+      <div>
+        <label className="field" htmlFor={`${id}-email`}>
+          Your email
+        </label>
+        <input id={`${id}-email`} type="email" inputMode="email" autoComplete="email" maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
+      </div>
+      <Alert text={error} />
+      <Btn type="submit" variant="go" size="big" block disabled={busy || !email.includes("@")}>
+        Email me a sign-in link
+      </Btn>
+      <button type="button" className="link-button" onClick={onPassword}>
+        Use my password instead
+      </button>
+    </form>
+  );
+}
+
 /** The fragment of the current address: where emailed links carry their token (never sent to a server). */
 const fragment = () => window.location.hash.replace(/^#/, "");
 
@@ -272,6 +346,62 @@ export function ResetPassword({ go }: { go: Go }) {
       </Card>
     </div>
   );
+}
+
+// -- /account/link#<token>: an emailed sign-in link ----------------------------------------------------
+export function SignInWithLink({ go }: { go: Go }) {
+  const token = useRef(fragment()).current;
+  const [otp, setOtp] = useState<string | null>(null);
+  const [state, setState] = useState<"working" | "done" | "code" | string>(token ? "working" : "That link is incomplete. Open it from your email again.");
+  const ran = useRef(false);
+  const id = useId();
+
+  const attempt = async (code?: string) => {
+    try {
+      await signInWithLink(token, code);
+      sfx.ding();
+      setState("done");
+    } catch (e) {
+      if (needsCode(e)) setState("code");
+      else setState(errText(e));
+    }
+  };
+
+  useEffect(() => {
+    document.title = "Signing in · Snazzlebop";
+    if (window.location.hash) window.history.replaceState({}, "", window.location.pathname);
+    if (!token || ran.current) return;
+    ran.current = true;
+    void attempt();
+  }, [token]); // runs once per link; `attempt` reads only the token and the code
+
+  if (state === "working") return <p className="muted center">Signing you in…</p>;
+  if (state === "done")
+    return <AuthMessage go={go} icon="🎉" title="You're signed in" text="Welcome back! Your coins, clubs and power-ups are waiting." action={["Go to your account", "/account"]} />;
+  if (state === "code")
+    return (
+      <div className="stack enter acct auth">
+        <Card className="auth-card">
+          <p className="auth-big" aria-hidden="true">
+            🔐
+          </p>
+          <h2 className="auth-title">One more step</h2>
+          <form
+            className="stack-sm space-top"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void attempt(otp?.trim());
+            }}
+          >
+            <OtpField id={`${id}-otp`} value={otp ?? ""} set={setOtp} />
+            <Btn type="submit" variant="go" size="big" block disabled={!otp?.trim()}>
+              Sign in
+            </Btn>
+          </form>
+        </Card>
+      </div>
+    );
+  return <AuthMessage go={go} icon="⚠️" title="That link didn't work" text={state} action={["Sign in another way", "/account"]} />;
 }
 
 // -- /account/verify#<token> ------------------------------------------------------------------------

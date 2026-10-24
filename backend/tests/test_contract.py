@@ -199,6 +199,8 @@ def test_every_route_matches_its_declared_model(client):
     token = re.search(r"#([A-Za-z0-9_-]{20,})", mailer.sent[-1][1].text).group(1)
     c.call("POST", "/api/auth/verify", json={"token": token})
     c.call("POST", "/api/auth/verify", json={"token": token})  # spent: the error body
+    c.call("POST", "/api/auth/email-link", json={"email": "ana@example.com"})
+    c.call("POST", "/api/auth/email-link/use", json={"token": "x" * 30})  # unknown: the error body
     c.call("POST", "/api/auth/forgot", json={"login": "Ana_99"})
     client.portal.call(mailer.drain)
     reset = re.search(r"#([A-Za-z0-9_-]{20,})", mailer.sent[-1][1].text).group(1)

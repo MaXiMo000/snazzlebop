@@ -78,6 +78,14 @@ export async function recover(username: string, recoveryCode: string, newPasswor
 /** Email a reset link to the account's confirmed address (the same answer whether or not it exists). */
 export const forgotPassword = (login: string) => post<Ok>("/api/auth/forgot", { login });
 
+/** Email a one-time sign-in link to a confirmed address (the same answer whether or not it exists). */
+export const emailSignInLink = (email: string) => post<Ok>("/api/auth/email-link", { email });
+
+export async function signInWithLink(token: string, code?: string): Promise<void> {
+  const r = await post<UserBody>("/api/auth/email-link/use", { token, ...(code ? { code } : {}) });
+  set({ user: r.user });
+}
+
 export async function resetPassword(token: string, newPassword: string, code?: string): Promise<void> {
   const r = await post<UserBody>("/api/auth/reset", { token, new_password: newPassword, ...(code ? { code } : {}) });
   set({ user: r.user });
