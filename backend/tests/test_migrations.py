@@ -25,7 +25,7 @@ BASELINE_TABLES = {
     "sessions",
 }
 # Columns later migrations added to those tables: a pre-migration database doesn't have them.
-LATER_COLUMNS = {"users": ["email", "email_verified"]}
+LATER_COLUMNS = {"users": ["email", "email_verified", "suspended_until", "suspend_reason"]}
 LATER_INDEXES = ["ix_users_email"]
 
 

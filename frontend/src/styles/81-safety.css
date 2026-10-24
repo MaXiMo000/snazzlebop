@@ -226,3 +226,25 @@
   padding-left: 1.2em;
   overflow-wrap: anywhere;
 }
+
+/* Staff console */
+.staff-days {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* A case's details: each fact wraps as a whole, so nothing is left dangling at narrow widths. */
+.case-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.case-meta li {
+  white-space: nowrap;
+}
+.case-meta li.long {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

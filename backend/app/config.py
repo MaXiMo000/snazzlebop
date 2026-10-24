@@ -107,6 +107,8 @@ class Settings:
     report_webhook_url: str = ""  # each report event is POSTed here, signed
     report_webhook_secret: str = field(default="", repr=False)
     integration_token: str = field(default="", repr=False)  # bearer token for /api/integrations/*
+    # Platform staff (staff.py): these usernames, and only with an authenticator app turned on.
+    staff_usernames: tuple[str, ...] = field(default=(), repr=False)
 
     # The jump-scare prank. On unless JUMPSCARE=false; JUMPSCARE_NAMES (comma separated) replaces the
     # built-in list. (A plain Settings() keeps it off, so unit tests stay quiet.)
@@ -223,6 +225,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         report_webhook_url=webhook,
         report_webhook_secret=webhook_secret,
         integration_token=integration_token,
+        staff_usernames=tuple(n.casefold() for n in _csv(e.get("STAFF_USERNAMES"))),
         jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
         jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )

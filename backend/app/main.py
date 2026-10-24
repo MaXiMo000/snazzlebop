@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import accounts, calls, integrations, notifications, safety, schemas
+from . import accounts, calls, integrations, notifications, safety, schemas, staff
 from .clubs import routes as clubs
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
@@ -42,9 +42,9 @@ from .ws import ConnectionCounter, serve_socket
 log = logging.getLogger("snazzlebop")
 
 # The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
-# /clubs/<slug> (and /reports), /join/<invite>, /privacy and /safety.
+# /clubs/<slug> (and /reports), /join/<invite>, /privacy, /safety and /staff.
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify)?|inbox|privacy|safety|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify)?|inbox|privacy|safety|staff|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 
@@ -206,6 +206,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(notifications.router(settings, db, hub, notifier, presence, statuses))
     app.include_router(safety.router(settings, db, hub, presence, outbox))
     app.include_router(integrations.router(settings, db, outbox))
+    app.include_router(staff.router(settings, db, outbox))
 
     async def account_id(request: Request) -> int | None:
         user = await accounts.session_user(request, db)

@@ -115,6 +115,8 @@ def router(settings: Settings, db: Any, outbox: Outbox) -> APIRouter:
             if report.status in ("actioned",):
                 raise HubError("handled", "A moderator already acted on this case", 409)
             changes["status"] = body.status
+            if body.status == "escalated":
+                changes["staff"] = True  # staff own it from now on
         if body.priority is not None:
             if body.priority not in events.PRIORITIES:
                 raise HubError("bad_input", f"priority is any of {', '.join(events.PRIORITIES)}")

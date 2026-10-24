@@ -54,6 +54,7 @@ def report_payload(report: Any, club: Any, site: str, secret: str) -> dict[str, 
         "v": SCHEMA_VERSION,
         "id": report.public_id,
         "status": report.status,
+        "queue": "staff" if report.staff else "club",  # who decides: platform staff or the club's moderators
         "priority": report.priority,
         "reason": report.reason,
         "reason_label": REASONS.get(report.reason, report.reason),

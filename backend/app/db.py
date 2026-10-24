@@ -101,6 +101,9 @@ class User(Base):
     # Optional, lower-cased. Only a confirmed address is used: for signing in, reset links and notices.
     email: Mapped[str | None] = mapped_column(String(254), nullable=True, index=True)
     email_verified: Mapped[bool] = mapped_column(default=False)
+    # A platform suspension by staff (staff.py): no sign-in until then. Far in the future = permanent.
+    suspended_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspend_reason: Mapped[str] = mapped_column(String(200), default="")
 
 
 class EmailToken(Base):
@@ -202,6 +205,8 @@ class Report(Base):
     external: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     triage: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Platform staff own this case: it was escalated, or it isn't about a club at all.
+    staff: Mapped[bool] = mapped_column(default=False, index=True)
 
 
 class ReportEvent(Base):
@@ -534,6 +539,8 @@ class Database:
                 if found is None:
                     return None
                 user, expires = found
+                if suspended(user):
+                    return None
                 if aware(expires) < datetime.now(UTC):
                     await session.execute(delete(Session).where(Session.token_hash == token_hash))
                     await session.commit()
@@ -924,6 +931,48 @@ class Database:
             await session.commit()
             return report
 
+    async def staff_reports(self) -> list[Report]:
+        """Platform staff's queue: cases they own that are waiting first (by priority later, in the
+        page), then the most recent ones they closed."""
+        waiting = ("open", "triaged", "escalated")
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(Report)
+                .where(Report.staff.is_(True))
+                .order_by(Report.status.in_(waiting).desc(), Report.created_at.desc())
+                .limit(80)
+            )
+            return list(rows.scalars().all())
+
+    async def suspend(self, user_id: int, until: datetime | None, reason: str) -> None:
+        """Suspend (or, with None, lift a suspension): every session ends at once."""
+        async with self.sessions() as session:
+            await session.execute(
+                update(User)
+                .where(User.id == user_id)
+                .values(suspended_until=until, suspend_reason=reason[:200])
+            )
+            if until is not None:
+                await session.execute(delete(Session).where(Session.user_id == user_id))
+            await session.commit()
+
+    async def suspended_users(self) -> list[User]:
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(User).where(User.suspended_until.is_not(None)).order_by(User.suspended_until)
+            )
+            return [u for u in rows.scalars().all() if suspended(u)]
+
+    async def staff_actions(self, limit: int = 40) -> list[ModAction]:
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(ModAction)
+                .where(ModAction.club_id.is_(None))
+                .order_by(ModAction.created_at.desc(), ModAction.id.desc())
+                .limit(limit)
+            )
+            return list(rows.scalars().all())
+
     async def reports_today(self, reporter_id: int) -> int:
         since = datetime.now(UTC) - timedelta(days=1)
         async with self.sessions() as session:
@@ -1272,6 +1321,13 @@ class Database:
             await session.execute(delete(PushSub).where(*where))
             await session.commit()
 
+    async def club_names(self, ids: set[int]) -> dict[int, str]:
+        if not ids:
+            return {}
+        async with self.sessions() as session:
+            rows = await session.execute(select(Club.id, Club.name).where(Club.id.in_(ids)))
+            return {int(i): str(n) for i, n in rows.all()}
+
     async def users_by_id(self, ids: list[int]) -> dict[int, User]:
         if not ids:
             return {}
@@ -1499,6 +1555,10 @@ class Database:
 
     async def close(self) -> None:
         await self.engine.dispose()
+
+
+def suspended(user: User) -> bool:
+    return user.suspended_until is not None and aware(user.suspended_until) > datetime.now(UTC)
 
 
 def aware(when: datetime) -> datetime:

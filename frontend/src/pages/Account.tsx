@@ -267,7 +267,7 @@ function RecoveryCode({ code, done }: { code: string; done: () => void }) {
 }
 
 function Profile({ go, onSignedOut }: { go: (path: string) => void; onSignedOut: () => void }) {
-  const { user } = useAccount();
+  const { user, staff } = useAccount();
   const [stats, setStats] = useState<Stats | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
   const [items, setItems] = useState<ShopItem[]>([]);
@@ -303,6 +303,11 @@ function Profile({ go, onSignedOut }: { go: (path: string) => void; onSignedOut:
           <Btn variant="ghost" onClick={() => go("/clubs")}>
             Your clubs
           </Btn>
+          {staff && (
+            <Btn variant="ghost" onClick={() => go("/staff")}>
+              Staff console
+            </Btn>
+          )}
         </div>
       </Card>
       <InviteWaiting go={go} />

@@ -13,8 +13,10 @@ interface AccountState {
   available: boolean;
   /** the server can send email: sign-in by email, reset links, notices */
   mail: boolean;
+  /** platform staff (the console also needs the authenticator app) */
+  staff: boolean;
 }
-let state: AccountState = { user: null, loaded: false, available: true, mail: false };
+let state: AccountState = { user: null, loaded: false, available: true, mail: false, staff: false };
 let fetching = false;
 const listeners = new Set<() => void>();
 
@@ -26,7 +28,7 @@ function set(next: Partial<AccountState>) {
 export async function refreshAccount(): Promise<Account | null> {
   try {
     const r = await request<Me>("/api/me");
-    set({ user: r.user, available: r.accounts, mail: r.mail });
+    set({ user: r.user, available: r.accounts, mail: r.mail, staff: r.staff });
   } catch {
     set({});
   }

@@ -27,7 +27,9 @@ PW = "correct horse battery"
 
 @pytest.fixture()
 def client(tmp_path):
-    app = create_app(settings(tmp_path, rate_auth_burst=1000, integration_token="i" * 40))
+    app = create_app(
+        settings(tmp_path, rate_auth_burst=1000, integration_token="i" * 40, staff_usernames=("ana_99",))
+    )
     app.state.mailer.keep = True  # mail on (kept in memory), so the email routes answer for real
     with TestClient(app) as c:
         yield c
@@ -183,6 +185,9 @@ def test_every_route_matches_its_declared_model(client):
     c.call("POST", "/api/me/mfa/enable", json={"code": "000000"})  # wrong: the error body
     code = mfa.totp_at(setup["secret"], int(time.time()) // mfa.TOTP_STEP)
     backup = c.call("POST", "/api/me/mfa/enable", json={"code": code})["codes"]
+    c.call("GET", "/api/staff/reports")  # staff, with the authenticator on
+    c.call("POST", "/api/staff/reports/999", "/api/staff/reports/{report_id}", json={"action": "dismiss"})
+    c.call("POST", "/api/staff/unsuspend", json={"username": "Bo_42"})
     c.call("POST", "/api/me/mfa/backup-codes", json={"code": backup[0]})
     c.call("POST", "/api/me/mfa/disable", json={"password": PW, "code": "nope"})  # error body
     fresh = mfa.totp_at(setup["secret"], int(time.time()) // mfa.TOTP_STEP + 1)  # the next step's code

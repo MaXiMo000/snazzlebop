@@ -10,6 +10,7 @@ import { ClubReports } from "./pages/ClubReports";
 import { InboxPage } from "./pages/Inbox";
 import { Privacy } from "./pages/Privacy";
 import { Safety } from "./pages/Safety";
+import { Staff } from "./pages/Staff";
 import { Home } from "./pages/Home";
 import { Room } from "./pages/Room";
 
@@ -20,6 +21,7 @@ const CLUB_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/?$/;
 const CLUB_REPORTS_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/reports\/?$/;
 const PRIVACY_PATH = /^\/privacy\/?$/;
 const SAFETY_PATH = /^\/safety\/?$/;
+const STAFF_PATH = /^\/staff\/?$/;
 const JOIN_PATH = /^\/join\/([A-Za-z0-9-]{4,32})\/?$/;
 const INBOX_PATH = /^\/inbox\/?$/;
 
@@ -145,6 +147,8 @@ export function App() {
           <Privacy go={go} />
         ) : SAFETY_PATH.test(path) ? (
           <Safety go={go} />
+        ) : STAFF_PATH.test(path) ? (
+          <Staff go={go} />
         ) : clubMatch ? (
           <ClubHome key={clubMatch[1]} slug={clubMatch[1]!} go={go} />
         ) : INBOX_PATH.test(path) ? (

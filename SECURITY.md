@@ -32,6 +32,9 @@ Only the latest version on `main` (the live deployment) is supported.
 - **Blocking and reports.** Blocks are silent and apply everywhere: friends, invites, presence,
   joining rooms and room chat. Report context is captured by the server, not supplied by the reporter.
   Moderators act only on roles below their own, and every action is recorded in an audit log.
+- **Staff access.** The staff console exists only for usernames listed in a server secret, and only
+  while that account's authenticator app is on; to anyone else it answers "not found". Suspensions end
+  every session at once, and a suspended account learns of it only after entering the right password.
 - **Integrations.** Report events leave only through an operator-configured webhook, signed with
   HMAC-SHA256 and a timestamp, and carry pseudonymous ids instead of accounts or emails. The
   integration API is off unless a 32+ character token is set and compares it in constant time; it

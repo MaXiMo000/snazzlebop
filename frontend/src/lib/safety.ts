@@ -1,7 +1,7 @@
 import { request } from "./api";
-import type { BlockList, ClubReports, Ok, SiteInfo } from "./contract";
+import type { BlockList, ClubReports, Ok, SiteInfo, StaffQueue } from "./contract";
 
-export type { BlockList, ClubReports } from "./contract";
+export type { BlockList, ClubReports, StaffQueue } from "./contract";
 
 const post = <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) });
 const club = (slug: string) => `/api/clubs/${encodeURIComponent(slug)}`;
@@ -33,3 +33,9 @@ export const unmute = (slug: string, username: string) => post<Ok>(`${club(slug)
 
 export const siteInfo = () => request<SiteInfo>("/api/site");
 export const EXPORT_URL = "/api/me/export";
+
+// -- the platform staff console
+export const staffQueue = () => request<StaffQueue>("/api/staff/reports");
+export const staffAct = (id: number, action: string, days?: number, reason?: string) =>
+  post<Ok>(`/api/staff/reports/${id}`, { action, ...(days !== undefined ? { days } : {}), ...(reason ? { reason } : {}) });
+export const liftSuspension = (username: string) => post<Ok>("/api/staff/unsuspend", { username });

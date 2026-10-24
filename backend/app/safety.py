@@ -90,7 +90,7 @@ def written(d: dict[str, Any]) -> str:
 def history(event: Any) -> dict[str, str]:
     """One timeline entry, in words a moderator reads at a glance."""
     who = event.actor.split(":", 1)
-    actor = f"{who[1]} (integration)" if who[0] == "integration" else who[-1]
+    actor = f"{who[1]} ({who[0]})" if who[0] in ("integration", "staff") else who[-1]
     d = event.data or {}
     text = {
         "created": "Reported",
@@ -101,13 +101,16 @@ def history(event: Any) -> dict[str, str]:
             "ban": "Banned from the club",
             "dismiss": "Dismissed",
             "escalate": "Sent to staff",
+            "suspend": "Account suspended "
+            + ("for good" if d.get("days") == 0 else f"for {d.get('days')} days"),
+            "return": "Handed back to the club",
         }.get(d.get("action", ""), str(d.get("action", ""))),
         "triage": written(d),
         "external": written(d),
         "status": written(d),
         "update": written(d),
     }.get(event.kind, event.kind)
-    if d.get("note") and event.kind in ("status", "update", "triage"):
+    if d.get("note") and event.kind in ("status", "update", "triage", "action"):
         text += f": {d['note']}"
     return {"at": aware(event.created_at).isoformat(), "actor": actor, "text": text}
 
@@ -248,6 +251,7 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence, outbox: Ou
             "note": clean_note(body.note),
             "context": [],
             "priority": events.REASON_PRIORITY.get(body.reason, "normal"),
+            "staff": club_id is None,
         }
         await db.add_report(values, actor(user), outbox.names, payload)
         return JSONResponse({"ok": True})
@@ -277,6 +281,7 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence, outbox: Ou
             "note": clean_note(body.note),
             "context": hub.said(room, body.player_id),
             "priority": events.REASON_PRIORITY.get(body.reason, "normal"),
+            "staff": room.club_id is None,
         }
         await db.add_report(values, actor(user), outbox.names, payload)
         if body.block and account is not None:
@@ -381,7 +386,8 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence, outbox: Ou
         status = {"dismiss": "dismissed", "escalate": "escalated"}.get(body.action, "actioned")
         await db.update_report(
             r.id,
-            {"status": status, "handled_by": user.id, "handled_at": datetime.now(UTC)},
+            {"status": status, "handled_by": user.id, "handled_at": datetime.now(UTC)}
+            | ({"staff": True} if body.action == "escalate" else {}),
             "action",
             actor(user),
             {"action": body.action, "hours": body.hours}

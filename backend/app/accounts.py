@@ -42,6 +42,7 @@ from starlette.requests import HTTPConnection
 from . import emails, mfa, schemas
 from .coins import POWERUP_PRICES, season_of
 from .config import Settings
+from .db import aware, suspended
 from .mailer import Mailer
 from .rooms import HubError
 from .security import RateLimiter, client_ip
@@ -443,6 +444,9 @@ def router(
         if user is None or not ok:
             lockout.fail(key)
             raise HubError("bad_login", "Wrong username, email or password", 401)
+        if suspended(user):  # told only after the right password, so it can't be probed
+            until = aware(user.suspended_until).strftime("%d %b %Y")
+            raise HubError("suspended", f"This account is suspended until {until}", 403)
         await second_factor(user, body.code, key)
         lockout.ok(key)
         resp = JSONResponse({"user": public_user(user)})
@@ -498,7 +502,12 @@ def router(
     async def me(request: Request) -> JSONResponse:
         user = await current(request)
         return JSONResponse(
-            {"user": public_user(user) if user else None, "accounts": bool(db.ready), "mail": mail.enabled},
+            {
+                "user": public_user(user) if user else None,
+                "accounts": bool(db.ready),
+                "mail": mail.enabled,
+                "staff": user is not None and user.username_key in settings.staff_usernames,
+            },
             headers={"Cache-Control": "no-store"},
         )
 

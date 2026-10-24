@@ -92,6 +92,7 @@ class Me(Strict):
     user: PublicUser | None
     accounts: bool  # false when the server has no database: sign-in is unavailable
     mail: bool  # true when the server can send email: email sign-in, reset links and notices
+    staff: bool  # you're platform staff (the console also needs your authenticator app)
 
 
 class MfaStatus(Strict):
@@ -373,6 +374,38 @@ class ClubReports(Strict):
     muted: list[MutedRow]
     actions: list[ActionRow]  # the audit log, newest first
     reasons: dict[str, str]  # id -> label, for the report form
+
+
+class StaffReportRow(Strict):
+    id: int
+    target: str  # the name they went by
+    account: str | None  # their account, when they had one
+    reason: str
+    note: str
+    context: list[ChatLine]
+    room: str | None
+    club: str | None  # the club it came from, if any
+    status: Literal["open", "triaged", "escalated", "dismissed", "actioned"]
+    at: str
+    can_suspend: bool
+    can_return: bool  # an escalated club case can go back to its club
+    public_id: str
+    priority: Literal["low", "normal", "high", "urgent"]
+    triage: TriageInfo | None
+    tickets: list[TicketLink]
+    history: list[HistoryRow]
+
+
+class SuspendedRow(Strict):
+    username: str
+    until: str | None  # None: for good
+    reason: str
+
+
+class StaffQueue(Strict):
+    reports: list[StaffReportRow]
+    suspended: list[SuspendedRow]
+    actions: list[ActionRow]  # the staff audit log, newest first
 
 
 class IntegrationReports(Strict):

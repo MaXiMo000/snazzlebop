@@ -88,6 +88,9 @@ original has them.
 - **Safety:** block (silent), report from a club or a room (the server attaches what was said), a
   moderators' queue per club with mute, remove, ban and escalate, an audit log, a privacy notice, and a
   download of your data.
+- **Staff console:** platform staff (named in `STAFF_USERNAMES`, authenticator required) handle
+  escalated club cases and reports outside clubs: dismiss, hand back to the club, or suspend an account
+  (signed out everywhere, no sign-in until the date), with a staff audit log.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced
