@@ -279,7 +279,7 @@ export function EmailLinkForm({ onPassword }: { onPassword: () => void }) {
       </div>
       <Alert text={error} />
       <Btn type="submit" variant="go" size="big" block disabled={busy || !email.includes("@")}>
-        Email me a sign-in link
+        Send me a link
       </Btn>
       <button type="button" className="link-button" onClick={onPassword}>
         Use my password instead

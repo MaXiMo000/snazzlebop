@@ -140,7 +140,7 @@ function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab 
           ))}
         </div>
         <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-tab-${tab}`} className="space-top">
-          <p className="auth-lead">{lead[tab]}</p>
+          <p className="auth-lead">{tab === "in" && byLink ? "No password needed: we'll email you a link that signs you in." : lead[tab]}</p>
           {tab === "forgot" && mail && !byCode ? (
             <div className="space-top">
               <ForgotEmail onRecoveryCode={() => setByCode(true)} />
