@@ -58,6 +58,11 @@ services:
         sync: false
       - key: PUBLIC_URL
         sync: false
+      # Optional: sign in with Google (redirect URI: <PUBLIC_URL>/api/auth/google/callback).
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
       # Where privacy requests go, shown on the privacy notice.
       - key: PRIVACY_CONTACT
         sync: false

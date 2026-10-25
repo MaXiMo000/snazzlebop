@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { request } from "./api";
-import type { Account, BackupCodes, Board, Me, MfaSetup, MfaStatus, NewAccount, Ok, SessionList, Shop, Stats, UserBody } from "./contract";
+import type { Account, BackupCodes, Board, Identities, Me, MfaSetup, MfaStatus, NewAccount, Ok, SessionList, Shop, Stats, UserBody } from "./contract";
 
 // The signed-in account (the session itself is an HttpOnly cookie: this page never sees it).
 export type { Account, Board, MfaSetup, MfaStatus, ShopItem, Stats } from "./contract";
@@ -13,10 +13,12 @@ interface AccountState {
   available: boolean;
   /** the server can send email: sign-in by email, reset links, notices */
   mail: boolean;
+  /** sign in with Google is set up on this site */
+  google: boolean;
   /** platform staff (the console also needs the authenticator app) */
   staff: boolean;
 }
-let state: AccountState = { user: null, loaded: false, available: true, mail: false, staff: false };
+let state: AccountState = { user: null, loaded: false, available: true, mail: false, google: false, staff: false };
 let fetching = false;
 const listeners = new Set<() => void>();
 
@@ -28,7 +30,7 @@ function set(next: Partial<AccountState>) {
 export async function refreshAccount(): Promise<Account | null> {
   try {
     const r = await request<Me>("/api/me");
-    set({ user: r.user, available: r.accounts, mail: r.mail, staff: r.staff });
+    set({ user: r.user, available: r.accounts, mail: r.mail, google: r.google, staff: r.staff });
   } catch {
     set({});
   }
@@ -108,6 +110,12 @@ export async function removeEmail(password: string): Promise<void> {
   set({ user: r.user });
 }
 
+/** Google sign-in is a full-page trip (the browser goes to Google and back), so these are links. */
+export const GOOGLE_SIGN_IN = "/api/auth/google/start";
+export const GOOGLE_LINK = "/api/auth/google/start?mode=link";
+export const myIdentities = () => request<Identities>("/api/me/identities");
+export const unlinkGoogle = (password: string) => post<Ok>("/api/me/google/remove", { password });
+
 export const signOutOthers = () => post<Ok>("/api/me/sessions/revoke");
 export const mySessions = () => request<SessionList>("/api/me/sessions");
 export const signOutSession = (id: string) => post<Ok>(`/api/me/sessions/${encodeURIComponent(id)}/revoke`);
@@ -119,6 +127,7 @@ export async function logOut(): Promise<void> {
 
 export async function changePassword(password: string, newPassword: string): Promise<void> {
   await post<Ok>("/api/me/password", { password, new_password: newPassword });
+  await refreshAccount(); // an account that had no password now has one
 }
 
 export async function deleteAccount(password: string, code?: string): Promise<void> {

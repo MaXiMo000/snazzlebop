@@ -140,6 +140,7 @@ def test_changing_and_removing_the_email(client):
         "powerups": {},
         "email": "new@example.com",
         "email_verified": False,
+        "has_password": True,
     }
     sent = dict((to, m.subject) for to, m in outbox(client))
     assert sent == {

@@ -1,5 +1,25 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Alert, AuthMessage, EmailCard, EmailLinkForm, ForgotEmail, OtpField, PasswordField, ResetPassword, SessionCard, SignInWithLink, VerifyEmail, errText, needsCode } from "../components/auth";
+import {
+  Alert,
+  AuthMessage,
+  EmailCard,
+  EmailLinkForm,
+  ForgotEmail,
+  GoogleButton,
+  GoogleCard,
+  OrLine,
+  OtpField,
+  PasswordField,
+  ResetPassword,
+  SessionCard,
+  SignInWithLink,
+  VerifyEmail,
+  YourPassword,
+  errText,
+  needsCode,
+  useConfirmed,
+  useGoogleOutcome,
+} from "../components/auth";
 import { Authenticator } from "../components/security";
 import { Btn, Card, CopyButton } from "../components/ui";
 import { InviteWaiting } from "./Clubs";
@@ -28,6 +48,7 @@ export function Account({ go, view = "home" }: { go: (path: string) => void; vie
   const { user, loaded, available } = useAccount();
   const [code, setCode] = useState<string | null>(null); // a fresh recovery code, shown once
   const [signedOut, setSignedOut] = useState(false);
+  const outcome = useGoogleOutcome();
 
   useEffect(() => {
     if (view === "home" || view === "forgot") document.title = user ? `${user.username} · Snazzlebop` : "Your account · Snazzlebop";
@@ -51,7 +72,7 @@ export function Account({ go, view = "home" }: { go: (path: string) => void; vie
   if (view === "verify") return <VerifyEmail go={go} />;
   if (view === "link") return <SignInWithLink go={go} />;
   if (code) return <RecoveryCode code={code} done={() => setCode(null)} />;
-  if (user) return <Profile go={go} onSignedOut={() => setSignedOut(true)} />;
+  if (user) return <Profile go={go} onSignedOut={() => setSignedOut(true)} notice={outcome} />;
   if (signedOut)
     return (
       <AuthMessage
@@ -62,12 +83,14 @@ export function Account({ go, view = "home" }: { go: (path: string) => void; vie
         action={["Sign in again", "/account"]}
       />
     );
-  return <SignIn key={view} onCode={setCode} start={view === "forgot" ? "forgot" : "in"} />;
+  return <SignIn key={view} onCode={setCode} start={view === "forgot" ? "forgot" : "in"} notice={outcome} />;
 }
 
 /** Sign in, create an account, or get back in after forgetting the password. */
-function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab }) {
-  const { mail } = useAccount();
+type Notice = { ok: boolean; text: string } | null;
+
+function SignIn({ onCode, start, notice }: { onCode: (code: string) => void; start: Tab; notice: Notice }) {
+  const { mail, google } = useAccount();
   const [tab, setTab] = useState<Tab>(start);
   const [byCode, setByCode] = useState(!mail); // forgot: the recovery-code form instead of the email one
   const [byLink, setByLink] = useState(false); // sign in: a link by email instead of the password
@@ -140,6 +163,11 @@ function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab 
           ))}
         </div>
         <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-tab-${tab}`} className="space-top">
+          {notice && (
+            <div className="auth-notice">
+              <Alert text={notice.text} calm={notice.ok} />
+            </div>
+          )}
           <p className="auth-lead">{tab === "in" && byLink ? "No password needed: we'll email you a link that signs you in." : lead[tab]}</p>
           {tab === "forgot" && mail && !byCode ? (
             <div className="space-top">
@@ -150,7 +178,14 @@ function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab 
               <EmailLinkForm onPassword={() => setByLink(false)} />
             </div>
           ) : (
-            <form className="stack-sm space-top" onSubmit={(e) => void submit(e)}>
+            <>
+            {google && tab !== "forgot" && (
+              <div className="space-top">
+                <GoogleButton label={tab === "up" ? "Sign up with Google" : "Continue with Google"} />
+                <OrLine />
+              </div>
+            )}
+            <form className={`stack-sm ${google && tab !== "forgot" ? "" : "space-top"}`} onSubmit={(e) => void submit(e)}>
               <div>
                 <label className="field" htmlFor={`${id}-user`}>
                   {tab === "in" && mail ? "Username or email" : "Username"}
@@ -251,6 +286,7 @@ function SignIn({ onCode, start }: { onCode: (code: string) => void; start: Tab 
                 </p>
               )}
             </form>
+            </>
           )}
         </div>
       </Card>
@@ -279,7 +315,7 @@ function RecoveryCode({ code, done }: { code: string; done: () => void }) {
   );
 }
 
-function Profile({ go, onSignedOut }: { go: (path: string) => void; onSignedOut: () => void }) {
+function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSignedOut: () => void; notice: Notice }) {
   const { user, staff } = useAccount();
   const [stats, setStats] = useState<Stats | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
@@ -326,6 +362,7 @@ function Profile({ go, onSignedOut }: { go: (path: string) => void; onSignedOut:
           )}
         </div>
       </Card>
+      {notice && <Alert text={notice.text} calm={notice.ok} />}
       <InviteWaiting go={go} />
 
       {error && (
@@ -439,6 +476,7 @@ function Profile({ go, onSignedOut }: { go: (path: string) => void; onSignedOut:
       </Card>
 
       <EmailCard />
+      <GoogleCard />
       <Authenticator />
       <SessionCard onSignedOut={onSignedOut} />
       <Settings />
@@ -447,11 +485,14 @@ function Profile({ go, onSignedOut }: { go: (path: string) => void; onSignedOut:
 }
 
 function Settings() {
+  const { user } = useAccount();
+  const hasPassword = user?.has_password ?? true;
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [del, setDel] = useState("");
   const [delCode, setDelCode] = useState<string | null>(null); // asked for when the authenticator is on
   const [confirming, setConfirming] = useState(false);
+  const delReady = useConfirmed(del);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const run = async (fn: () => Promise<void>, ok: string) => {
     setNote(null);
@@ -473,23 +514,30 @@ function Settings() {
             await changePassword(current, next);
             setCurrent("");
             setNext("");
-          }, "Password changed. Other devices have been signed out.");
+          }, hasPassword ? "Password changed. Other devices have been signed out." : "Password set. You can sign in with it or with Google.");
         }}
       >
-        <div>
-          <label className="field" htmlFor="pw-now">
-            Current password
-          </label>
-          <input id="pw-now" type="password" value={current} maxLength={128} autoComplete="current-password" onChange={(e) => setCurrent(e.target.value)} />
-        </div>
-        <div>
-          <label className="field" htmlFor="pw-new">
-            New password
-          </label>
-          <input id="pw-new" type="password" value={next} maxLength={128} autoComplete="new-password" onChange={(e) => setNext(e.target.value)} />
-        </div>
-        <Btn type="submit" disabled={!current || !next}>
-          Change password
+        {hasPassword ? (
+          <div>
+            <label className="field" htmlFor="pw-now">
+              Current password
+            </label>
+            <input id="pw-now" type="password" value={current} maxLength={128} autoComplete="current-password" onChange={(e) => setCurrent(e.target.value)} />
+          </div>
+        ) : (
+          <p className="muted">You sign in with Google. Set a password to sign in with your username too.</p>
+        )}
+        <PasswordField
+          id="pw-new"
+          label="New password"
+          value={next}
+          set={setNext}
+          autoComplete="new-password"
+          meter
+          hint="At least 8 characters. A short sentence is easy to remember and hard to guess."
+        />
+        <Btn type="submit" disabled={(hasPassword && !current) || next.length < 8}>
+          {hasPassword ? "Change password" : "Set a password"}
         </Btn>
       </form>
       {note && (
@@ -521,17 +569,13 @@ function Settings() {
           }}
         >
           <p>
-            <b>This deletes your coins, power-ups, stats and season points for good.</b> Type your password to confirm.
+            <b>This deletes your coins, power-ups, stats and season points for good.</b>
+            {hasPassword ? " Type your password to confirm." : ""}
           </p>
-          <div>
-            <label className="field" htmlFor="pw-del">
-              Password
-            </label>
-            <input id="pw-del" type="password" value={del} maxLength={128} autoComplete="current-password" onChange={(e) => setDel(e.target.value)} />
-          </div>
+          <YourPassword id="pw-del" value={del} set={setDel} />
           {delCode !== null && <OtpField id="del-otp" value={delCode} set={setDelCode} />}
           <div className="row">
-            <Btn type="submit" variant="danger" disabled={!del || delCode?.trim() === ""}>
+            <Btn type="submit" variant="danger" disabled={!delReady || delCode?.trim() === ""}>
               Delete forever
             </Btn>
             <Btn variant="ghost" onClick={() => setConfirming(false)}>

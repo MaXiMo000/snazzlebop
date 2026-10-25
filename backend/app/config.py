@@ -101,6 +101,9 @@ class Settings:
     smtp_user: str = field(default="", repr=False)
     smtp_pass: str = field(default="", repr=False)
     mail_outbox_dir: str = ""  # development only: write emails here as files instead of sending them
+    # Optional: sign in with Google (oidc.py). Unset = no Google button.
+    google_client_id: str = ""
+    google_client_secret: str = field(default="", repr=False)
     privacy_contact: str = ""  # where privacy requests go (shown on the privacy notice)
 
     # Optional: other systems working on reports (events.py, outbox.py, integrations.py).
@@ -221,6 +224,8 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         smtp_user=e.get("SMTP_USER", "").strip(),
         smtp_pass=e.get("SMTP_PASS", "").strip(),
         mail_outbox_dir=e.get("MAIL_OUTBOX_DIR", "").strip(),
+        google_client_id=e.get("GOOGLE_CLIENT_ID", "").strip(),
+        google_client_secret=e.get("GOOGLE_CLIENT_SECRET", "").strip(),
         privacy_contact=e.get("PRIVACY_CONTACT", "").strip()[:200],
         report_webhook_url=webhook,
         report_webhook_secret=webhook_secret,

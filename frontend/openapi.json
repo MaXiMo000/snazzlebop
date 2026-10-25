@@ -1366,6 +1366,27 @@
         "title": "GameStat",
         "type": "object"
       },
+      "GoogleLink": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "GoogleLink",
+        "type": "object"
+      },
       "HandOverBody": {
         "additionalProperties": false,
         "properties": {
@@ -1439,6 +1460,36 @@
           "text"
         ],
         "title": "HistoryRow",
+        "type": "object"
+      },
+      "Identities": {
+        "additionalProperties": false,
+        "properties": {
+          "google": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoogleLink"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "google_available": {
+            "title": "Google Available",
+            "type": "boolean"
+          },
+          "has_password": {
+            "title": "Has Password",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "google",
+          "google_available",
+          "has_password"
+        ],
+        "title": "Identities",
         "type": "object"
       },
       "Inbox": {
@@ -2088,6 +2139,10 @@
             "title": "Accounts",
             "type": "boolean"
           },
+          "google": {
+            "title": "Google",
+            "type": "boolean"
+          },
           "mail": {
             "title": "Mail",
             "type": "boolean"
@@ -2111,6 +2166,7 @@
           "user",
           "accounts",
           "mail",
+          "google",
           "staff"
         ],
         "title": "Me",
@@ -2588,6 +2644,19 @@
         "title": "PasswordBody",
         "type": "object"
       },
+      "PasswordOnlyBody": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "title": "PasswordOnlyBody",
+        "type": "object"
+      },
       "PersonBody": {
         "additionalProperties": false,
         "properties": {
@@ -2891,6 +2960,10 @@
             "title": "Email Verified",
             "type": "boolean"
           },
+          "has_password": {
+            "title": "Has Password",
+            "type": "boolean"
+          },
           "powerups": {
             "additionalProperties": {
               "type": "integer"
@@ -2908,7 +2981,8 @@
           "coins",
           "powerups",
           "email",
-          "email_verified"
+          "email_verified",
+          "has_password"
         ],
         "title": "PublicUser",
         "type": "object"
@@ -9944,6 +10018,212 @@
           }
         },
         "summary": "Export"
+      }
+    },
+    "/api/me/google/remove": {
+      "post": {
+        "operationId": "unlink_google_api_me_google_remove_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordOnlyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Unlink Google"
+      }
+    },
+    "/api/me/identities": {
+      "get": {
+        "operationId": "identities_api_me_identities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Identities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Identities"
       }
     },
     "/api/me/mfa": {

@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import accounts, calls, integrations, notifications, places, safety, schemas, staff
+from . import accounts, calls, integrations, notifications, oidc, places, safety, schemas, staff
 from .clubs import routes as clubs
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
@@ -197,9 +197,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def stats() -> dict[str, int]:
         return await db.stats()
 
+    google = oidc.Google(settings.google_client_id, settings.google_client_secret, settings.site)
+    app.state.google = google  # tests stand in for Google here
     app.include_router(
         accounts.router(
-            settings, db, limiters["auth"], hub.hosting, mailer, statuses.of, presence.forget_user
+            settings,
+            db,
+            limiters["auth"],
+            hub.hosting,
+            mailer,
+            statuses.of,
+            presence.forget_user,
+            google,
         )
     )
     app.include_router(clubs.router(settings, db, hub, limiters["auth"], notifier, presence, statuses))

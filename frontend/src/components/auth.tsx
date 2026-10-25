@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ApiError } from "../lib/api";
 import {
+  GOOGLE_LINK,
+  GOOGLE_SIGN_IN,
   emailSignInLink,
   forgotPassword,
   logOut,
+  myIdentities,
   mySessions,
   removeEmail,
   resendEmail,
@@ -13,9 +16,10 @@ import {
   signOutSession,
   useAccount,
   signInWithLink,
+  unlinkGoogle,
   verifyEmail,
 } from "../lib/account";
-import type { SessionList } from "../lib/contract";
+import type { Identities, SessionList } from "../lib/contract";
 import { sfx } from "../lib/sfx";
 import { Btn, Card } from "./ui";
 
@@ -53,6 +57,158 @@ export function OtpField({ id, value, set }: { id: string; value: string; set: (
         placeholder="123 456"
       />
     </div>
+  );
+}
+
+/** "Prove it's you" before a change: the password, or nothing for an account that signs in only with
+ * Google (a recent sign-in stands in for it; the server says when to sign in again). */
+export function YourPassword({ id, value, set }: { id: string; value: string; set: (v: string) => void }) {
+  const { user } = useAccount();
+  if (user && !user.has_password) return null;
+  return <PasswordField id={id} label="Your password" value={value} set={set} autoComplete="current-password" />;
+}
+/** The password box is filled in, or there's no password to fill in. */
+export function useConfirmed(password: string): boolean {
+  const { user } = useAccount();
+  return !!password || (!!user && !user.has_password);
+}
+
+// -- Google -----------------------------------------------------------------------------------------
+function GoogleMark() {
+  return (
+    <svg className="google-mark" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92a8.78 8.78 0 0 0 2.68-6.62z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.33-1.58-5.04-3.7H.94v2.33A9 9 0 0 0 9 18z" />
+      <path fill="#FBBC05" d="M3.96 10.72a5.41 5.41 0 0 1 0-3.44V4.95H.94a9 9 0 0 0 0 8.1l3.02-2.33z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .94 4.95l3.02 2.33C4.67 5.16 6.66 3.58 9 3.58z" />
+    </svg>
+  );
+}
+
+/** Off to Google and back: a plain link, since the whole page makes the trip. */
+export function GoogleButton({ link = false, label = "Continue with Google" }: { link?: boolean; label?: string }) {
+  return (
+    <a className="btn block google-btn" href={link ? GOOGLE_LINK : GOOGLE_SIGN_IN}>
+      <GoogleMark />
+      <span>{label}</span>
+    </a>
+  );
+}
+
+/** "or", between Google and the password form. */
+export function OrLine() {
+  return (
+    <p className="auth-or" role="separator" aria-label="or">
+      <span aria-hidden="true">or</span>
+    </p>
+  );
+}
+
+const GOOGLE_OUTCOMES: Record<string, { ok: boolean; text: string }> = {
+  welcome: { ok: true, text: "Welcome to Snazzlebop! Your account is ready, and Google is how you sign in." },
+  signed_in: { ok: true, text: "Signed in with Google." },
+  linked: { ok: true, text: "Google is linked. You can sign in with it from now on." },
+  cancelled: { ok: false, text: "Google sign-in was cancelled. Nothing changed." },
+  failed: { ok: false, text: "Google sign-in didn't go through. Please try again." },
+  taken: { ok: false, text: "That Google account is already linked to another Snazzlebop account." },
+  email_taken: {
+    ok: false,
+    text: "An account already uses that Google email. Sign in to it with your password, then link Google from your account page.",
+  },
+  suspended: { ok: false, text: "This account is suspended right now." },
+  signed_out: { ok: false, text: "Sign in first, then link Google from your account page." },
+  off: { ok: false, text: "Google sign-in isn't available on this site right now." },
+};
+
+/** What happened on the trip to Google, read once from ?google=... and then cleared from the address. */
+export function useGoogleOutcome(): { ok: boolean; text: string } | null {
+  const [outcome] = useState(() => {
+    const key = new URLSearchParams(window.location.search).get("google");
+    return key ? (GOOGLE_OUTCOMES[key] ?? GOOGLE_OUTCOMES.failed ?? null) : null;
+  });
+  useEffect(() => {
+    if (outcome) window.history.replaceState(window.history.state, "", window.location.pathname);
+  }, [outcome]);
+  return outcome;
+}
+
+export function GoogleCard() {
+  const { user, google } = useAccount();
+  const [ids, setIds] = useState<Identities | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const id = useId();
+  const confirmed = useConfirmed(password);
+  const load = useCallback(() => myIdentities().then(setIds, () => undefined), []);
+  useEffect(() => void load(), [load, user?.has_password]);
+
+  if (!ids || (!google && !ids.google)) return null;
+  const remove = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setNote(null);
+    try {
+      await unlinkGoogle(password);
+      setNote({ ok: true, text: "Google is unlinked. Sign in with your password from now on." });
+      setRemoving(false);
+      setPassword("");
+      await load();
+    } catch (err) {
+      setNote({ ok: false, text: errText(err) });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card aria-labelledby={`${id}-h`}>
+      <h3 id={`${id}-h`}>Sign in with Google</h3>
+      {ids.google ? (
+        <>
+          <div className="email-now">
+            <p className="email-address">{ids.google.email ?? "Your Google account"}</p>
+            <span className="chip teal">Linked</span>
+          </div>
+          {!ids.has_password && (
+            <p className="muted space-top">Google is your only way in. Set a password below to have a second one.</p>
+          )}
+        </>
+      ) : (
+        <p className="muted">Link your Google account to sign in with one tap. We only get your name and email, never your Google password.</p>
+      )}
+      {!ids.google && google && (
+        <div className="space-top google-link">
+          <GoogleButton link label="Link Google" />
+        </div>
+      )}
+      {ids.google && ids.has_password && !removing && (
+        <div className="row space-top">
+          <Btn size="small" variant="ghost" onClick={() => setRemoving(true)}>
+            Unlink Google
+          </Btn>
+        </div>
+      )}
+      {removing && (
+        <form className="stack-sm space-top" onSubmit={(e) => void remove(e)}>
+          <p>You'll sign in with your username and password instead.</p>
+          <YourPassword id={`${id}-pw`} value={password} set={setPassword} />
+          <div className="row">
+            <Btn type="submit" variant="danger" disabled={busy || !confirmed}>
+              Unlink Google
+            </Btn>
+            <Btn variant="ghost" onClick={() => setRemoving(false)}>
+              Keep it
+            </Btn>
+          </div>
+        </form>
+      )}
+      {note && (
+        <div className="space-top">
+          <Alert text={note.text} calm={note.ok} />
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -473,6 +629,7 @@ export function EmailCard() {
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const id = useId();
+  const confirmed = useConfirmed(password);
   if (!user || (!mail && !user.email)) return null;
 
   const run = async (fn: () => Promise<unknown>, ok: string) => {
@@ -539,9 +696,9 @@ export function EmailCard() {
             </label>
             <input id={`${id}-email`} type="email" inputMode="email" autoComplete="email" maxLength={254} value={email} onChange={(e) => setEmailText(e.target.value)} />
           </div>
-          <PasswordField id={`${id}-pw`} label="Your password" value={password} set={setPassword} autoComplete="current-password" />
+          <YourPassword id={`${id}-pw`} value={password} set={setPassword} />
           <div className="row">
-            <Btn type="submit" variant="go" disabled={busy || !email.includes("@") || !password}>
+            <Btn type="submit" variant="go" disabled={busy || !email.includes("@") || !confirmed}>
               Send confirmation link
             </Btn>
             <Btn variant="ghost" onClick={() => setEditing(false)}>
@@ -559,9 +716,9 @@ export function EmailCard() {
           }}
         >
           <p>Without an email, only your recovery code can reset a forgotten password.</p>
-          <PasswordField id={`${id}-rpw`} label="Your password" value={password} set={setPassword} autoComplete="current-password" />
+          <YourPassword id={`${id}-rpw`} value={password} set={setPassword} />
           <div className="row">
-            <Btn type="submit" variant="danger" disabled={busy || !password}>
+            <Btn type="submit" variant="danger" disabled={busy || !confirmed}>
               Remove email
             </Btn>
             <Btn variant="ghost" onClick={() => setRemoving(false)}>

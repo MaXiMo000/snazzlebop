@@ -70,6 +70,13 @@ class Contract:
             TypeAdapter(self.models[key]).validate_python(body, strict=False)
         return body
 
+    def redirect(self, path: str) -> str:
+        """A browser-navigation route: answers with a redirect, not JSON."""
+        r = self.client.get(path, follow_redirects=False)
+        assert r.status_code == 303, r.text
+        self.called.add(("GET", path.split("?")[0]))
+        return r.headers["location"]
+
 
 def test_every_route_matches_its_declared_model(client):
     c = Contract(client)
@@ -218,6 +225,10 @@ def test_every_route_matches_its_declared_model(client):
     reset = re.search(r"#([A-Za-z0-9_-]{20,})", mailer.sent[-1][1].text).group(1)
     c.call("POST", "/api/auth/reset", json={"token": reset, "new_password": PW})
     c.call("GET", "/api/me/sessions")
+    c.call("GET", "/api/me/identities")
+    c.call("POST", "/api/me/google/remove", json={"password": PW})  # nothing linked: still ok
+    assert c.redirect("/api/auth/google/start") == "/account?google=off"
+    assert c.redirect("/api/auth/google/callback?code=x&state=y") == "/account?google=off"
     c.call("POST", "/api/me/sessions/abcdef012345/revoke", "/api/me/sessions/{session_id}/revoke")  # error
     c.call("POST", "/api/me/sessions/revoke")
     c.call("POST", "/api/me/email/remove", json={"password": PW})

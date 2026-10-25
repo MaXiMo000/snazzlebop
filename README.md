@@ -93,7 +93,9 @@ original has them.
   (signed out everywhere, no sign-in until the date), with a staff audit log.
 - **Places:** verify your college or company with a code sent to your address there (free email
   providers never count); a badge for a year, then alumni; clubs can be just for one place; staff
-  manage places and see requests for new ones. Plus sign-in by an emailed link.
+  manage places and see requests for new ones.
+- **Ways to sign in:** username and password, an emailed link, or Google (when configured). A Google
+  account can add a password later, and an existing account links Google from its account page.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced
@@ -142,6 +144,7 @@ Everything is read from the environment; [.env.example](.env.example) lists ever
 | `CLIENT_IP_HEADER` / `TRUSTED_PROXY_HOPS` | behind a proxy | how to find the client's IP for rate limits |
 | `ANTHROPIC_API_KEY` | no | grows the content pools with fresh, validated items |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | no | turns on voice and video calls |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no | turns on sign in with Google (redirect URI `<PUBLIC_URL>/api/auth/google/callback`) |
 | `JUMPSCARE_NAMES` | no | a private, comma-separated list of friends who get a walk-on and a jump scare |
 
 ## Integrations (reports)

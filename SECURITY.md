@@ -24,6 +24,11 @@ Only the latest version on `main` (the live deployment) is supported.
   short-lived, and carried in the link's fragment so they never reach server logs. A forgotten-password
   request answers the same whether or not the account exists. Notices about password, sign-in and
   security changes go only to a confirmed address. Logs never contain addresses or links.
+- **Sign in with Google.** Server-side OpenID Connect with PKCE, a nonce and a signed, short-lived state
+  cookie; the ID token is verified against Google's keys (signature, issuer, audience, expiry). Accounts
+  are matched by Google's account id only, never by email, so a Google account can't take over an
+  existing one. An authenticator app, when on, is still asked for after Google. Accounts without a
+  password confirm sensitive changes with a recent sign-in.
 - **Notifications and presence.** Push payloads are encrypted to each browser (RFC 8291) and hold
   only a short text and a link on this site. The server only ever sends to the browsers' own push
   services (an allowlist, https only), so a forged subscription can't make it call anywhere else.

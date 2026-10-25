@@ -380,6 +380,19 @@ class Circle(Base):
     forfeits: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
+class Identity(Base):
+    """A way to sign in other than the password: today Google, by its stable account id ("sub").
+    An account may have several; one without a password must keep at least one."""
+
+    __tablename__ = "identities"
+
+    provider: Mapped[str] = mapped_column(String(16), primary_key=True)
+    subject: Mapped[str] = mapped_column(String(255), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    email: Mapped[str] = mapped_column(String(254), default="")  # as the provider reported it, verified
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
 class Mfa(Base):
     """An account's authenticator-app sign-in (app.mfa): the salt its secret is derived from (the secret
     itself is never stored), whether it is switched on yet, the last time step accepted (so a code can't
@@ -639,6 +652,70 @@ class Database:
             await session.execute(delete(Session).where(Session.expires_at < datetime.now(UTC)))
             await session.commit()
 
+    async def session_started(self, token_hash: str) -> datetime | None:
+        """When this session signed in (to let a password-less account confirm a sensitive change)."""
+        async with self.sessions() as session:
+            at = await session.scalar(select(Session.created_at).where(Session.token_hash == token_hash))
+            return aware(at) if at is not None else None
+
+    # -- other ways to sign in (oidc.py) ---------------------------------------------------------------
+    async def identity_user(self, provider: str, subject: str) -> User | None:
+        async with self.sessions() as session:
+            row = await session.get(Identity, (provider, subject))
+            return await session.get(User, row.user_id) if row is not None else None
+
+    async def identities(self, user_id: int) -> list[Identity]:
+        async with self.sessions() as session:
+            rows = await session.execute(select(Identity).where(Identity.user_id == user_id))
+            return list(rows.scalars().all())
+
+    async def add_identity(self, user_id: int, provider: str, subject: str, email: str) -> bool:
+        """Link a sign-in to the account; False if it already belongs to another account."""
+        async with self.sessions() as session:
+            row = await session.get(Identity, (provider, subject))
+            if row is not None:
+                return row.user_id == user_id
+            mine = await session.scalar(
+                select(Identity).where(Identity.user_id == user_id, Identity.provider == provider)
+            )
+            if mine is not None:  # one account per provider: replace the old link
+                await session.delete(mine)
+            session.add(Identity(provider=provider, subject=subject, user_id=user_id, email=email[:254]))
+            await session.commit()
+            return True
+
+    async def remove_identity(self, user_id: int, provider: str) -> None:
+        async with self.sessions() as session:
+            await session.execute(
+                delete(Identity).where(Identity.user_id == user_id, Identity.provider == provider)
+            )
+            await session.commit()
+
+    async def create_identity_user(
+        self, username: str, recovery_hash: str, provider: str, subject: str, email: str | None
+    ) -> User | None:
+        """A new account that signs in only through a provider (no password yet). None if the
+        username is taken."""
+        try:
+            async with self.sessions() as session:
+                user = User(
+                    username=username,
+                    username_key=username.casefold(),
+                    pw_hash="",
+                    recovery_hash=recovery_hash,
+                    coins=0,
+                    powerups={},
+                    email=email,
+                    email_verified=email is not None,
+                )
+                session.add(user)
+                await session.flush()
+                session.add(Identity(provider=provider, subject=subject, user_id=user.id, email=email or ""))
+                await session.commit()
+                return user
+        except IntegrityError:
+            return None
+
     async def user_sessions(self, user_id: int) -> list[Session]:
         """The account's signed-in browsers, most recently used first."""
         now = datetime.now(UTC)
@@ -792,6 +869,7 @@ class Database:
             await session.execute(delete(PushSub).where(PushSub.user_id == user_id))
             await session.execute(delete(UserPrefs).where(UserPrefs.user_id == user_id))
             await session.execute(delete(UserPlace).where(UserPlace.user_id == user_id))
+            await session.execute(delete(Identity).where(Identity.user_id == user_id))
             await session.execute(delete(PlaceCode).where(PlaceCode.user_id == user_id))
             await session.execute(
                 delete(Block).where(or_(Block.user_id == user_id, Block.blocked_id == user_id))

@@ -32,6 +32,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.mailer": ({"app.config", "app.emails"}, set()),  # stdlib only: Resend over HTTPS, or SMTP
     "app.presence": (set(), set()),  # pure: who's around and "up for a game", clock injected
     "app.webpush": (set(), {"cryptography"}),  # push encryption and VAPID only
+    "app.oidc": (set(), {"cryptography"}),  # Google sign-in protocol: state, PKCE, ID token checks
     "app.notify": ({"app.config", "app.webpush"}, set()),  # rules and fan-out; storage passed in
     "app.events": (set(), set()),  # pure: the versioned shape of events other systems receive
     "app.outbox": ({"app.config", "app.events"}, set()),  # delivery with retries; storage passed in

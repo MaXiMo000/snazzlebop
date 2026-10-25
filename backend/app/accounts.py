@@ -27,6 +27,7 @@ import asyncio
 import base64
 import hashlib
 import hmac
+import logging
 import re
 import secrets
 import time
@@ -35,11 +36,11 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.requests import HTTPConnection
 
-from . import emails, mfa, schemas
+from . import emails, mfa, oidc, schemas
 from .coins import POWERUP_PRICES, season_of
 from .config import Settings
 from .db import aware, suspended
@@ -48,6 +49,7 @@ from .rooms import HubError
 from .security import RateLimiter, client_ip
 from .show import CARDS
 
+log = logging.getLogger("snazzlebop.accounts")
 SESSION_COOKIE = "sb_session"
 SESSION_DAYS = 30
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,20}$")
@@ -84,6 +86,8 @@ EMAIL_RE = re.compile(rf"^[^@\s]{{1,64}}@{_LABEL}(?:\.{_LABEL})+$")
 VERIFY_SECONDS = 2 * 86400
 RESET_SECONDS = 30 * 60
 LINK_SECONDS = 15 * 60  # an emailed sign-in link
+GOOGLE_CODE_SECONDS = 5 * 60  # after Google, to enter the authenticator code
+FRESH_SECONDS = 15 * 60  # how recent a sign-in stands in for a password (accounts without one)
 RESET_GAP = 60.0  # one reset email per account per minute, whatever the rate limits allow
 
 
@@ -224,6 +228,11 @@ class LinkBody(BaseModel):
     code: str | None = Field(default=None, max_length=32)  # authenticator or backup code, when it is on
 
 
+class PasswordOnlyBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    password: str = Field(default="", max_length=PASSWORD_MAX)
+
+
 class TokenBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     token: str = Field(max_length=100)
@@ -284,6 +293,7 @@ def public_user(user: Any) -> dict[str, Any]:
         "powerups": dict(user.powerups or {}),
         "email": user.email,
         "email_verified": bool(user.email_verified),
+        "has_password": bool(user.pw_hash),
     }
 
 
@@ -314,12 +324,15 @@ def router(
     mailer: Mailer | None = None,
     status_of: Callable[[set[int]], Awaitable[dict[int, tuple[str, str | None]]]] | None = None,
     forget: Callable[[int, list[int]], None] = lambda user_id, closed: None,
+    google: oidc.Google | None = None,
 ) -> APIRouter:
     api = APIRouter()
     lockout = Lockout()
     mail = mailer or Mailer(settings)
     site = settings.site
     reset_sent: dict[int, float] = {}  # account -> when its last reset email went out
+    google = google or oidc.Google("", "", "")
+    box = oidc.StateBox(settings.secret_key)
     link_sent: dict[int, float] = {}  # account -> when its last sign-in link went out
 
     def ip(request: Request) -> str:
@@ -386,6 +399,19 @@ def router(
             samesite="strict",
             path="/",
         )
+
+    async def confirm(
+        user: Any, password: str, request: Request, wrong: str = "That password isn't right"
+    ) -> None:
+        """Prove it's really you before a sensitive change: your password, or, for an account that
+        signs in only with Google, a sign-in within the last few minutes."""
+        if user.pw_hash:
+            if not await asyncio.to_thread(verify_password, password, user.pw_hash):
+                raise HubError("bad_login", wrong, 401)
+            return
+        started = await db.session_started(token_hash(request.cookies.get(SESSION_COOKIE, "")))
+        if started is None or time.time() - started.timestamp() > FRESH_SECONDS:
+            raise HubError("reauth", "For safety, sign in with Google again, then try once more", 401)
 
     async def find_account(login_name: str) -> Any:
         """The account a sign-in names: a username, or an email confirmed on it."""
@@ -520,6 +546,7 @@ def router(
                 "user": public_user(user) if user else None,
                 "accounts": bool(db.ready),
                 "mail": mail.enabled,
+                "google": google.enabled,
                 "staff": user is not None and user.username_key in settings.staff_usernames,
             },
             headers={"Cache-Control": "no-store"},
@@ -535,8 +562,7 @@ def router(
         same_origin(request)
         throttle(request)
         user = await require_user(request)
-        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
-            raise HubError("bad_login", "Your current password isn't right", 401)
+        await confirm(user, body.password, request, "Your current password isn't right")
         password = check_password(body.new_password, user.username)
         pw = await asyncio.to_thread(hash_password, password)
         await db.set_credentials(user.id, pw, None)
@@ -551,14 +577,135 @@ def router(
         same_origin(request)
         throttle(request)
         user = await require_user(request)
-        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
-            raise HubError("bad_login", "That password isn't right", 401)
+        await confirm(user, body.password, request)
         await second_factor(user, body.code, "delete:" + user.username_key)
         tell(user, emails.goodbye(site, user.username), "goodbye")
         forget(user.id, await db.delete_user(user.id))  # presence: the account and clubs that closed
         resp = JSONResponse({"ok": True})
         resp.delete_cookie(SESSION_COOKIE, path="/", samesite="strict", secure=settings.is_production)
         return resp
+
+    # -- sign in with Google (oidc.py) ------------------------------------------------------------------
+    STATE_COOKIE = "sb_oidc"
+
+    def done(where: str) -> RedirectResponse:
+        """Back to the account page with an outcome the page explains; the attempt's cookie goes."""
+        resp = RedirectResponse(f"/account?google={where}", status_code=303)
+        resp.delete_cookie(STATE_COOKIE, path="/api/auth/google")
+        return resp
+
+    def username_from(claims: dict[str, Any]) -> str:
+        raw = str(claims.get("given_name") or str(claims.get("email", "")).split("@")[0] or "player")
+        base = re.sub(r"[^A-Za-z0-9_.-]", "", unicodedata.normalize("NFKD", raw))[:14] or "player"
+        if len(base) < 3:
+            base = f"{base}_gg"
+        return f"{base}_{secrets.randbelow(9000) + 1000}"
+
+    @api.get("/api/auth/google/start", include_in_schema=False)
+    async def google_start(request: Request, mode: str = "signin") -> RedirectResponse:
+        """Off to Google. `mode=link` adds Google to the signed-in account instead."""
+        if not google.enabled or not db.ready:
+            return done("off")
+        user = await current(request) if mode == "link" else None
+        if mode == "link" and user is None:
+            return done("signed_out")
+        attempt = oidc.new_attempt("link" if user else "signin", user.id if user else None)
+        resp = RedirectResponse(google.authorize(attempt), status_code=303)
+        resp.set_cookie(
+            STATE_COOKIE,
+            box.seal(attempt),
+            max_age=oidc.STATE_SECONDS,
+            httponly=True,
+            secure=settings.is_production,
+            samesite="lax",  # Google's redirect back is a top-level navigation from another site
+            path="/api/auth/google",
+        )
+        return resp
+
+    @api.get("/api/auth/google/callback", include_in_schema=False)
+    async def google_callback(
+        request: Request, code: str = "", state: str = "", error: str = ""
+    ) -> RedirectResponse:
+        if not google.enabled or not db.ready:
+            return done("off")
+        if error:
+            return done("cancelled")
+        try:
+            attempt = box.open(request.cookies.get(STATE_COOKIE, ""))
+            if not state or not hmac.compare_digest(state, attempt.state) or not code or len(code) > 512:
+                raise oidc.OidcError("state mismatch")
+            claims = await asyncio.to_thread(google.claims, code, attempt)
+        except oidc.OidcError as exc:
+            log.warning("google sign-in refused: %s", exc)
+            return done("failed")
+        subject = str(claims["sub"])
+        email = str(claims.get("email", "")).lower() if claims.get("email_verified") is True else ""
+
+        if attempt.mode == "link":
+            user = await db.user_by_id(attempt.user_id) if attempt.user_id else None
+            if user is None or suspended(user):
+                return done("failed")
+            if not await db.add_identity(user.id, "google", subject, email):
+                return done("taken")
+            notice(
+                user, "Google sign-in added to your Snazzlebop account", "You can now sign in with Google."
+            )
+            return done("linked")
+
+        user = await db.identity_user("google", subject)
+        outcome = "signed_in"
+        if user is None:
+            # Never matched to an existing account by email: that account links Google itself.
+            if email and await db.user_by_email(email) is not None:
+                return done("email_taken")
+            hashed = recovery_hash(settings.secret_key, new_recovery_code())  # unused: Google is the way back
+            for _ in range(5):
+                user = await db.create_identity_user(
+                    username_from(claims), hashed, "google", subject, email or None
+                )
+                if user is not None:
+                    break
+            if user is None:
+                return done("failed")
+            outcome = "welcome"
+        if suspended(user):
+            return done("suspended")
+        row = await db.mfa(user.id)
+        if row is not None and row.enabled_at is not None:
+            # The authenticator still applies: finish on the sign-in-link page, which asks for the code.
+            ticket = secrets.token_urlsafe(32)
+            await db.add_token(token_hash(ticket), user.id, "login", "", GOOGLE_CODE_SECONDS)
+            resp = RedirectResponse(f"/account/link#{ticket}", status_code=303)
+            resp.delete_cookie(STATE_COOKIE, path="/api/auth/google")
+            return resp
+        resp = done(outcome)
+        set_session(resp, await start_session(user.id, request))
+        await signed_in(resp, request, user)
+        return resp
+
+    @api.get("/api/me/identities", response_model=schemas.Identities, responses=schemas.ERRORS)
+    async def identities(request: Request) -> JSONResponse:
+        user = await require_user(request)
+        linked = {i.provider: i for i in await db.identities(user.id)}
+        g = linked.get("google")
+        body = {
+            "google": {"email": g.email or None} if g is not None else None,
+            "google_available": google.enabled,
+            "has_password": bool(user.pw_hash),
+        }
+        return JSONResponse(body, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/me/google/remove", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def unlink_google(body: PasswordOnlyBody, request: Request) -> JSONResponse:
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        if not user.pw_hash:
+            raise HubError("needs_password", "Set a password first, or you'd have no way to sign in", 409)
+        await confirm(user, body.password, request)
+        await db.remove_identity(user.id, "google")
+        notice(user, "Google sign-in removed from your Snazzlebop account", "Google sign-in was turned off.")
+        return JSONResponse({"ok": True})
 
     # -- forgotten passwords by email, confirming an address -------------------------------------------
     BAD_LINK = "That link has expired or was already used. Ask for a new one"
@@ -683,8 +830,7 @@ def router(
         user = await require_user(request)
         if not mail.enabled:
             raise HubError("mail_off", "Email isn't set up on this site", 503)
-        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
-            raise HubError("bad_login", "That password isn't right", 401)
+        await confirm(user, body.password, request)
         email = clean_email(body.email)
         if email == user.email and user.email_verified:
             raise HubError("same_email", "That's already your email")
@@ -715,8 +861,7 @@ def router(
         same_origin(request)
         throttle(request)
         user = await require_user(request)
-        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
-            raise HubError("bad_login", "That password isn't right", 401)
+        await confirm(user, body.password, request)
         notice(user, "Your Snazzlebop email was removed", "This email address was removed from your account.")
         await db.set_email(user.id, None)
         fresh = await db.user_by_id(user.id)
@@ -777,8 +922,7 @@ def router(
         same_origin(request)
         throttle(request)
         user = await require_user(request)
-        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
-            raise HubError("bad_login", "That password isn't right", 401)
+        await confirm(user, body.password, request)
         row = await db.mfa(user.id)
         if row is not None and row.enabled_at is not None:
             raise HubError("mfa_on", "Your authenticator app is already set up", 409)
@@ -816,8 +960,7 @@ def router(
         same_origin(request)
         throttle(request)
         user = await require_user(request)
-        if not await asyncio.to_thread(verify_password, body.password, user.pw_hash):
-            raise HubError("bad_login", "That password isn't right", 401)
+        await confirm(user, body.password, request)
         await second_factor(user, body.code, "mfa:" + user.username_key)
         await db.delete_mfa(user.id)
         notice(

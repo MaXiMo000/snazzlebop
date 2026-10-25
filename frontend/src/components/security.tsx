@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "../lib/api";
 import { mfaDisable, mfaEnable, mfaNewCodes, mfaSetup, mfaStatus, type MfaSetup, type MfaStatus } from "../lib/account";
+import { YourPassword, useConfirmed } from "./auth";
 import { Btn, Card, CopyButton } from "./ui";
 
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : "Something went wrong");
@@ -25,6 +26,7 @@ export function Authenticator() {
   const [status, setStatus] = useState<MfaStatus | null>(null);
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const [password, setPassword] = useState("");
+  const confirmed = useConfirmed(password);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,14 +73,7 @@ export function Authenticator() {
       />
     </div>
   );
-  const passwordField = (id: string) => (
-    <div>
-      <label className="field" htmlFor={id}>
-        Password
-      </label>
-      <input id={id} type="password" value={password} maxLength={128} autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} />
-    </div>
-  );
+  const passwordField = (id: string) => <YourPassword id={id} value={password} set={setPassword} />;
 
   if (status === null) return null;
   return (
@@ -146,7 +141,7 @@ export function Authenticator() {
               {passwordField("mfa-off-pw")}
               {codeField("mfa-off-code", "Code from your app, or a backup code")}
               <div className="row">
-                <Btn type="submit" variant="danger" disabled={busy || !password || !code.trim()}>
+                <Btn type="submit" variant="danger" disabled={busy || !confirmed || !code.trim()}>
                   Turn it off
                 </Btn>
                 <Btn variant="ghost" onClick={cancel}>
@@ -211,7 +206,7 @@ export function Authenticator() {
             >
               {passwordField("mfa-pw")}
               <div className="row">
-                <Btn type="submit" disabled={busy || !password}>
+                <Btn type="submit" disabled={busy || !confirmed}>
                   Continue
                 </Btn>
                 <Btn variant="ghost" onClick={cancel}>

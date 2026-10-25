@@ -172,3 +172,37 @@
   gap: 0 16px;
   margin-top: -6px;
 }
+
+/* Sign in with Google: a neutral button (Google's mark keeps its own colours), "or", the outcome */
+.google-btn {
+  --bg: var(--surface);
+  --fg: var(--ink);
+  font-family: var(--body);
+  font-weight: 700;
+  text-decoration: none;
+}
+.google-mark {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.google-link .google-btn {
+  width: auto;
+}
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 18px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.auth-or::before,
+.auth-or::after {
+  content: "";
+  flex: 1;
+  border-top: 2px solid var(--edge);
+}
+.auth-notice {
+  margin-bottom: 12px;
+}

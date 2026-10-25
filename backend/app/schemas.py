@@ -75,6 +75,7 @@ class PublicUser(Strict):
     powerups: dict[str, int]
     email: str | None
     email_verified: bool
+    has_password: bool  # false for an account that signs in only with Google
 
 
 class UserBody(Strict):
@@ -92,7 +93,18 @@ class Me(Strict):
     user: PublicUser | None
     accounts: bool  # false when the server has no database: sign-in is unavailable
     mail: bool  # true when the server can send email: email sign-in, reset links and notices
+    google: bool  # sign in with Google is set up on this site
     staff: bool  # you're platform staff (the console also needs your authenticator app)
+
+
+class GoogleLink(Strict):
+    email: str | None
+
+
+class Identities(Strict):
+    google: GoogleLink | None  # linked Google account, if any
+    google_available: bool
+    has_password: bool
 
 
 class MfaStatus(Strict):
