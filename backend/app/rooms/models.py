@@ -32,6 +32,7 @@ ALLOWED_MESSAGE_TYPES = {
         "ready",
         "boost",
         "power",
+        "party",
     ),
     *("shuffle", "ink", "inksync", "chat", "call", "avatar", "hush", "crown", "forfeit", "wheel"),
 }
@@ -234,6 +235,10 @@ class Room:
     power_used: dict[str, int] = field(default_factory=dict)  # pid -> game_no
     power_news: list[dict[str, Any]] = field(default_factory=list)
     power_private: dict[str, str] = field(default_factory=dict)
+    # Party items (party.py): the latest effects everyone plays, and when each player last used one.
+    party_effects: list[dict[str, Any]] = field(default_factory=list)
+    party_seq: int = 0
+    party_last: dict[str, float] = field(default_factory=dict)
     team_news: dict[str, Any] = field(default_factory=dict)  # last game: team totals and the winner
     # Snapshots: this copy came from the database and nothing has changed here since (so a newer
     # snapshot, written by the server that's shutting down during a deploy, may replace it).

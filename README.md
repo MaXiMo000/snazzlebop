@@ -106,6 +106,8 @@ original has them.
 - **Power-ups:** each game has its own (Trivia 50/50 and +5 seconds, Draw & Guess letter, Liar's Dice
   peek, Chicken Run shield, Imposter vote change), bought with coins and used one per game in casual
   rooms. Everyone sees that you used one; what it shows is yours alone.
+- **Party items:** confetti cannon, air horn, drum roll, standing ovation and spotlight: used any time in a
+  room, played on every screen (the TV too), no effect on scores, with spam limits.
 - **Levels and daily quests:** XP from fair games (and a bonus for the day's first win), levels that pay
   coins and a power-up, and three quests a day, one of them always about playing with someone new.
 - **Fair play:** coins, battle prizes and ratings can't be farmed: thrown quick games, the same group

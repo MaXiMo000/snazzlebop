@@ -23,6 +23,14 @@ GAME_POWER_PRICES = {
     "chicken_shield": 50,
     "imposter_revote": 30,
 }
+# Party items (party.py): no effect on scores, used anywhere in a room.
+PARTY_PRICES = {
+    "party_confetti": 15,
+    "party_airhorn": 15,
+    "party_drumroll": 20,
+    "party_ovation": 20,
+    "party_spotlight": 25,
+}
 
 
 def places(scores: dict[str, int]) -> dict[str, int]:

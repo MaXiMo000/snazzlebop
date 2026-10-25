@@ -28,6 +28,7 @@ import { MarketFloor, MarketMoves } from "../components/market";
 import { BoostPanel, CardReveal, CoinNews, MvpVote, PowerCard, RatingNews, Rivals } from "../components/extras";
 import { BattleBanner, BattleNews } from "../components/battle";
 import { GamePowers, PowerNews } from "../components/powers";
+import { PartyBar, PartyOverlay } from "../components/party";
 import { useAccount } from "../lib/account";
 import { TeamBadge, TeamResult } from "../components/teams";
 import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
@@ -230,6 +231,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
     <div className="stack">
       <JumpScare count={state.scare} room={code} you={state.you} />
       <ReactionOverlay reactions={state.reactions} />
+      <PartyOverlay state={state} />
       <FaceHost all={state.faces} champion={state.night?.belt.holder} you={state.you} send={send} />
       <Entrance entrance={state.entrance} you={state.you} room={code} />
       {state.chat && <ChatDock chat={state.chat} you={state.you} send={send} />}
@@ -337,6 +339,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
         </>
       )}
       {phase === "finale" && <ReactionBar send={send} />}
+      <PartyBar state={state} send={send} />
       {!audience && phase !== "lobby" && <Night state={state} send={send} isHost={isHost} />}
       <Recap state={state} send={send} />
     </div>
@@ -476,6 +479,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
     <div className="tv stack">
       <h1 className="sr-only">Snazzlebop TV, room {code}</h1>
       <ReactionOverlay reactions={state.reactions} />
+      <PartyOverlay state={state} />
       <FaceHost all={state.faces} champion={state.night?.belt.holder} you={state.you} />
       <Entrance entrance={state.entrance} you={state.you} room={code} />
       {state.chat && <ChatTicker chat={state.chat} />}

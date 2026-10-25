@@ -7,6 +7,7 @@ from typing import Any
 
 from .. import coins as coinlib
 from .. import fairplay
+from .. import party as partylib
 from .. import show as showlib
 from ..games import REGISTRY, Game
 from .models import (
@@ -177,6 +178,43 @@ class ShowMixin:
                 if self.refund_powerup is not None:
                     await self.refund_powerup(user_id, str(item))
                 raise
+
+    # -- party items: anywhere in the room, for everyone, no effect on scores -------------------------
+    def _check_party(self, room: Room, pid: str, item: Any) -> None:
+        if pid not in room.players or pid not in room.accounts:
+            raise HubError("signed_out", "Sign in to use party items")
+        if not isinstance(item, str) or item not in partylib.ITEMS:
+            raise HubError("bad_item", "That's not a party item")
+        now = self.clock()
+        if now - room.party_last.get(pid, -1e9) < partylib.PLAYER_GAP:
+            raise HubError("slow_down", "Give it a moment before the next one")
+        last = room.party_effects[-1]["at"] if room.party_effects else -1e9
+        if now - last < partylib.ROOM_GAP:
+            raise HubError("slow_down", "Someone just did: let it land first")
+
+    async def _use_party(self, room: Room, pid: str, msg: dict[str, Any]) -> None:
+        """Spend a party item: every screen in the room plays it. Checked before and after spending, and
+        given back if the room got busy in between."""
+        item = msg.get("item")
+        async with room.lock:
+            self._check_party(room, pid, item)
+        user_id = room.accounts[pid]
+        if self.spend_powerup is None or not await self.spend_powerup(user_id, str(item)):
+            raise HubError("no_powerup", "You don't have that one. Get it in the shop")
+        async with room.lock:
+            try:
+                self._check_party(room, pid, item)
+            except HubError:
+                if self.refund_powerup is not None:
+                    await self.refund_powerup(user_id, str(item))
+                raise
+            now = self.clock()
+            room.party_last[pid] = now
+            room.party_seq += 1
+            room.party_effects = [
+                *room.party_effects[-(partylib.KEEP - 1) :],
+                {"id": room.party_seq, "item": str(item), "by": room.players[pid].name, "at": now},
+            ]
 
     def _check_boost(self, room: Room, pid: str, item: Any, target: Any) -> int:
         game = room.game

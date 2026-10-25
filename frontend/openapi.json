@@ -3151,6 +3151,47 @@
         "title": "Ok",
         "type": "object"
       },
+      "Party": {
+        "additionalProperties": false,
+        "properties": {
+          "effects": {
+            "items": {
+              "$ref": "#/components/schemas/PartyEffect"
+            },
+            "title": "Effects",
+            "type": "array"
+          }
+        },
+        "required": [
+          "effects"
+        ],
+        "title": "Party",
+        "type": "object"
+      },
+      "PartyEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "item": {
+            "title": "Item",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "item",
+          "by"
+        ],
+        "title": "PartyEffect",
+        "type": "object"
+      },
       "PasswordBody": {
         "additionalProperties": false,
         "properties": {
@@ -4441,6 +4482,9 @@
           "night": {
             "$ref": "#/components/schemas/Night"
           },
+          "party": {
+            "$ref": "#/components/schemas/Party"
+          },
           "players": {
             "items": {
               "$ref": "#/components/schemas/PlayerRow"
@@ -4575,6 +4619,7 @@
           "ranked",
           "battle",
           "powers",
+          "party",
           "ready",
           "last_standings",
           "scare",

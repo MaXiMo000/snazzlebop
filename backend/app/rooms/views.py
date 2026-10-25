@@ -67,6 +67,9 @@ class ViewsMixin:
                 # everyone online has their own account (never who doesn't): a ranked game can start
                 "ready": self._all_signed_in(room),
             },
+            "party": {
+                "effects": [{k: e[k] for k in ("id", "item", "by")} for e in room.party_effects],
+            },
             "powers": {
                 "offer": [{"id": k, **v} for k, v in self._power_offer(room).items()]
                 if pid in room.players and pid in room.accounts

@@ -37,6 +37,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.battles": (set(), set()),  # battle prizes and limits
     "app.fairplay": (set(), set()),  # anti-farming rules for every payout
     "app.progress": (set(), set()),  # levels and daily quests
+    "app.party": (set(), set()),  # party items: room effects with no effect on scores
     "app.notify": ({"app.config", "app.webpush"}, set()),  # rules and fan-out; storage passed in
     "app.events": (set(), set()),  # pure: the versioned shape of events other systems receive
     "app.outbox": ({"app.config", "app.events"}, set()),  # delivery with retries; storage passed in
@@ -44,7 +45,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (
         {"app.rooms", "app.games", "app.config", "app.security", "app.calls", "app.persist", "app.prank"}
-        | {"app.coins", "app.show", "app.ratings", "app.battles", "app.fairplay"},
+        | {"app.coins", "app.show", "app.ratings", "app.battles", "app.fairplay", "app.party"},
         set(),
     ),
     "app.contentgen": ({"app.games"}, {"anthropic"}),

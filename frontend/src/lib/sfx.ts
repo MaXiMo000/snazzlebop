@@ -109,6 +109,23 @@ export const sfx = {
     note(1046.5, 0.68, 0.7, "triangle", 0.18);
     note(1318.5, 0.68, 0.7, "sine", 0.1);
   },
+  /** party item: an air horn (two detuned blasts) */
+  airhorn() {
+    for (const t of [0, 0.32]) {
+      note(233, t, 0.28, "sawtooth", 0.14);
+      note(236, t, 0.28, "square", 0.08);
+    }
+  },
+  /** party item: a snare roll that swells, then a hit */
+  drumroll() {
+    for (let i = 0; i < 26; i++) note(180 + (i % 3) * 7, i * 0.055, 0.04, "square", 0.03 + i * 0.002);
+    note(110, 1.48, 0.35, "triangle", 0.2);
+    note(880, 1.48, 0.3, "sine", 0.08);
+  },
+  /** party item: a crowd clapping */
+  applause() {
+    for (let i = 0; i < 30; i++) note(1400 + ((i * 331) % 900), i * 0.045 + ((i * 7) % 5) * 0.006, 0.025, "square", 0.04);
+  },
   /** winner fanfare */
   fanfare() {
     [523.3, 659.3, 784, 1046.5].forEach((f, i) => note(f, i * 0.11, i === 3 ? 0.7 : 0.16, "triangle", 0.17));

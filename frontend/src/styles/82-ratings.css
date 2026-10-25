@@ -154,3 +154,28 @@
     justify-self: start;
   }
 }
+
+/* Party items: your items as round buttons with a count */
+.party-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+.party-btn {
+  position: relative;
+  width: 60px;
+  flex: none;
+}
+.party-count {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  min-width: 22px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--mustard);
+  color: var(--plum);
+  font: 700 0.75rem / 22px var(--body);
+  text-align: center;
+}

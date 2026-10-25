@@ -2722,6 +2722,20 @@ export interface components {
             /** Ok */
             ok: boolean;
         };
+        /** Party */
+        Party: {
+            /** Effects */
+            effects: components["schemas"]["PartyEffect"][];
+        };
+        /** PartyEffect */
+        PartyEffect: {
+            /** By */
+            by: string;
+            /** Id */
+            id: number;
+            /** Item */
+            item: string;
+        };
         /** PasswordBody */
         PasswordBody: {
             /** New Password */
@@ -3162,6 +3176,7 @@ export interface components {
             last_standings: components["schemas"]["Standing"][];
             market: components["schemas"]["Market"] | null;
             night: components["schemas"]["Night"];
+            party: components["schemas"]["Party"];
             /** Players */
             players: components["schemas"]["PlayerRow"][];
             powers: components["schemas"]["Powers"];

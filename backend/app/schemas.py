@@ -938,6 +938,16 @@ class Ranked(Strict):
     ready: bool  # everyone online is signed in with their own account
 
 
+class PartyEffect(Strict):
+    id: int  # rises with each one: a screen plays the ones it hasn't yet
+    item: str
+    by: str  # the player's name in this room
+
+
+class Party(Strict):
+    effects: list[PartyEffect]
+
+
 class PowerItem(Strict):
     id: str
     name: str
@@ -999,6 +1009,7 @@ class RoomFrame(Strict):
     ranked: Ranked
     battle: BattleView
     powers: Powers
+    party: Party
     ready: Ready
     last_standings: list[Standing]
     scare: int
