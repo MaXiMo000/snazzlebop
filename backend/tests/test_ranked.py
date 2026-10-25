@@ -132,14 +132,14 @@ class StoreTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(out[a]["after"], out[a]["before"])
         self.assertLess(out[c]["after"], out[c]["before"])
         self.assertEqual(out[a]["tier"], "Provisional")
-        mine = {r["game"]: r for r in await self.db.my_ratings(a)}
+        mine = {r["game"]: r for r in (await self.db.my_ratings(a))[0]}
         self.assertEqual(mine["trivia"]["games"], 1)
         # last season's rating comes back halfway to the start
         async with self.db.sessions() as s:
             row = await s.get(SkillRating, (a, "trivia"))
             row.season, row.mu, row.sigma = R.season_of() - 1, 35.0, 3.0
             await s.commit()
-        mine = {r["game"]: r for r in await self.db.my_ratings(a)}
+        mine = {r["game"]: r for r in (await self.db.my_ratings(a))[0]}
         self.assertEqual(mine["trivia"]["rating"], R.soft_reset(R.Rating(35, 3), 1).display)
 
     async def test_the_same_pair_stops_counting_and_the_day_is_capped(self):

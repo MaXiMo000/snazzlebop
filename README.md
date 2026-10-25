@@ -78,7 +78,8 @@ original has them.
   share.
 - **Installable:** add it to a phone's home screen and it opens full-screen.
 - **TV mode:** a read-only big-screen view, with faces from the call and the latest chat.
-- **Optional accounts:** coins for top places, a power-up shop, stats and monthly seasons. Sign-in by
+- **Optional accounts:** coins for top places (kept in an append-only ledger with a history page), a
+  power-up shop, stats and monthly seasons. Sign-in by
   username or a confirmed email, an optional authenticator app, reset links by email, and branded
   emails about security changes and new devices (Resend or any SMTP server; off when unset).
 - **Up for a game:** say you're free in a club for 30, 60 or 120 minutes; when three of you are up,

@@ -691,6 +691,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/coins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Coins
+         * @description Your balance, today's earnings toward the cap, and the latest changes.
+         */
+        get: operations["my_coins_api_me_coins_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/delete": {
         parameters: {
             query?: never;
@@ -1858,6 +1878,34 @@ export interface components {
             /** Needed */
             needed: number;
         };
+        /** CoinEntry */
+        CoinEntry: {
+            /** At */
+            at: string;
+            /** Delta */
+            delta: number;
+            /** Game */
+            game: string | null;
+            /** Place */
+            place: number | null;
+            /** Reason */
+            reason: string;
+            /** Ref */
+            ref: string | null;
+            /** Season */
+            season: number | null;
+        };
+        /** CoinHistory */
+        CoinHistory: {
+            /** Balance */
+            balance: number;
+            /** Daily Cap */
+            daily_cap: number;
+            /** Earned Today */
+            earned_today: number;
+            /** Entries */
+            entries: components["schemas"]["CoinEntry"][];
+        };
         /** CoinNews */
         CoinNews: {
             /** Coins */
@@ -2414,6 +2462,8 @@ export interface components {
             games: components["schemas"]["MyRating"][];
             /** Place Boards */
             place_boards: boolean;
+            /** Rewards */
+            rewards: components["schemas"]["SeasonReward"][];
             season: components["schemas"]["RatingSeason"];
         };
         /** MyStats */
@@ -2937,6 +2987,17 @@ export interface components {
             table: {
                 [key: string]: components["schemas"]["SeasonRow"];
             };
+        };
+        /** SeasonReward */
+        SeasonReward: {
+            /** Coins */
+            coins: number;
+            /** Game */
+            game: string;
+            /** Season */
+            season: number;
+            /** Tier */
+            tier: string;
         };
         /** SeasonRow */
         SeasonRow: {
@@ -7145,6 +7206,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    my_coins_api_me_coins_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoinHistory"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

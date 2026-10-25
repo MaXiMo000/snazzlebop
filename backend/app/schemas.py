@@ -127,6 +127,7 @@ class MyRatings(Strict):
     season: RatingSeason
     games: list[MyRating]
     place_boards: bool  # you appear on the leaderboards of places you're verified at
+    rewards: list[SeasonReward]  # season rewards paid just now (shown once)
 
 
 class BoardRow(Strict):
@@ -145,6 +146,30 @@ class RatingBoard(Strict):
     period: str  # season | week
     season: RatingSeason
     rows: list[BoardRow]
+
+
+class CoinEntry(Strict):
+    delta: int
+    reason: str  # opening | place | shop | season
+    ref: str | None  # shop: the power-up; season: the game
+    season: int | None  # season rewards: which season
+    game: str | None  # place: the game finished
+    place: int | None
+    at: str  # ISO 8601
+
+
+class CoinHistory(Strict):
+    balance: int
+    earned_today: int  # by playing, in the last 24 hours (what the daily cap counts)
+    daily_cap: int
+    entries: list[CoinEntry]  # newest first
+
+
+class SeasonReward(Strict):
+    game: str
+    season: int
+    tier: str
+    coins: int
 
 
 class MfaStatus(Strict):

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { request } from "./api";
-import type { Account, BackupCodes, Board, Identities, Me, MfaSetup, MfaStatus, NewAccount, Ok, SessionList, Shop, Stats, UserBody } from "./contract";
+import type { Account, BackupCodes, Board, CoinHistory, Identities, Me, MfaSetup, MfaStatus, NewAccount, Ok, SessionList, Shop, Stats, UserBody } from "./contract";
 
 // The signed-in account (the session itself is an HttpOnly cookie: this page never sees it).
 export type { Account, Board, MfaSetup, MfaStatus, ShopItem, Stats } from "./contract";
@@ -136,6 +136,8 @@ export async function deleteAccount(password: string, code?: string): Promise<vo
 }
 
 export const myStats = () => request<Stats>("/api/me/stats");
+/** Your balance, today's earnings toward the daily limit, and the ledger (newest first). */
+export const myCoins = () => request<CoinHistory>("/api/me/coins");
 export const leaderboard = () => request<Board>("/api/leaderboard");
 export const shopItems = () => request<Shop>("/api/shop");
 

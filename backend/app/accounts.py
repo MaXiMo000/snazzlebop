@@ -41,7 +41,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.requests import HTTPConnection
 
 from . import emails, mfa, oidc, schemas
-from .coins import POWERUP_PRICES, season_of
+from .coins import DAILY_COIN_CAP, POWERUP_PRICES, season_of
 from .config import Settings
 from .db import aware, suspended
 from .mailer import Mailer
@@ -556,6 +556,13 @@ def router(
     async def my_stats(request: Request) -> JSONResponse:
         user = await require_user(request)
         return JSONResponse(await db.user_stats(user.id, season_of()), headers={"Cache-Control": "no-store"})
+
+    @api.get("/api/me/coins", response_model=schemas.CoinHistory, responses=schemas.ERRORS)
+    async def my_coins(request: Request) -> JSONResponse:
+        """Your balance, today's earnings toward the cap, and the latest changes."""
+        user = await require_user(request)
+        body = await db.coin_history(user.id)
+        return JSONResponse({**body, "daily_cap": DAILY_COIN_CAP}, headers={"Cache-Control": "no-store"})
 
     @api.post("/api/me/password", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def change_password(body: PasswordBody, request: Request) -> JSONResponse:

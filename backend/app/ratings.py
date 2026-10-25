@@ -105,3 +105,7 @@ def soft_reset(r: Rating, seasons_passed: int) -> Rating:
     for _ in range(max(0, seasons_passed)):
         r = Rating((r.mu + MU) / 2, (r.sigma + SIGMA) / 2)
     return r
+
+
+# Coins for the tier a rating ended its season on (paid once, when the next season begins for it).
+SEASON_REWARD = {"Bronze": 20, "Silver": 40, "Gold": 80, "Platinum": 120, "Diamond": 200}

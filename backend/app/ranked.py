@@ -51,7 +51,8 @@ def router(settings: Settings, db: Any) -> APIRouter:
     @api.get("/api/ratings/me", response_model=schemas.MyRatings, responses=schemas.ERRORS)
     async def my_ratings(request: Request) -> JSONResponse:
         user = await me(request)
-        have = {r["game"]: r for r in await db.my_ratings(user.id)}
+        rows, rewards = await db.my_ratings(user.id)
+        have = {r["game"]: r for r in rows}
         games = []
         for game_id in sorted(RANKED, key=lambda g: REGISTRY[g].title):
             r = have.get(game_id, {"rating": ratinglib.Rating().display, "games": 0})
@@ -65,7 +66,12 @@ def router(settings: Settings, db: Any) -> APIRouter:
                     "placement_left": max(0, ratinglib.PROVISIONAL_GAMES - r["games"]),
                 }
             )
-        body = {"season": season_view(), "games": games, "place_boards": bool(user.place_boards)}
+        body = {
+            "season": season_view(),
+            "games": games,
+            "place_boards": bool(user.place_boards),
+            "rewards": rewards,
+        }
         return JSONResponse(body, headers={"Cache-Control": "no-store"})
 
     @api.get("/api/ratings/board", response_model=schemas.RatingBoard, responses=schemas.ERRORS)

@@ -3,7 +3,7 @@ import { Alert, errText } from "../components/auth";
 import { Select } from "../components/Select";
 import { SEGMENT_ICON } from "../components/show";
 import { Btn, Card } from "../components/ui";
-import { useAccount } from "../lib/account";
+import { refreshAccount, useAccount } from "../lib/account";
 import { myClubs } from "../lib/clubs";
 import type { ClubList, MyPlaces } from "../lib/contract";
 import { myPlaces } from "../lib/places";
@@ -35,7 +35,13 @@ export function Ratings({ go }: { go: Go }) {
   useEffect(() => {
     document.title = "Ratings · Snazzlebop";
     if (!user) return;
-    myRatings().then(setMine, (e) => setError(errText(e)));
+    myRatings().then(
+      (r) => {
+        setMine(r);
+        if (r.rewards.length) void refreshAccount(); // the top bar shows the new balance
+      },
+      (e) => setError(errText(e)),
+    );
     myClubs().then((r) => setClubs(r.clubs), () => undefined);
     myPlaces().then((r) => setPlaces(r.places.filter((p) => p.status === "verified")), () => undefined);
   }, [user]);
@@ -65,6 +71,14 @@ export function Ratings({ go }: { go: Go }) {
         )}
       </Card>
       <Alert text={error} />
+      {mine && mine.rewards.length > 0 && (
+        <Alert
+          calm
+          text={`Season rewards: ${mine.rewards
+            .map((r) => `+${r.coins} coins for ${r.tier} in ${mine.games.find((g) => g.game === r.game)?.title ?? r.game}`)
+            .join(", ")}. Every rating has come halfway back for the new season.`}
+        />
+      )}
 
       <Card aria-labelledby="my-ratings-h">
         <h2 id="my-ratings-h">Every ranked game</h2>
@@ -102,7 +116,7 @@ export function Ratings({ go }: { go: Go }) {
           <li>The host ticks Ranked game before starting. Everyone has to be signed in, and the game uses its standard settings with no power-ups.</li>
           <li>Your rating moves by where you finish and who you beat: beating stronger players counts for more. Leaving early counts as last place.</li>
           <li>Your first five games in each one are placement games. After that you get a number and a tier, from Bronze to Diamond.</li>
-          <li>Seasons last eight weeks. A new season brings every rating halfway back to the start, so everyone has something to climb.</li>
+          <li>Seasons last eight weeks. A new season brings every rating halfway back to the start, so everyone has something to climb, and pays a reward for the tier you ended on: 20 coins for Bronze up to 200 for Diamond.</li>
           <li>To keep it fair, the same two players only count five times a day, and a rating moves at most 150 points a day.</li>
         </ul>
       </Card>

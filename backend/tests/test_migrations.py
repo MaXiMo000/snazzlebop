@@ -114,6 +114,21 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(row[0].startswith("rpt_"))
             self.assertEqual(row[1], "normal")
 
+    async def test_existing_balances_open_the_ledger(self):
+        async with self.engine.begin() as conn:
+            await conn.run_sync(lambda c: command.upgrade(config(c), "0012"))
+            await conn.execute(
+                text(
+                    "INSERT INTO users (username, username_key, pw_hash, recovery_hash, coins, powerups,"
+                    " created_at, email_verified, place_boards) VALUES"
+                    " ('Ana_99', 'ana_99', 'x', 'y', 120, '{}', CURRENT_TIMESTAMP, 0, 0),"
+                    " ('Bo_42', 'bo_42', 'x', 'y', 0, '{}', CURRENT_TIMESTAMP, 0, 0)"
+                )
+            )
+            await conn.run_sync(lambda c: command.upgrade(config(c), "head"))
+            rows = (await conn.execute(text("SELECT delta, reason FROM ledger"))).all()
+            self.assertEqual([tuple(r) for r in rows], [(120, "opening")])
+
     def test_the_baseline_is_the_first_revision(self):
         from alembic.script import ScriptDirectory
 

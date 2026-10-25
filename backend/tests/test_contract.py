@@ -227,6 +227,7 @@ def test_every_route_matches_its_declared_model(client):
     c.call("GET", "/api/me/sessions")
     c.call("GET", "/api/me/identities")
     c.call("GET", "/api/ratings/me")
+    c.call("GET", "/api/me/coins")
     c.call("GET", "/api/ratings/board?game=chess&period=week", "/api/ratings/board")
     c.call("POST", "/api/me/place-boards", json={"on": True})
     c.call("POST", "/api/me/google/remove", json={"password": PW})  # nothing linked: still ok

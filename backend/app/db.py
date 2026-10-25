@@ -396,6 +396,27 @@ class RatingEvent(Base):
     )
 
 
+class LedgerEntry(Base):
+    """One change to an account's coins: append-only, never edited. users.coins is the cached sum,
+    updated in the same transaction. (reason, ref) names what caused it, once: posting the same one
+    twice is refused, so retries can't pay twice."""
+
+    __tablename__ = "ledger"
+    __table_args__ = (UniqueConstraint("user_id", "reason", "ref_type", "ref_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    currency: Mapped[str] = mapped_column(String(8), default="coins")
+    delta: Mapped[int] = mapped_column(Integer)
+    # opening (the balance before the ledger) | place (a finished game) | shop | season (rating reward)
+    reason: Mapped[str] = mapped_column(String(24))
+    ref_type: Mapped[str] = mapped_column(String(16))  # result | item | rating | account
+    ref_id: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
+
+
 class Friend(Base):
     """One account added another. Friends see each other's rooms only once both have added the other."""
 
@@ -909,6 +930,7 @@ class Database:
             await session.execute(delete(UserPlace).where(UserPlace.user_id == user_id))
             await session.execute(delete(Identity).where(Identity.user_id == user_id))
             await session.execute(delete(SkillRating).where(SkillRating.user_id == user_id))
+            await session.execute(delete(LedgerEntry).where(LedgerEntry.user_id == user_id))
             await session.execute(delete(RatingEvent).where(RatingEvent.user_id == user_id))
             await session.execute(delete(PlaceCode).where(PlaceCode.user_id == user_id))
             await session.execute(
@@ -1365,6 +1387,15 @@ class Database:
                 .all()
             )
             prefs = await session.get(UserPrefs, user_id)
+            ledger = (
+                (
+                    await session.execute(
+                        select(LedgerEntry).where(LedgerEntry.user_id == user_id).order_by(LedgerEntry.id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
         friends = await self.friends(user_id)
         return {
             "account": {
@@ -1386,6 +1417,15 @@ class Database:
                     "played_at": aware(r.played_at).isoformat(),
                 }
                 for r in results
+            ],
+            "coins": [
+                {
+                    "delta": e.delta,
+                    "reason": e.reason,
+                    "ref": f"{e.ref_type}:{e.ref_id}",
+                    "at": aware(e.created_at).isoformat(),
+                }
+                for e in ledger
             ],
             "clubs": [
                 {"club": n, "role": role, "joined_at": aware(at).isoformat()} for n, role, at in clubs.all()
@@ -1812,7 +1852,8 @@ class Database:
             user = row.scalar_one_or_none()
             if user is None or user.coins < price:
                 return None
-            user.coins -= price
+            await self._post(session, user_id, -price, "shop", "item", f"{item}:{secrets.token_hex(6)}")
+            await session.refresh(user)
             owned = dict(user.powerups or {})
             owned[item] = owned.get(item, 0) + 1
             user.powerups = owned
@@ -1864,34 +1905,118 @@ class Database:
                 # lock; it serialises writers anyway.)
                 for r in sorted(rows, key=lambda r: r["user_id"]):
                     await session.execute(select(User.id).where(User.id == r["user_id"]).with_for_update())
-                    got = await session.execute(
-                        select(func.coalesce(func.sum(Result.coins), 0)).where(
-                            Result.user_id == r["user_id"], Result.played_at >= since
-                        )
-                    )
-                    left = max(0, daily_cap - int(got.scalar_one()))
+                    left = max(0, daily_cap - await self._earned_since(session, r["user_id"], since))
                     coins = min(r["coins"], left)
-                    session.add(
-                        Result(
-                            user_id=r["user_id"],
-                            game_id=r["game_id"],
-                            season=season,
-                            place=r["place"],
-                            players=r["players"],
-                            points=r["points"],
-                            coins=coins,
-                        )
+                    result = Result(
+                        user_id=r["user_id"],
+                        game_id=r["game_id"],
+                        season=season,
+                        place=r["place"],
+                        players=r["players"],
+                        points=r["points"],
+                        coins=coins,
                     )
+                    session.add(result)
+                    await session.flush()
                     if coins:
-                        await session.execute(
-                            update(User).where(User.id == r["user_id"]).values(coins=User.coins + coins)
-                        )
+                        await self._post(session, r["user_id"], coins, "place", "result", str(result.id))
                     paid[r["user_id"]] = coins
                 await session.commit()
         except Exception:
             log.exception("could not record account results")
             return {}
         return paid
+
+    # -- the coin ledger ----------------------------------------------------------------------------------
+    @staticmethod
+    async def _post(session: Any, user_id: int, delta: int, reason: str, ref_type: str, ref_id: str) -> bool:
+        """Append one ledger row and move the cached balance with it, in the caller's transaction.
+        False (and nothing changes) if that reason and reference were already posted."""
+        try:
+            async with session.begin_nested():
+                session.add(
+                    LedgerEntry(
+                        user_id=user_id, delta=delta, reason=reason, ref_type=ref_type, ref_id=ref_id[:64]
+                    )
+                )
+                await session.flush()
+        except IntegrityError:
+            return False
+        await session.execute(update(User).where(User.id == user_id).values(coins=User.coins + delta))
+        return True
+
+    @staticmethod
+    async def _earned_since(session: Any, user_id: int, since: datetime) -> int:
+        """Coins earned by playing since then (what the daily cap counts)."""
+        got = await session.scalar(
+            select(func.coalesce(func.sum(LedgerEntry.delta), 0)).where(
+                LedgerEntry.user_id == user_id,
+                LedgerEntry.reason == "place",
+                LedgerEntry.created_at >= since,
+            )
+        )
+        return int(got or 0)
+
+    async def coin_history(self, user_id: int, limit: int = 50) -> dict[str, Any]:
+        """Your balance, what you've earned today toward the cap, and the latest ledger rows (with the
+        game behind each finish)."""
+        async with self.sessions() as session:
+            user = await session.get(User, user_id)
+            earned = await self._earned_since(session, user_id, datetime.now(UTC) - timedelta(days=1))
+            rows = (
+                (
+                    await session.execute(
+                        select(LedgerEntry)
+                        .where(LedgerEntry.user_id == user_id)
+                        .order_by(LedgerEntry.id.desc())
+                        .limit(limit)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            result_ids = [int(r.ref_id) for r in rows if r.ref_type == "result" and r.ref_id.isdigit()]
+            results = (
+                {
+                    res.id: res
+                    for res in (
+                        await session.execute(select(Result).where(Result.id.in_(result_ids)))
+                    ).scalars()
+                }
+                if result_ids
+                else {}
+            )
+        entries = []
+        for r in rows:
+            res = results.get(int(r.ref_id)) if r.ref_type == "result" and r.ref_id.isdigit() else None
+            entries.append(
+                {
+                    "delta": r.delta,
+                    "reason": r.reason,
+                    "ref": r.ref_id.split(":")[0] if r.ref_type in ("item", "rating") else None,
+                    "season": int(r.ref_id.split(":")[1]) if r.ref_type == "rating" else None,
+                    "game": res.game_id if res else None,
+                    "place": res.place if res else None,
+                    "at": aware(r.created_at).isoformat(),
+                }
+            )
+        return {"balance": user.coins if user else 0, "earned_today": earned, "entries": entries}
+
+    async def _season_reward(self, session: Any, row: SkillRating, season: int) -> dict[str, Any] | None:
+        """A rating last played in an earlier season: pay that season's reward for the tier it ended
+        on, once."""
+        if row.season >= season:
+            return None
+        shown = ratinglib.Rating(row.mu, row.sigma).display
+        tier = ratinglib.tier(shown, row.games)
+        coins = ratinglib.SEASON_REWARD.get(tier, 0)
+        if not coins:
+            return None
+        if not await self._post(
+            session, row.user_id, coins, "season", "rating", f"{row.game_id}:{row.season}"
+        ):
+            return None
+        return {"game": row.game_id, "season": row.season, "tier": tier, "coins": coins}
 
     # -- ratings (ratings.py) ---------------------------------------------------------------------------
     @staticmethod
@@ -1946,6 +2071,8 @@ class Database:
                     )
                 ).all()
             )
+            for row in rows.values():
+                await self._season_reward(session, row, season)
             now = {uid: self._current(rows.get(uid), season) for uid in ids}
             new = ratinglib.rate({str(u): now[u][0] for u in ids}, {str(u): placing[u] for u in ids})
             match = secrets.token_hex(12)
@@ -1980,17 +2107,23 @@ class Database:
             await session.commit()
         return out
 
-    async def my_ratings(self, user_id: int) -> list[dict[str, Any]]:
+    async def my_ratings(self, user_id: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Your ratings as they stand this season, and any season rewards this paid just now."""
         season = ratinglib.season_of()
         async with self.sessions() as session:
-            rows = (
-                await session.execute(select(SkillRating).where(SkillRating.user_id == user_id))
-            ).scalars()
-            out = []
+            rows = list(
+                (await session.execute(select(SkillRating).where(SkillRating.user_id == user_id))).scalars()
+            )
+            out, paid = [], []
             for row in rows:
+                reward = await self._season_reward(session, row, season)
+                if reward:
+                    paid.append(reward)
                 rating, games = self._current(row, season)
                 out.append({"game": row.game_id, "rating": rating.display, "games": games})
-            return out
+            if paid:
+                await session.commit()
+            return out, paid
 
     async def rating_board(
         self, game_id: str, user_ids: set[int] | None, week: bool, limit: int = 50

@@ -121,7 +121,7 @@ def test_failed_deliveries_retry_then_give_up_and_stay_visible(client):
 
         async def due_now() -> None:
             async with db.sessions() as s:
-                await s.execute(update(OutboxItem).values(next_at=datetime.now(UTC) - timedelta(seconds=1)))
+                await s.execute(update(OutboxItem).values(next_at=t[0] - timedelta(seconds=1)))
                 await s.commit()
 
         client.portal.call(due_now)

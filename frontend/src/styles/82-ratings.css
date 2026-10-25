@@ -36,3 +36,35 @@
 .board-period {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* Coins page: today's earnings against the daily limit */
+.coin-meter {
+  display: block;
+  width: 100%;
+  height: 18px;
+  appearance: none;
+  border: var(--line);
+  border-radius: 999px;
+  background: var(--field);
+  overflow: hidden;
+}
+.coin-meter::-webkit-progress-bar {
+  background: var(--field);
+}
+.coin-meter::-webkit-progress-value {
+  background: var(--mustard);
+}
+.coin-meter::-moz-progress-bar {
+  background: var(--mustard);
+}
+/* What it was on the left, the amount always on the same line at the right */
+.coin-history li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.coin-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 14px;
+}

@@ -910,6 +910,110 @@
         "title": "ClubUp",
         "type": "object"
       },
+      "CoinEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "delta": {
+            "title": "Delta",
+            "type": "integer"
+          },
+          "game": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          }
+        },
+        "required": [
+          "delta",
+          "reason",
+          "ref",
+          "season",
+          "game",
+          "place",
+          "at"
+        ],
+        "title": "CoinEntry",
+        "type": "object"
+      },
+      "CoinHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "integer"
+          },
+          "daily_cap": {
+            "title": "Daily Cap",
+            "type": "integer"
+          },
+          "earned_today": {
+            "title": "Earned Today",
+            "type": "integer"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/CoinEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "balance",
+          "earned_today",
+          "daily_cap",
+          "entries"
+        ],
+        "title": "CoinHistory",
+        "type": "object"
+      },
       "CoinNews": {
         "additionalProperties": false,
         "properties": {
@@ -2492,6 +2596,13 @@
             "title": "Place Boards",
             "type": "boolean"
           },
+          "rewards": {
+            "items": {
+              "$ref": "#/components/schemas/SeasonReward"
+            },
+            "title": "Rewards",
+            "type": "array"
+          },
           "season": {
             "$ref": "#/components/schemas/RatingSeason"
           }
@@ -2499,7 +2610,8 @@
         "required": [
           "season",
           "games",
-          "place_boards"
+          "place_boards",
+          "rewards"
         ],
         "title": "MyRatings",
         "type": "object"
@@ -4073,6 +4185,35 @@
           "table"
         ],
         "title": "Season",
+        "type": "object"
+      },
+      "SeasonReward": {
+        "additionalProperties": false,
+        "properties": {
+          "coins": {
+            "title": "Coins",
+            "type": "integer"
+          },
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "season": {
+            "title": "Season",
+            "type": "integer"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game",
+          "season",
+          "tier",
+          "coins"
+        ],
+        "title": "SeasonReward",
         "type": "object"
       },
       "SeasonRow": {
@@ -9790,6 +9931,105 @@
           }
         },
         "summary": "Me"
+      }
+    },
+    "/api/me/coins": {
+      "get": {
+        "description": "Your balance, today's earnings toward the cap, and the latest changes.",
+        "operationId": "my_coins_api_me_coins_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "My Coins"
       }
     },
     "/api/me/delete": {

@@ -470,12 +470,11 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
       </div>
 
       <Card aria-labelledby="coins-h">
-        <h3 id="coins-h">How coins work</h3>
-        <ul className="evidence">
-          <li>Finish a game with at least one other player: 1st 50, 2nd 30, 3rd 20, 4th 10, everyone else 5.</li>
-          <li>Ties share the better place. Up to 600 coins a day.</li>
-          <li>Your season points are the coins you earn this month. The table starts fresh every month.</li>
-        </ul>
+        <h3 id="coins-h">Coins</h3>
+        <p className="muted">Every game you finish pays coins: 50 for 1st down to 5 for taking part, up to 600 a day. See where every coin came from and went.</p>
+        <Btn className="space-top" variant="ghost" onClick={() => go("/coins")}>
+          Coin history
+        </Btn>
       </Card>
 
       <EmailCard />
