@@ -121,8 +121,8 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                 text(
                     "INSERT INTO users (username, username_key, pw_hash, recovery_hash, coins, powerups,"
                     " created_at, email_verified, place_boards) VALUES"
-                    " ('Ana_99', 'ana_99', 'x', 'y', 120, '{}', CURRENT_TIMESTAMP, 0, 0),"
-                    " ('Bo_42', 'bo_42', 'x', 'y', 0, '{}', CURRENT_TIMESTAMP, 0, 0)"
+                    " ('Ana_99', 'ana_99', 'x', 'y', 120, '{}', CURRENT_TIMESTAMP, false, false),"
+                    " ('Bo_42', 'bo_42', 'x', 'y', 0, '{}', CURRENT_TIMESTAMP, false, false)"
                 )
             )
             await conn.run_sync(lambda c: command.upgrade(config(c), "head"))
