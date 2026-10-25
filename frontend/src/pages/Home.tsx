@@ -3,6 +3,7 @@ import { ApiError, createRoom, joinRoom } from "../lib/api";
 import { Btn, Card } from "../components/ui";
 import { useAccount } from "../lib/account";
 import { Friends, InstallApp } from "../components/friends";
+import { YourCorner } from "../components/nav";
 
 export function Home({ go }: { go: (path: string) => void }) {
   const [name, setName] = useState("");
@@ -55,9 +56,13 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <Card tone="stage" className="center">
-        <p className="lead">Thirty-seven games. One room code. No sign-up needed.</p>
+        <p className="lead">
+          Thirty-seven games. One room code. <span className="no-break">No sign-up needed.</span>
+        </p>
         <p className="muted">Grab up to 8 friends, put the show on the big screen, play from your phones.</p>
       </Card>
+
+      <YourCorner go={go} />
 
       <Card aria-labelledby="name-h">
         <h2 id="name-h">First, your name</h2>

@@ -15,6 +15,7 @@ import { Ratings } from "./pages/Ratings";
 import { Coins } from "./pages/Coins";
 import { Battles } from "./pages/Battles";
 import { Quests } from "./pages/Quests";
+import { SiteNav } from "./components/nav";
 import { Staff } from "./pages/Staff";
 import { StaffPlaces } from "./pages/StaffPlaces";
 import { Home } from "./pages/Home";
@@ -146,7 +147,8 @@ export function App() {
           <SoundToggle />
         </div>
       </header>
-      <main id="main" className="app">
+      {!match && <SiteNav path={path} go={go} />}
+      <main id="main" className={`app ${match ? "" : "with-nav"}`}>
         {match ? (
           <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} tv={new URLSearchParams(window.location.search).get("tv") === "1"} />
         ) : accountMatch ? (

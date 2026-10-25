@@ -43,9 +43,16 @@ async function connect(pass: CallPass) {
     const r = new lk.Room({
       adaptiveStream: true, // each tile gets the resolution it's shown at
       dynacast: true, // nobody watching a layer: it isn't sent
-      audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      audioCaptureDefaults: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 48000,
+      },
       videoCaptureDefaults: { resolution: lk.VideoPresets.h540.resolution, facingMode: "user" },
       publishDefaults: {
+        audioPreset: lk.AudioPresets.music, // 48 kbps: clearly better than the speech default, still small
         simulcast: true,
         videoSimulcastLayers: [lk.VideoPresets.h180, lk.VideoPresets.h360],
         dtx: true, // silence costs nothing
@@ -221,7 +228,7 @@ function Icon({ name }: { name: keyof typeof ICONS }) {
 function Tile({ p, local, tv, big }: { p: Participant; local: boolean; tv: boolean; big: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
-  const s = useCall();
+  useCall(); // re-render as the call changes (who is speaking, muted, camera on)
   const cam = p.getTrackPublication("camera" as Track.Source)?.track;
   const mic = p.getTrackPublication("microphone" as Track.Source)?.track;
   const camOn = !!cam && p.isCameraEnabled;
@@ -230,7 +237,7 @@ function Tile({ p, local, tv, big }: { p: Participant; local: boolean; tv: boole
     if (!cam || !el) return;
     cam.attach(el);
     return () => void cam.detach(el);
-  }, [cam, s.version]);
+  }, [cam, camOn]);
   useEffect(() => {
     const el = audio.current;
     if (local || tv || !mic || !el) return; // never play yourself back, and the TV stays silent
