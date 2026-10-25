@@ -27,6 +27,7 @@ import {
 import { MarketFloor, MarketMoves } from "../components/market";
 import { BoostPanel, CardReveal, CoinNews, MvpVote, PowerCard, RatingNews, Rivals } from "../components/extras";
 import { BattleBanner, BattleNews } from "../components/battle";
+import { GamePowers, PowerNews } from "../components/powers";
 import { useAccount } from "../lib/account";
 import { TeamBadge, TeamResult } from "../components/teams";
 import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
@@ -283,8 +284,10 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
           {/* a team game: your team above the game; at the results, the team score is the headline */}
           <TeamBadge state={state} />
           {phase === "results" && <TeamResult state={state} />}
+          <PowerNews state={state} />
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
           {phase === "game" && <ReadyBar state={state} send={send} />}
+          {phase === "game" && state.role === "player" && <GamePowers state={state} send={send} />}
           {phase === "game" && state.role === "player" && <PowerCard state={state} send={send} />}
           {phase === "game" && state.role === "player" && !state.ranked.on && !state.battle.game && <BoostPanel state={state} send={send} />}
           {phase === "game" && state.role !== "player" && <CardsDown state={state} />}
@@ -516,6 +519,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
         <div className="tv-split">
           <div className="stack">
             <TeamBadge state={state} tv />
+            <PowerNews state={state} />
             <GameRouter state={state} receivedAt={receivedAt} send={watch} />
             {phase === "game" && <CardsDown state={state} />}
             {phase === "results" && (

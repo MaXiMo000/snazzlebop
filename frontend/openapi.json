@@ -401,7 +401,7 @@
         "additionalProperties": false,
         "properties": {
           "item": {
-            "maxLength": 16,
+            "maxLength": 32,
             "title": "Item",
             "type": "string"
           }
@@ -3412,6 +3412,106 @@
         "title": "PlaylistItem",
         "type": "object"
       },
+      "PowerItem": {
+        "additionalProperties": false,
+        "properties": {
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "icon",
+          "text"
+        ],
+        "title": "PowerItem",
+        "type": "object"
+      },
+      "PowerUse": {
+        "additionalProperties": false,
+        "properties": {
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "item": {
+            "title": "Item",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pid": {
+            "title": "Pid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pid",
+          "item",
+          "name",
+          "icon"
+        ],
+        "title": "PowerUse",
+        "type": "object"
+      },
+      "Powers": {
+        "additionalProperties": false,
+        "properties": {
+          "mine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mine"
+          },
+          "news": {
+            "items": {
+              "$ref": "#/components/schemas/PowerUse"
+            },
+            "title": "News",
+            "type": "array"
+          },
+          "offer": {
+            "items": {
+              "$ref": "#/components/schemas/PowerItem"
+            },
+            "title": "Offer",
+            "type": "array"
+          },
+          "used": {
+            "title": "Used",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "offer",
+          "used",
+          "news",
+          "mine"
+        ],
+        "title": "Powers",
+        "type": "object"
+      },
       "PrefsBody": {
         "additionalProperties": false,
         "properties": {
@@ -4234,6 +4334,9 @@
             "title": "Players",
             "type": "array"
           },
+          "powers": {
+            "$ref": "#/components/schemas/Powers"
+          },
           "quip": {
             "title": "Quip",
             "type": "string"
@@ -4357,6 +4460,7 @@
           "teams",
           "ranked",
           "battle",
+          "powers",
           "ready",
           "last_standings",
           "scare",
@@ -4743,6 +4847,10 @@
       "ShopItem": {
         "additionalProperties": false,
         "properties": {
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
           "icon": {
             "title": "Icon",
             "type": "string"
@@ -4769,7 +4877,8 @@
           "price",
           "name",
           "icon",
-          "text"
+          "text",
+          "game"
         ],
         "title": "ShopItem",
         "type": "object"
@@ -14866,6 +14975,7 @@
     },
     "/api/shop": {
       "get": {
+        "description": "Each game's own power-ups, for casual rooms (never ranked games or battles).",
         "operationId": "shop_api_shop_get",
         "responses": {
           "200": {

@@ -1464,7 +1464,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Shop */
+        /**
+         * Shop
+         * @description Each game's own power-ups, for casual rooms (never ranked games or battles).
+         */
         get: operations["shop_api_shop_get"];
         put?: never;
         post?: never;
@@ -2775,6 +2778,39 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** PowerItem */
+        PowerItem: {
+            /** Icon */
+            icon: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Text */
+            text: string;
+        };
+        /** PowerUse */
+        PowerUse: {
+            /** Icon */
+            icon: string;
+            /** Item */
+            item: string;
+            /** Name */
+            name: string;
+            /** Pid */
+            pid: string;
+        };
+        /** Powers */
+        Powers: {
+            /** Mine */
+            mine: string | null;
+            /** News */
+            news: components["schemas"]["PowerUse"][];
+            /** Offer */
+            offer: components["schemas"]["PowerItem"][];
+            /** Used */
+            used: boolean;
+        };
         /** PrefsBody */
         PrefsBody: {
             /**
@@ -3049,6 +3085,7 @@ export interface components {
             night: components["schemas"]["Night"];
             /** Players */
             players: components["schemas"]["PlayerRow"][];
+            powers: components["schemas"]["Powers"];
             /** Quip */
             quip: string;
             ranked: components["schemas"]["Ranked"];
@@ -3216,6 +3253,8 @@ export interface components {
         };
         /** ShopItem */
         ShopItem: {
+            /** Game */
+            game: string;
             /** Icon */
             icon: string;
             /** Id */

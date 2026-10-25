@@ -231,6 +231,20 @@ class LiarsDice(Game):
             view["standings"] = list(self.standings)
         return view
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "dice_peek": {"name": "Peek a die", "icon": "👀", "text": "See one die from a rival's cup"},
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "dice_peek":
+            return super().use_power(pid, item)
+        if pid not in self.alive():
+            raise GameError("not_now", "You're out of dice")
+        line = self.peek(pid)
+        if line is None:
+            raise GameError("not_now", "Use it while bids are open")
+        return line
+
     def peek(self, pid: str) -> str | None:
         """Power card: one die from one rival's cup."""
         rivals = [p for p in self.alive() if p != pid and self.dice.get(p)]

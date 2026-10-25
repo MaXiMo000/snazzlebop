@@ -345,6 +345,30 @@ class TriviaTonight(Game):
     def chat_muted(self, pid: str) -> bool:
         return self.phase == "question"
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "trivia_fifty": {"name": "50/50", "icon": "✂️", "text": "Two wrong answers struck out, just for you"},
+        "trivia_time": {
+            "name": "+5 seconds",
+            "icon": "⏱️",
+            "text": "Five more seconds on this question, for everyone",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if self.phase != "question" or not self.alive(pid) or pid in self.answers:
+            raise GameError("not_now", "Use it while a question is open and you haven't answered")
+        if item == "trivia_fifty":
+            line = self.peek(pid)
+            if line is None:
+                raise GameError("not_now", "50/50 needs a four-answer question")
+            return line
+        if item == "trivia_time":
+            if self.deadline is not None:
+                self.deadline += 5
+            self.bump()
+            return None
+        return super().use_power(pid, item)
+
     def peek(self, pid: str) -> str | None:
         """Power card: 50:50. Names two wrong choices (one for a true-or-false question)."""
         if self.phase != "question" or self.qi is None or len(self.choices) < 4:

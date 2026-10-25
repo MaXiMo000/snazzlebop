@@ -156,26 +156,30 @@ def test_coins_for_places_daily_cap_shop_and_leaderboard(client):
         paid = client.portal.call(db.record_results, rows, coins.season_of(), coins.DAILY_COIN_CAP)
     assert paid == {user.id: {"coins": 0, "note": "limit"}}
     assert client.get("/api/me").json()["user"]["coins"] == 600
-    r = client.post("/api/shop/buy", json={"item": "double"})
+    r = client.post("/api/shop/buy", json={"item": "chicken_shield"})
     assert r.status_code == 200 and r.json()["user"] == {
         "username": "Ana_99",
-        "coins": 520,
-        "powerups": {"double": 1},
+        "coins": 550,
+        "powerups": {"chicken_shield": 1},
         "email": None,
         "email_verified": False,
         "has_password": True,
     }
     assert client.post("/api/shop/buy", json={"item": "gold bar"}).status_code == 400
-    for _ in range(8):
-        client.post("/api/shop/buy", json={"item": "double"})
-    r = client.post("/api/shop/buy", json={"item": "double"})
+    assert (
+        client.post("/api/shop/buy", json={"item": "double"}).status_code == 400
+    )  # the show's cards aren't sold
+    for _ in range(11):
+        client.post("/api/shop/buy", json={"item": "chicken_shield"})
+    r = client.post("/api/shop/buy", json={"item": "chicken_shield"})
     assert r.status_code == 400 and r.json()["error"]["code"] == "not_enough_coins"
     stats = client.get("/api/me/stats").json()
     assert stats["totals"] == {"played": 13, "wins": 13, "coins": 600}
     assert stats["season"]["rank"] == 1
     board = client.get("/api/leaderboard").json()
     assert board["rows"][0]["username"] == "Ana_99" and board["rows"][0]["points"] == 600
-    assert client.get("/api/shop").json()["items"][0]["price"] > 0
+    items = client.get("/api/shop").json()["items"]
+    assert {i["id"] for i in items} == set(coins.GAME_POWER_PRICES) and all(i["game"] for i in items)
     client.post("/api/auth/logout")
     assert client.post("/api/shop/buy", json={"item": "peek"}).status_code == 401
 

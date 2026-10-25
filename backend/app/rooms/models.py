@@ -19,7 +19,20 @@ ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: avoids lookalikes
 ROOM_CODE_RE = re.compile(r"^[A-HJ-NP-Z]{3,8}$")
 ALLOWED_MESSAGE_TYPES = {
     *("ping", "start", "act", "skip", "lobby", "leave", "kick", "lock", "title"),
-    *("show", "next", "theme", "react", "predict", "trade", "card", "mvp", "rematch", "ready", "boost"),
+    *(
+        "show",
+        "next",
+        "theme",
+        "react",
+        "predict",
+        "trade",
+        "card",
+        "mvp",
+        "rematch",
+        "ready",
+        "boost",
+        "power",
+    ),
     *("shuffle", "ink", "inksync", "chat", "call", "avatar", "hush", "crown", "forfeit", "wheel"),
 }
 TEAM_MIN_PLAYERS = 4  # two teams of at least two
@@ -216,6 +229,11 @@ class Room:
     # Fair play (fairplay.py): when this game began, and the accounts seated in it then (only they're paid).
     game_began: float = -1.0  # -1: a room saved before this was tracked
     game_accounts: dict[str, int] = field(default_factory=dict)
+    # Power-ups v2 (a game's own POWERS): who used one in which game, what everyone saw, and the line
+    # each player's own power-up showed them alone.
+    power_used: dict[str, int] = field(default_factory=dict)  # pid -> game_no
+    power_news: list[dict[str, Any]] = field(default_factory=list)
+    power_private: dict[str, str] = field(default_factory=dict)
     team_news: dict[str, Any] = field(default_factory=dict)  # last game: team totals and the winner
     # Snapshots: this copy came from the database and nothing has changed here since (so a newer
     # snapshot, written by the server that's shutting down during a deploy, may replace it).

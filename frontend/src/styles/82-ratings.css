@@ -80,3 +80,18 @@
   font-family: var(--display);
   font-size: 1.4rem;
 }
+
+/* Power-ups v2: who used what, above the game, for everyone */
+.power-news {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.acct-item-game {
+  display: block;
+  font-weight: 700;
+  color: var(--ink);
+}

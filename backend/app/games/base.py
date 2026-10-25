@@ -119,6 +119,9 @@ class Game(ABC):
     # True when the host may switch on Teams: two teams, the team's combined score wins. A game with an
     # official partner rule plays it (self.teams); the rest play as usual and the hub adds up the teams.
     TEAMS: ClassVar[bool] = False
+    # Power-ups (casual rooms only, bought in the shop): item id -> {"name", "icon", "text"}. A game
+    # offers a few of its own and applies them in use_power().
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {}
     # What a player reads when chat_muted() is keeping them quiet.
     CHAT_MUTED_NOTE: ClassVar[str] = "You can't chat right now."
 
@@ -261,6 +264,11 @@ class Game(ABC):
         """The Peek power card: one private line about a secret in the game as it stands right now (or None
         when there's nothing to see). Called only for a seated player; the line goes only to them."""
         return None
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        """Apply one of this game's POWERS for a seated player. Returns a private line for them (or None);
+        raises GameError when it can't be used right now (the hub then gives the power-up back)."""
+        raise GameError("no_power", "That power-up isn't in this game")
 
     def highlights(self) -> list[dict[str, str]]:
         """Moments worth a line in the show's highlight reel, once the game is over:

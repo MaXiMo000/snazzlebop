@@ -103,6 +103,9 @@ original has them.
   or this week. Fair-play limits stop repeat pairings and big swings in a day.
 - **Battles:** challenge a clubmate to a duel or open a group battle in your club. Free to enter: the
   platform pays fixed prizes from the final scores. Trophies and head-to-head records.
+- **Power-ups:** each game has its own (Trivia 50/50 and +5 seconds, Draw & Guess letter, Liar's Dice
+  peek, Chicken Run shield, Imposter vote change), bought with coins and used one per game in casual
+  rooms. Everyone sees that you used one; what it shows is yours alone.
 - **Fair play:** coins, battle prizes and ratings can't be farmed: thrown quick games, the same group
   replaying each other, second accounts on one device, a guest tab to beat and brand-new accounts are
   all held back, and players see why.

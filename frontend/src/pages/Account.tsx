@@ -379,7 +379,7 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
 
       <Card aria-labelledby="shop-h">
         <h3 id="shop-h">Power-up shop</h3>
-        <p className="muted">Use one per game, in any game. Played in secret, revealed at the results.</p>
+        <p className="muted">Each game has its own. Use one per game in casual rooms (never ranked games or battles); everyone sees when you use one.</p>
         <ul className="acct-shop">
           {items.map((it) => {
             const owned = user.powerups[it.id] ?? 0;
@@ -392,6 +392,7 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
                   <b>{it.name}</b>
                 </p>
                 <p className="muted acct-item-text">
+                  <span className="acct-item-game">{it.game}</span>
                   {owned > 0 && <span className="chip teal acct-owned">You have {owned}</span>}
                   {it.text}
                 </p>

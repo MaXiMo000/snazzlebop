@@ -13,7 +13,16 @@ from datetime import UTC, datetime
 PLACE_COINS = (50, 30, 20, 10)
 EVERYONE_ELSE = 5
 DAILY_COIN_CAP = 600
-POWERUP_PRICES = {"peek": 40, "shield": 60, "steal": 60, "double": 80}
+POWERUP_PRICES = {"peek": 40, "shield": 60, "steal": 60, "double": 80}  # the show's cards (no longer sold)
+# Each game's own power-ups (games/*.py POWERS), sold in the shop for coins.
+GAME_POWER_PRICES = {
+    "trivia_fifty": 30,
+    "trivia_time": 20,
+    "drawguess_letter": 30,
+    "dice_peek": 40,
+    "chicken_shield": 50,
+    "imposter_revote": 30,
+}
 
 
 def places(scores: dict[str, int]) -> dict[str, int]:

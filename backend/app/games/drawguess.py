@@ -95,6 +95,7 @@ class DrawGuess(Game):
         self.gained: dict[str, int] = {}
         self.feed: list[dict[str, Any]] = []
         self.hints: list[int] = []  # letter positions revealed so far
+        self.extra: dict[str, set[int]] = {}  # this turn: letters a player's power-up showed them alone
         self.canvas = None
         self.phase = "choose"
         self.set_deadline(self.timings["choose"])
@@ -231,7 +232,10 @@ class DrawGuess(Game):
             "seconds": self.draw_seconds,
             "word": word if knows else None,
             # The blanks: "" for a hidden letter, the letter itself for a hint, spaces and dashes as-is.
-            "pattern": [c if not c.isalpha() or i in self.hints or knows else "" for i, c in enumerate(word)],
+            "pattern": [
+                c if not c.isalpha() or i in self.hints or i in self.extra.get(pid, ()) or knows else ""
+                for i, c in enumerate(word)
+            ],
             "choices": list(self.choices) if self.phase == "choose" and pid == self.drawer else None,
             "guessed": list(self.guessed),
             "gained": dict(self.gained),
@@ -253,6 +257,28 @@ class DrawGuess(Game):
         if self.phase != "draw" or (pid != self.drawer and pid not in self.guessed):
             return None
         return "No giving the word away!" if squash(self.word) in squash(text) else None
+
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "drawguess_letter": {
+            "name": "Reveal a letter",
+            "icon": "🔤",
+            "text": "One more letter of the word, just for you",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "drawguess_letter":
+            return super().use_power(pid, item)
+        if self.phase != "draw" or pid == self.drawer or pid in self.guessed:
+            raise GameError("not_now", "Use it while you're guessing")
+        mine = self.extra.setdefault(pid, set())
+        hidden = [i for i, c in enumerate(self.word) if c.isalpha() and i not in self.hints and i not in mine]
+        if len(hidden) <= 1:
+            raise GameError("not_now", "There's nothing left to reveal")
+        i = self.rng.choice(hidden)
+        mine.add(i)
+        self.bump()
+        return f'Letter {i + 1} is "{self.word[i].upper()}"'
 
     def peek(self, pid: str) -> str | None:
         if self.phase != "draw" or pid == self.drawer or pid in self.guessed:

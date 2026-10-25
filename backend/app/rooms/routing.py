@@ -57,6 +57,9 @@ class RoutingMixin:
             if kind == "boost":
                 await self._use_boost(room, pid, msg)
                 return await self.broadcast(room)
+            if kind == "power":
+                await self._use_power(room, pid, msg)
+                return await self.broadcast(room)
             async with room.lock:
                 changed = self._apply(room, pid, kind, msg)
             if changed:

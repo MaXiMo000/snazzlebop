@@ -309,6 +309,23 @@ class Imposter(Game):
             view["history"] = self.history
         return view
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "imposter_revote": {
+            "name": "Change my vote",
+            "icon": "🔁",
+            "text": "Take back your vote and vote again",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "imposter_revote":
+            return super().use_power(pid, item)
+        if self.phase != "vote" or pid not in self.votes:
+            raise GameError("not_now", "Use it after you've voted, while voting is open")
+        del self.votes[pid]
+        self.bump()
+        return "Your vote is back: vote again."
+
     def highlights(self) -> list[dict[str, str]]:
         if not self.finished:
             return []

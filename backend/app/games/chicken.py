@@ -31,6 +31,7 @@ BASE, GROWTH = 20.0, 1.15
 BOMB_MIN, BOMB_MAX = 4.0, 24.0
 NERVE_BONUS = 50
 INSURANCE_COST, INSURANCE_SHARE = 30, 0.25
+SHIELD_SHARE = 0.5  # the Shield power-up: half the pot at the bang
 FUSE_COST = 40
 FUSE_MIN, FUSE_MAX = 0.4, 0.8
 TAP_LAG = 0.4  # seconds: how far back a tap's own time may be credited (network + screen lag)
@@ -78,6 +79,9 @@ class ChickenRun(Game):
         self.run_start: float | None = None
         self.result: dict[str, Any] | None = None
         self.insured: set[str] = set()
+        self.shielded: set[str] = (
+            set()
+        )  # this round: a Shield power-up keeps SHIELD_SHARE of the pot at the bang
         self.fuses: dict[str, float] = {}  # target -> personal bomb time (secret)
         self.saboteurs: dict[str, list[str]] = {}  # target -> who shortened it
         self.phase = "ready"
@@ -107,9 +111,12 @@ class ChickenRun(Game):
         boomed = [p for p in self.player_ids if p not in self.cashed]
         bomb = round(self.bomb, 2)
         payouts = {
-            p: int(value_at(round(self.bomb_for(p), 2)) * INSURANCE_SHARE)
+            p: int(
+                value_at(round(self.bomb_for(p), 2))
+                * max(INSURANCE_SHARE if p in self.insured else 0, SHIELD_SHARE if p in self.shielded else 0)
+            )
             for p in boomed
-            if p in self.insured
+            if p in self.insured or p in self.shielded
         }
         for pid, pts in payouts.items():
             self.add_points(pid, pts)
@@ -127,6 +134,7 @@ class ChickenRun(Game):
             "boomed": boomed,
             "nerve": bonus,
             "insured": sorted(self.insured),
+            "shielded": sorted(self.shielded),
             "payouts": payouts,
             "fuses": {p: round(t, 2) for p, t in self.fuses.items()},
             "saboteurs": {p: list(v) for p, v in self.saboteurs.items()},
@@ -246,6 +254,23 @@ class ChickenRun(Game):
         if self.phase == "final":
             view["history"] = self.history
         return view
+
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "chicken_shield": {
+            "name": "Shield",
+            "icon": "🛡️",
+            "text": "Blow up this round and still keep half the pot",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "chicken_shield":
+            return super().use_power(pid, item)
+        if self.phase not in ("ready", "run") or pid in self.cashed or pid in self.shielded:
+            raise GameError("not_now", "Use it before you cash out this round")
+        self.shielded.add(pid)
+        self.bump()
+        return "Shielded: if the bomb gets you this round, you keep half the pot."
 
     def peek(self, pid: str) -> str | None:
         """Power card: a safe window. Your bomb is somewhere after this."""

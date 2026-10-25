@@ -41,13 +41,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.requests import HTTPConnection
 
 from . import emails, mfa, oidc, schemas
-from .coins import DAILY_COIN_CAP, POWERUP_PRICES, season_of
+from .coins import DAILY_COIN_CAP, GAME_POWER_PRICES, season_of
 from .config import Settings
 from .db import aware, suspended
+from .games import REGISTRY
 from .mailer import Mailer
 from .rooms import HubError
 from .security import RateLimiter, client_ip
-from .show import CARDS
 
 log = logging.getLogger("snazzlebop.accounts")
 SESSION_COOKIE = "sb_session"
@@ -282,7 +282,7 @@ class FriendBody(BaseModel):
 
 class BuyBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    item: str = Field(max_length=16)
+    item: str = Field(max_length=32)
 
 
 def public_user(user: Any) -> dict[str, Any]:
@@ -1048,15 +1048,21 @@ def router(
 
     @api.get("/api/shop", response_model=schemas.Shop)
     async def shop() -> dict[str, Any]:
-        return {"items": [{"id": k, "price": v, **CARDS[k]} for k, v in POWERUP_PRICES.items()]}
+        """Each game's own power-ups, for casual rooms (never ranked games or battles)."""
+        items = []
+        for cls in REGISTRY.values():
+            for item, info in cls.POWERS.items():
+                if item in GAME_POWER_PRICES:
+                    items.append({"id": item, "price": GAME_POWER_PRICES[item], "game": cls.title, **info})
+        return {"items": items}
 
     @api.post("/api/shop/buy", response_model=schemas.UserBody, responses=schemas.ERRORS)
     async def buy(body: BuyBody, request: Request) -> JSONResponse:
         same_origin(request)
         user = await require_user(request)
-        if body.item not in POWERUP_PRICES:
+        if body.item not in GAME_POWER_PRICES:
             raise HubError("bad_item", "That's not in the shop")
-        updated = await db.buy(user.id, body.item, POWERUP_PRICES[body.item])
+        updated = await db.buy(user.id, body.item, GAME_POWER_PRICES[body.item])
         if updated is None:
             raise HubError("not_enough_coins", "Not enough coins for that yet")
         return JSONResponse({"user": public_user(updated)}, headers={"Cache-Control": "no-store"})

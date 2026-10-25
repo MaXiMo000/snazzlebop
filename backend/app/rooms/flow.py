@@ -113,6 +113,7 @@ class FlowMixin:
         room.boost_peeks, room.coin_news, room.team_news, room.rating_news = {}, {}, {}, {}
         room.battle_news = {}
         room.game_began = self.clock()
+        room.power_news, room.power_private = [], {}
         room.game_accounts = {p: room.accounts[p] for p in game.player_ids if p in room.accounts}
         room.chat = [m for m in room.chat if m["team"] is None]  # new game, new teams: old team talk goes
         s = room.show

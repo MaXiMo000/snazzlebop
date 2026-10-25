@@ -273,6 +273,7 @@ class ShopItem(Strict):
     name: str
     icon: str
     text: str
+    game: str  # the game it's used in
 
 
 class Shop(Strict):
@@ -911,6 +912,27 @@ class Ranked(Strict):
     ready: bool  # everyone online is signed in with their own account
 
 
+class PowerItem(Strict):
+    id: str
+    name: str
+    icon: str
+    text: str
+
+
+class PowerUse(Strict):
+    pid: str
+    item: str
+    name: str
+    icon: str
+
+
+class Powers(Strict):
+    offer: list[PowerItem]  # this game's power-ups you could use now (casual rooms, signed in)
+    used: bool  # you've used yours this game
+    news: list[PowerUse]  # who used what (everyone sees)
+    mine: str | None  # what your power-up showed you alone
+
+
 class BattlePrize(Strict):
     place: int
     prize: int
@@ -950,6 +972,7 @@ class RoomFrame(Strict):
     teams: Teams | None
     ranked: Ranked
     battle: BattleView
+    powers: Powers
     ready: Ready
     last_standings: list[Standing]
     scare: int

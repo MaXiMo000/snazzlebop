@@ -125,6 +125,59 @@ class ShowMixin:
                     await self.refund_powerup(user_id, str(item))
                 raise
 
+    # -- power-ups v2: a game's own POWERS, seen by the whole room ------------------------------------
+    def _power_offer(self, room: Room) -> dict[str, dict[str, str]]:
+        """The power-ups this room's game offers right now: casual rooms only (never ranked or battles)."""
+        game = room.game
+        if room.phase != "game" or game is None or game.finished or room.ranked or room.battle:
+            return {}
+        return dict(game.POWERS)
+
+    def _check_power(self, room: Room, pid: str, item: Any) -> int:
+        if pid not in room.accounts:
+            raise HubError("signed_out", "Sign in to use power-ups")
+        if room.ranked or room.battle:
+            raise HubError("no_power", "Power-ups are off in ranked games and battles")
+        offer = self._power_offer(room)
+        if not isinstance(item, str) or item not in offer or room.game is None:
+            raise HubError("no_power", "That power-up isn't in this game")
+        if pid not in room.game.player_ids:
+            raise HubError("no_power", "You're not in this game")
+        if room.power_used.get(pid) == room.game_no:
+            raise HubError("already_used", "One power-up per game")
+        return room.game_no
+
+    async def _use_power(self, room: Room, pid: str, msg: dict[str, Any]) -> None:
+        """Spend one of your power-ups on the game being played. The room sees who used what; anything
+        it shows (a struck answer, a die) goes only to you. Given back if the game can't use it now."""
+        item = msg.get("item")
+        async with room.lock:
+            game_no = self._check_power(room, pid, item)
+        user_id = room.accounts[pid]
+        if self.spend_powerup is None or not await self.spend_powerup(user_id, str(item)):
+            raise HubError("no_powerup", "You don't have that power-up. Buy one in the shop")
+        async with room.lock:
+            try:
+                if room.game_no != game_no:
+                    raise HubError("too_late", "That game has finished")
+                self._check_power(room, pid, item)
+                game = room.game
+                if game is None:
+                    raise HubError("too_late", "That game has finished")
+                line = game.use_power(pid, str(item))
+                room.power_used[pid] = game_no
+                info = game.POWERS[str(item)]
+                room.power_news = [
+                    *room.power_news[-7:],
+                    {"pid": pid, "item": str(item), "name": info["name"], "icon": info["icon"]},
+                ]
+                if line:
+                    room.power_private[pid] = line
+            except Exception:
+                if self.refund_powerup is not None:
+                    await self.refund_powerup(user_id, str(item))
+                raise
+
     def _check_boost(self, room: Room, pid: str, item: Any, target: Any) -> int:
         game = room.game
         if pid not in room.accounts:
