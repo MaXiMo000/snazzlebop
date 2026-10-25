@@ -105,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         on_results=pay_coins,
         on_rated=db.rate_match,
         on_battle=db.settle_battle,
+        on_activity=db.log_activity,
         spend_powerup=db.spend_powerup,
         refund_powerup=db.refund_powerup,
         save_circle=db.save_circle,

@@ -3646,12 +3646,27 @@
             "title": "Quests",
             "type": "array"
           },
+          "reroll_left": {
+            "title": "Reroll Left",
+            "type": "boolean"
+          },
           "reward": {
             "$ref": "#/components/schemas/QuestReward"
+          },
+          "streak": {
+            "title": "Streak",
+            "type": "integer"
+          },
+          "streak_every": {
+            "title": "Streak Every",
+            "type": "integer"
           },
           "today_xp": {
             "title": "Today Xp",
             "type": "integer"
+          },
+          "weekly": {
+            "$ref": "#/components/schemas/WeeklyChallenges"
           },
           "xp": {
             "title": "Xp",
@@ -3666,7 +3681,11 @@
           "today_xp",
           "daily_cap",
           "quests",
-          "reward"
+          "reward",
+          "reroll_left",
+          "streak",
+          "streak_every",
+          "weekly"
         ],
         "title": "Progress",
         "type": "object"
@@ -3732,6 +3751,10 @@
             "title": "Id",
             "type": "string"
           },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
           "progress": {
             "title": "Progress",
             "type": "integer"
@@ -3752,6 +3775,7 @@
         "required": [
           "id",
           "title",
+          "kind",
           "social",
           "progress",
           "target",
@@ -5991,6 +6015,32 @@
           "username"
         ],
         "title": "UsernameBody",
+        "type": "object"
+      },
+      "WeeklyChallenges": {
+        "additionalProperties": false,
+        "properties": {
+          "challenges": {
+            "items": {
+              "$ref": "#/components/schemas/Quest"
+            },
+            "title": "Challenges",
+            "type": "array"
+          },
+          "ends": {
+            "title": "Ends",
+            "type": "string"
+          },
+          "reward": {
+            "$ref": "#/components/schemas/QuestReward"
+          }
+        },
+        "required": [
+          "ends",
+          "challenges",
+          "reward"
+        ],
+        "title": "WeeklyChallenges",
         "type": "object"
       },
       "Wheel": {
@@ -13122,6 +13172,116 @@
         "summary": "Claim"
       }
     },
+    "/api/me/quests/{quest}/reroll": {
+      "post": {
+        "description": "Swap one of today's quests for another of its kind (once a day, not after claiming it).",
+        "operationId": "reroll_api_me_quests__quest__reroll_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quest",
+            "required": true,
+            "schema": {
+              "title": "Quest",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Progress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Reroll"
+      }
+    },
     "/api/me/sessions": {
       "get": {
         "description": "Every browser signed in to this account. Each is named by the first 12 characters of its\nhash: enough to pick one out, useless for signing in.",
@@ -13525,6 +13685,115 @@
           }
         },
         "summary": "My Stats"
+      }
+    },
+    "/api/me/weekly/{challenge}/claim": {
+      "post": {
+        "operationId": "claim_weekly_api_me_weekly__challenge__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "challenge",
+            "required": true,
+            "schema": {
+              "title": "Challenge",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Progress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Claim Weekly"
       }
     },
     "/api/notifications": {

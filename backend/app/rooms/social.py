@@ -52,6 +52,9 @@ class SocialMixin:
             return False
         room.react_last[pid] = now
         room.react_window.append(now)
+        if pid in room.players and room.game is not None and room.react_logged.get(pid) != room.game_no:
+            room.react_logged[pid] = room.game_no  # quests count games you reacted in, not taps
+            self._activity(room, [pid], "react")
         who = room.players.get(pid) or room.audience.get(pid)
         room.react_seq += 1
         room.reactions = [

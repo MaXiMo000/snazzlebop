@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import date
+from datetime import date, timedelta
 
 from app import progress as P
 
@@ -16,16 +16,46 @@ class LevelTests(unittest.TestCase):
 
 
 class QuestTests(unittest.TestCase):
-    def test_three_a_day_one_social_stable_and_varied(self):
+    def test_every_kind_holds_a_week_and_measures_are_known(self):
+        measures = {
+            "fair_games", "wins", "top2", "big_games", "big_wins", "distinct_games", "category", "categories",
+            "new_games", "ranked", "ranked_wins", "battles", "battle_wins", "new_people", "people",
+            "old_friends", "clubmates", "new_clubmates", "activity", "coins_earned", "xp_earned", "shop",
+        }  # fmt: skip
+        for kind in P.KINDS:
+            self.assertGreaterEqual(sum(q["kind"] == kind for q in P.QUESTS.values()), 7, kind)
+        self.assertGreaterEqual(len(P.QUESTS), 40)
+        for qid, q in {**P.QUESTS, **P.WEEKLY}.items():
+            self.assertIn(q["measure"], measures, qid)
+            self.assertIn(q["kind"], P.KINDS, qid)
+
+    def test_three_a_day_one_social_no_repeats_within_a_week(self):
+        for user in (1, 7, 42, 999):
+            history = []
+            for d in range(60):
+                day = date(2026, 3, 1) + timedelta(days=d)
+                picks = P.daily_quests(user, day)
+                self.assertEqual(P.daily_quests(user, day), picks)  # the same all day
+                kinds = [P.QUESTS[x]["kind"] for x in picks]
+                self.assertEqual(kinds[0], "social")
+                self.assertEqual(len(set(kinds)), 3)  # three different kinds
+                for earlier in history[-6:]:
+                    self.assertFalse(set(picks) & set(earlier), f"repeat within a week for {user} on {day}")
+                history.append(picks)
+
+    def test_rerolls_and_weekly_challenges(self):
         day = date(2026, 10, 25)
         picks = P.daily_quests(7, day)
-        self.assertEqual(len(picks), 3)
-        self.assertEqual(len(set(picks)), 3)
-        self.assertTrue(P.QUESTS[picks[0]]["social"])
-        self.assertTrue(all(not P.QUESTS[q]["social"] for q in picks[1:]))
-        self.assertEqual(P.daily_quests(7, day), picks)  # the same all day
-        days = {tuple(P.daily_quests(7, date(2026, 10, d))) for d in range(1, 29)}
-        self.assertGreater(len(days), 5)  # and different across days
+        for qid in picks:
+            new = P.reroll_for(7, day, qid)
+            self.assertNotIn(new, picks)
+            self.assertEqual(P.QUESTS[new]["kind"], P.QUESTS[qid]["kind"])
+        week = P.weekly_challenges(7, day)
+        self.assertEqual(len(set(week)), 3)
+        monday = P.week_start(day)
+        for d in range(7):
+            self.assertEqual(P.weekly_challenges(7, monday + timedelta(days=d)), week)  # all week
+        self.assertNotEqual(P.weekly_challenges(7, monday + timedelta(days=7)), week)
 
 
 if __name__ == "__main__":
@@ -36,7 +66,7 @@ if __name__ == "__main__":
 import unittest.mock  # noqa: E402
 
 from app import fairplay as F  # noqa: E402
-from app.db import Database, Result  # noqa: E402
+from app.db import Database, Result, XpEvent  # noqa: E402
 
 
 def finish(uid, place, group, accounts=2, note=""):
@@ -135,6 +165,88 @@ class StoreTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual([q["progress"] for q in progress["quests"][:2]], [1, 0])  # b isn't a clubmate
 
 
+class VarietyTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.db = Database("sqlite+aiosqlite:///:memory:")
+        await self.db.init()
+        self.ids = [(await self.db.create_user(f"V{i}_00", "x", "y")).id for i in range(3)]
+
+    async def game(self, winner, loser, game_id="four"):
+        g = F.group_key([winner, loser])
+        rows = [finish(winner, 1, g), finish(loser, 2, g)]
+        for r in rows:
+            r["game_id"] = game_id
+        return await self.db.record_results(rows, "s", 600)
+
+    async def test_activity_and_category_quests(self):
+        a, b, _ = self.ids
+        with unittest.mock.patch.object(
+            P, "daily_quests", lambda uid, day: ["new_person", "cat_quiz", "use_party"]
+        ):
+            await self.game(a, b, "trivia")
+            await self.db.log_activity([a], "party")
+            progress = await self.db.progress(a)
+            self.assertEqual([q["progress"] for q in progress["quests"]], [1, 1, 1])
+            self.assertEqual([q["kind"] for q in progress["quests"]], ["social", "games", "fun"])
+
+    async def test_one_reroll_a_day_never_after_claiming(self):
+        a, b, _ = self.ids
+        with unittest.mock.patch.object(
+            P, "daily_quests", lambda uid, day: ["new_person", "win1", "use_party"]
+        ):
+            await self.game(a, b)
+            self.assertEqual(await self.db.claim_quest(a, "win1"), "")
+            self.assertEqual(await self.db.reroll_quest(a, "win1"), "claimed")
+            self.assertEqual(await self.db.reroll_quest(a, "use_party"), "")
+            progress = await self.db.progress(a)
+            ids = [q["id"] for q in progress["quests"]]
+            self.assertNotIn("use_party", ids)
+            self.assertEqual(P.QUESTS[ids[2]]["kind"], "fun")
+            self.assertFalse(progress["reroll_left"])
+            self.assertEqual(await self.db.reroll_quest(a, "new_person"), "rerolled")
+
+    async def test_the_streak_bonus_every_seventh_day(self):
+        a, b, _ = self.ids
+        today = self.db._today()
+        async with self.db.sessions() as s:  # six earlier days, all three claimed
+            for d in range(1, P.STREAK_DAYS):
+                day = (today - timedelta(days=d)).date().isoformat()
+                for qid in ("x", "y", "z"):
+                    s.add(XpEvent(user_id=a, delta=1, reason="quest", ref=f"{day}:{qid}"))
+            await s.commit()
+        with unittest.mock.patch.object(
+            P, "daily_quests", lambda uid, day: ["new_person", "win1", "finish3"]
+        ):
+            for _ in range(3):
+                await self.game(a, b)
+            for qid in ("new_person", "win1"):
+                self.assertEqual(await self.db.claim_quest(a, qid), "")
+            self.assertEqual((await self.db.progress(a))["streak"], P.STREAK_DAYS - 1)
+            self.assertEqual(await self.db.claim_quest(a, "finish3"), "")
+            self.assertEqual((await self.db.progress(a))["streak"], P.STREAK_DAYS)
+        history = await self.db.coin_history(a)
+        self.assertEqual(
+            [e["delta"] for e in history["entries"] if e["reason"] == "streak"], [P.STREAK_COINS]
+        )
+        self.assertEqual((await self.db.user_by_id(a)).powerups.get(P.STREAK_GIFT), 1)
+
+    async def test_weekly_challenges(self):
+        a, b, c = self.ids
+        with unittest.mock.patch.object(
+            P, "weekly_challenges", lambda uid, day: ["w_win10", "w_people8", "w_cats4"]
+        ):
+            self.assertEqual(await self.db.claim_weekly(a, "w_win10"), "not_done")
+            self.assertEqual(await self.db.claim_weekly(a, "w_ranked5"), "not_today")
+            for game in ("trivia", "dice", "chicken"):
+                await self.game(a, b, game)
+            await self.game(a, c, "four")
+            weekly = (await self.db.progress(a))["weekly"]
+            self.assertEqual([w["progress"] for w in weekly["challenges"]], [4, 2, 4])
+            self.assertEqual(await self.db.claim_weekly(a, "w_cats4"), "")
+            self.assertEqual(await self.db.claim_weekly(a, "w_cats4"), "claimed")
+            self.assertTrue((await self.db.progress(a))["weekly"]["challenges"][2]["claimed"])
+
+
 # -- HTTP ----------------------------------------------------------------------------------------------
 import pytest  # noqa: E402
 
@@ -183,3 +295,37 @@ def test_progress_and_a_clubmate_quest_over_http(tmp_path):
             assert client.post("/api/me/quests/ranked1/claim").status_code == 404
         client.cookies.clear()
         assert client.get("/api/me/progress").status_code == 401
+
+
+class ActivityHookTests(unittest.IsolatedAsyncioTestCase):
+    async def test_rooms_log_what_quests_count_and_skip_unfair_games(self):
+        import asyncio
+
+        from tests.test_accounts import Wallet
+        from tests.test_ranked import room_of
+
+        logged: list[tuple[list[int], str]] = []
+
+        async def on_activity(ids, kind):
+            logged.append((sorted(ids), kind))
+
+        hub, room, pids, conns = await room_of(2)
+        hub.on_activity = on_activity
+        wallet = Wallet({(1, "party_confetti"): 1})
+        hub.spend_powerup, hub.refund_powerup = wallet.spend, wallet.refund
+        await hub.handle_message(room, pids[0], conns[pids[0]], {"t": "party", "item": "party_confetti"})
+        room.club_id = 9
+        for quick in (True, False):
+            await hub.handle_message(room, pids[0], conns[pids[0]], {"t": "start", "game": "four"})
+            if not quick:
+                room.game_began -= 120
+            room.game.scores = lambda: {pids[0]: 300, pids[1]: 0}
+            room.game.finished = True
+            hub._maybe_finish(room)
+            await asyncio.gather(*list(hub._tasks))
+            room.phase = "lobby"
+        kinds = [k for _, k in logged]
+        self.assertEqual(kinds.count("party"), 1)
+        self.assertEqual(kinds.count("host"), 1)  # the quick game logged nothing
+        self.assertIn(([1, 2], "club_game"), logged)
+        self.assertIn(([1], "club_host"), logged)

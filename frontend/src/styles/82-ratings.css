@@ -179,3 +179,18 @@
   font: 700 0.75rem / 22px var(--body);
   text-align: center;
 }
+.quest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+@media (max-width: 560px) {
+  .quest > .quest-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+.streak {
+  margin-bottom: 0;
+}

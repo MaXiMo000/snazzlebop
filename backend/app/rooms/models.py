@@ -239,6 +239,9 @@ class Room:
     party_effects: list[dict[str, Any]] = field(default_factory=list)
     party_seq: int = 0
     party_last: dict[str, float] = field(default_factory=dict)
+    react_logged: dict[str, int] = field(
+        default_factory=dict
+    )  # pid -> the game a reaction was last logged in
     team_news: dict[str, Any] = field(default_factory=dict)  # last game: team totals and the winner
     # Snapshots: this copy came from the database and nothing has changed here since (so a newer
     # snapshot, written by the server that's shutting down during a deploy, may replace it).

@@ -50,7 +50,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     ),
     "app.contentgen": ({"app.games"}, {"anthropic"}),
     "app.db": (
-        {"app.ratings", "app.battles", "app.fairplay", "app.progress"},
+        {"app.ratings", "app.battles", "app.fairplay", "app.progress", "app.games"},
         {"alembic", "sqlalchemy"},
     ),  # storage; uses the pure rules
 }

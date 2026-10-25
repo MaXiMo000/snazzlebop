@@ -44,6 +44,7 @@ from . import battles as battlelib
 from . import fairplay
 from . import progress as progresslib
 from . import ratings as ratinglib
+from .games.catalogue import CATEGORY_OF
 
 log = logging.getLogger("snazzlebop.db")
 INBOX_KEEP = 100  # inbox entries kept per person
@@ -486,6 +487,31 @@ class PlayedWith(Base):
     first_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     last_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     games: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Activity(Base):
+    """Something done in a room that quests count (a power-up, a party item, hosting, a club game, a
+    show night, the audience's MVP, a reaction). It pays nothing by itself."""
+
+    __tablename__ = "activity"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
+
+
+class QuestReroll(Base):
+    """Today's one reroll: which quest was swapped for which."""
+
+    __tablename__ = "quest_rerolls"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)
+    old: Mapped[str] = mapped_column(String(32))
+    new: Mapped[str] = mapped_column(String(32))
 
 
 class Friend(Base):
@@ -1004,6 +1030,8 @@ class Database:
             await session.execute(delete(LedgerEntry).where(LedgerEntry.user_id == user_id))
             await session.execute(delete(BattleResult).where(BattleResult.user_id == user_id))
             await session.execute(delete(XpEvent).where(XpEvent.user_id == user_id))
+            await session.execute(delete(Activity).where(Activity.user_id == user_id))
+            await session.execute(delete(QuestReroll).where(QuestReroll.user_id == user_id))
             await session.execute(
                 delete(PlayedWith).where(or_(PlayedWith.user_id == user_id, PlayedWith.other_id == user_id))
             )
@@ -2097,27 +2125,54 @@ class Database:
                 else:
                     row.last_at, row.games = now, row.games + 1
 
-    async def _quest_progress(self, session: Any, user_id: int, quest: str, today: datetime) -> int:
-        """How far along a quest is today, from what actually happened (never from what a client says)."""
-        if quest == "finish3":
+    async def log_activity(self, user_ids: list[int], kind: str) -> None:
+        """Things done in rooms that quests count (power-ups, party items, hosting, club games, shows,
+        the audience's MVP, reactions). Only signed-in accounts; nothing here pays by itself."""
+        ids = sorted(set(user_ids))
+        if not self.ready or not ids:
+            return
+        try:
+            async with self.sessions() as session:
+                session.add_all([Activity(user_id=uid, kind=kind[:16]) for uid in ids])
+                await session.commit()
+        except Exception:
+            log.exception("could not log activity")
+
+    async def _measure(self, session: Any, user_id: int, quest: dict[str, Any], since: datetime) -> int:
+        """How far along a quest or challenge is since a moment, from what actually happened (never
+        from what a client says). Games count only when fair (fairplay.py)."""
+        measure, arg = quest["measure"], quest.get("arg")
+        fair = [Result.user_id == user_id, Result.fair.is_(True), Result.played_at >= since]
+        if measure == "fair_games":
+            q = select(func.count()).where(*fair)
+        elif measure == "wins":
+            q = select(func.count()).where(*fair, Result.place == 1)
+        elif measure == "top2":
+            q = select(func.count()).where(*fair, Result.place <= 2)
+        elif measure == "big_games":
+            q = select(func.count()).where(*fair, Result.players >= int(arg))
+        elif measure == "big_wins":
+            q = select(func.count()).where(*fair, Result.place == 1, Result.players >= int(arg))
+        elif measure == "distinct_games":
+            q = select(func.count(func.distinct(Result.game_id))).where(*fair)
+        elif measure in ("category", "categories"):
+            games = (await session.execute(select(Result.game_id).where(*fair))).scalars().all()
+            cats = {CATEGORY_OF.get(g) for g in games}
+            return (
+                len(cats - {None})
+                if measure == "categories"
+                else sum(CATEGORY_OF.get(g) == arg for g in games)
+            )
+        elif measure == "new_games":
+            before = select(Result.game_id).where(Result.user_id == user_id, Result.played_at < since)
+            q = select(func.count(func.distinct(Result.game_id))).where(*fair, Result.game_id.not_in(before))
+        elif measure == "ranked":
+            q = select(func.count()).where(RatingEvent.user_id == user_id, RatingEvent.at >= since)
+        elif measure == "ranked_wins":
             q = select(func.count()).where(
-                Result.user_id == user_id, Result.fair.is_(True), Result.played_at >= today
+                RatingEvent.user_id == user_id, RatingEvent.at >= since, RatingEvent.place == 1
             )
-        elif quest == "win1":
-            q = select(func.count()).where(
-                Result.user_id == user_id, Result.fair.is_(True), Result.place == 1, Result.played_at >= today
-            )
-        elif quest == "try_game":
-            before = select(Result.game_id).where(Result.user_id == user_id, Result.played_at < today)
-            q = select(func.count(func.distinct(Result.game_id))).where(
-                Result.user_id == user_id,
-                Result.fair.is_(True),
-                Result.played_at >= today,
-                Result.game_id.not_in(before),
-            )
-        elif quest == "ranked1":
-            q = select(func.count()).where(RatingEvent.user_id == user_id, RatingEvent.at >= today)
-        elif quest == "battle1":
+        elif measure in ("battles", "battle_wins"):
             q = (
                 select(func.count())
                 .select_from(BattleResult)
@@ -2125,32 +2180,94 @@ class Database:
                 .where(
                     BattleResult.user_id == user_id,
                     BattleResult.finished.is_(True),
-                    Battle.played_at >= today,
+                    Battle.played_at >= since,
                 )
             )
-        elif quest == "new_person":
-            q = select(func.count()).where(PlayedWith.user_id == user_id, PlayedWith.first_at >= today)
-        elif quest == "new_clubmate":
+            if measure == "battle_wins":
+                q = q.where(BattleResult.place == 1)
+        elif measure == "new_people":
+            q = select(func.count()).where(PlayedWith.user_id == user_id, PlayedWith.first_at >= since)
+        elif measure == "people":
+            q = select(func.count()).where(PlayedWith.user_id == user_id, PlayedWith.last_at >= since)
+        elif measure == "old_friends":
+            q = select(func.count()).where(
+                PlayedWith.user_id == user_id, PlayedWith.last_at >= since, PlayedWith.first_at < since
+            )
+        elif measure in ("clubmates", "new_clubmates"):
             my_clubs = select(Membership.club_id).where(
                 Membership.user_id == user_id, Membership.banned.is_(False)
             )
             mates = select(Membership.user_id).where(
                 Membership.club_id.in_(my_clubs), Membership.banned.is_(False)
             )
+            when = PlayedWith.first_at if measure == "new_clubmates" else PlayedWith.last_at
             q = select(func.count()).where(
-                PlayedWith.user_id == user_id, PlayedWith.first_at >= today, PlayedWith.other_id.in_(mates)
+                PlayedWith.user_id == user_id, when >= since, PlayedWith.other_id.in_(mates)
             )
-        elif quest == "three_people":
-            q = select(func.count()).where(PlayedWith.user_id == user_id, PlayedWith.last_at >= today)
+        elif measure == "activity":
+            q = select(func.count()).where(
+                Activity.user_id == user_id, Activity.kind == arg, Activity.at >= since
+            )
+        elif measure == "coins_earned":
+            q = select(func.coalesce(func.sum(LedgerEntry.delta), 0)).where(
+                LedgerEntry.user_id == user_id, LedgerEntry.reason == "place", LedgerEntry.created_at >= since
+            )
+        elif measure == "xp_earned":
+            q = select(func.coalesce(func.sum(XpEvent.delta), 0)).where(
+                XpEvent.user_id == user_id,
+                XpEvent.reason.in_(("game", "first_win")),
+                XpEvent.created_at >= since,
+            )
+        elif measure == "shop":
+            q = select(func.count()).where(
+                LedgerEntry.user_id == user_id, LedgerEntry.reason == "shop", LedgerEntry.created_at >= since
+            )
         else:
             return 0
         return int(await session.scalar(q) or 0)
 
+    @staticmethod
+    def _today() -> datetime:
+        return datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    async def _todays(self, session: Any, user_id: int, today: datetime) -> tuple[list[str], str | None]:
+        """Today's quests for this account (with a reroll applied), and the quest it replaced."""
+        picks = progresslib.daily_quests(user_id, today.date())
+        row = await session.get(QuestReroll, (user_id, today.date().isoformat()))
+        if row is not None and row.old in picks:
+            picks[picks.index(row.old)] = row.new
+            return picks, row.old
+        return picks, None
+
+    async def _streak(self, session: Any, user_id: int, today: datetime) -> int:
+        """Days in a row (up to today, or yesterday if today isn't done yet) with all three quests claimed."""
+        refs = (
+            await session.execute(
+                select(XpEvent.ref).where(
+                    XpEvent.user_id == user_id,
+                    XpEvent.reason == "quest",
+                    XpEvent.created_at >= today - timedelta(days=400),
+                )
+            )
+        ).scalars()
+        per_day: dict[str, int] = {}
+        for ref in refs:
+            day = ref.split(":")[0]
+            per_day[day] = per_day.get(day, 0) + 1
+        day = today.date()
+        if per_day.get(day.isoformat(), 0) < 3:
+            day -= timedelta(days=1)
+        streak = 0
+        while per_day.get(day.isoformat(), 0) >= 3:
+            streak += 1
+            day -= timedelta(days=1)
+        return streak
+
     async def progress(self, user_id: int) -> dict[str, Any]:
-        """Your level and today's quests."""
-        now = datetime.now(UTC)
-        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        """Your level, today's quests, your streak and this week's challenges."""
+        today = self._today()
         day = today.date().isoformat()
+        week = datetime.combine(progresslib.week_start(today.date()), datetime.min.time(), UTC)
         async with self.sessions() as session:
             user = await session.get(User, user_id)
             xp = int(user.xp or 0) if user else 0
@@ -2164,26 +2281,51 @@ class Database:
             claimed = set(
                 (
                     await session.execute(
-                        select(XpEvent.ref).where(XpEvent.user_id == user_id, XpEvent.reason == "quest")
+                        select(XpEvent.ref).where(
+                            XpEvent.user_id == user_id,
+                            XpEvent.reason.in_(("quest", "weekly")),
+                            XpEvent.created_at >= week - timedelta(days=1),
+                        )
                     )
                 ).scalars()
             )
+            picks, swapped = await self._todays(session, user_id, today)
             quests = []
-            for qid in progresslib.daily_quests(user_id, today.date()):
+            for qid in picks:
                 info = progresslib.QUESTS[qid]
                 target = int(info["target"])  # type: ignore[call-overload]
-                done = await self._quest_progress(session, user_id, qid, today)
+                done = await self._measure(session, user_id, info, today)
                 quests.append(
                     {
                         "id": qid,
                         "title": info["title"],
-                        "social": bool(info["social"]),
+                        "kind": info["kind"],
+                        "social": info["kind"] == "social",
                         "progress": min(done, target),
                         "target": target,
                         "claimed": f"{day}:{qid}" in claimed,
                     }
                 )
+            weekly = []
+            wk = progresslib.week_start(today.date()).isoformat()
+            for wid in progresslib.weekly_challenges(user_id, today.date()):
+                info = progresslib.WEEKLY[wid]
+                target = int(info["target"])  # type: ignore[call-overload]
+                done = await self._measure(session, user_id, info, week)
+                weekly.append(
+                    {
+                        "id": wid,
+                        "title": info["title"],
+                        "kind": info["kind"],
+                        "social": info["kind"] == "social",
+                        "progress": min(done, target),
+                        "target": target,
+                        "claimed": f"{wk}:{wid}" in claimed,
+                    }
+                )
+            streak = await self._streak(session, user_id, today)
         level = progresslib.level_of(xp)
+        ends = progresslib.week_start(today.date()) + timedelta(days=6)
         return {
             "level": level,
             "xp": xp,
@@ -2193,22 +2335,83 @@ class Database:
             "daily_cap": progresslib.XP_DAILY_CAP,
             "quests": quests,
             "reward": {"xp": progresslib.XP_QUEST, "coins": progresslib.QUEST_COINS},
+            "reroll_left": swapped is None,
+            "streak": streak,
+            "streak_every": progresslib.STREAK_DAYS,
+            "weekly": {
+                "ends": ends.isoformat(),
+                "challenges": weekly,
+                "reward": {"xp": progresslib.WEEKLY_XP, "coins": progresslib.WEEKLY_COINS},
+            },
         }
 
     async def claim_quest(self, user_id: int, quest: str) -> str:
-        """Claim a finished quest of today's: XP and coins, once. Returns "" or why it can't be claimed."""
-        today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-        if quest not in progresslib.daily_quests(user_id, today.date()):
-            return "not_today"
-        ref = f"{today.date().isoformat()}:{quest}"
+        """Claim a finished quest of today's: XP and coins, once; the third of the day may complete a
+        streak bonus. Returns "" or why it can't be claimed."""
+        today = self._today()
+        day = today.date().isoformat()
+        ref = f"{day}:{quest}"
         async with self.sessions() as session:
             await session.execute(select(User.id).where(User.id == user_id).with_for_update())
-            target = int(progresslib.QUESTS[quest]["target"])  # type: ignore[call-overload]
-            if await self._quest_progress(session, user_id, quest, today) < target:
+            picks, _ = await self._todays(session, user_id, today)
+            if quest not in picks:
+                return "not_today"
+            info = progresslib.QUESTS[quest]
+            if await self._measure(session, user_id, info, today) < int(info["target"]):  # type: ignore[call-overload]
                 return "not_done"
             if not await self._xp(session, user_id, progresslib.XP_QUEST, "quest", ref):
                 return "claimed"
             await self._post(session, user_id, progresslib.QUEST_COINS, "quest", "quest", ref)
+            await session.flush()
+            streak = await self._streak(session, user_id, today)
+            due = bool(streak) and streak % progresslib.STREAK_DAYS == 0
+            if due and await self._post(session, user_id, progresslib.STREAK_COINS, "streak", "streak", day):
+                user = (await session.execute(select(User).where(User.id == user_id))).scalar_one()
+                owned = dict(user.powerups or {})
+                owned[progresslib.STREAK_GIFT] = owned.get(progresslib.STREAK_GIFT, 0) + 1
+                user.powerups = owned
+            await session.commit()
+        return ""
+
+    async def reroll_quest(self, user_id: int, quest: str) -> str:
+        """Swap one of today's unclaimed quests for another of its kind, once a day."""
+        today = self._today()
+        day = today.date().isoformat()
+        async with self.sessions() as session:
+            await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+            picks, swapped = await self._todays(session, user_id, today)
+            if quest not in picks:
+                return "not_today"
+            if swapped is not None:
+                return "rerolled"
+            claimed = await session.scalar(
+                select(func.count()).where(
+                    XpEvent.user_id == user_id, XpEvent.reason == "quest", XpEvent.ref == f"{day}:{quest}"
+                )
+            )
+            if claimed:
+                return "claimed"
+            new = progresslib.reroll_for(user_id, today.date(), quest)
+            session.add(QuestReroll(user_id=user_id, day=day, old=quest, new=new))
+            await session.commit()
+        return ""
+
+    async def claim_weekly(self, user_id: int, challenge: str) -> str:
+        """Claim a finished challenge of this week's: XP and coins, once."""
+        today = self._today()
+        start = progresslib.week_start(today.date())
+        if challenge not in progresslib.weekly_challenges(user_id, today.date()):
+            return "not_today"
+        since = datetime.combine(start, datetime.min.time(), UTC)
+        ref = f"{start.isoformat()}:{challenge}"
+        async with self.sessions() as session:
+            await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+            info = progresslib.WEEKLY[challenge]
+            if await self._measure(session, user_id, info, since) < int(info["target"]):  # type: ignore[call-overload]
+                return "not_done"
+            if not await self._xp(session, user_id, progresslib.WEEKLY_XP, "weekly", ref):
+                return "claimed"
+            await self._post(session, user_id, progresslib.WEEKLY_COINS, "weekly", "weekly", ref)
             await session.commit()
         return ""
 

@@ -1119,6 +1119,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/quests/{quest}/reroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reroll
+         * @description Swap one of today's quests for another of its kind (once a day, not after claiming it).
+         */
+        post: operations["reroll_api_me_quests__quest__reroll_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/sessions": {
         parameters: {
             query?: never;
@@ -1188,6 +1208,23 @@ export interface paths {
         get: operations["my_stats_api_me_stats_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/weekly/{challenge}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Claim Weekly */
+        post: operations["claim_weekly_api_me_weekly__challenge__claim_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2896,9 +2933,16 @@ export interface components {
             next_xp: number;
             /** Quests */
             quests: components["schemas"]["Quest"][];
+            /** Reroll Left */
+            reroll_left: boolean;
             reward: components["schemas"]["QuestReward"];
+            /** Streak */
+            streak: number;
+            /** Streak Every */
+            streak_every: number;
             /** Today Xp */
             today_xp: number;
+            weekly: components["schemas"]["WeeklyChallenges"];
             /** Xp */
             xp: number;
         };
@@ -2928,6 +2972,8 @@ export interface components {
             claimed: boolean;
             /** Id */
             id: string;
+            /** Kind */
+            kind: string;
             /** Progress */
             progress: number;
             /** Social */
@@ -3647,6 +3693,14 @@ export interface components {
         UsernameBody: {
             /** Username */
             username: string;
+        };
+        /** WeeklyChallenges */
+        WeeklyChallenges: {
+            /** Challenges */
+            challenges: components["schemas"]["Quest"][];
+            /** Ends */
+            ends: string;
+            reward: components["schemas"]["QuestReward"];
         };
         /** Wheel */
         Wheel: {
@@ -9846,6 +9900,100 @@ export interface operations {
             };
         };
     };
+    reroll_api_me_quests__quest__reroll_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Progress"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     my_sessions_api_me_sessions_get: {
         parameters: {
             query?: never;
@@ -10140,6 +10288,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyStats"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    claim_weekly_api_me_weekly__challenge__claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                challenge: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Progress"];
                 };
             };
             /** @description Bad request */

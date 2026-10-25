@@ -21,6 +21,18 @@ from .models import (
 
 
 class FlowMixin:
+    def _activity(self, room: Room, pids: list[str], kind: str) -> None:
+        """Log something quests count, for the signed-in players among these seats."""
+        accounts = [room.accounts[p] for p in pids if p in room.accounts]
+        if not accounts or self.on_activity is None:
+            return
+        try:
+            task = asyncio.get_running_loop().create_task(self.on_activity(accounts, kind))
+        except RuntimeError:
+            return
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
     def _too_quick(self, room: Room) -> bool:
         """The game ended too soon after it began to pay anything (fairplay.py)."""
         return room.game_began >= 0 and fairplay.too_quick(self.clock() - room.game_began)
@@ -273,6 +285,13 @@ class FlowMixin:
         self._pay_coins(room, game, scores)
         self._rate(room, game, scores)
         self._settle_battle(room, game, scores)
+        # Quests: hosting and club-room games count only for games fair play would pay for.
+        accounts = self._paid_accounts(room)
+        if len(set(accounts.values())) >= 2 and not self._too_quick(room) and game.game_id != "jackpot":
+            self._activity(room, [room.host_id], "host")
+            if room.club_id is not None:
+                self._activity(room, list(accounts), "club_game")
+                self._activity(room, [room.host_id], "club_host")
 
     def _settle_battle(self, room: Room, game: Game, scores: dict[str, int]) -> None:
         """The room's battle has been played: pay its prizes from the final scores (once)."""

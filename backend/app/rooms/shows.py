@@ -174,6 +174,7 @@ class ShowMixin:
                 ]
                 if line:
                     room.power_private[pid] = line
+                self._activity(room, [pid], "power")
             except Exception:
                 if self.refund_powerup is not None:
                     await self.refund_powerup(user_id, str(item))
@@ -215,6 +216,7 @@ class ShowMixin:
                 *room.party_effects[-(partylib.KEEP - 1) :],
                 {"id": room.party_seq, "item": str(item), "by": room.players[pid].name, "at": now},
             ]
+            self._activity(room, [pid], "party")
 
     def _check_boost(self, room: Room, pid: str, item: Any, target: Any) -> int:
         game = room.game
@@ -318,6 +320,7 @@ class ShowMixin:
         top = max(votes.values())
         names = room.names()
         for pid in (p for p, v in votes.items() if v == top and p in room.players):
+            self._activity(room, [pid], "mvp")
             room.total_scores[pid] = room.total_scores.get(pid, 0) + FAN_BONUS
             title = room.show.games[-1]["title"] if room.show.games else ""
             room.show.reel.append(
@@ -456,4 +459,5 @@ class ShowMixin:
             if pts == top:
                 row["wins"] += 1
         self._scare_everyone_matched(room)
+        self._activity(room, list(room.players), "show")
         room.game, room.phase = None, "finale"

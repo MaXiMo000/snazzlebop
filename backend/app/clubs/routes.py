@@ -452,6 +452,7 @@ def router(
             club.id, room.code, body.game, body.kind, user.id, opponent.user_id if opponent else None
         )
         hub.set_battle(room, battle_id, body.game, body.kind, [user.id, opponent.user_id] if opponent else [])
+        await db.log_activity([user.id], "battle_sent")
         if opponent is not None:
             await notifier.notify(
                 [opponent.user_id],

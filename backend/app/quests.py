@@ -17,6 +17,7 @@ WHY = {
     "not_today": ("not_today", "That isn't one of today's quests", 404),
     "not_done": ("not_done", "Finish the quest first", 409),
     "claimed": ("claimed", "You've already claimed that one", 409),
+    "rerolled": ("rerolled", "You've used today's reroll", 409),
 }
 
 
@@ -41,6 +42,25 @@ def router(settings: Settings, db: Any) -> APIRouter:
         check_same_origin(request, settings)
         user = await me(request)
         why = await db.claim_quest(user.id, quest[:32])
+        if why:
+            raise HubError(*WHY[why])
+        return JSONResponse(await db.progress(user.id), headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/me/quests/{quest}/reroll", response_model=schemas.Progress, responses=schemas.ERRORS)
+    async def reroll(quest: str, request: Request) -> JSONResponse:
+        """Swap one of today's quests for another of its kind (once a day, not after claiming it)."""
+        check_same_origin(request, settings)
+        user = await me(request)
+        why = await db.reroll_quest(user.id, quest[:32])
+        if why:
+            raise HubError(*WHY[why])
+        return JSONResponse(await db.progress(user.id), headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/me/weekly/{challenge}/claim", response_model=schemas.Progress, responses=schemas.ERRORS)
+    async def claim_weekly(challenge: str, request: Request) -> JSONResponse:
+        check_same_origin(request, settings)
+        user = await me(request)
+        why = await db.claim_weekly(user.id, challenge[:32])
         if why:
             raise HubError(*WHY[why])
         return JSONResponse(await db.progress(user.id), headers={"Cache-Control": "no-store"})

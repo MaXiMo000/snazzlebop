@@ -212,6 +212,7 @@ class BattleRecord(Strict):
 class Quest(Strict):
     id: str
     title: str
+    kind: str  # social | games | skill | club | fun
     social: bool  # means playing with someone new
     progress: int
     target: int
@@ -232,6 +233,16 @@ class Progress(Strict):
     daily_cap: int
     quests: list[Quest]  # today's three
     reward: QuestReward  # for each finished quest
+    reroll_left: bool  # one swap a day
+    streak: int  # days in a row with all three claimed
+    streak_every: int  # a bonus every this many days
+    weekly: WeeklyChallenges
+
+
+class WeeklyChallenges(Strict):
+    ends: str  # ISO date (Sunday)
+    challenges: list[Quest]
+    reward: QuestReward
 
 
 class MfaStatus(Strict):

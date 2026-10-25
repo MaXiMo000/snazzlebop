@@ -110,7 +110,8 @@ original has them.
 - **Party items:** confetti cannon, air horn, drum roll, standing ovation and spotlight: used any time in a
   room, played on every screen (the TV too), no effect on scores, with spam limits.
 - **Levels and daily quests:** XP from fair games (and a bonus for the day's first win), levels that pay
-  coins and a power-up, and three quests a day, one of them always about playing with someone new.
+  coins and a power-up, and three quests a day from a pool of 42 (one always social, no repeats within a
+  week, one swap a day), a 7-day streak bonus and weekly challenges.
 - **Fair play:** coins, battle prizes and ratings can't be farmed: thrown quick games, the same group
   replaying each other, second accounts on one device, a guest tab to beat and brand-new accounts are
   all held back, and players see why.
