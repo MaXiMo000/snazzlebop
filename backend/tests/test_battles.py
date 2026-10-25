@@ -25,8 +25,12 @@ class PrizeTests(unittest.TestCase):
 
 # -- storage: payouts, limits, the record ----------------------------------------------------------
 import asyncio  # noqa: E402
+from datetime import UTC, datetime, timedelta  # noqa: E402
 
-from app.db import Database  # noqa: E402
+from sqlalchemy import update  # noqa: E402
+
+from app import fairplay as F  # noqa: E402
+from app.db import Database, User  # noqa: E402
 
 
 class StoreTests(unittest.IsolatedAsyncioTestCase):
@@ -34,30 +38,40 @@ class StoreTests(unittest.IsolatedAsyncioTestCase):
         self.db = Database("sqlite+aiosqlite:///:memory:")
         await self.db.init()
         self.ids = [(await self.db.create_user(n, "x", "y")).id for n in ("Ana_99", "Bo_42", "Cy_7", "Di_5")]
+        await self.trust(self.ids)
+
+    async def trust(self, ids):
+        """Old enough, with a confirmed email: allowed to win battle prizes."""
+        async with self.db.sessions() as s:
+            old = datetime.now(UTC) - timedelta(days=F.NEW_ACCOUNT_DAYS + 1)
+            await s.execute(update(User).where(User.id.in_(ids)).values(created_at=old, email_verified=True))
+            await s.commit()
 
     async def duel(self, a, b, a_place=1, b_place=2):
         bid = await self.db.create_battle(None, "ABCD", "four", "duel", a, b)
         return await self.db.settle_battle(bid, {a: a_place, b: b_place}, {a, b})
 
-    async def test_a_duel_pays_once_and_the_pair_limit(self):
+    async def test_a_duel_pays_once_and_the_same_pair_stops_paying(self):
         a, b, *_ = self.ids
         bid = await self.db.create_battle(None, "ABCD", "four", "duel", a, b)
         paid = await self.db.settle_battle(bid, {a: 1, b: 2}, {a, b})
         self.assertEqual((paid[a]["prize"], paid[b]["prize"]), (B.DUEL_PRIZE, B.FINISH_PRIZE))
         self.assertIsNone(await self.db.settle_battle(bid, {a: 1, b: 2}, {a, b}))  # once
-        for _ in range(B.PAIR_PAID - 1):
+        for _ in range(F.BATTLE_REPEAT_LIMIT - 1):
             await self.duel(a, b)
-        paid = await self.duel(a, b)
-        self.assertEqual((paid[a]["prize"], paid[a]["note"]), (0, "pair"))
+        paid = await self.duel(b, a, 2, 1)  # who challenged whom doesn't matter: the same two
+        self.assertEqual((paid[a]["prize"], paid[a]["note"]), (0, "repeat"))
         record = await self.db.battle_record(a)
-        self.assertEqual((record["played"], record["trophies"]), (B.PAIR_PAID + 1, B.PAIR_PAID + 1))
-        self.assertEqual(record["head_to_head"], [{"username": "Bo_42", "won": 4, "lost": 0, "drawn": 0}])
-        self.assertEqual(record["prizes"], B.DUEL_PRIZE * B.PAIR_PAID)
+        n = F.BATTLE_REPEAT_LIMIT + 1
+        self.assertEqual((record["played"], record["trophies"]), (n, n))
+        self.assertEqual(record["head_to_head"], [{"username": "Bo_42", "won": n, "lost": 0, "drawn": 0}])
+        self.assertEqual(record["prizes"], B.DUEL_PRIZE * F.BATTLE_REPEAT_LIMIT)
 
     async def test_the_daily_limit_same_device_and_leavers(self):
         a, b, c, d = self.ids
         for i in range(B.DAILY_PRIZES):
             other = (await self.db.create_user(f"Op_{i}", "x", "y")).id
+            await self.trust([other])
             await self.duel(a, other)
         paid = await self.duel(a, b)
         self.assertEqual(paid[a]["note"], "limit")
@@ -87,8 +101,8 @@ class RoomTests(unittest.IsolatedAsyncioTestCase):
     async def test_a_duel_room(self):
         paid = []
 
-        async def on_battle(bid, placing, finished):
-            paid.append((bid, placing, finished))
+        async def on_battle(bid, placing, finished, quick):
+            paid.append((bid, placing, finished, quick))
             return {u: {"place": p, "prize": 40 if p == 1 else 10, "note": ""} for u, p in placing.items()}
 
         hub, room, pids, conns = await room_of(3)
@@ -101,12 +115,15 @@ class RoomTests(unittest.IsolatedAsyncioTestCase):
         await hub.disconnect(room, pids[2], conns[pids[2]])
         await hub.handle_message(room, pids[0], conns[pids[0]], {"t": "start", "game": "four"})
         self.assertEqual(room.game.game_id, "four")
+        await hub.handle_message(room, pids[0], conns[pids[0]], {"t": "boost", "item": "double"})
+        self.assertIn("battle", conns[pids[0]].errors())  # no power-ups in a battle
         self.assertEqual(hub.view_for(room, pids[0])["battle"]["kind"], "duel")
         room.game.scores = lambda: {pids[0]: 0, pids[1]: 300}
         room.game.finished = True
+        room.game_began -= 60  # played long enough to count
         hub._maybe_finish(room)
         await asyncio.gather(*list(hub._tasks))
-        self.assertEqual(paid, [(7, {1: 2, 2: 1}, {1, 2})])
+        self.assertEqual(paid, [(7, {1: 2, 2: 1}, {1, 2}, False)])
         self.assertEqual(hub.view_for(room, pids[1])["battle"]["news"][pids[1]]["prize"], 40)
         self.assertEqual(room.battle, {})  # played: the room goes on as a normal one
         self.assertIsNone(hub.view_for(room, pids[1])["battle"]["game"])

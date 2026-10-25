@@ -87,6 +87,7 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         game = room.game
         game.scores = lambda: {pids[0]: 5, pids[1]: 9, pids[2]: 12}
         game.finished = True
+        room.game_began -= 60  # played long enough to count
         await hub.disconnect(room, pids[2], conns[pids[2]])  # the top scorer walked out
         hub._maybe_finish(room)
         await asyncio.gather(*list(hub._tasks))
@@ -101,6 +102,7 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         await start(hub, room, pids, conns)
         room.game.scores = lambda: {pids[0]: 1, pids[1]: 0}
         room.game.finished = True
+        room.game_began -= 60  # played long enough to count
         hub._maybe_finish(room)
         await asyncio.gather(*list(hub._tasks))
         self.assertEqual(
@@ -112,6 +114,7 @@ class HubTests(unittest.IsolatedAsyncioTestCase):
         await hub.handle_message(room, pids[0], conns[pids[0]], {"t": "start", "game": "four"})
         room.game.scores = lambda: {pids[0]: 1, pids[1]: 0}
         room.game.finished = True
+        room.game_began -= 60  # played long enough to count
         hub._maybe_finish(room)
         await asyncio.gather(*list(hub._tasks))
         self.assertEqual(rater.calls, [])
@@ -184,6 +187,7 @@ def client(tmp_path):
 
 
 def signup(client, name):
+    client.cookies.clear()  # each person on their own browser
     r = client.post("/api/auth/signup", json={"username": name, "password": PW})
     assert r.status_code == 201, r.text
 

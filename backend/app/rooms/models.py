@@ -213,6 +213,9 @@ class Room:
     # A battle waiting to be played here (battles.py): {"id", "game", "kind", "accounts": [ids]} ({} = none)
     battle: dict[str, Any] = field(default_factory=dict)
     battle_news: dict[str, dict[str, Any]] = field(default_factory=dict)  # last game: pid -> prize
+    # Fair play (fairplay.py): when this game began, and the accounts seated in it then (only they're paid).
+    game_began: float = -1.0  # -1: a room saved before this was tracked
+    game_accounts: dict[str, int] = field(default_factory=dict)
     team_news: dict[str, Any] = field(default_factory=dict)  # last game: team totals and the winner
     # Snapshots: this copy came from the database and nothing has changed here since (so a newer
     # snapshot, written by the server that's shutting down during a deploy, may replace it).

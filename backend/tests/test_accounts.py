@@ -154,7 +154,7 @@ def test_coins_for_places_daily_cap_shop_and_leaderboard(client):
     paid = {}
     for _ in range(13):  # 13 x 50 = 650, but the day caps at 600
         paid = client.portal.call(db.record_results, rows, coins.season_of(), coins.DAILY_COIN_CAP)
-    assert paid == {user.id: 0}
+    assert paid == {user.id: {"coins": 0, "note": "limit"}}
     assert client.get("/api/me").json()["user"]["coins"] == 600
     r = client.post("/api/shop/buy", json={"item": "double"})
     assert r.status_code == 200 and r.json()["user"] == {
@@ -262,7 +262,7 @@ class Wallet:
 
     async def pay(self, rows):
         self.paid.append(rows)
-        return {r["user_id"]: r["coins"] for r in rows}
+        return {r["user_id"]: {"coins": r["coins"], "note": r.get("note", "")} for r in rows}
 
 
 async def live_game(wallet):
@@ -304,6 +304,7 @@ class PowerUpTests(unittest.IsolatedAsyncioTestCase):
         assert "already_used" in conns[host].errors()
         assert wallet.owned[(1, "steal")] == 1  # refused before anything was spent
         # finish the game: the double applies, then coins are paid for the two accounts only
+        hub.clock.t += 60  # played long enough to count
         for _ in range(40):
             if room.phase != "game":
                 break

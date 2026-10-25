@@ -22,7 +22,7 @@ class Wallet:
 
     async def pay(self, rows):
         self.paid.append(rows)
-        return {r["user_id"]: r["coins"] for r in rows}
+        return {r["user_id"]: {"coins": r["coins"], "note": r.get("note", "")} for r in rows}
 
 
 async def party(n: int, intro: bool = False, wallet: Wallet | None = None):

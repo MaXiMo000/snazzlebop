@@ -102,8 +102,10 @@ original has them.
   Bronze to Diamond, eight-week seasons, and leaderboards for everyone, a club or a place, this season
   or this week. Fair-play limits stop repeat pairings and big swings in a day.
 - **Battles:** challenge a clubmate to a duel or open a group battle in your club. Free to enter: the
-  platform pays fixed prizes from the final scores, with daily limits, a cap on paid duels between the
-  same two people, and none between accounts on the same device. Trophies and head-to-head records.
+  platform pays fixed prizes from the final scores. Trophies and head-to-head records.
+- **Fair play:** coins, battle prizes and ratings can't be farmed: thrown quick games, the same group
+  replaying each other, second accounts on one device, a guest tab to beat and brand-new accounts are
+  all held back, and players see why.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced

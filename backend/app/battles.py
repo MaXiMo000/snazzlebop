@@ -2,8 +2,8 @@
 pays fixed prizes from the server's final scores, through the coin ledger. Pure.
 
 A duel is two members on a two-player game; a group battle is 3-8 members in a club room. Limits keep
-prizes from being farmed: a daily number of prizes per account, a few paid duels a day between the same
-two accounts, and none at all between accounts that share a device.
+prizes from being farmed: a daily number of prizes per account, and the rules in fairplay.py (the same
+group of accounts, shared devices, new accounts, games that end too quickly).
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ DUEL_PRIZE = 40  # the duel's winner
 GROUP_PRIZE = 60  # first place in a group battle (shared places each get it)
 FINISH_PRIZE = 10  # everyone else who played to the end
 DAILY_PRIZES = 10  # battle prizes an account can win in 24 hours
-PAIR_PAID = 3  # paid duels between the same two accounts in 24 hours
 OPEN_HOURS = 24  # an unanswered challenge lapses
 
 

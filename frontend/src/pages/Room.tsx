@@ -286,7 +286,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
           {phase === "game" && <ReadyBar state={state} send={send} />}
           {phase === "game" && state.role === "player" && <PowerCard state={state} send={send} />}
-          {phase === "game" && state.role === "player" && !state.ranked.on && <BoostPanel state={state} send={send} />}
+          {phase === "game" && state.role === "player" && !state.ranked.on && !state.battle.game && <BoostPanel state={state} send={send} />}
           {phase === "game" && state.role !== "player" && <CardsDown state={state} />}
           <Rivals state={state} />
           {phase === "results" && (

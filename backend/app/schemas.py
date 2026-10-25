@@ -814,6 +814,7 @@ class CardPlay(Strict):
 class CoinNews(Strict):
     coins: int
     place: int
+    note: str = ""  # why coins were held back (fairplay.NOTES): limit | repeat | device | quick | solo
 
 
 class CardsYou(Strict):

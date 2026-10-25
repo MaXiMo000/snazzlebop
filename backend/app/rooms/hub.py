@@ -40,13 +40,16 @@ class Hub(
         intro_seconds: float = INTRO_SECONDS,  # 0 = games start straight away (used by unit tests)
         store: SnapshotStore | None = None,  # saves rooms so they survive a restart (None: memory only)
         # Accounts: pay coins for a finished game ({account: coins} paid), spend / refund a power-up.
-        on_results: Callable[[list[dict[str, Any]]], Awaitable[dict[int, int]]] | None = None,
+        on_results: Callable[[list[dict[str, Any]]], Awaitable[dict[int, dict[str, Any]]]] | None = None,
         spend_powerup: Callable[[int, str], Awaitable[bool]] | None = None,
         refund_powerup: Callable[[int, str], Awaitable[None]] | None = None,
         # Ranked games: (game, {account: place}) -> each account's rating change, or None if unrated.
         on_rated: Callable[[str, dict[int, int]], Awaitable[dict[int, dict[str, Any]] | None]] | None = None,
         # Battles: (battle id, {account: place}, accounts that finished) -> each account's prize.
-        on_battle: Callable[[int, dict[int, int], set[int]], Awaitable[dict[int, dict[str, Any]] | None]]
+        # (battle id, {account: place}, accounts that finished, too quick) -> each account's prize
+        on_battle: Callable[
+            [int, dict[int, int], set[int], bool], Awaitable[dict[int, dict[str, Any]] | None]
+        ]
         | None = None,
         # (host's account, belt holder's name, forfeits): remembered for that host's next rooms
         save_circle: Callable[[int, str, list[str]], Awaitable[None]] | None = None,

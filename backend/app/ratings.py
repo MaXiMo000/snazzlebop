@@ -21,7 +21,7 @@ SCALE = 40  # display points per unit of mu - 3 sigma
 
 PROVISIONAL_GAMES = 5  # placement games before a number is shown
 DAY_CAP = 150  # the most display points a rating can move in a day, up or down
-PAIR_LIMIT = 5  # duels between the same two accounts in a day that still count
+PAIR_LIMIT = 5  # rated games a day with exactly the same accounts (a pair or a whole group)
 
 TIERS = (("Bronze", 0), ("Silver", 1100), ("Gold", 1300), ("Platinum", 1500), ("Diamond", 1700))
 

@@ -112,6 +112,11 @@ export function Coins({ go }: { go: Go }) {
           <li>Ties share the better place. Up to {data?.daily_cap ?? 600} coins a day from playing.</li>
           <li>Ranked ratings pay a reward when a season ends, from 20 coins for Bronze to 200 for Diamond.</li>
           <li>Your season points are the coins you earn this month. The table starts fresh every month.</li>
+          <li>
+            To keep it fair, a game pays nothing if it ends within 45 seconds, the same group of people stops earning after 5 games together in
+            a day, and accounts on the same device never earn from each other.
+          </li>
+          <li>Place coins need another signed-in player in the game. Playing only with guests pays 5 coins for finishing.</li>
           <li>Coins can't be bought, sold, traded or bet. Every change is recorded here.</li>
         </ul>
       </Card>

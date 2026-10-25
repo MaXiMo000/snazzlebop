@@ -41,6 +41,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
 
 from . import battles as battlelib
+from . import fairplay
 from . import ratings as ratinglib
 
 log = logging.getLogger("snazzlebop.db")
@@ -362,6 +363,7 @@ class Result(Base):
     points: Mapped[int] = mapped_column(Integer)
     coins: Mapped[int] = mapped_column(Integer)
     played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    group_key: Mapped[str] = mapped_column(String(32), default="")  # the accounts in the game (fairplay.py)
 
 
 class SkillRating(Base):
@@ -434,6 +436,7 @@ class Battle(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
     status: Mapped[str] = mapped_column(String(10), default="open")  # open | played | expired
+    group_key: Mapped[str] = mapped_column(String(32), default="")  # who played it (fairplay.py)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     played_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -450,7 +453,7 @@ class BattleResult(Base):
     place: Mapped[int] = mapped_column(Integer)
     finished: Mapped[bool] = mapped_column(default=True)
     prize: Mapped[int] = mapped_column(Integer, default=0)
-    note: Mapped[str] = mapped_column(String(16), default="")  # why no prize: limit | pair | device | left
+    note: Mapped[str] = mapped_column(String(16), default="")  # why no prize (fairplay.NOTES)
 
 
 class Friend(Base):
@@ -1932,11 +1935,16 @@ class Database:
         except Exception:
             log.exception("could not refund a power-up")
 
-    async def record_results(self, rows: list[dict[str, Any]], season: str, daily_cap: int) -> dict[int, int]:
-        """Store each account's finish and pay its coins (up to the daily cap). Returns coins paid."""
-        paid: dict[int, int] = {}
+    async def record_results(
+        self, rows: list[dict[str, Any]], season: str, daily_cap: int
+    ) -> dict[int, dict[str, Any]]:
+        """Store each account's finish and pay its coins: account -> {"coins", "note"}. Held back
+        (fairplay.py) for accounts sharing a device, a group that already played a lot today, and
+        past the daily cap."""
+        paid: dict[int, dict[str, Any]] = {}
         if not self.ready or not rows:
             return paid
+        shared = await self.share_device([r["user_id"] for r in rows])
         try:
             async with self.sessions() as session:
                 since = datetime.now(UTC) - timedelta(days=1)
@@ -1945,8 +1953,24 @@ class Database:
                 # lock; it serialises writers anyway.)
                 for r in sorted(rows, key=lambda r: r["user_id"]):
                     await session.execute(select(User.id).where(User.id == r["user_id"]).with_for_update())
+                    coins, note = r["coins"], r.get("note", "")
+                    group = r.get("group", "")
+                    if coins and r["user_id"] in shared:
+                        coins, note = 0, "device"
+                    if coins and group and r.get("accounts", 1) >= 2:
+                        played = await session.scalar(
+                            select(func.count()).where(
+                                Result.user_id == r["user_id"],
+                                Result.group_key == group,
+                                Result.coins > 0,
+                                Result.played_at >= since,
+                            )
+                        )
+                        if (played or 0) >= fairplay.REPEAT_LIMIT:
+                            coins, note = 0, "repeat"
                     left = max(0, daily_cap - await self._earned_since(session, r["user_id"], since))
-                    coins = min(r["coins"], left)
+                    if coins > left:
+                        coins, note = left, "limit"
                     result = Result(
                         user_id=r["user_id"],
                         game_id=r["game_id"],
@@ -1955,12 +1979,13 @@ class Database:
                         players=r["players"],
                         points=r["points"],
                         coins=coins,
+                        group_key=group,
                     )
                     session.add(result)
                     await session.flush()
                     if coins:
                         await self._post(session, r["user_id"], coins, "place", "result", str(result.id))
-                    paid[r["user_id"]] = coins
+                    paid[r["user_id"]] = {"coins": coins, "note": note}
                 await session.commit()
         except Exception:
             log.exception("could not record account results")
@@ -2093,10 +2118,11 @@ class Database:
         return {u for users in seen.values() if len(users) > 1 for u in users}
 
     async def settle_battle(
-        self, battle_id: int, placing: dict[int, int], finished: set[int]
+        self, battle_id: int, placing: dict[int, int], finished: set[int], quick: bool = False
     ) -> dict[int, dict[str, Any]] | None:
         """Pay a played battle once (None if it was already settled or doesn't exist): each account's
-        prize, with the daily limit, the same-pair limit for duels and the same-device rule."""
+        prize, with the daily limit and the fair-play rules (fairplay.py): too quick, the same group of
+        accounts again, a shared device, a new account."""
         if not self.ready or not placing:
             return None
         shared = await self.share_device(list(placing))
@@ -2107,21 +2133,25 @@ class Database:
             ).scalar_one_or_none()
             if battle is None or battle.status != "open":
                 return None
-            pair_full = False
-            if battle.kind == "duel" and len(placing) == 2:
-                a, b = sorted(placing)
-                mine = select(BattleResult.battle_id).where(BattleResult.user_id == a, BattleResult.prize > 0)
-                paid = await session.scalar(
-                    select(func.count())
-                    .select_from(BattleResult)
-                    .join(Battle, Battle.id == BattleResult.battle_id)
-                    .where(
-                        BattleResult.user_id == b,
-                        BattleResult.battle_id.in_(mine),
-                        Battle.played_at >= since,
-                    )
-                )
-                pair_full = (paid or 0) >= battlelib.PAIR_PAID
+            group = fairplay.group_key(placing)
+            # battles this same group of accounts played today that paid anyone
+            played = await session.scalar(
+                select(func.count(func.distinct(Battle.id)))
+                .select_from(Battle)
+                .join(BattleResult, BattleResult.battle_id == Battle.id)
+                .where(Battle.group_key == group, Battle.played_at >= since, BattleResult.prize > 0)
+            )
+            repeat = len(placing) >= 2 and (played or 0) >= fairplay.BATTLE_REPEAT_LIMIT
+            fresh = datetime.now(UTC) - timedelta(days=fairplay.NEW_ACCOUNT_DAYS)
+            users = {
+                u.id: u
+                for u in (await session.execute(select(User).where(User.id.in_(list(placing))))).scalars()
+            }
+            with_google = set(
+                (
+                    await session.execute(select(Identity.user_id).where(Identity.user_id.in_(list(placing))))
+                ).scalars()
+            )
             due = battlelib.prizes(battle.kind, placing, finished)
             out: dict[int, dict[str, Any]] = {}
             for uid in sorted(placing):
@@ -2134,12 +2164,22 @@ class Database:
                     )
                 )
                 prize, note = due[uid], ""
+                user = users.get(uid)
+                trusted = (
+                    user is not None
+                    and aware(user.created_at) <= fresh
+                    and (bool(user.email_verified) or uid in with_google)
+                )
                 if uid not in finished:
                     note = "left"
+                elif quick:
+                    prize, note = 0, "quick"
                 elif uid in shared:
                     prize, note = 0, "device"
-                elif pair_full:
-                    prize, note = 0, "pair"
+                elif repeat:
+                    prize, note = 0, "repeat"
+                elif not trusted:
+                    prize, note = 0, "new"
                 elif battlelib.limited(int(won or 0), prize) == 0 and prize:
                     prize, note = 0, "limit"
                 if prize:
@@ -2155,7 +2195,7 @@ class Database:
                     )
                 )
                 out[uid] = {"place": placing[uid], "prize": prize, "note": note}
-            battle.status, battle.played_at = "played", datetime.now(UTC)
+            battle.status, battle.played_at, battle.group_key = "played", datetime.now(UTC), group
             await session.commit()
         return out
 
@@ -2252,7 +2292,7 @@ class Database:
         """Rate one ranked game. `placing`: account -> place (1 = best, ties share). Returns each
         account's change, or None when the game doesn't count (two accounts that already met
         ratings.PAIR_LIMIT times today)."""
-        if not self.ready or len(placing) < 2:
+        if not self.ready or len(placing) < 2 or await self.share_device(list(placing)):
             return None
         season = ratinglib.season_of()
         since = datetime.now(UTC) - timedelta(days=1)
@@ -2260,16 +2300,17 @@ class Database:
         async with self.sessions() as session:
             for uid in ids:  # one writer per account at a time (id order: no deadlocks)
                 await session.execute(select(User.id).where(User.id == uid).with_for_update())
-            if len(ids) == 2:
-                a, b = ids
-                theirs = select(RatingEvent.match).where(RatingEvent.user_id == b, RatingEvent.at >= since)
-                met = await session.scalar(
-                    select(func.count()).where(
-                        RatingEvent.user_id == a, RatingEvent.at >= since, RatingEvent.match.in_(theirs)
-                    )
+            # The same two accounts (a duel), or the same whole group, only count a few times a day.
+            mine = select(RatingEvent.match).where(RatingEvent.user_id == ids[0], RatingEvent.at >= since)
+            seen: dict[str, set[int]] = {}
+            for match, uid in (
+                await session.execute(
+                    select(RatingEvent.match, RatingEvent.user_id).where(RatingEvent.match.in_(mine))
                 )
-                if (met or 0) >= ratinglib.PAIR_LIMIT:
-                    return None
+            ).all():
+                seen.setdefault(match, set()).add(int(uid))
+            if sum(1 for group in seen.values() if group == set(ids)) >= ratinglib.PAIR_LIMIT:
+                return None
             rows = {
                 r.user_id: r
                 for r in (

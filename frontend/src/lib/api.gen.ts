@@ -2032,6 +2032,11 @@ export interface components {
         CoinNews: {
             /** Coins */
             coins: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
             /** Place */
             place: number;
         };

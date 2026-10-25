@@ -6,6 +6,7 @@ import asyncio
 from typing import Any
 
 from .. import battles as battlelib
+from .. import fairplay
 from .. import ratings as ratinglib
 from .. import show as showlib
 from ..games import REGISTRY, Game, GameError, Player
@@ -20,6 +21,16 @@ from .models import (
 
 
 class FlowMixin:
+    def _too_quick(self, room: Room) -> bool:
+        """The game ended too soon after it began to pay anything (fairplay.py)."""
+        return room.game_began >= 0 and fairplay.too_quick(self.clock() - room.game_began)
+
+    @staticmethod
+    def _paid_accounts(room: Room) -> dict[str, int]:
+        """Seat -> account for the accounts seated when the game began (a room saved before this was
+        tracked falls back to the room's accounts)."""
+        return room.game_accounts if room.game_began >= 0 else room.accounts
+
     @staticmethod
     def _all_signed_in(room: Room) -> bool:
         accounts = [room.accounts.get(p.id) for p in room.connected_players()]
@@ -101,6 +112,8 @@ class FlowMixin:
         room.game_no += 1
         room.boost_peeks, room.coin_news, room.team_news, room.rating_news = {}, {}, {}, {}
         room.battle_news = {}
+        room.game_began = self.clock()
+        room.game_accounts = {p: room.accounts[p] for p in game.player_ids if p in room.accounts}
         room.chat = [m for m in room.chat if m["team"] is None]  # new game, new teams: old team talk goes
         s = room.show
         if s is not None:
@@ -266,14 +279,16 @@ class FlowMixin:
         if not b or game.game_id != b["game"] or self.on_battle is None:
             return
         room.battle = {}  # played: the room goes on as a normal one
+        accounts = self._paid_accounts(room)
         online = {p.id for p in room.connected_players()}
         placing = ratinglib.ranks({p: v for p, v in scores.items() if p in online})
         last = max(placing.values(), default=0) + 1
-        by_account = {room.accounts[p]: placing.get(p, last) for p in scores if p in room.accounts}
-        finished = {room.accounts[p] for p in scores if p in room.accounts and p in online}
+        by_account = {accounts[p]: placing.get(p, last) for p in scores if p in accounts}
+        finished = {accounts[p] for p in scores if p in accounts and p in online}
+        quick = self._too_quick(room)
         try:
             task = asyncio.get_running_loop().create_task(
-                self._battle_paid(room, room.game_no, int(b["id"]), by_account, finished)
+                self._battle_paid(room, room.game_no, int(b["id"]), by_account, finished, quick)
             )
         except RuntimeError:
             return
@@ -281,12 +296,18 @@ class FlowMixin:
         task.add_done_callback(self._tasks.discard)
 
     async def _battle_paid(
-        self, room: Room, game_no: int, battle_id: int, placing: dict[int, int], finished: set[int]
+        self,
+        room: Room,
+        game_no: int,
+        battle_id: int,
+        placing: dict[int, int],
+        finished: set[int],
+        quick: bool,
     ) -> None:
         if self.on_battle is None:
             return
         try:
-            paid = await self.on_battle(battle_id, placing, finished)
+            paid = await self.on_battle(battle_id, placing, finished, quick)
         except Exception:
             log.exception("could not pay a battle")
             return
@@ -299,13 +320,14 @@ class FlowMixin:
     def _rate(self, room: Room, game: Game, scores: dict[str, int]) -> None:
         """A ranked game's ratings, from the server's final scores. Anyone who left before the end is
         placed last."""
-        if not room.ranked or self.on_rated is None:
+        if not room.ranked or self.on_rated is None or self._too_quick(room):
             return
+        accounts = self._paid_accounts(room)
         online = {p.id for p in room.connected_players()}
         stayed = {p: v for p, v in scores.items() if p in online}
         placing = ratinglib.ranks(stayed)
         last = max(placing.values(), default=0) + 1
-        by_account = {room.accounts[p]: placing.get(p, last) for p in scores if p in room.accounts}
+        by_account = {accounts[p]: placing.get(p, last) for p in scores if p in accounts}
         try:
             task = asyncio.get_running_loop().create_task(
                 self._rated(room, room.game_no, game.game_id, by_account)

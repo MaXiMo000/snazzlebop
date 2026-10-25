@@ -1275,6 +1275,11 @@
             "title": "Coins",
             "type": "integer"
           },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
           "place": {
             "title": "Place",
             "type": "integer"

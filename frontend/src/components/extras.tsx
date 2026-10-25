@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Btn, Card, nameOf } from "./ui";
 import { sfx } from "../lib/sfx";
 import { refreshAccount, useAccount } from "../lib/account";
+import { heldBack } from "../lib/fairplay";
 import type { RoomState } from "../types";
 import { Select } from "./Select";
 
@@ -165,7 +166,7 @@ export function CoinNews({ state }: { state: RoomState }) {
       {mine && (
         <p className="lead coin-mine">
           You finished {ORDINAL[mine.place] ?? `#${mine.place}`}: <b>+{mine.coins}</b>
-          {mine.coins === 0 ? " (today's limit reached)" : ""}
+          {mine.note ? <span className="muted"> ({heldBack(mine.note)})</span> : null}
         </p>
       )}
       <ul className="evidence">

@@ -6,6 +6,7 @@ import asyncio
 from typing import Any
 
 from .. import coins as coinlib
+from .. import fairplay
 from .. import show as showlib
 from ..games import REGISTRY, Game
 from .models import (
@@ -130,6 +131,8 @@ class ShowMixin:
             raise HubError("signed_out", "Sign in to use power-ups")
         if room.ranked:
             raise HubError("ranked", "Power-ups are off in ranked games")
+        if room.battle:
+            raise HubError("battle", "Power-ups are off in battles")
         if room.phase != "game" or game is None or game.finished or game.game_id == "jackpot":
             raise HubError("no_card", "Power-ups are used during a game")
         if pid not in game.player_ids:
@@ -148,8 +151,12 @@ class ShowMixin:
 
     def _pay_coins(self, room: Room, game: Game, scores: dict[str, int]) -> None:
         """Coins for every signed-in finisher (one result per account), paid in the background."""
-        if self.on_results is None or game.game_id == "jackpot" or not room.accounts:
+        accounts = self._paid_accounts(room)
+        if self.on_results is None or game.game_id == "jackpot" or not accounts:
             return
+        quick = self._too_quick(room)
+        signed_in = set(accounts.values())
+        group = fairplay.group_key(signed_in)
         if room.teams:  # teams: everyone finishes where their team does
             totals = {t: sum(v for p, v in scores.items() if room.teams.get(p) == t) for t in (0, 1)}
             team_place = coinlib.places({str(t): v for t, v in totals.items()})
@@ -160,9 +167,11 @@ class ShowMixin:
             all_tied = len(set(scores.values())) == 1
         best: dict[int, dict[str, Any]] = {}
         for pid, place in placed.items():
-            uid = room.accounts.get(pid)
+            uid = accounts.get(pid)
             if uid is None:
                 continue
+            due = coinlib.coins_for(place, len(scores), all_tied=all_tied)
+            coins, note = (0, "quick") if quick else fairplay.solo_coins(due, len(signed_in))
             row = {
                 "user_id": uid,
                 "pid": pid,
@@ -170,7 +179,10 @@ class ShowMixin:
                 "place": place,
                 "players": len(scores),
                 "points": scores[pid],
-                "coins": coinlib.coins_for(place, len(scores), all_tied=all_tied),
+                "coins": coins,
+                "note": note,
+                "group": group,
+                "accounts": len(signed_in),
             }
             if uid not in best or place < best[uid]["place"]:
                 best[uid] = row
@@ -195,7 +207,14 @@ class ShowMixin:
             return
         if room.game_no != game_no:
             return
-        room.coin_news = {r["pid"]: {"place": r["place"], "coins": paid.get(r["user_id"], 0)} for r in rows}
+        room.coin_news = {
+            r["pid"]: {
+                "place": r["place"],
+                "coins": paid.get(r["user_id"], {}).get("coins", 0),
+                "note": paid.get(r["user_id"], {}).get("note", r.get("note", "")),
+            }
+            for r in rows
+        }
         await self.broadcast(room)
 
     def _award_mvp(self, room: Room) -> None:

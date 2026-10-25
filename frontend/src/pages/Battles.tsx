@@ -131,7 +131,10 @@ export function Battles({ go }: { go: Go }) {
         <ul className="evidence">
           <li>Challenge a clubmate to a duel, or open a group battle for three to eight. Nobody puts anything in.</li>
           <li>The platform pays the prizes: 40 coins for winning a duel, 60 for first in a group, 10 for everyone who finishes.</li>
-          <li>Up to 10 battle prizes a day. The same two people get paid for three duels a day, and accounts on the same device never do.</li>
+          <li>
+            Up to 10 battle prizes a day. The same group of people gets paid for three battles a day, and accounts on the same device never do.
+          </li>
+          <li>Prizes start once an account is 3 days old with a confirmed email (or Google). A battle that ends within 45 seconds pays nothing.</li>
           <li>Tick Ranked game before starting and the battle counts for your rating too.</li>
         </ul>
       </Card>

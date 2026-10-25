@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { fetchGames } from "../lib/api";
 import { DUEL_GAMES, DUEL_PRIZE, FINISH_PRIZE, GROUP_PRIZE, startBattle } from "../lib/battles";
+import { heldBack } from "../lib/fairplay";
 import type { ClubDetail } from "../lib/contract";
 import type { GameCard, RoomState } from "../types";
 import { Alert, errText } from "./auth";
@@ -143,13 +144,6 @@ export function BattleBanner({ state }: { state: RoomState }) {
   );
 }
 
-const WHY: Record<string, string> = {
-  limit: "today's battle prizes are used up",
-  pair: "you two already played three paid battles today",
-  device: "the accounts share a device",
-  left: "left before the end",
-};
-
 /** Results: the battle's prizes. */
 export function BattleNews({ state }: { state: RoomState }) {
   const news = Object.entries(state.battle.news);
@@ -165,14 +159,14 @@ export function BattleNews({ state }: { state: RoomState }) {
       {mine && (
         <p className="lead coin-mine">
           {mine.place === 1 ? "You won the battle" : "You finished the battle"}: <b>+{mine.prize}</b>
-          {mine.note && <span className="muted"> ({WHY[mine.note] ?? mine.note})</span>}
+          {mine.note && <span className="muted"> ({heldBack(mine.note)})</span>}
         </p>
       )}
       <ul className="evidence">
         {news.map(([pid, n]) => (
           <li key={pid}>
             <b>{name(pid)}</b> {n.place === 1 ? "🏆 " : ""}+{n.prize}
-            {n.note ? <span className="muted"> · {WHY[n.note] ?? n.note}</span> : null}
+            {n.note ? <span className="muted"> · {heldBack(n.note)}</span> : null}
           </li>
         ))}
       </ul>
