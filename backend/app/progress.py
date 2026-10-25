@@ -58,6 +58,11 @@ LEVEL_GIFTS = (
     "dice_peek",
     "chicken_shield",
     "imposter_revote",
+    "four_undo",
+    "rather_room",
+    "ships_sonar",
+    "hangman_vowel",
+    "tod_fresh",
 )
 
 

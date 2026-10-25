@@ -66,6 +66,66 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(game.votes["p0"], "p2")
 
 
+class MoreEngineTests(unittest.TestCase):
+    def test_four_in_a_row_undo(self):
+        game, clock, _ = make(REGISTRY["four"], 2)
+        mover = game.mover
+        with self.assertRaises(GameError):
+            game.use_power(mover, "four_undo")  # nothing to undo yet
+        game.handle(mover, {"a": "drop", "col": 3})
+        replier = game.mover
+        with self.assertRaises(GameError):
+            game.use_power(replier, "four_undo")  # not their disc
+        game.use_power(mover, "four_undo")
+        self.assertEqual((game.mover, game.cols[3], game.moves), (mover, [], []))
+        game.handle(mover, {"a": "drop", "col": 2})
+        game.handle(game.mover, {"a": "drop", "col": 2})
+        with self.assertRaises(GameError):
+            game.use_power(mover, "four_undo")  # they've replied: too late
+
+    def test_would_you_rather_ask_the_room(self):
+        game, clock, _ = make(REGISTRY["rather"], 4)
+        guessers = [p for p in ("p0", "p1", "p2", "p3") if p != game.hot]
+        with self.assertRaises(GameError):
+            game.use_power(guessers[0], "rather_room")  # nobody has answered yet
+        game.handle(guessers[1], {"a": "answer", "pick": 0, "guess": 0})
+        self.assertIn("leans", game.use_power(guessers[0], "rather_room"))
+        with self.assertRaises(GameError):
+            game.use_power(game.hot, "rather_room")  # never for the hot seat
+
+
+class ThirdEngineTests(unittest.TestCase):
+    def test_battleships_sonar(self):
+        game, clock, _ = make(REGISTRY["ships"], 2)
+        with self.assertRaises(GameError):
+            game.use_power("p0", "ships_sonar")  # still placing
+        for p in ("p0", "p1"):
+            game.handle(p, {"a": "ready"})
+        self.assertRegex(game.use_power("p0", "ships_sonar"), r"Sonar: \d+ unfound ship square")
+
+    def test_hangman_vowel(self):
+        game, clock, _ = make(REGISTRY["hangman"], 2)
+        game.handle(game.setter, {"a": "set", "word": "elephant"})
+        with self.assertRaises(GameError):
+            game.use_power(game.setter, "hangman_vowel")  # not their turn
+        line = game.use_power(game.guesser, "hangman_vowel")
+        self.assertIn(line[-3], "EA")
+        self.assertEqual(game.round_scores[game.guesser], 0)  # no points for it
+        game.use_power(game.guesser, "hangman_vowel")
+        with self.assertRaises(GameError):
+            game.use_power(game.guesser, "hangman_vowel")  # no vowels left
+
+    def test_truth_or_dare_another_card(self):
+        game, clock, _ = make(REGISTRY["truthdare"], 3)
+        with self.assertRaises(GameError):
+            game.use_power(game.target, "tod_fresh")  # no card yet
+        game.advance()
+        game.handle(game.target, {"a": "choose", "choice": "dare"})
+        rerolls = dict(game.rerolls)
+        self.assertIsNone(game.use_power(game.target, "tod_fresh"))
+        self.assertEqual(game.rerolls, rerolls)  # the free re-roll is still there
+
+
 # -- the room --------------------------------------------------------------------------------------
 from tests.test_accounts import Wallet  # noqa: E402
 from tests.test_ranked import room_of  # noqa: E402

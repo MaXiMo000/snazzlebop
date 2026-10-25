@@ -1796,9 +1796,10 @@ async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         if g["phase"] == "final":
             break
         rnd, order = g["round"], g["order"]
+        holder, lives = g["holder"], g["lives"][g["holder"]]
         for _ in range(rng.randint(0, 3)):
             g = host.state["game"]  # type: ignore[index]
-            holder = g["holder"]
+            holder, lives = g["holder"], g["lives"][g["holder"]]
             alive = [p for p in order if g["lives"][p] > 0]
             other = next((p for p in alive if p != holder), None)
             if other and rng.random() < 0.3:
@@ -1807,19 +1808,27 @@ async def play_bomb(host: Bot, bots: list[Bot], rng: random.Random) -> None:
             await by_id[holder].send(t="act", a="answer", text=f"thing {word}")
             i = order.index(holder)
             want = next(p for p in order[i + 1 :] + order[: i + 1] if p in alive)
+            # The secret fuse can go off before the answer lands: then the bomb never passes, and the
+            # blast (checked below) is on the player who was holding it.
             await all_until(
                 bots,
-                lambda st, w=want, n=word: (
-                    st["game"]["count"] >= 1
-                    and st["game"]["holder"] == w
-                    and st["game"]["answers"][-1]["text"] == f"thing {n}"
+                lambda st, w=want, n=word, r=rnd: (
+                    st["game"]["phase"] != "pass"
+                    or st["game"]["round"] != r
+                    or (
+                        st["game"]["count"] >= 1
+                        and st["game"]["holder"] == w
+                        and st["game"]["answers"][-1]["text"] == f"thing {n}"
+                    )
                 ),
                 "bomb passed",
             )
+            if host.state["game"]["phase"] != "pass":  # type: ignore[index]
+                break
+            holder = want
+            lives = host.state["game"]["lives"][want]  # type: ignore[index]
             if rng.random() < 0.3:
                 await by_id[want].send(t="act", a="answer", text=f"THING  {word}!")  # refused: used
-        g = host.state["game"]  # type: ignore[index]
-        holder, lives = g["holder"], g["lives"][g["holder"]]
         await all_until(
             bots,
             lambda st, r=rnd: st["game"]["phase"] == "boom" and st["game"]["round"] == r,

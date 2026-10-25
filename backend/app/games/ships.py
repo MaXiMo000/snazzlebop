@@ -103,6 +103,34 @@ class Battleships(Game):
         self.set_deadline(self.timings["turn"])
         self.bump()
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "ships_sonar": {
+            "name": "Sonar ping",
+            "icon": "📡",
+            "text": "How many ship squares hide in a patch of their sea",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "ships_sonar":
+            return super().use_power(pid, item)
+        if self.phase != "battle" or pid not in self.side_of:
+            raise GameError("not_now", "Use it once the battle has started")
+        side = self.side_of[pid]
+        tried = self.shots[side]
+        fresh = [c for c in range(SIZE * SIZE) if c not in tried]
+        if not fresh:
+            raise GameError("not_now", "There's no unexplored water left")
+        centre = self.rng.choice(fresh)
+        r, c = divmod(centre, SIZE)
+        r, c = min(max(r, 1), SIZE - 2), min(max(c, 1), SIZE - 2)  # keep the 3x3 patch on the board
+        patch = {(r + dr) * SIZE + (c + dc) for dr in (-1, 0, 1) for dc in (-1, 0, 1)}
+        ships = {cell for ship in self.fleets[1 - side] for cell in ship}
+        found = len((patch & ships) - set(tried))
+        where = f"{'ABCDEFGH'[r - 1]}{c}-{'ABCDEFGH'[r + 1]}{c + 2}"
+        noun = "square" if found == 1 else "squares"
+        return f"Sonar: {found} unfound ship {noun} in {where}."
+
     def _fire(self, pid: str, cell: int) -> None:
         target = 1 - self.turn
         ship = next((s for s in self.fleets[target] if cell in s), None)

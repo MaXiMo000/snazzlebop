@@ -22,6 +22,11 @@ GAME_POWER_PRICES = {
     "dice_peek": 40,
     "chicken_shield": 50,
     "imposter_revote": 30,
+    "four_undo": 30,
+    "rather_room": 25,
+    "ships_sonar": 40,
+    "hangman_vowel": 25,
+    "tod_fresh": 20,
 }
 # Party items (party.py): no effect on scores, used anywhere in a room.
 PARTY_PRICES = {

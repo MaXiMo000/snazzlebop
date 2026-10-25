@@ -110,6 +110,26 @@ class FourInARow(Game):
             raise GameError("full", "That column is full")
         self._drop(col, pid)
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "four_undo": {"name": "Undo", "icon": "↩️", "text": "Take back your last disc before they move"},
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "four_undo":
+            return super().use_power(pid, item)
+        last = self.moves[-1] if self.moves else None
+        if self.phase != "play" or last is None or last["by"] != pid or self.turn == last["side"]:
+            raise GameError("not_now", "Use it right after your own move, before they reply")
+        self.moves.pop()
+        self.cols[last["col"]].pop()
+        side = last["side"]
+        self.next_up[side] -= 1
+        self.turn = side
+        self.line = []
+        self.set_deadline(self.turn_seconds)
+        self.bump()
+        return "Your disc is back in your hand: drop it again."
+
     def _drop(self, col: int, pid: str | None) -> None:
         side = self.turn
         self.cols[col].append(side)

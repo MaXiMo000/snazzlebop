@@ -103,9 +103,10 @@ original has them.
   or this week. Fair-play limits stop repeat pairings and big swings in a day.
 - **Battles:** challenge a clubmate to a duel or open a group battle in your club. Free to enter: the
   platform pays fixed prizes from the final scores. Trophies and head-to-head records.
-- **Power-ups:** each game has its own (Trivia 50/50 and +5 seconds, Draw & Guess letter, Liar's Dice
-  peek, Chicken Run shield, Imposter vote change), bought with coins and used one per game in casual
-  rooms. Everyone sees that you used one; what it shows is yours alone.
+- **Power-ups:** games have their own (Trivia 50/50 and +5 seconds, Draw & Guess letter, Liar's Dice
+  peek, Chicken Run shield, Imposter vote change, Four in a Row undo, Would You Rather ask the room,
+  Battleships sonar, Hangman vowel, Truth or Dare another card), bought with coins or won on level-ups,
+  used one per game in casual rooms. Everyone sees that you used one; what it shows is yours alone.
 - **Party items:** confetti cannon, air horn, drum roll, standing ovation and spotlight: used any time in a
   room, played on every screen (the TV too), no effect on scores, with spam limits.
 - **Levels and daily quests:** XP from fair games (and a bonus for the day's first win), levels that pay

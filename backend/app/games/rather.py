@@ -140,6 +140,24 @@ class WouldYouRather(Game):
         self.advance()
         return True
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "rather_room": {
+            "name": "Ask the room",
+            "icon": "🗳️",
+            "text": "See which way everyone else is leaning",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "rather_room":
+            return super().use_power(pid, item)
+        if self.phase != "pick" or pid == self.hot or pid in self.guesses:
+            raise GameError("not_now", "Use it while you're guessing, before you lock in")
+        line = self.peek(pid)
+        if line is None:
+            raise GameError("not_now", "Nobody else has answered yet: try again in a moment")
+        return line
+
     def peek(self, pid: str) -> str | None:
         """Power card: which way the room is leaning so far (never the hot seat's own answer)."""
         if self.phase != "pick" or pid == self.hot:

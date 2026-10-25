@@ -105,6 +105,24 @@ class TruthOrDare(Game):
         pool = (TOD_TRUTHS if kind == "truth" else TOD_DARES)[self.heat]
         return pool[self.deal(f"{kind}-{self.heat}", len(pool), 1)[0]]
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "tod_fresh": {
+            "name": "Another card",
+            "icon": "🃏",
+            "text": "Swap your prompt for a fresh one (on top of your re-roll)",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "tod_fresh":
+            return super().use_power(pid, item)
+        if self.phase != "perform" or pid != self.target:
+            raise GameError("not_now", "Use it on your turn, once you have a card")
+        self.prompt = self._deal(self.choice or "truth")
+        self.set_deadline(self.timings[self.choice or "truth"])
+        self.bump()
+        return None
+
     def _choose(self, kind: str) -> None:
         self.choice = kind
         self.prompt = self._deal(kind)

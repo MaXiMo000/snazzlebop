@@ -134,6 +134,28 @@ class Hangman(Game):
             raise GameError("bad_input", "The hint can't give the word away")
         self._begin(word, hint)
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "hangman_vowel": {
+            "name": "Reveal a vowel",
+            "icon": "🅰️",
+            "text": "Show a hidden vowel on your turn (no points)",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "hangman_vowel":
+            return super().use_power(pid, item)
+        self._turn_check(pid)
+        vowels = [v for v in "aeiou" if v in self.word and v not in self.guessed]
+        # never the last hidden letters: the word is still for someone to solve
+        vowels = [v for v in vowels if self._hidden() - self.word.count(v) >= 1]
+        if not vowels:
+            raise GameError("not_now", "No vowel left to reveal")
+        v = self.rng.choice(vowels)
+        self.guessed.append(v)
+        self.bump()
+        return f'The word has an "{v.upper()}".'
+
     def _turn_check(self, pid: str) -> None:
         if self.phase != "guess":
             raise GameError("wrong_phase", "No guessing right now")
