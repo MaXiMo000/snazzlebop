@@ -137,6 +137,10 @@
   .corner-text {
     display: none;
   }
+  /* Without the description line: one row, the label centred beside the icon. */
+  .corner-icon {
+    grid-row: auto;
+  }
   .corner-tile {
     min-height: 56px;
   }
