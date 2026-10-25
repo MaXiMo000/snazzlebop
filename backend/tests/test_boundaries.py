@@ -33,6 +33,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.presence": (set(), set()),  # pure: who's around and "up for a game", clock injected
     "app.webpush": (set(), {"cryptography"}),  # push encryption and VAPID only
     "app.oidc": (set(), {"cryptography"}),  # Google sign-in protocol: state, PKCE, ID token checks
+    "app.ratings": (set(), set()),  # the rating model, seasons and tiers
     "app.notify": ({"app.config", "app.webpush"}, set()),  # rules and fan-out; storage passed in
     "app.events": (set(), set()),  # pure: the versioned shape of events other systems receive
     "app.outbox": ({"app.config", "app.events"}, set()),  # delivery with retries; storage passed in
@@ -40,11 +41,11 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (
         {"app.rooms", "app.games", "app.config", "app.security", "app.calls", "app.persist", "app.prank"}
-        | {"app.coins", "app.show"},
+        | {"app.coins", "app.show", "app.ratings"},
         set(),
     ),
     "app.contentgen": ({"app.games"}, {"anthropic"}),
-    "app.db": (set(), {"alembic", "sqlalchemy"}),
+    "app.db": ({"app.ratings"}, {"alembic", "sqlalchemy"}),  # storage; uses the pure rating model
 }
 EDGES = {
     "app.main",
@@ -55,6 +56,7 @@ EDGES = {
     "app.integrations",
     "app.staff",
     "app.places",
+    "app.ranked",
     "app.ws",
     "app.migrations",
 }  # may use the frameworks

@@ -43,6 +43,8 @@ export type PlaceStarted = Schemas["PlaceStarted"];
 export type StaffPlaces = Schemas["StaffPlaces"];
 export type SessionList = Schemas["SessionList"];
 export type Identities = Schemas["Identities"];
+export type MyRatings = Schemas["MyRatings"];
+export type RatingBoard = Schemas["RatingBoard"];
 
 // The WebSocket "state" frame (backend app/schemas.py RoomFrame).
 export type ApiRoomFrame = Schemas["RoomFrame"];

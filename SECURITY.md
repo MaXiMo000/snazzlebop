@@ -48,6 +48,10 @@ Only the latest version on `main` (the live deployment) is supported.
   can change a case's workflow fields but never act against a person.
 - **Private clubs.** A club is visible only to its members. Invite links are random, stored only as
   keyed hashes, expire and run out; roles can act only on roles below their own, and bans stick.
+- **Fair ranked play.** Ratings come only from the server's final scores. Ranked games need every player
+  signed in with their own account, use fixed settings and allow no power-ups; leaving counts as last
+  place. Repeat games between the same two accounts stop counting after a few a day, and a rating can
+  only move so far in a day. Place leaderboards list only people who chose to appear on them.
 - **Abuse limits.** Rate limits per client on the API, room joins, sign-in and WebSocket messages, caps
   on connections, rooms, players and message size, and idle and age limits for rooms.
 - **Browser hardening.** A strict Content Security Policy (same origin only, no inline scripts or

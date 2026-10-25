@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import accounts, calls, integrations, notifications, oidc, places, safety, schemas, staff
+from . import accounts, calls, integrations, notifications, oidc, places, ranked, safety, schemas, staff
 from .clubs import routes as clubs
 from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
@@ -44,7 +44,7 @@ log = logging.getLogger("snazzlebop")
 # The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
 # /clubs/<slug> (and /reports), /join/<invite>, /places, /privacy, /safety and /staff (and /places).
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|ratings|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 
@@ -91,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         on_game_started=generator.request,
         store=db,
         on_results=pay_coins,
+        on_rated=db.rate_match,
         spend_powerup=db.spend_powerup,
         refund_powerup=db.refund_powerup,
         save_circle=db.save_circle,
@@ -217,6 +218,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(integrations.router(settings, db, outbox))
     app.include_router(staff.router(settings, db, outbox))
     app.include_router(places.router(settings, db, mailer))
+    app.include_router(ranked.router(settings, db))
 
     async def account_id(request: Request) -> int | None:
         user = await accounts.session_user(request, db)

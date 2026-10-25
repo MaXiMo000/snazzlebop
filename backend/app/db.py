@@ -21,6 +21,7 @@ from sqlalchemy import (
     JSON,
     Connection,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     LargeBinary,
@@ -38,6 +39,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
+
+from . import ratings as ratinglib
 
 log = logging.getLogger("snazzlebop.db")
 INBOX_KEEP = 100  # inbox entries kept per person
@@ -104,6 +107,8 @@ class User(Base):
     # A platform suspension by staff (staff.py): no sign-in until then. Far in the future = permanent.
     suspended_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     suspend_reason: Mapped[str] = mapped_column(String(200), default="")
+    # Shown on the leaderboards of places this account is verified at (off unless switched on).
+    place_boards: Mapped[bool] = mapped_column(default=False)
 
 
 class EmailToken(Base):
@@ -356,6 +361,39 @@ class Result(Base):
     points: Mapped[int] = mapped_column(Integer)
     coins: Mapped[int] = mapped_column(Integer)
     played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class SkillRating(Base):
+    """One account's rating in one ranked game (ratings.py). `season` is when it was last played: a
+    later season pulls it halfway back to the start before it's used or shown."""
+
+    __tablename__ = "ratings"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    game_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    mu: Mapped[float] = mapped_column(Float)
+    sigma: Mapped[float] = mapped_column(Float)
+    games: Mapped[int] = mapped_column(Integer, default=0)
+    season: Mapped[int] = mapped_column(Integer, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class RatingEvent(Base):
+    """One rating change from one ranked game: the history, the day cap and the same-pair limit."""
+
+    __tablename__ = "rating_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match: Mapped[str] = mapped_column(String(24), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    game_id: Mapped[str] = mapped_column(String(32))
+    season: Mapped[int] = mapped_column(Integer)
+    place: Mapped[int] = mapped_column(Integer)
+    before: Mapped[int] = mapped_column(Integer)
+    after: Mapped[int] = mapped_column(Integer)
+    at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
 
 
 class Friend(Base):
@@ -870,6 +908,8 @@ class Database:
             await session.execute(delete(UserPrefs).where(UserPrefs.user_id == user_id))
             await session.execute(delete(UserPlace).where(UserPlace.user_id == user_id))
             await session.execute(delete(Identity).where(Identity.user_id == user_id))
+            await session.execute(delete(SkillRating).where(SkillRating.user_id == user_id))
+            await session.execute(delete(RatingEvent).where(RatingEvent.user_id == user_id))
             await session.execute(delete(PlaceCode).where(PlaceCode.user_id == user_id))
             await session.execute(
                 delete(Block).where(or_(Block.user_id == user_id, Block.blocked_id == user_id))
@@ -1852,6 +1892,197 @@ class Database:
             log.exception("could not record account results")
             return {}
         return paid
+
+    # -- ratings (ratings.py) ---------------------------------------------------------------------------
+    @staticmethod
+    def _current(row: SkillRating | None, season: int) -> tuple[ratinglib.Rating, int]:
+        """A stored rating as it stands this season, and its game count."""
+        if row is None:
+            return ratinglib.Rating(), 0
+        return ratinglib.soft_reset(ratinglib.Rating(row.mu, row.sigma), season - row.season), row.games
+
+    async def rate_match(self, game_id: str, placing: dict[int, int]) -> dict[int, dict[str, Any]] | None:
+        """Rate one ranked game. `placing`: account -> place (1 = best, ties share). Returns each
+        account's change, or None when the game doesn't count (two accounts that already met
+        ratings.PAIR_LIMIT times today)."""
+        if not self.ready or len(placing) < 2:
+            return None
+        season = ratinglib.season_of()
+        since = datetime.now(UTC) - timedelta(days=1)
+        ids = sorted(placing)
+        async with self.sessions() as session:
+            for uid in ids:  # one writer per account at a time (id order: no deadlocks)
+                await session.execute(select(User.id).where(User.id == uid).with_for_update())
+            if len(ids) == 2:
+                a, b = ids
+                theirs = select(RatingEvent.match).where(RatingEvent.user_id == b, RatingEvent.at >= since)
+                met = await session.scalar(
+                    select(func.count()).where(
+                        RatingEvent.user_id == a, RatingEvent.at >= since, RatingEvent.match.in_(theirs)
+                    )
+                )
+                if (met or 0) >= ratinglib.PAIR_LIMIT:
+                    return None
+            rows = {
+                r.user_id: r
+                for r in (
+                    await session.execute(
+                        select(SkillRating).where(
+                            SkillRating.user_id.in_(ids), SkillRating.game_id == game_id
+                        )
+                    )
+                ).scalars()
+            }
+            moved = dict(
+                (
+                    await session.execute(
+                        select(RatingEvent.user_id, func.sum(RatingEvent.after - RatingEvent.before))
+                        .where(
+                            RatingEvent.user_id.in_(ids),
+                            RatingEvent.game_id == game_id,
+                            RatingEvent.at >= since,
+                        )
+                        .group_by(RatingEvent.user_id)
+                    )
+                ).all()
+            )
+            now = {uid: self._current(rows.get(uid), season) for uid in ids}
+            new = ratinglib.rate({str(u): now[u][0] for u in ids}, {str(u): placing[u] for u in ids})
+            match = secrets.token_hex(12)
+            out: dict[int, dict[str, Any]] = {}
+            for uid in ids:
+                old, games = now[uid]
+                rating = ratinglib.capped(old, new[str(uid)], int(moved.get(uid) or 0))
+                row = rows.get(uid)
+                if row is None:
+                    row = SkillRating(user_id=uid, game_id=game_id, games=0)
+                    session.add(row)
+                row.mu, row.sigma, row.season = rating.mu, rating.sigma, season
+                row.games = games + 1
+                row.updated_at = datetime.now(UTC)
+                session.add(
+                    RatingEvent(
+                        match=match,
+                        user_id=uid,
+                        game_id=game_id,
+                        season=season,
+                        place=placing[uid],
+                        before=old.display,
+                        after=rating.display,
+                    )
+                )
+                out[uid] = {
+                    "before": old.display,
+                    "after": rating.display,
+                    "games": games + 1,
+                    "tier": ratinglib.tier(rating.display, games + 1),
+                }
+            await session.commit()
+        return out
+
+    async def my_ratings(self, user_id: int) -> list[dict[str, Any]]:
+        season = ratinglib.season_of()
+        async with self.sessions() as session:
+            rows = (
+                await session.execute(select(SkillRating).where(SkillRating.user_id == user_id))
+            ).scalars()
+            out = []
+            for row in rows:
+                rating, games = self._current(row, season)
+                out.append({"game": row.game_id, "rating": rating.display, "games": games})
+            return out
+
+    async def rating_board(
+        self, game_id: str, user_ids: set[int] | None, week: bool, limit: int = 50
+    ) -> list[dict[str, Any]]:
+        """The top of one game's board this season (rating) or this week (rating gained), among
+        `user_ids` (None: everyone). Provisional players aren't listed."""
+        season = ratinglib.season_of()
+        async with self.sessions() as session:
+            if week:
+                gain = func.sum(RatingEvent.after - RatingEvent.before)
+                q = (
+                    select(User.username, gain, SkillRating.mu, SkillRating.sigma, SkillRating.games)
+                    .join(User, User.id == RatingEvent.user_id)
+                    .join(
+                        SkillRating,
+                        (SkillRating.user_id == RatingEvent.user_id) & (SkillRating.game_id == game_id),
+                    )
+                    .where(
+                        RatingEvent.game_id == game_id,
+                        RatingEvent.at >= datetime.now(UTC) - timedelta(days=7),
+                        SkillRating.games >= ratinglib.PROVISIONAL_GAMES,
+                    )
+                    .group_by(User.username, SkillRating.mu, SkillRating.sigma, SkillRating.games)
+                    .order_by(gain.desc(), User.username)
+                    .limit(limit)
+                )
+                if user_ids is not None:
+                    q = q.where(RatingEvent.user_id.in_(user_ids))
+                rows = (await session.execute(q)).all()
+                return [
+                    {
+                        "username": name,
+                        "rating": ratinglib.Rating(mu, sigma).display,
+                        "tier": ratinglib.tier(ratinglib.Rating(mu, sigma).display, games),
+                        "games": games,
+                        "gain": int(g or 0),
+                    }
+                    for name, g, mu, sigma, games in rows
+                ]
+            q = (
+                select(User.username, SkillRating.mu, SkillRating.sigma, SkillRating.games)
+                .join(User, User.id == SkillRating.user_id)
+                .where(
+                    SkillRating.game_id == game_id,
+                    SkillRating.season == season,
+                    SkillRating.games >= ratinglib.PROVISIONAL_GAMES,
+                )
+                # the shown number is mu - 3 sigma: order by it, ties by name
+                .order_by((SkillRating.mu - 3 * SkillRating.sigma).desc(), User.username)
+                .limit(limit)
+            )
+            if user_ids is not None:
+                q = q.where(SkillRating.user_id.in_(user_ids))
+            out = []
+            for name, mu, sigma, games in (await session.execute(q)).all():
+                shown = ratinglib.Rating(mu, sigma).display
+                out.append(
+                    {
+                        "username": name,
+                        "rating": shown,
+                        "tier": ratinglib.tier(shown, games),
+                        "games": games,
+                        "gain": None,
+                    }
+                )
+            return out
+
+    async def club_member_ids(self, club_id: int) -> set[int]:
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(Membership.user_id).where(Membership.club_id == club_id, Membership.banned.is_(False))
+            )
+            return set(rows.scalars())
+
+    async def place_board_ids(self, place_id: int) -> set[int]:
+        """Accounts verified at the place now that chose to be on its boards."""
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(UserPlace.user_id)
+                .join(User, User.id == UserPlace.user_id)
+                .where(
+                    UserPlace.place_id == place_id,
+                    UserPlace.expires_at > datetime.now(UTC),
+                    User.place_boards.is_(True),
+                )
+            )
+            return set(rows.scalars())
+
+    async def set_place_boards(self, user_id: int, on: bool) -> None:
+        async with self.sessions() as session:
+            await session.execute(update(User).where(User.id == user_id).values(place_boards=on))
+            await session.commit()
 
     async def user_stats(self, user_id: int, season: str) -> dict[str, Any]:
         wins = func.sum(func.cast(Result.place == 1, Integer))

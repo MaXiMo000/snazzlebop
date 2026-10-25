@@ -179,6 +179,53 @@ export function CoinNews({ state }: { state: RoomState }) {
   );
 }
 
+/** Results of a ranked game: each player's rating change (or that the game didn't count). */
+export function RatingNews({ state }: { state: RoomState }) {
+  const news = Object.entries(state.ranked.news);
+  if (!news.length) return null;
+  const counted = news.filter(([, n]) => n.counted && n.after != null && n.before != null);
+  const mine = state.ranked.news[state.you];
+  const change = (n: { before?: number | null; after?: number | null }) => (n.after ?? 0) - (n.before ?? 0);
+  const signed = (d: number) => (d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "±0");
+  counted.sort((a, b) => change(b[1]) - change(a[1]));
+  return (
+    <Card tone="soft" aria-labelledby="rating-news-h">
+      <h3 id="rating-news-h">📈 Ranked</h3>
+      {counted.length === 0 ? (
+        <p className="lead">This game didn't change anyone's rating: the same players already met five times today.</p>
+      ) : (
+        <>
+          {mine && mine.counted && (
+            <p className="lead coin-mine">
+              {mine.tier === "Provisional" ? (
+                <>
+                  Placement game <b>{mine.games ?? 1} of 5</b>
+                </>
+              ) : (
+                <>
+                  Your rating: <b>{mine.after}</b>
+                </>
+              )}{" "}
+              <span className="no-break">
+                ({signed(change(mine))}
+                {mine.tier && mine.tier !== "Provisional" ? ` · ${mine.tier}` : ""})
+              </span>
+            </p>
+          )}
+          <ul className="evidence">
+            {counted.map(([pid, n]) => (
+              <li key={pid}>
+                <b>{nameOf(state.players, pid)}</b> {signed(change(n))}
+                {n.tier && n.tier !== "Provisional" ? ` · ${n.tier}` : " · placement"}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Card>
+  );
+}
+
 /** Results: which cards were played this game, and what they did. */
 export function CardReveal({ state }: { state: RoomState }) {
   const news = state.cards?.news ?? [];

@@ -208,6 +208,8 @@ class Room:
     boost_peeks: dict[str, str] = field(default_factory=dict)  # what a bought Peek showed (private)
     coin_news: dict[str, dict[str, int]] = field(default_factory=dict)  # last game: pid -> place, coins
     teams: dict[str, int] = field(default_factory=dict)  # this game's teams (player -> 0/1); {} = no teams
+    ranked: bool = False  # this game is rated (ratings.py): accounts only, fixed options, no power-ups
+    rating_news: dict[str, dict[str, Any]] = field(default_factory=dict)  # last game: pid -> change
     team_news: dict[str, Any] = field(default_factory=dict)  # last game: team totals and the winner
     # Snapshots: this copy came from the database and nothing has changed here since (so a newer
     # snapshot, written by the server that's shutting down during a deploy, may replace it).

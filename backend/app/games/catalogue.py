@@ -69,6 +69,14 @@ FEATURED: Final = ("imposter", "trivia", "drawguess", "rather", "dice", "four")
 RANKED: Final = frozenset(
     {"trivia", "wordrace", "crossword", "codewords", "dice", "codes", "reflex", "chess", "four", "ships"}
 )
+# A ranked game needs 2 players for a duel, 3 for a free-for-all (fewer can't separate skill from luck).
+DUELS: Final = frozenset({"chess", "four", "ships", "reflex"})
+
+
+def ranked_min(game_id: str) -> int | None:
+    if game_id not in RANKED:
+        return None
+    return 2 if game_id in DUELS else 3
 
 
 def entry(game_id: str) -> dict[str, object]:
@@ -77,6 +85,7 @@ def entry(game_id: str) -> dict[str, object]:
         "category": CATEGORY_OF[game_id],
         "featured": FEATURED.index(game_id) if game_id in FEATURED else None,
         "ranked": game_id in RANKED,
+        "ranked_min": ranked_min(game_id),
     }
 
 

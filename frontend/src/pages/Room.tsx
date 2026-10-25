@@ -25,7 +25,7 @@ import {
   ThemePicker,
 } from "../components/show";
 import { MarketFloor, MarketMoves } from "../components/market";
-import { BoostPanel, CardReveal, CoinNews, MvpVote, PowerCard, Rivals } from "../components/extras";
+import { BoostPanel, CardReveal, CoinNews, MvpVote, PowerCard, RatingNews, Rivals } from "../components/extras";
 import { useAccount } from "../lib/account";
 import { TeamBadge, TeamResult } from "../components/teams";
 import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
@@ -285,7 +285,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
           {phase === "game" && <ReadyBar state={state} send={send} />}
           {phase === "game" && state.role === "player" && <PowerCard state={state} send={send} />}
-          {phase === "game" && state.role === "player" && <BoostPanel state={state} send={send} />}
+          {phase === "game" && state.role === "player" && !state.ranked.on && <BoostPanel state={state} send={send} />}
           {phase === "game" && state.role !== "player" && <CardsDown state={state} />}
           <Rivals state={state} />
           {phase === "results" && (
@@ -293,6 +293,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
               <HostLine quip={state.quip} />
               <CardReveal state={state} />
               <CoinNews state={state} />
+              <RatingNews state={state} />
               <Highlights items={state.highlights} />
               {state.market && <MarketMoves m={state.market} players={state.players} you={state.you} />}
               <MvpVote state={state} send={send} />
@@ -520,6 +521,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
                 <HostLine quip={state.quip} />
                 <CardReveal state={state} />
                 <CoinNews state={state} />
+                <RatingNews state={state} />
                 <Highlights items={state.highlights} />
                 {state.market && <MarketMoves m={state.market} players={state.players} you="" />}
                 <MvpVote state={state} send={noop} />
@@ -674,21 +676,43 @@ function HostGameBar({ state, send }: { state: RoomState; send: Send }) {
 }
 
 /** Start button, plus a picker for each option the game declares (first value = default). */
-function StartGame({ game, enough, online, send, prefix, teamsFirst }: { game: GameCard; enough: boolean; online: number; send: Send; prefix: string; teamsFirst: boolean }) {
+function StartGame({
+  game,
+  enough,
+  online,
+  send,
+  prefix,
+  teamsFirst,
+  rankedReady,
+}: {
+  game: GameCard;
+  enough: boolean;
+  online: number;
+  send: Send;
+  prefix: string;
+  teamsFirst: boolean;
+  rankedReady: boolean;
+}) {
   const [chosen, setChosen] = useState<Record<string, string>>({});
-  const [teams, setTeams] = useState(teamsFirst);
+  const [teamsPick, setTeams] = useState(teamsFirst);
+  const [ranked, setRanked] = useState(false);
+  const teams = teamsPick && !ranked;
   const teamsOk = online >= 4;
-  const options = Object.entries(game.options ?? {});
+  const rankedMin = game.ranked_min ?? 2;
+  // Ranked games use the standard settings: no options to pick.
+  const options = ranked ? [] : Object.entries(game.options ?? {});
   const picked = Object.fromEntries(options.map(([k, vals]) => [k, chosen[k] ?? vals[0]!]));
   // What will start, in short ("Classic · 10 questions"): the full choices fold away until wanted.
   const short = (label: string) => label.replace(/ \(.*\)$/, "");
   const now = [
     ...options.map(([k, vals]) => short(OPTION_LABELS[k]?.[picked[k] ?? vals[0]!] ?? picked[k] ?? "")),
-    ...(game.teams ? [teams ? "Two teams" : "Everyone for themselves"] : []),
+    ...(game.teams && !ranked ? [teams ? "Two teams" : "Everyone for themselves"] : []),
+    ...(ranked ? ["Ranked", "Standard settings"] : []),
   ];
+  const rankedBlock = !ranked ? "" : !rankedReady ? "Everyone must be signed in" : online < rankedMin ? `Ranked needs ${rankedMin}+ online` : "";
   return (
     <>
-      {now.length > 0 && (
+      {(now.length > 0 || game.ranked) && (
         <details className="game-options">
           <summary>
             <span className="game-options-title">
@@ -700,6 +724,17 @@ function StartGame({ game, enough, online, send, prefix, teamsFirst }: { game: G
               ))}
             </span>
           </summary>
+          {game.ranked && (
+            <div className="space-top">
+              <label className="check">
+                <input type="checkbox" checked={ranked} onChange={(e) => setRanked(e.target.checked)} />
+                <span>Ranked game</span>
+              </label>
+              <p className="muted acct-hint">
+                Rated for everyone, with the standard settings and no power-ups. Every player signs in, {rankedMin}+ players.
+              </p>
+            </div>
+          )}
           {options.map(([key, values]) => (
             <div key={key} className="space-top">
               <label className="field" htmlFor={`${prefix}opt-${game.id}-${key}`}>
@@ -718,7 +753,7 @@ function StartGame({ game, enough, online, send, prefix, teamsFirst }: { game: G
               </Select>
             </div>
           ))}
-          {game.teams && (
+          {game.teams && !ranked && (
             <div className="space-top">
               <label className="field" htmlFor={`${prefix}teams-${game.id}`}>
                 Play
@@ -735,10 +770,16 @@ function StartGame({ game, enough, online, send, prefix, teamsFirst }: { game: G
         className="space-top start-game"
         variant="accent"
         block
-        disabled={!enough || (teams && !teamsOk)}
-        onClick={() => send({ t: "start", game: game.id, ...(options.length ? { options: picked } : {}), ...(teams ? { teams: true } : {}) })}
+        disabled={!enough || (teams && !teamsOk) || !!rankedBlock}
+        onClick={() =>
+          send({ t: "start", game: game.id, ...(options.length ? { options: picked } : {}), ...(teams ? { teams: true } : {}), ...(ranked ? { ranked: true } : {}) })
+        }
       >
-        {!enough ? (online > game.max_players ? `Up to ${game.max_players} players` : `Need ${game.min_players}+ online`) : teams && !teamsOk ? "Teams need 4+ online" : teams ? "Start in teams!" : "Start!"}
+        {!enough
+          ? online > game.max_players
+            ? `Up to ${game.max_players} players`
+            : `Need ${game.min_players}+ online`
+          : rankedBlock || (teams && !teamsOk ? "Teams need 4+ online" : teams ? "Start in teams!" : ranked ? "Start ranked!" : "Start!")}
         <span className="sr-only"> {game.title}</span>
       </Btn>
     </>
@@ -844,6 +885,7 @@ function GameShelf({ state, online, isHost, send }: { state: RoomState; online: 
                   prefix={s.id === "start" ? "start-" : ""}
                   highlight={picked === g.id && s.id !== "start"}
                   teamsFirst={teams && g.teams}
+                  rankedReady={state.ranked.ready}
                 />
               ))}
             </div>
@@ -885,6 +927,7 @@ function GameCardTile({
   prefix = "",
   teamsFirst = false,
   highlight = false,
+  rankedReady = false,
 }: {
   g: GameCard;
   online: number;
@@ -893,6 +936,7 @@ function GameCardTile({
   prefix?: string;
   teamsFirst?: boolean;
   highlight?: boolean;
+  rankedReady?: boolean;
 }) {
   const enough = online >= g.min_players && online <= g.max_players;
   return (
@@ -908,7 +952,7 @@ function GameCardTile({
       </div>
       <div className="body">
         <p>{g.blurb}</p>
-        {isHost && <StartGame game={g} enough={enough} online={online} send={send} prefix={prefix} teamsFirst={teamsFirst} />}
+        {isHost && <StartGame game={g} enough={enough} online={online} send={send} prefix={prefix} teamsFirst={teamsFirst} rankedReady={rankedReady} />}
       </div>
     </Card>
   );

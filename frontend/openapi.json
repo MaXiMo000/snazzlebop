@@ -141,6 +141,52 @@
         "title": "BlockedPerson",
         "type": "object"
       },
+      "BoardRow": {
+        "additionalProperties": false,
+        "properties": {
+          "gain": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gain"
+          },
+          "games": {
+            "title": "Games",
+            "type": "integer"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "you": {
+            "title": "You",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "username",
+          "rating",
+          "tier",
+          "games",
+          "gain",
+          "you"
+        ],
+        "title": "BoardRow",
+        "type": "object"
+      },
       "BuyBody": {
         "additionalProperties": false,
         "properties": {
@@ -1306,6 +1352,17 @@
             "title": "Ranked",
             "type": "boolean"
           },
+          "ranked_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranked Min"
+          },
           "show": {
             "title": "Show",
             "type": "boolean"
@@ -1332,7 +1389,8 @@
           "teams",
           "category",
           "featured",
-          "ranked"
+          "ranked",
+          "ranked_min"
         ],
         "title": "GameCard",
         "type": "object"
@@ -2381,6 +2439,71 @@
         "title": "MyPlaces",
         "type": "object"
       },
+      "MyRating": {
+        "additionalProperties": false,
+        "properties": {
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "games": {
+            "title": "Games",
+            "type": "integer"
+          },
+          "placement_left": {
+            "title": "Placement Left",
+            "type": "integer"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game",
+          "title",
+          "rating",
+          "games",
+          "tier",
+          "placement_left"
+        ],
+        "title": "MyRating",
+        "type": "object"
+      },
+      "MyRatings": {
+        "additionalProperties": false,
+        "properties": {
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/MyRating"
+            },
+            "title": "Games",
+            "type": "array"
+          },
+          "place_boards": {
+            "title": "Place Boards",
+            "type": "boolean"
+          },
+          "season": {
+            "$ref": "#/components/schemas/RatingSeason"
+          }
+        },
+        "required": [
+          "season",
+          "games",
+          "place_boards"
+        ],
+        "title": "MyRatings",
+        "type": "object"
+      },
       "MyStats": {
         "additionalProperties": false,
         "properties": {
@@ -2670,6 +2793,20 @@
           "username"
         ],
         "title": "PersonBody",
+        "type": "object"
+      },
+      "PlaceBoardsBody": {
+        "additionalProperties": false,
+        "properties": {
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "PlaceBoardsBody",
         "type": "object"
       },
       "PlaceBody": {
@@ -3004,6 +3141,161 @@
           "to"
         ],
         "title": "QuietHours",
+        "type": "object"
+      },
+      "Ranked": {
+        "additionalProperties": false,
+        "properties": {
+          "news": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RatingNews"
+            },
+            "title": "News",
+            "type": "object"
+          },
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on",
+          "news",
+          "ready"
+        ],
+        "title": "Ranked",
+        "type": "object"
+      },
+      "RatingBoard": {
+        "additionalProperties": false,
+        "properties": {
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/BoardRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "season": {
+            "$ref": "#/components/schemas/RatingSeason"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game",
+          "title",
+          "scope",
+          "period",
+          "season",
+          "rows"
+        ],
+        "title": "RatingBoard",
+        "type": "object"
+      },
+      "RatingNews": {
+        "additionalProperties": false,
+        "description": "One player's rating change after a ranked game (or counted false: the game didn't count).",
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Before"
+          },
+          "counted": {
+            "title": "Counted",
+            "type": "boolean"
+          },
+          "games": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Games"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tier"
+          }
+        },
+        "required": [
+          "counted"
+        ],
+        "title": "RatingNews",
+        "type": "object"
+      },
+      "RatingSeason": {
+        "additionalProperties": false,
+        "properties": {
+          "ends": {
+            "title": "Ends",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "starts": {
+            "title": "Starts",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "starts",
+          "ends"
+        ],
+        "title": "RatingSeason",
         "type": "object"
       },
       "Reaction": {
@@ -3543,6 +3835,9 @@
             "title": "Quip",
             "type": "string"
           },
+          "ranked": {
+            "$ref": "#/components/schemas/Ranked"
+          },
           "reactions": {
             "items": {
               "$ref": "#/components/schemas/Reaction"
@@ -3657,6 +3952,7 @@
           "season",
           "intro",
           "teams",
+          "ranked",
           "ready",
           "last_standings",
           "scare",
@@ -11069,6 +11365,114 @@
         "summary": "Change Password"
       }
     },
+    "/api/me/place-boards": {
+      "post": {
+        "operationId": "place_boards_api_me_place_boards_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceBoardsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Place Boards"
+      }
+    },
     "/api/me/places": {
       "get": {
         "operationId": "my_places_api_me_places_get",
@@ -12436,6 +12840,243 @@
           }
         },
         "summary": "Unsubscribe"
+      }
+    },
+    "/api/ratings/board": {
+      "get": {
+        "operationId": "board_api_ratings_board_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "game",
+            "required": true,
+            "schema": {
+              "title": "Game",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "everyone",
+              "title": "Scope",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "slug",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "season",
+              "title": "Period",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingBoard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Board"
+      }
+    },
+    "/api/ratings/me": {
+      "get": {
+        "operationId": "my_ratings_api_ratings_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyRatings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "My Ratings"
       }
     },
     "/api/reports": {

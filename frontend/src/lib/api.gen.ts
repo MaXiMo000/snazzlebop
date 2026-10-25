@@ -939,6 +939,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/place-boards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Place Boards */
+        post: operations["place_boards_api_me_place_boards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/places": {
         parameters: {
             query?: never;
@@ -1171,6 +1188,40 @@ export interface paths {
         put?: never;
         /** Unsubscribe */
         post: operations["unsubscribe_api_push_unsubscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ratings/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Board */
+        get: operations["board_api_ratings_board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ratings/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Ratings */
+        get: operations["my_ratings_api_ratings_me_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1559,6 +1610,21 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** BoardRow */
+        BoardRow: {
+            /** Gain */
+            gain: number | null;
+            /** Games */
+            games: number;
+            /** Rating */
+            rating: number;
+            /** Tier */
+            tier: string;
+            /** Username */
+            username: string;
+            /** You */
+            you: boolean;
+        };
         /** BuyBody */
         BuyBody: {
             /** Item */
@@ -1945,6 +2011,8 @@ export interface components {
             };
             /** Ranked */
             ranked: boolean;
+            /** Ranked Min */
+            ranked_min: number | null;
             /** Show */
             show: boolean;
             /** Teams */
@@ -2325,6 +2393,29 @@ export interface components {
             /** Places */
             places: components["schemas"]["MyPlace"][];
         };
+        /** MyRating */
+        MyRating: {
+            /** Game */
+            game: string;
+            /** Games */
+            games: number;
+            /** Placement Left */
+            placement_left: number;
+            /** Rating */
+            rating: number;
+            /** Tier */
+            tier: string;
+            /** Title */
+            title: string;
+        };
+        /** MyRatings */
+        MyRatings: {
+            /** Games */
+            games: components["schemas"]["MyRating"][];
+            /** Place Boards */
+            place_boards: boolean;
+            season: components["schemas"]["RatingSeason"];
+        };
         /** MyStats */
         MyStats: {
             /** Games */
@@ -2420,6 +2511,11 @@ export interface components {
         PersonBody: {
             /** Username */
             username: string;
+        };
+        /** PlaceBoardsBody */
+        PlaceBoardsBody: {
+            /** On */
+            on: boolean;
         };
         /** PlaceBody */
         PlaceBody: {
@@ -2537,6 +2633,68 @@ export interface components {
             from: string;
             /** To */
             to: string;
+        };
+        /** Ranked */
+        Ranked: {
+            /** News */
+            news: {
+                [key: string]: components["schemas"]["RatingNews"];
+            };
+            /** On */
+            on: boolean;
+            /** Ready */
+            ready: boolean;
+        };
+        /** RatingBoard */
+        RatingBoard: {
+            /** Game */
+            game: string;
+            /** Period */
+            period: string;
+            /** Rows */
+            rows: components["schemas"]["BoardRow"][];
+            /** Scope */
+            scope: string;
+            season: components["schemas"]["RatingSeason"];
+            /** Title */
+            title: string;
+        };
+        /**
+         * RatingNews
+         * @description One player's rating change after a ranked game (or counted false: the game didn't count).
+         */
+        RatingNews: {
+            /**
+             * After
+             * @default null
+             */
+            after: number | null;
+            /**
+             * Before
+             * @default null
+             */
+            before: number | null;
+            /** Counted */
+            counted: boolean;
+            /**
+             * Games
+             * @default null
+             */
+            games: number | null;
+            /**
+             * Tier
+             * @default null
+             */
+            tier: string | null;
+        };
+        /** RatingSeason */
+        RatingSeason: {
+            /** Ends */
+            ends: string;
+            /** Number */
+            number: number;
+            /** Starts */
+            starts: string;
         };
         /** Reaction */
         Reaction: {
@@ -2704,6 +2862,7 @@ export interface components {
             players: components["schemas"]["PlayerRow"][];
             /** Quip */
             quip: string;
+            ranked: components["schemas"]["Ranked"];
             /** Reactions */
             reactions: components["schemas"]["Reaction"][];
             ready: components["schemas"]["Ready"];
@@ -8412,6 +8571,102 @@ export interface operations {
             };
         };
     };
+    place_boards_api_me_place_boards_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceBoardsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     my_places_api_me_places_get: {
         parameters: {
             query?: never;
@@ -9558,6 +9813,195 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    board_api_ratings_board_get: {
+        parameters: {
+            query: {
+                game: string;
+                scope?: string;
+                slug?: string;
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RatingBoard"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    my_ratings_api_ratings_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyRatings"];
                 };
             };
             /** @description Bad request */

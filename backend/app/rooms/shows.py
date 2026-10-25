@@ -128,6 +128,8 @@ class ShowMixin:
         game = room.game
         if pid not in room.accounts:
             raise HubError("signed_out", "Sign in to use power-ups")
+        if room.ranked:
+            raise HubError("ranked", "Power-ups are off in ranked games")
         if room.phase != "game" or game is None or game.finished or game.game_id == "jackpot":
             raise HubError("no_card", "Power-ups are used during a game")
         if pid not in game.player_ids:

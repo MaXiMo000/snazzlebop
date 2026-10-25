@@ -61,6 +61,12 @@ class ViewsMixin:
             "season": {"number": room.season_no, "table": room.season} if room.season_no else None,
             "intro": self._intro_view(room) if room.phase == "intro" else None,
             "teams": self._teams_view(room, pid),
+            "ranked": {
+                "on": room.ranked if room.phase in ("game", "results") else bool(room.intro.get("ranked")),
+                "news": room.rating_news if room.phase == "results" else {},
+                # everyone online has their own account (never who doesn't): a ranked game can start
+                "ready": self._all_signed_in(room),
+            },
             "ready": self._ready_view(room),
             "last_standings": room.last_standings if room.phase == "lobby" else [],
             "scare": room.scares.get(pid, 0),  # only ever this viewer's own count

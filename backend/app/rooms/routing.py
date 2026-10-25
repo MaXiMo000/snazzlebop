@@ -112,14 +112,19 @@ class RoutingMixin:
             if room.club_games and cls.game_id not in room.club_games:
                 raise HubError("club_game", "This club doesn't play that one")
             options = self._options(cls, msg.get("options"))
-            want_teams = msg.get("teams", False)
-            if not isinstance(want_teams, bool):
+            want_teams, ranked = msg.get("teams", False), msg.get("ranked", False)
+            if not isinstance(want_teams, bool) or not isinstance(ranked, bool):
                 raise HubError("bad_message", "Unknown message")
+            if ranked:
+                if want_teams:
+                    raise HubError("ranked_teams", "Ranked games are played without the Teams switch")
+                self._check_ranked(room, cls.game_id)
+                options = {}  # ranked games use the standard settings, the same for everyone
             teams = self._split_teams(room, cls) if want_teams else {}
             # raises (too few players, a team rule) before anything changes
             self._make_game(room, cls, options=options, teams=teams)
             room.show = None  # a one-off game outside any show
-            self._open_intro(room, cls.game_id, options, teams=teams)
+            self._open_intro(room, cls.game_id, options, teams=teams, ranked=ranked)
             return True
         if kind == "shuffle":
             if not is_host:

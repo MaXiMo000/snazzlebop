@@ -96,6 +96,10 @@ original has them.
   manage places and see requests for new ones.
 - **Ways to sign in:** username and password, an emailed link, or Google (when configured). A Google
   account can add a password later, and an existing account links Google from its account page.
+- **Ranked play:** ten skill games can be played ranked (signed-in players, standard settings, no
+  power-ups). Ratings use the Plackett-Luce model (as in OpenSkill), with placement games, tiers from
+  Bronze to Diamond, eight-week seasons, and leaderboards for everyone, a club or a place, this season
+  or this week. Fair-play limits stop repeat pairings and big swings in a day.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced

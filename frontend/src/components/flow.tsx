@@ -31,7 +31,7 @@ export function IntroScreen({ state, receivedAt, send, readOnly }: { state: Room
   const isHost = state.room.host === state.you;
   const imReady = intro.ready.includes(state.you);
   const waitingOn = state.players.filter((p) => p.connected && !intro.ready.includes(p.id));
-  const chosen = Object.entries(intro.options).map(([k, v]) => OPTION_LABELS[k]?.[v] ?? v);
+  const chosen = [...(state.ranked.on ? ["Ranked", "Standard settings"] : []), ...Object.entries(intro.options).map(([k, v]) => OPTION_LABELS[k]?.[v] ?? v)];
   return (
     <div className={`seg-${intro.game} stack enter`}>
       <ShowHead sign="Up next · how to play" title={intro.title} remaining={intro.closes_in} receivedAt={receivedAt}>

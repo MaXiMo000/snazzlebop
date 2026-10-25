@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from .. import ratings as ratinglib
 from .. import show as showlib
 from ..games import REGISTRY, Game, GameError, Player
+from ..games.catalogue import RANKED, ranked_min
 from ..games.jackpot import Jackpot
 from .models import (
     TEAM_MIN_PLAYERS,
@@ -17,6 +19,23 @@ from .models import (
 
 
 class FlowMixin:
+    @staticmethod
+    def _all_signed_in(room: Room) -> bool:
+        accounts = [room.accounts.get(p.id) for p in room.connected_players()]
+        return None not in accounts and len(set(accounts)) == len(accounts)
+
+    def _check_ranked(self, room: Room, game_id: str) -> None:
+        """A ranked game: a ranked kind of game, enough players, every one of them signed in (one seat
+        per account). Raises with what's missing."""
+        if game_id not in RANKED:
+            raise HubError("not_ranked", "That game isn't played ranked")
+        online = [p.id for p in room.connected_players()]
+        need = ranked_min(game_id) or 2
+        if len(online) < need:
+            raise HubError("too_few", f"Ranked games need {need} or more players online")
+        if not self._all_signed_in(room):
+            raise HubError("ranked_guests", "Everyone needs to be signed in, each with their own account")
+
     def _split_teams(self, room: Room, cls: type[Game]) -> dict[str, int]:
         """Everyone online, shuffled into two teams as even as can be."""
         if not cls.TEAMS:
@@ -60,7 +79,7 @@ class FlowMixin:
         room.predictions, room.highlights, room.quip = {}, [], ""
         room.card_news, room.rival_news, room.rivals, room.mvp_votes = [], [], [], {}
         room.game_no += 1
-        room.boost_peeks, room.coin_news, room.team_news = {}, {}, {}
+        room.boost_peeks, room.coin_news, room.team_news, room.rating_news = {}, {}, {}, {}
         room.chat = [m for m in room.chat if m["team"] is None]  # new game, new teams: old team talk goes
         s = room.show
         if s is not None:
@@ -81,6 +100,7 @@ class FlowMixin:
         options: dict[str, str] | None = None,
         slot: str = "",
         teams: dict[str, int] | None = None,
+        ranked: bool = False,
     ) -> None:
         """The "how to play" screen. The game is built (and its clocks start) only when it ends."""
         room.intro = {
@@ -88,6 +108,7 @@ class FlowMixin:
             "options": dict(options or {}),
             "slot": slot,
             "teams": dict(teams or {}),
+            "ranked": ranked,
         }
         room.ready = set()
         room.predictions, room.highlights, room.quip = {}, [], ""
@@ -104,6 +125,8 @@ class FlowMixin:
         room.intro, room.ready = {}, set()
         teams: dict[str, int] = {}
         try:
+            if i.get("ranked"):  # someone may have left, or a guest arrived, during the intro
+                self._check_ranked(room, i["game"])
             if i["game"] == "jackpot":
                 stakes = {p.id: room.total_scores.get(p.id, 0) for p in room.players.values()}
                 game = self._make_game(room, Jackpot, stakes=stakes)
@@ -125,6 +148,7 @@ class FlowMixin:
             return
         # Only the host's Teams switch makes room teams (Codewords keeps its own red/blue in game.teams).
         room.teams = {p: t for p, t in teams.items() if p in game.round_scores}
+        room.ranked = bool(i.get("ranked"))
         self._begin(room, game)
         if s is not None and i["slot"] == "playlist":
             s.started += 1
@@ -212,6 +236,43 @@ class FlowMixin:
             except Exception:
                 log.exception("failed to record game result")
         self._pay_coins(room, game, scores)
+        self._rate(room, game, scores)
+
+    def _rate(self, room: Room, game: Game, scores: dict[str, int]) -> None:
+        """A ranked game's ratings, from the server's final scores. Anyone who left before the end is
+        placed last."""
+        if not room.ranked or self.on_rated is None:
+            return
+        online = {p.id for p in room.connected_players()}
+        stayed = {p: v for p, v in scores.items() if p in online}
+        placing = ratinglib.ranks(stayed)
+        last = max(placing.values(), default=0) + 1
+        by_account = {room.accounts[p]: placing.get(p, last) for p in scores if p in room.accounts}
+        try:
+            task = asyncio.get_running_loop().create_task(
+                self._rated(room, room.game_no, game.game_id, by_account)
+            )
+        except RuntimeError:
+            return
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def _rated(self, room: Room, game_no: int, game_id: str, placing: dict[int, int]) -> None:
+        if self.on_rated is None:
+            return
+        try:
+            changes = await self.on_rated(game_id, placing)
+        except Exception:
+            log.exception("could not rate a ranked game")
+            return
+        if room.game_no != game_no:
+            return
+        seat = {uid: pid for pid, uid in room.accounts.items()}
+        if changes is None:  # didn't count: say so rather than show nothing
+            room.rating_news = {seat[u]: {"counted": False} for u in placing if u in seat}
+        else:
+            room.rating_news = {seat[u]: {"counted": True, **c} for u, c in changes.items() if u in seat}
+        await self.broadcast(room)
 
     async def tick(self) -> None:
         for room in list(self.rooms.values()):

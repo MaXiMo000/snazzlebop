@@ -11,6 +11,7 @@ import { InboxPage } from "./pages/Inbox";
 import { Privacy } from "./pages/Privacy";
 import { Safety } from "./pages/Safety";
 import { Places } from "./pages/Places";
+import { Ratings } from "./pages/Ratings";
 import { Staff } from "./pages/Staff";
 import { StaffPlaces } from "./pages/StaffPlaces";
 import { Home } from "./pages/Home";
@@ -26,6 +27,7 @@ const SAFETY_PATH = /^\/safety\/?$/;
 const STAFF_PATH = /^\/staff\/?$/;
 const STAFF_PLACES_PATH = /^\/staff\/places\/?$/;
 const PLACES_PATH = /^\/places\/?$/;
+const RATINGS_PATH = /^\/ratings\/?$/;
 const JOIN_PATH = /^\/join\/([A-Za-z0-9-]{4,32})\/?$/;
 const INBOX_PATH = /^\/inbox\/?$/;
 
@@ -157,6 +159,8 @@ export function App() {
           <StaffPlaces go={go} />
         ) : PLACES_PATH.test(path) ? (
           <Places go={go} />
+        ) : RATINGS_PATH.test(path) ? (
+          <Ratings go={go} />
         ) : clubMatch ? (
           <ClubHome key={clubMatch[1]} slug={clubMatch[1]!} go={go} />
         ) : INBOX_PATH.test(path) ? (
@@ -191,6 +195,7 @@ function SiteFooter({ go }: { go: (p: string) => void }) {
         {link("/privacy", "Privacy")}
         {link("/safety", "Safety and data")}
         {link("/clubs", "Clubs")}
+        {link("/ratings", "Ratings")}
       </nav>
     </footer>
   );

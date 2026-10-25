@@ -51,6 +51,7 @@ class GameCard(Strict):
     category: str
     featured: int | None
     ranked: bool
+    ranked_min: int | None  # players a ranked game needs (None: not played ranked)
 
 
 class RoomPass(Strict):
@@ -105,6 +106,45 @@ class Identities(Strict):
     google: GoogleLink | None  # linked Google account, if any
     google_available: bool
     has_password: bool
+
+
+class RatingSeason(Strict):
+    number: int
+    starts: str  # ISO date
+    ends: str
+
+
+class MyRating(Strict):
+    game: str
+    title: str
+    rating: int
+    games: int
+    tier: str  # "Provisional" until the placement games are played
+    placement_left: int
+
+
+class MyRatings(Strict):
+    season: RatingSeason
+    games: list[MyRating]
+    place_boards: bool  # you appear on the leaderboards of places you're verified at
+
+
+class BoardRow(Strict):
+    username: str
+    rating: int
+    tier: str
+    games: int
+    gain: int | None  # this week's change (weekly boards only)
+    you: bool
+
+
+class RatingBoard(Strict):
+    game: str
+    title: str
+    scope: str  # everyone | club | place
+    period: str  # season | week
+    season: RatingSeason
+    rows: list[BoardRow]
 
 
 class MfaStatus(Strict):
@@ -791,6 +831,22 @@ class Reaction(Strict):
     e: str
 
 
+class RatingNews(Strict):
+    """One player's rating change after a ranked game (or counted false: the game didn't count)."""
+
+    counted: bool
+    before: int | None = None
+    after: int | None = None
+    games: int | None = None
+    tier: str | None = None
+
+
+class Ranked(Strict):
+    on: bool  # this game is (or is about to be) rated
+    news: dict[str, RatingNews]  # results: player id -> change
+    ready: bool  # everyone online is signed in with their own account
+
+
 class RoomFrame(Strict):
     """The room as one screen sees it. Secrets are filtered per viewer before this is built."""
 
@@ -816,6 +872,7 @@ class RoomFrame(Strict):
     season: Season | None
     intro: Intro | None
     teams: Teams | None
+    ranked: Ranked
     ready: Ready
     last_standings: list[Standing]
     scare: int

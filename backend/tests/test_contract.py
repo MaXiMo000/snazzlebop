@@ -226,6 +226,9 @@ def test_every_route_matches_its_declared_model(client):
     c.call("POST", "/api/auth/reset", json={"token": reset, "new_password": PW})
     c.call("GET", "/api/me/sessions")
     c.call("GET", "/api/me/identities")
+    c.call("GET", "/api/ratings/me")
+    c.call("GET", "/api/ratings/board?game=chess&period=week", "/api/ratings/board")
+    c.call("POST", "/api/me/place-boards", json={"on": True})
     c.call("POST", "/api/me/google/remove", json={"password": PW})  # nothing linked: still ok
     assert c.redirect("/api/auth/google/start") == "/account?google=off"
     assert c.redirect("/api/auth/google/callback?code=x&state=y") == "/account?google=off"
