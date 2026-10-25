@@ -86,7 +86,7 @@ function useWalk(view: SnakesView) {
     setShown({ ...view.pos, [player]: at });
     const timers: number[] = [];
     const finish = () => {
-      if (via) {
+      if (via === "ladder" || via === "snake") {
         setSliding(player);
         if (via === "ladder") sfx.fanfare();
         else sfx.buzz();
@@ -138,6 +138,8 @@ export function Snakes({ view, you, receivedAt, send, tv = false }: Props) {
             ? ` · up the ladder to ${last.to}!`
             : last.via === "snake"
               ? ` · down the snake to ${last.to}!`
+              : last.via === "repelled"
+                ? ` · the snake didn’t bite!`
               : ` · now on ${last.to}`
       }`
     : "Roll to get going. First to 100 wins.";

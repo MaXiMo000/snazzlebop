@@ -213,6 +213,36 @@ class LastCard(Game):
     def _partners(self, a: str, b: str) -> bool:
         return bool(self.teams) and self.teams.get(a) == self.teams.get(b)
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "lastcard_peek": {
+            "name": "Peek the pile",
+            "icon": "🃏",
+            "text": "See the next card on the draw pile",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "lastcard_peek":
+            return super().use_power(pid, item)
+        if self.phase != "play":
+            raise GameError("wrong_phase", "Wait for the next hand")
+        if not self.deck:
+            raise GameError("not_now", "The draw pile is empty")
+        colour, value = CARDS[self.deck[-1]]
+        names = {
+            "skip": "Skip",
+            "reverse": "Reverse",
+            "draw2": "Draw Two",
+            "wild": "Wild",
+            "wild4": "Wild Draw Four",
+        }
+        card = names.get(value, value)
+        return (
+            f"The next card on the pile is a {card}."
+            if colour == "wild"
+            else f"The next card on the pile is a {colour} {card}."
+        )
+
     def _actor(self, pid: str) -> None:
         if self.phase != "play":
             raise GameError("wrong_phase", "Wait for the next hand")

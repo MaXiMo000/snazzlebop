@@ -126,6 +126,69 @@ class ThirdEngineTests(unittest.TestCase):
         self.assertEqual(game.rerolls, rerolls)  # the free re-roll is still there
 
 
+class FourthEngineTests(unittest.TestCase):
+    def test_word_race_free_letter(self):
+        game, clock, _ = make(REGISTRY["wordrace"], 2)
+        line = game.use_power("p0", "wordrace_letter")
+        i = int(line.split()[1]) - 1
+        self.assertEqual(line, f"Letter {i + 1} is {game.answer[i]}.")
+        self.assertNotIn(game.answer, str(game.view_for("p1")))  # nothing new for anyone else
+        game.board["p0"] = [("XXXXX", "gggg" + "x")]  # four greens: only the last letter is left
+        with self.assertRaises(GameError):
+            game.use_power("p0", "wordrace_letter")
+
+    def test_code_crackers_peek(self):
+        game, clock, _ = make(REGISTRY["codes"], 2)
+        with self.assertRaises(GameError):
+            game.use_power("p0", "codes_peek")  # codes not set yet
+        for p in ("p0", "p1"):
+            game.handle(p, {"a": "set", "code": [0, 1, 2, 3]})
+        self.assertIn("in position", game.use_power("p0", "codes_peek"))
+        self.assertEqual(game.scores()["p0"], 0)  # free, unlike a bought hint
+
+    def test_last_card_peek(self):
+        game, clock, _ = make(REGISTRY["lastcard"], 2)
+        while game.phase != "play":
+            game.advance()
+        line = game.use_power("p0", "lastcard_peek")
+        self.assertTrue(line.startswith("The next card on the pile is a "))
+        game.deck = []
+        with self.assertRaises(GameError):
+            game.use_power("p0", "lastcard_peek")
+
+    def test_snake_repellent(self):
+        from app.games import snakes
+
+        game, clock, _ = make(REGISTRY["snakes"], 2)
+        pid = game.current
+        head = next(iter(snakes.SNAKES))
+        game.pos[pid] = head - 3
+        game.rng.randint = lambda a, b: 3  # lands on the snake's head
+        game.use_power(pid, "snakes_repel")
+        with self.assertRaises(GameError):
+            game.use_power(pid, "snakes_repel")  # already protected
+        game._roll()
+        self.assertEqual(game.pos[pid], head)
+        self.assertEqual(game.last["via"], "repelled")
+        self.assertEqual(game.stats[pid]["snakes"], 0)
+        self.assertNotIn(pid, game.repel)  # used up
+
+    def test_five_dice_extra_roll(self):
+        game, clock, _ = make(REGISTRY["fivedice"], 2)
+        while game.phase != "play":
+            game.advance()
+        held = [False] * 5
+        game.handle("p0", {"a": "roll"})
+        game.use_power("p0", "fivedice_roll")
+        with self.assertRaises(GameError):
+            game.use_power("p0", "fivedice_roll")
+        for _ in range(3):
+            game.handle("p0", {"a": "roll", "held": held})
+        self.assertEqual(game.cards["p0"].rolls, 4)
+        with self.assertRaises(GameError):
+            game.handle("p0", {"a": "roll", "held": held})  # four is the limit
+
+
 # -- the room --------------------------------------------------------------------------------------
 from tests.test_accounts import Wallet  # noqa: E402
 from tests.test_ranked import room_of  # noqa: E402

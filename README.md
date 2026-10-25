@@ -105,7 +105,9 @@ original has them.
   platform pays fixed prizes from the final scores. Trophies and head-to-head records.
 - **Power-ups:** games have their own (Trivia 50/50 and +5 seconds, Draw & Guess letter, Liar's Dice
   peek, Chicken Run shield, Imposter vote change, Four in a Row undo, Would You Rather ask the room,
-  Battleships sonar, Hangman vowel, Truth or Dare another card), bought with coins or won on level-ups,
+  Battleships sonar, Hangman vowel, Truth or Dare another card, Word Race free letter, Code Crackers
+  peek, Last Card peek the pile, Snakes and Ladders snake repellent, Five Dice extra roll), bought with
+  coins or won on level-ups,
   used one per game in casual rooms. Everyone sees that you used one; what it shows is yours alone.
 - **Party items:** confetti cannon, air horn, drum roll, standing ovation and spotlight: used any time in a
   room, played on every screen (the TV too), no effect on scores, with spam limits.

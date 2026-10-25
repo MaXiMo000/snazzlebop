@@ -83,7 +83,7 @@ export function FiveDice({ view, you, receivedAt, send, tv = false }: Props) {
       <ShowHead sign={sign} title="Five Dice" remaining={view.phase === "final" ? null : view.remaining} receivedAt={receivedAt}>
         {mine && view.phase === "play" && !mine.done && (
           <p className="fd-tags">
-            <span className="chip plum">{mine.rolls === 0 ? "Roll to start your turn" : `Roll ${mine.rolls} of 3`}</span>
+            <span className="chip plum">{mine.rolls === 0 ? "Roll to start your turn" : `Roll ${mine.rolls} of ${mine.max_rolls}`}</span>
           </p>
         )}
       </ShowHead>
@@ -104,7 +104,7 @@ export function FiveDice({ view, you, receivedAt, send, tv = false }: Props) {
 
 function Tray({ card, send }: { card: FiveDiceCard; send: Props["send"] }) {
   const [held, setHeld] = useState<boolean[]>(card.held);
-  const left = 3 - card.rolls;
+  const left = card.max_rolls - card.rolls;
   if (card.done) {
     return (
       <Card tone="soft" className="center">
@@ -236,7 +236,7 @@ function Table({ view, you }: { view: FiveDiceView; you?: string }) {
                   ))}
                 </span>
                 <span className="fd-state muted">
-                  {c.done && last ? `${NAMES[last.box]}: ${last.points}` : c.done ? "scored" : c.rolls ? `roll ${c.rolls} of 3` : "thinking…"}
+                  {c.done && last ? `${NAMES[last.box]}: ${last.points}` : c.done ? "scored" : c.rolls ? `roll ${c.rolls} of ${c.max_rolls}` : "thinking…"}
                 </span>
               </li>
             );

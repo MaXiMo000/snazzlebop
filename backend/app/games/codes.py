@@ -177,6 +177,18 @@ class CodeCrackers(Game):
             out.append(shown)
         return out
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "codes_peek": {"name": "Code peek", "icon": "🔍", "text": "One symbol of a rival's code, for free"},
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "codes_peek":
+            return super().use_power(pid, item)
+        line = self.peek(pid)
+        if line is None:
+            raise GameError("not_now", "Use it while there's a code left to crack")
+        return line
+
     def peek(self, pid: str) -> str | None:
         """Power card: one free position of a rival's code you haven't cracked."""
         if self.phase != "crack":

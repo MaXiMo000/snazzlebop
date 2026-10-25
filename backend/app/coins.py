@@ -27,6 +27,11 @@ GAME_POWER_PRICES = {
     "ships_sonar": 40,
     "hangman_vowel": 25,
     "tod_fresh": 20,
+    "wordrace_letter": 30,
+    "codes_peek": 30,
+    "lastcard_peek": 25,
+    "snakes_repel": 25,
+    "fivedice_roll": 30,
 }
 # Party items (party.py): no effect on scores, used anywhere in a room.
 PARTY_PRICES = {

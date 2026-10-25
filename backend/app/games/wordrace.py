@@ -161,6 +161,28 @@ class WordRace(Game):
         if all(self._done(p) for p in self.player_ids):
             self._reveal()
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "wordrace_letter": {
+            "name": "Free letter",
+            "icon": "🔤",
+            "text": "One letter of the word in its right spot",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "wordrace_letter":
+            return super().use_power(pid, item)
+        if self.phase != "play" or pid not in self.board:
+            raise GameError("wrong_phase", "Use it while the word is live")
+        if self._done(pid):
+            raise GameError("finished", "You've finished this word")
+        found = {i for _, marks in self.board[pid] for i, m in enumerate(marks) if m == GREEN}
+        spots = [i for i in range(LENGTH) if i not in found]
+        if len(spots) < 2:  # never the last letter: the word is still for you to solve
+            raise GameError("not_now", "You've nearly got it already")
+        i = self.rng.choice(spots)
+        return f"Letter {i + 1} is {self.answer[i]}."
+
     # -- clocks ---------------------------------------------------------------------------------------
     def tick(self) -> None:
         if not self.finished and self.expired():

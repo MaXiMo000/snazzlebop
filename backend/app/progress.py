@@ -134,6 +134,11 @@ LEVEL_GIFTS = (
     "ships_sonar",
     "hangman_vowel",
     "tod_fresh",
+    "wordrace_letter",
+    "codes_peek",
+    "lastcard_peek",
+    "snakes_repel",
+    "fivedice_roll",
 )
 
 

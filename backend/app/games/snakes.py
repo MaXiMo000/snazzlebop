@@ -57,10 +57,30 @@ class SnakesAndLadders(Game):
         self.moves = 0
         self.stats: dict[str, dict[str, int]] = {p: {"ladders": 0, "snakes": 0} for p in self.order}
         self.winner: str | None = None
+        self.repel: set[str] = set()  # players whose next snake won't bite
         self.ready_at = 0.0
         self.phase = "play"
         self.set_deadline(self.timings["turn"])
         self.bump()
+
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "snakes_repel": {
+            "name": "Snake repellent",
+            "icon": "🧴",
+            "text": "The next snake you land on doesn't bite",
+        },
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "snakes_repel":
+            return super().use_power(pid, item)
+        if self.phase != "play" or pid not in self.pos:
+            raise GameError("wrong_phase", "Use it during the game")
+        if pid in self.repel:
+            raise GameError("not_now", "You're already protected")
+        self.repel.add(pid)
+        self.bump()
+        return "The next snake you land on won't bite."
 
     @property
     def current(self) -> str:
@@ -83,7 +103,10 @@ class SnakesAndLadders(Game):
             if mid in SNAKES and mid != start
             else None
         )
-        if via is None:
+        if via == "snake" and pid in self.repel:
+            self.repel.discard(pid)
+            via, end = "repelled", mid
+        if via is None or via == "repelled":
             end = mid
         else:
             self.stats[pid]["ladders" if via == "ladder" else "snakes"] += 1

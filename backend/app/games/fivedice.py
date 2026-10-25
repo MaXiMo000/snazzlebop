@@ -58,6 +58,7 @@ class Card:
         self.dice: list[int] = [0] * 5
         self.held: list[bool] = [False] * 5
         self.rolls = 0
+        self.extra = 0  # extra rolls this round (a power-up)
         self.bonus = 0  # Five Dice bonuses
         self.done = False  # scored this round
 
@@ -119,7 +120,7 @@ class FiveDice(Game):
 
     def _begin(self) -> None:
         for c in self.cards.values():
-            c.dice, c.held, c.rolls, c.done = [0] * 5, [False] * 5, 0, False
+            c.dice, c.held, c.rolls, c.done, c.extra = [0] * 5, [False] * 5, 0, False, 0
         self.phase = "play"
         self.set_deadline(self.timings["round"])
         self.bump()
@@ -143,8 +144,24 @@ class FiveDice(Game):
         else:
             raise GameError("bad_action", "Unknown action")
 
+    POWERS: ClassVar[dict[str, dict[str, str]]] = {
+        "fivedice_roll": {"name": "Extra roll", "icon": "🎲", "text": "A fourth roll this round"},
+    }
+
+    def use_power(self, pid: str, item: str) -> str | None:
+        if item != "fivedice_roll":
+            return super().use_power(pid, item)
+        card = self.cards.get(pid)
+        if self.phase != "play" or card is None or card.done:
+            raise GameError("wrong_phase", "Use it before you score this round")
+        if card.extra:
+            raise GameError("not_now", "You've an extra roll already")
+        card.extra = 1
+        self.bump()
+        return "You get a fourth roll this round."
+
     def _roll(self, card: Card, held: Any) -> None:
-        if card.rolls >= ROLLS:
+        if card.rolls >= ROLLS + card.extra:
             raise GameError("no_rolls", "That was your last roll: pick a box")
         if card.rolls == 0:
             card.held = [False] * 5
@@ -218,6 +235,7 @@ class FiveDice(Game):
             "dice": list(card.dice),
             "held": list(card.held),
             "rolls": card.rolls,
+            "max_rolls": ROLLS + card.extra,
             "done": card.done,
             "upper": card.upper,
             "bonus": card.bonus,

@@ -1195,7 +1195,8 @@ export interface SnakesMove {
   /** where the die took them, before any ladder or snake */
   mid: number;
   to: number;
-  via: "ladder" | "snake" | null;
+  /** "repelled": a snake that didn't bite (the Snake repellent power-up) */
+  via: "ladder" | "snake" | "repelled" | null;
 }
 
 export interface SnakesView {
@@ -1447,6 +1448,8 @@ export interface FiveDiceCard {
   dice: number[];
   held: boolean[];
   rolls: number;
+  /** 3, or 4 with the Extra roll power-up */
+  max_rolls: number;
   done: boolean;
   upper: number;
   bonus: number;
