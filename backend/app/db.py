@@ -42,6 +42,7 @@ from sqlalchemy.pool import StaticPool
 
 from . import battles as battlelib
 from . import fairplay
+from . import progress as progresslib
 from . import ratings as ratinglib
 
 log = logging.getLogger("snazzlebop.db")
@@ -111,6 +112,7 @@ class User(Base):
     suspend_reason: Mapped[str] = mapped_column(String(200), default="")
     # Shown on the leaderboards of places this account is verified at (off unless switched on).
     place_boards: Mapped[bool] = mapped_column(default=False)
+    xp: Mapped[int] = mapped_column(Integer, default=0)  # the cached sum of xp_events (progress.py)
 
 
 class EmailToken(Base):
@@ -364,6 +366,7 @@ class Result(Base):
     coins: Mapped[int] = mapped_column(Integer)
     played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     group_key: Mapped[str] = mapped_column(String(32), default="")  # the accounts in the game (fairplay.py)
+    fair: Mapped[bool] = mapped_column(default=False)  # counts for XP and quests (fairplay.py passed)
 
 
 class SkillRating(Base):
@@ -454,6 +457,35 @@ class BattleResult(Base):
     finished: Mapped[bool] = mapped_column(default=True)
     prize: Mapped[int] = mapped_column(Integer, default=0)
     note: Mapped[str] = mapped_column(String(16), default="")  # why no prize (fairplay.NOTES)
+
+
+class XpEvent(Base):
+    """One XP change: append-only, once per (reason, ref). users.xp is the cached sum."""
+
+    __tablename__ = "xp_events"
+    __table_args__ = (UniqueConstraint("user_id", "reason", "ref"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    delta: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(16))  # game | first_win | quest
+    ref: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
+
+
+class PlayedWith(Base):
+    """Two accounts that have played a fair game together (one row each way): who's new to whom, for
+    social quests and the "new connections" measure."""
+
+    __tablename__ = "connections"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    other_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    first_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    last_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    games: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class Friend(Base):
@@ -971,6 +1003,10 @@ class Database:
             await session.execute(delete(SkillRating).where(SkillRating.user_id == user_id))
             await session.execute(delete(LedgerEntry).where(LedgerEntry.user_id == user_id))
             await session.execute(delete(BattleResult).where(BattleResult.user_id == user_id))
+            await session.execute(delete(XpEvent).where(XpEvent.user_id == user_id))
+            await session.execute(
+                delete(PlayedWith).where(or_(PlayedWith.user_id == user_id, PlayedWith.other_id == user_id))
+            )
             await session.execute(
                 delete(Battle).where(or_(Battle.challenger_id == user_id, Battle.opponent_id == user_id))
             )
@@ -1948,6 +1984,7 @@ class Database:
         try:
             async with self.sessions() as session:
                 since = datetime.now(UTC) - timedelta(days=1)
+                fair_ids: list[int] = []  # accounts whose finish counts (XP, quests, connections)
                 # Lock each account (in id order: no deadlocks) before reading its day's total, so two
                 # rooms finishing at the same moment can't both pay up to the cap. (SQLite ignores the
                 # lock; it serialises writers anyway.)
@@ -1971,6 +2008,7 @@ class Database:
                     left = max(0, daily_cap - await self._earned_since(session, r["user_id"], since))
                     if coins > left:
                         coins, note = left, "limit"
+                    fair = r.get("accounts", 1) >= 2 and note not in fairplay.UNFAIR
                     result = Result(
                         user_id=r["user_id"],
                         game_id=r["game_id"],
@@ -1980,17 +2018,199 @@ class Database:
                         points=r["points"],
                         coins=coins,
                         group_key=group,
+                        fair=fair,
                     )
                     session.add(result)
                     await session.flush()
                     if coins:
                         await self._post(session, r["user_id"], coins, "place", "result", str(result.id))
-                    paid[r["user_id"]] = {"coins": coins, "note": note}
+                    xp = 0
+                    if fair:
+                        xp = await self._game_xp(session, r["user_id"], r["place"], result.id)
+                    paid[r["user_id"]] = {"coins": coins, "note": note, "xp": xp}
+                    if fair:
+                        fair_ids.append(r["user_id"])
+                await self._connect(session, fair_ids)
                 await session.commit()
         except Exception:
             log.exception("could not record account results")
             return {}
         return paid
+
+    # -- levels and quests (progress.py) -------------------------------------------------------------------
+    async def _xp(self, session: Any, user_id: int, delta: int, reason: str, ref: str) -> int:
+        """Append XP once per (reason, ref) and pay any levels it reaches (coins and a power-up, once
+        each). Returns the XP added."""
+        if delta <= 0:
+            return 0
+        try:
+            async with session.begin_nested():
+                session.add(XpEvent(user_id=user_id, delta=delta, reason=reason, ref=ref[:64]))
+                await session.flush()
+        except IntegrityError:
+            return 0
+        user = (await session.execute(select(User).where(User.id == user_id))).scalar_one()
+        before = progresslib.level_of(user.xp or 0)
+        user.xp = (user.xp or 0) + delta
+        for level in range(before + 1, progresslib.level_of(user.xp) + 1):
+            if await self._post(session, user_id, progresslib.LEVEL_COINS, "level", "level", str(level)):
+                owned = dict(user.powerups or {})
+                gift = progresslib.level_gift(user_id, level)
+                owned[gift] = owned.get(gift, 0) + 1
+                user.powerups = owned
+        await session.flush()
+        return delta
+
+    async def _game_xp(self, session: Any, user_id: int, place: int, result_id: int) -> int:
+        """XP for a fair finish: some for finishing, more for winning and for the day's first win,
+        within the daily cap."""
+        today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        earned = await session.scalar(
+            select(func.coalesce(func.sum(XpEvent.delta), 0)).where(
+                XpEvent.user_id == user_id,
+                XpEvent.reason.in_(("game", "first_win")),
+                XpEvent.created_at >= today,
+            )
+        )
+        room = max(0, progresslib.XP_DAILY_CAP - int(earned or 0))
+        want = progresslib.XP_FINISH + (progresslib.XP_WIN if place == 1 else 0)
+        got = await self._xp(session, user_id, min(want, room), "game", str(result_id))
+        if place == 1 and room - got > 0:
+            day = today.date().isoformat()
+            got += await self._xp(
+                session, user_id, min(progresslib.XP_FIRST_WIN, room - got), "first_win", day
+            )
+        return got
+
+    @staticmethod
+    async def _connect(session: Any, user_ids: list[int]) -> None:
+        """These accounts just played a fair game together: remember each pair."""
+        now = datetime.now(UTC)
+        ids = sorted(set(user_ids))
+        for a in ids:
+            for b in ids:
+                if a == b:
+                    continue
+                row = await session.get(PlayedWith, (a, b))
+                if row is None:
+                    session.add(PlayedWith(user_id=a, other_id=b, first_at=now, last_at=now, games=1))
+                else:
+                    row.last_at, row.games = now, row.games + 1
+
+    async def _quest_progress(self, session: Any, user_id: int, quest: str, today: datetime) -> int:
+        """How far along a quest is today, from what actually happened (never from what a client says)."""
+        if quest == "finish3":
+            q = select(func.count()).where(
+                Result.user_id == user_id, Result.fair.is_(True), Result.played_at >= today
+            )
+        elif quest == "win1":
+            q = select(func.count()).where(
+                Result.user_id == user_id, Result.fair.is_(True), Result.place == 1, Result.played_at >= today
+            )
+        elif quest == "try_game":
+            before = select(Result.game_id).where(Result.user_id == user_id, Result.played_at < today)
+            q = select(func.count(func.distinct(Result.game_id))).where(
+                Result.user_id == user_id,
+                Result.fair.is_(True),
+                Result.played_at >= today,
+                Result.game_id.not_in(before),
+            )
+        elif quest == "ranked1":
+            q = select(func.count()).where(RatingEvent.user_id == user_id, RatingEvent.at >= today)
+        elif quest == "battle1":
+            q = (
+                select(func.count())
+                .select_from(BattleResult)
+                .join(Battle, Battle.id == BattleResult.battle_id)
+                .where(
+                    BattleResult.user_id == user_id,
+                    BattleResult.finished.is_(True),
+                    Battle.played_at >= today,
+                )
+            )
+        elif quest == "new_person":
+            q = select(func.count()).where(PlayedWith.user_id == user_id, PlayedWith.first_at >= today)
+        elif quest == "new_clubmate":
+            my_clubs = select(Membership.club_id).where(
+                Membership.user_id == user_id, Membership.banned.is_(False)
+            )
+            mates = select(Membership.user_id).where(
+                Membership.club_id.in_(my_clubs), Membership.banned.is_(False)
+            )
+            q = select(func.count()).where(
+                PlayedWith.user_id == user_id, PlayedWith.first_at >= today, PlayedWith.other_id.in_(mates)
+            )
+        elif quest == "three_people":
+            q = select(func.count()).where(PlayedWith.user_id == user_id, PlayedWith.last_at >= today)
+        else:
+            return 0
+        return int(await session.scalar(q) or 0)
+
+    async def progress(self, user_id: int) -> dict[str, Any]:
+        """Your level and today's quests."""
+        now = datetime.now(UTC)
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        day = today.date().isoformat()
+        async with self.sessions() as session:
+            user = await session.get(User, user_id)
+            xp = int(user.xp or 0) if user else 0
+            earned = await session.scalar(
+                select(func.coalesce(func.sum(XpEvent.delta), 0)).where(
+                    XpEvent.user_id == user_id,
+                    XpEvent.reason.in_(("game", "first_win")),
+                    XpEvent.created_at >= today,
+                )
+            )
+            claimed = set(
+                (
+                    await session.execute(
+                        select(XpEvent.ref).where(XpEvent.user_id == user_id, XpEvent.reason == "quest")
+                    )
+                ).scalars()
+            )
+            quests = []
+            for qid in progresslib.daily_quests(user_id, today.date()):
+                info = progresslib.QUESTS[qid]
+                target = int(info["target"])  # type: ignore[call-overload]
+                done = await self._quest_progress(session, user_id, qid, today)
+                quests.append(
+                    {
+                        "id": qid,
+                        "title": info["title"],
+                        "social": bool(info["social"]),
+                        "progress": min(done, target),
+                        "target": target,
+                        "claimed": f"{day}:{qid}" in claimed,
+                    }
+                )
+        level = progresslib.level_of(xp)
+        return {
+            "level": level,
+            "xp": xp,
+            "level_xp": progresslib.xp_for(level),
+            "next_xp": progresslib.xp_for(level + 1),
+            "today_xp": int(earned or 0),
+            "daily_cap": progresslib.XP_DAILY_CAP,
+            "quests": quests,
+            "reward": {"xp": progresslib.XP_QUEST, "coins": progresslib.QUEST_COINS},
+        }
+
+    async def claim_quest(self, user_id: int, quest: str) -> str:
+        """Claim a finished quest of today's: XP and coins, once. Returns "" or why it can't be claimed."""
+        today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        if quest not in progresslib.daily_quests(user_id, today.date()):
+            return "not_today"
+        ref = f"{today.date().isoformat()}:{quest}"
+        async with self.sessions() as session:
+            await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+            target = int(progresslib.QUESTS[quest]["target"])  # type: ignore[call-overload]
+            if await self._quest_progress(session, user_id, quest, today) < target:
+                return "not_done"
+            if not await self._xp(session, user_id, progresslib.XP_QUEST, "quest", ref):
+                return "claimed"
+            await self._post(session, user_id, progresslib.QUEST_COINS, "quest", "quest", ref)
+            await session.commit()
+        return ""
 
     # -- the coin ledger ----------------------------------------------------------------------------------
     @staticmethod

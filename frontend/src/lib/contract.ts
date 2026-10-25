@@ -44,6 +44,7 @@ export type StaffPlaces = Schemas["StaffPlaces"];
 export type SessionList = Schemas["SessionList"];
 export type Identities = Schemas["Identities"];
 export type MyRatings = Schemas["MyRatings"];
+export type Progress = Schemas["Progress"];
 export type CoinHistory = Schemas["CoinHistory"];
 export type BattleRecord = Schemas["BattleRecord"];
 export type RatingBoard = Schemas["RatingBoard"];

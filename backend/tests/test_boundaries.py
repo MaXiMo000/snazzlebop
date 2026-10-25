@@ -36,6 +36,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.ratings": (set(), set()),  # the rating model, seasons and tiers
     "app.battles": (set(), set()),  # battle prizes and limits
     "app.fairplay": (set(), set()),  # anti-farming rules for every payout
+    "app.progress": (set(), set()),  # levels and daily quests
     "app.notify": ({"app.config", "app.webpush"}, set()),  # rules and fan-out; storage passed in
     "app.events": (set(), set()),  # pure: the versioned shape of events other systems receive
     "app.outbox": ({"app.config", "app.events"}, set()),  # delivery with retries; storage passed in
@@ -48,7 +49,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     ),
     "app.contentgen": ({"app.games"}, {"anthropic"}),
     "app.db": (
-        {"app.ratings", "app.battles", "app.fairplay"},
+        {"app.ratings", "app.battles", "app.fairplay", "app.progress"},
         {"alembic", "sqlalchemy"},
     ),  # storage; uses the pure rules
 }
@@ -62,6 +63,7 @@ EDGES = {
     "app.staff",
     "app.places",
     "app.ranked",
+    "app.quests",
     "app.ws",
     "app.migrations",
 }  # may use the frameworks

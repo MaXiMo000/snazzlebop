@@ -154,7 +154,7 @@ def test_coins_for_places_daily_cap_shop_and_leaderboard(client):
     paid = {}
     for _ in range(13):  # 13 x 50 = 650, but the day caps at 600
         paid = client.portal.call(db.record_results, rows, coins.season_of(), coins.DAILY_COIN_CAP)
-    assert paid == {user.id: {"coins": 0, "note": "limit"}}
+    assert paid == {user.id: {"coins": 0, "note": "limit", "xp": 0}}
     assert client.get("/api/me").json()["user"]["coins"] == 600
     r = client.post("/api/shop/buy", json={"item": "chicken_shield"})
     assert r.status_code == 200 and r.json()["user"] == {

@@ -235,6 +235,10 @@ def test_every_route_matches_its_declared_model(client):
     c.call("GET", "/api/ratings/me")
     c.call("GET", "/api/me/coins")
     c.call("GET", "/api/me/battles")
+    c.call("GET", "/api/me/progress")
+    c.call(
+        "POST", "/api/me/quests/win1/claim", "/api/me/quests/{quest}/claim"
+    )  # not done yet: the error body
     c.call("GET", "/api/ratings/board?game=chess&period=week", "/api/ratings/board")
     c.call("POST", "/api/me/place-boards", json={"on": True})
     c.call("POST", "/api/me/google/remove", json={"password": PW})  # nothing linked: still ok

@@ -106,6 +106,8 @@ original has them.
 - **Power-ups:** each game has its own (Trivia 50/50 and +5 seconds, Draw & Guess letter, Liar's Dice
   peek, Chicken Run shield, Imposter vote change), bought with coins and used one per game in casual
   rooms. Everyone sees that you used one; what it shows is yours alone.
+- **Levels and daily quests:** XP from fair games (and a bonus for the day's first win), levels that pay
+  coins and a power-up, and three quests a day, one of them always about playing with someone new.
 - **Fair play:** coins, battle prizes and ratings can't be farmed: thrown quick games, the same group
   replaying each other, second accounts on one device, a guest tab to beat and brand-new accounts are
   all held back, and players see why.

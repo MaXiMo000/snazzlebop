@@ -95,3 +95,62 @@
   font-weight: 700;
   color: var(--ink);
 }
+
+/* Quests and level */
+.level-big {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(3rem, 14vw, 5rem);
+  line-height: 1;
+  color: var(--bulb);
+}
+.level-meter {
+  margin: 14px auto 0;
+  max-width: 420px;
+}
+.quest-list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.quest {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px;
+  border: var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.quest.done {
+  border-color: var(--teal);
+}
+.quest.claimed {
+  opacity: 0.8;
+}
+.quest-icon {
+  font-size: 1.6rem;
+}
+.quest-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.quest-text b {
+  text-wrap: balance;
+}
+/* Phones: the claim button goes under the quest, so the title keeps the width */
+@media (max-width: 560px) {
+  .quest {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+  .quest > .btn,
+  .quest > .chip {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

@@ -209,6 +209,31 @@ class BattleRecord(Strict):
     challenges: list[Challenge]  # duels waiting for you
 
 
+class Quest(Strict):
+    id: str
+    title: str
+    social: bool  # means playing with someone new
+    progress: int
+    target: int
+    claimed: bool
+
+
+class QuestReward(Strict):
+    xp: int
+    coins: int
+
+
+class Progress(Strict):
+    level: int
+    xp: int
+    level_xp: int  # the XP this level started at
+    next_xp: int  # the XP the next level starts at
+    today_xp: int  # from games today (the daily cap counts these)
+    daily_cap: int
+    quests: list[Quest]  # today's three
+    reward: QuestReward  # for each finished quest
+
+
 class MfaStatus(Strict):
     enabled: bool
     backup_codes_left: int
@@ -816,6 +841,7 @@ class CoinNews(Strict):
     coins: int
     place: int
     note: str = ""  # why coins were held back (fairplay.NOTES): limit | repeat | device | quick | solo
+    xp: int = 0  # XP from this game (fair games only, progress.py)
 
 
 class CardsYou(Strict):

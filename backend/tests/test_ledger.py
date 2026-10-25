@@ -33,10 +33,12 @@ class LedgerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_payouts_purchases_and_the_cap(self):
         paid = await self.db.record_results([finish(self.ana, 50)], "2026-10", 120)
-        self.assertEqual(paid, {self.ana: {"coins": 50, "note": ""}})
+        self.assertEqual(paid, {self.ana: {"coins": 50, "note": "", "xp": 0}})
         await self.db.record_results([finish(self.ana, 50)], "2026-10", 120)
         paid = await self.db.record_results([finish(self.ana, 50)], "2026-10", 120)
-        self.assertEqual(paid, {self.ana: {"coins": 20, "note": "limit"}})  # the cap, from the ledger
+        self.assertEqual(
+            paid, {self.ana: {"coins": 20, "note": "limit", "xp": 0}}
+        )  # the cap, from the ledger
         self.assertEqual(await self.balance_matches(self.ana), 120)
         self.assertIsNotNone(await self.db.buy(self.ana, "peek", 40))
         self.assertIsNone(await self.db.buy(self.ana, "double", 400))

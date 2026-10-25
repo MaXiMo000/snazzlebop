@@ -24,6 +24,9 @@ BATTLE_REPEAT_LIMIT = 3  # paid battles a day with exactly the same accounts
 SOLO_COINS = 5  # place coins without another signed-in player: everyone gets the finisher amount
 NEW_ACCOUNT_DAYS = 3
 
+# Held-back reasons that also keep a game out of XP, quests and "new connections".
+UNFAIR = frozenset({"quick", "device", "repeat", "solo"})
+
 # Why a payout was held back, as players are told.
 NOTES = {
     "limit": "today's limit is reached",

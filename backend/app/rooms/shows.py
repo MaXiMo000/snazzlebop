@@ -265,6 +265,7 @@ class ShowMixin:
                 "place": r["place"],
                 "coins": paid.get(r["user_id"], {}).get("coins", 0),
                 "note": paid.get(r["user_id"], {}).get("note", r.get("note", "")),
+                "xp": paid.get(r["user_id"], {}).get("xp", 0),
             }
             for r in rows
         }

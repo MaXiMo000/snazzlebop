@@ -1283,6 +1283,11 @@
           "place": {
             "title": "Place",
             "type": "integer"
+          },
+          "xp": {
+            "default": 0,
+            "title": "Xp",
+            "type": "integer"
           }
         },
         "required": [
@@ -3574,6 +3579,57 @@
         "title": "PrefsBody",
         "type": "object"
       },
+      "Progress": {
+        "additionalProperties": false,
+        "properties": {
+          "daily_cap": {
+            "title": "Daily Cap",
+            "type": "integer"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "level_xp": {
+            "title": "Level Xp",
+            "type": "integer"
+          },
+          "next_xp": {
+            "title": "Next Xp",
+            "type": "integer"
+          },
+          "quests": {
+            "items": {
+              "$ref": "#/components/schemas/Quest"
+            },
+            "title": "Quests",
+            "type": "array"
+          },
+          "reward": {
+            "$ref": "#/components/schemas/QuestReward"
+          },
+          "today_xp": {
+            "title": "Today Xp",
+            "type": "integer"
+          },
+          "xp": {
+            "title": "Xp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "level",
+          "xp",
+          "level_xp",
+          "next_xp",
+          "today_xp",
+          "daily_cap",
+          "quests",
+          "reward"
+        ],
+        "title": "Progress",
+        "type": "object"
+      },
       "PublicUser": {
         "additionalProperties": false,
         "description": "Your own account (only ever sent to its owner).",
@@ -3622,6 +3678,64 @@
           "has_password"
         ],
         "title": "PublicUser",
+        "type": "object"
+      },
+      "Quest": {
+        "additionalProperties": false,
+        "properties": {
+          "claimed": {
+            "title": "Claimed",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "integer"
+          },
+          "social": {
+            "title": "Social",
+            "type": "boolean"
+          },
+          "target": {
+            "title": "Target",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "social",
+          "progress",
+          "target",
+          "claimed"
+        ],
+        "title": "Quest",
+        "type": "object"
+      },
+      "QuestReward": {
+        "additionalProperties": false,
+        "properties": {
+          "coins": {
+            "title": "Coins",
+            "type": "integer"
+          },
+          "xp": {
+            "title": "Xp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "xp",
+          "coins"
+        ],
+        "title": "QuestReward",
         "type": "object"
       },
       "QuietHours": {
@@ -12754,6 +12868,213 @@
           }
         },
         "summary": "Remove"
+      }
+    },
+    "/api/me/progress": {
+      "get": {
+        "operationId": "my_progress_api_me_progress_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Progress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "My Progress"
+      }
+    },
+    "/api/me/quests/{quest}/claim": {
+      "post": {
+        "operationId": "claim_api_me_quests__quest__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quest",
+            "required": true,
+            "schema": {
+              "title": "Quest",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Progress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Claim"
       }
     },
     "/api/me/sessions": {

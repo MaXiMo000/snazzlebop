@@ -166,6 +166,7 @@ export function CoinNews({ state }: { state: RoomState }) {
       {mine && (
         <p className="lead coin-mine">
           You finished {ORDINAL[mine.place] ?? `#${mine.place}`}: <b>+{mine.coins}</b>
+          {mine.xp ? <span className="no-break"> · +{mine.xp} XP</span> : null}
           {mine.note ? <span className="muted"> ({heldBack(mine.note)})</span> : null}
         </p>
       )}

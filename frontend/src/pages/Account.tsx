@@ -349,6 +349,9 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
           <Btn variant="gold" onClick={() => go("/")}>
             Play a game
           </Btn>
+          <Btn variant="ghost" onClick={() => go("/quests")}>
+            Quests and level
+          </Btn>
           <Btn variant="ghost" onClick={() => go("/clubs")}>
             Your clubs
           </Btn>

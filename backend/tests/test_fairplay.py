@@ -60,9 +60,11 @@ class StoreTests(unittest.IsolatedAsyncioTestCase):
         pair = F.group_key([a, b])
         for _ in range(F.REPEAT_LIMIT):
             paid = await self.db.record_results([finish(a, 50, pair), finish(b, 30, pair, place=2)], "s", 600)
-            self.assertEqual(paid[a], {"coins": 50, "note": ""})
+            self.assertEqual((paid[a]["coins"], paid[a]["note"]), (50, ""))
         paid = await self.db.record_results([finish(a, 50, pair), finish(b, 30, pair, place=2)], "s", 600)
-        self.assertEqual(paid, {a: {"coins": 0, "note": "repeat"}, b: {"coins": 0, "note": "repeat"}})
+        self.assertEqual(
+            paid, {a: {"coins": 0, "note": "repeat", "xp": 0}, b: {"coins": 0, "note": "repeat", "xp": 0}}
+        )
         # playing someone new still pays
         other = F.group_key([a, c])
         paid = await self.db.record_results([finish(a, 50, other), finish(c, 30, other, place=2)], "s", 600)
