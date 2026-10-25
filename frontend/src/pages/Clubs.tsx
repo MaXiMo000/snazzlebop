@@ -350,6 +350,20 @@ export function ClubHome({ slug, go }: { slug: string; go: Go }) {
         </p>
         {c.place && <p className="space-top club-place">🎓 For people verified at {c.place.name}</p>}
       </Card>
+      {c.secure_nudge && (
+        <p className="alert calm club-nudge" role="status">
+          You run this club: turn on your authenticator app so a stolen password can't take it over.{" "}
+          <a
+            href="/account"
+            onClick={(e) => {
+              e.preventDefault();
+              go("/account");
+            }}
+          >
+            Set it up
+          </a>
+        </p>
+      )}
       {mayInvite(c.role) && (
         <a
           className={`club-mod-link ${c.open_reports ? "waiting" : ""}`}

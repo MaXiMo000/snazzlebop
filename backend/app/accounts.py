@@ -343,9 +343,10 @@ def router(
             path="/",
         )
 
-    async def start_session(user_id: int) -> str:
+    async def start_session(user_id: int, request: Request) -> str:
         token = secrets.token_urlsafe(32)
-        await db.create_session(token_hash(token), user_id, SESSION_DAYS * 86400)
+        device = emails.describe_device(request.headers.get("user-agent", "")[:400])
+        await db.create_session(token_hash(token), user_id, SESSION_DAYS * 86400, device)
         return token
 
     async def current(request: Request) -> Any:
@@ -439,7 +440,7 @@ def router(
             user = await db.user_by_id(user.id)
             await send_verify(user, email, changed=False)
         resp = JSONResponse({"user": public_user(user), "recovery_code": code}, status_code=201)
-        set_session(resp, await start_session(user.id))
+        set_session(resp, await start_session(user.id, request))
         await signed_in(resp, request, user)
         resp.headers["Cache-Control"] = "no-store"
         return resp
@@ -463,7 +464,7 @@ def router(
         await second_factor(user, body.code, key)
         lockout.ok(key)
         resp = JSONResponse({"user": public_user(user)})
-        set_session(resp, await start_session(user.id))
+        set_session(resp, await start_session(user.id, request))
         await signed_in(resp, request, user)
         resp.headers["Cache-Control"] = "no-store"
         return resp
@@ -496,7 +497,7 @@ def router(
             user, "Your Snazzlebop password was reset", "Your recovery code was used to reset your password."
         )
         resp = JSONResponse({"user": public_user(user), "recovery_code": code})
-        set_session(resp, await start_session(user.id))
+        set_session(resp, await start_session(user.id, request))
         await signed_in(resp, request, user)
         resp.headers["Cache-Control"] = "no-store"
         return resp
@@ -542,7 +543,7 @@ def router(
         await db.delete_sessions(user.id)
         notice(user, "Your Snazzlebop password was changed", "The password for your account was changed.")
         resp = JSONResponse({"ok": True})
-        set_session(resp, await start_session(user.id))
+        set_session(resp, await start_session(user.id, request))
         return resp
 
     @api.post("/api/me/delete", response_model=schemas.Ok, responses=schemas.ERRORS)
@@ -605,7 +606,7 @@ def router(
             )
         lockout.ok(user.username_key)
         resp = JSONResponse({"user": public_user(user)})
-        set_session(resp, await start_session(user.id))
+        set_session(resp, await start_session(user.id, request))
         await signed_in(resp, request, user)
         resp.headers["Cache-Control"] = "no-store"
         return resp
@@ -656,7 +657,7 @@ def router(
             user, "Your Snazzlebop password was reset", "Your password was reset with a link we emailed you."
         )
         resp = JSONResponse({"user": public_user(user)})
-        set_session(resp, await start_session(user.id))
+        set_session(resp, await start_session(user.id, request))
         await signed_in(resp, request, user)
         resp.headers["Cache-Control"] = "no-store"
         return resp
@@ -720,6 +721,35 @@ def router(
         await db.set_email(user.id, None)
         fresh = await db.user_by_id(user.id)
         return JSONResponse({"user": public_user(fresh)}, headers={"Cache-Control": "no-store"})
+
+    @api.get("/api/me/sessions", response_model=schemas.SessionList, responses=schemas.ERRORS)
+    async def my_sessions(request: Request) -> JSONResponse:
+        """Every browser signed in to this account. Each is named by the first 12 characters of its
+        hash: enough to pick one out, useless for signing in."""
+        user = await require_user(request)
+        mine = token_hash(request.cookies.get(SESSION_COOKIE, ""))
+        rows = [
+            {
+                "id": s.token_hash[:12],
+                "device": s.device or "A browser",
+                "signed_in": aware(s.created_at).isoformat() if s.created_at else None,
+                "last_seen": aware(s.last_seen).isoformat() if s.last_seen else None,
+                "current": s.token_hash == mine,
+            }
+            for s in await db.user_sessions(user.id)
+        ]
+        return JSONResponse({"sessions": rows}, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/me/sessions/{session_id}/revoke", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def sign_out_one(session_id: str, request: Request) -> JSONResponse:
+        same_origin(request)
+        throttle(request)
+        user = await require_user(request)
+        if not re.fullmatch(r"[0-9a-f]{12}", session_id):
+            raise HubError("bad_input", "Unknown device")
+        if not await db.delete_session_by_prefix(user.id, session_id):
+            raise HubError("no_session", "That device is already signed out", 404)
+        return JSONResponse({"ok": True})
 
     @api.post("/api/me/sessions/revoke", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def sign_out_others(request: Request) -> JSONResponse:

@@ -250,3 +250,10 @@ def test_club_rooms_follow_the_club_rules(client):
         ws.send_json({"t": "auth", "token": plain["token"]})
         frame = ws.receive_json()
         assert len(frame["games"]) > 2 and frame["chat"]["muted"] is False
+
+
+def test_owners_without_an_authenticator_are_nudged(client):
+    slug = new_club(client)
+    code = invite(client, slug)
+    assert client.get(f"/api/clubs/{slug}").json()["secure_nudge"] is True
+    assert join(client, "Bo_42", code).json()["secure_nudge"] is False  # members aren't

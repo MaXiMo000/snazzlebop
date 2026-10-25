@@ -276,6 +276,7 @@ class ClubDetail(Strict):
     muted: bool  # you turned off "a club game is filling up" for this club
     open_reports: int  # reports waiting for the moderators (0 unless you're one)
     place: PlaceRef | None  # the place the club is for, when it requires one
+    secure_nudge: bool  # you run this club without the authenticator app: suggest turning it on
 
 
 class InboxItem(Strict):
@@ -477,6 +478,18 @@ class PlaceRequestRow(Strict):
 class StaffPlaces(Strict):
     places: list[StaffPlace]
     requests: list[PlaceRequestRow]
+
+
+class SessionRow(Strict):
+    id: str  # the start of the session's hash: names it, can't sign anyone in
+    device: str  # "Chrome on Windows"
+    signed_in: str | None
+    last_seen: str | None
+    current: bool  # this browser
+
+
+class SessionList(Strict):
+    sessions: list[SessionRow]
 
 
 class SiteInfo(Strict):

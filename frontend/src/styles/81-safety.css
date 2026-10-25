@@ -275,3 +275,8 @@
   font-weight: 700;
   text-wrap: balance;
 }
+.club-nudge a {
+  color: inherit;
+  font-weight: 800;
+  white-space: nowrap;
+}

@@ -335,6 +335,11 @@ class Session(Base):
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # For the account page's device list: what it is ("Chrome on Windows"), when it signed in and
+    # when it was last used (updated at most every few minutes).
+    device: Mapped[str] = mapped_column(String(60), default="")
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Result(Base):
@@ -590,14 +595,20 @@ class Database:
         try:
             async with self.sessions() as session:
                 row = await session.execute(
-                    select(User, Session.expires_at)
+                    select(User, Session.expires_at, Session.last_seen)
                     .join(Session, Session.user_id == User.id)
                     .where(Session.token_hash == token_hash)
                 )
                 found = row.first()
                 if found is None:
                     return None
-                user, expires = found
+                user, expires, seen = found
+                now = datetime.now(UTC)
+                if seen is None or now - aware(seen) > timedelta(minutes=5):
+                    await session.execute(
+                        update(Session).where(Session.token_hash == token_hash).values(last_seen=now)
+                    )
+                    await session.commit()
                 if suspended(user):
                     return None
                 if aware(expires) < datetime.now(UTC):
@@ -609,12 +620,45 @@ class Database:
             log.exception("could not read a session")
             return None
 
-    async def create_session(self, token_hash: str, user_id: int, ttl_seconds: float) -> None:
+    async def create_session(
+        self, token_hash: str, user_id: int, ttl_seconds: float, device: str = ""
+    ) -> None:
         async with self.sessions() as session:
-            expires = datetime.now(UTC) + timedelta(seconds=ttl_seconds)
-            session.add(Session(token_hash=token_hash, user_id=user_id, expires_at=expires))
+            now = datetime.now(UTC)
+            expires = now + timedelta(seconds=ttl_seconds)
+            session.add(
+                Session(
+                    token_hash=token_hash,
+                    user_id=user_id,
+                    expires_at=expires,
+                    device=device[:60],
+                    created_at=now,
+                    last_seen=now,
+                )
+            )
             await session.execute(delete(Session).where(Session.expires_at < datetime.now(UTC)))
             await session.commit()
+
+    async def user_sessions(self, user_id: int) -> list[Session]:
+        """The account's signed-in browsers, most recently used first."""
+        now = datetime.now(UTC)
+        async with self.sessions() as session:
+            rows = await session.execute(
+                select(Session).where(Session.user_id == user_id, Session.expires_at > now)
+            )
+            found = list(rows.scalars().all())
+        return sorted(found, key=lambda s: aware(s.last_seen or s.created_at or now), reverse=True)
+
+    async def delete_session_by_prefix(self, user_id: int, prefix: str) -> bool:
+        """Sign out one of the account's browsers, named by the start of its hash (what the list shows)."""
+        async with self.sessions() as session:
+            rows = await session.execute(select(Session.token_hash).where(Session.user_id == user_id))
+            match = [h for (h,) in rows.all() if h.startswith(prefix)]
+            if len(match) != 1:
+                return False
+            await session.execute(delete(Session).where(Session.token_hash == match[0]))
+            await session.commit()
+            return True
 
     async def delete_session(self, token_hash: str) -> None:
         async with self.sessions() as session:

@@ -291,3 +291,22 @@ def test_unconfirmed_emails_get_no_sign_in_link(client):
     client.post("/api/auth/logout")
     assert client.post("/api/auth/email-link", json={"email": "ana@example.com"}).json() == {"ok": True}
     assert outbox(client) == []
+
+
+def test_the_device_list_and_signing_out_one(client):
+    signup(client, email="")
+    ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0) AppleWebKit Chrome/130.0 Safari/537.36"}
+    here = client.cookies.get("sb_session")
+    client.cookies.clear()
+    client.post("/api/auth/login", json={"username": "Ana_99", "password": PW}, headers=ua)
+    rows = client.get("/api/me/sessions").json()["sessions"]
+    current = next(r for r in rows if r["current"])
+    assert len(rows) == 2 and current["device"] == "Chrome on Windows"
+    other = next(r for r in rows if not r["current"])
+    assert len(other["id"]) == 12 and other["signed_in"] and other["last_seen"]
+    assert client.post(f"/api/me/sessions/{other['id']}/revoke").json() == {"ok": True}
+    assert len(client.get("/api/me/sessions").json()["sessions"]) == 1
+    assert client.post(f"/api/me/sessions/{other['id']}/revoke").json()["error"]["code"] == "no_session"
+    assert client.post("/api/me/sessions/nothex/revoke").json()["error"]["code"] == "bad_input"
+    client.cookies.set("sb_session", here)
+    assert client.get("/api/me").json()["user"] is None  # that browser is signed out

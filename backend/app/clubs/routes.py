@@ -175,9 +175,16 @@ def router(
             else [],
             "up": up_view(club, user),
             "place": {"slug": place.slug, "name": place.name} if place is not None else None,
+            # Owners and admins are nudged to turn on the authenticator app (a stolen password
+            # shouldn't be enough to take over a club).
+            "secure_nudge": role in ("owner", "admin") and not await mfa_on(user.id),
             "muted": muted,
             "open_reports": await db.open_reports(club.id) if policy.may_invite(role) else 0,
         }
+
+    async def mfa_on(user_id: int) -> bool:
+        row = await db.mfa(user_id)
+        return row is not None and row.enabled_at is not None
 
     async def required_place(club: Club) -> Any:
         slug = policy.clean_rules(club.rules or None)["place"]

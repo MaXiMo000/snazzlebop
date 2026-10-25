@@ -217,6 +217,8 @@ def test_every_route_matches_its_declared_model(client):
     client.portal.call(mailer.drain)
     reset = re.search(r"#([A-Za-z0-9_-]{20,})", mailer.sent[-1][1].text).group(1)
     c.call("POST", "/api/auth/reset", json={"token": reset, "new_password": PW})
+    c.call("GET", "/api/me/sessions")
+    c.call("POST", "/api/me/sessions/abcdef012345/revoke", "/api/me/sessions/{session_id}/revoke")  # error
     c.call("POST", "/api/me/sessions/revoke")
     c.call("POST", "/api/me/email/remove", json={"password": PW})
     c.call("POST", "/api/me/password", json={"password": PW, "new_password": PW + "!"})

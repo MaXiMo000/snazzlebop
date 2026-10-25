@@ -41,6 +41,7 @@ export type MyPlaces = Schemas["MyPlaces"];
 export type PlaceList = Schemas["PlaceList"];
 export type PlaceStarted = Schemas["PlaceStarted"];
 export type StaffPlaces = Schemas["StaffPlaces"];
+export type SessionList = Schemas["SessionList"];
 
 // The WebSocket "state" frame (backend app/schemas.py RoomFrame).
 export type ApiRoomFrame = Schemas["RoomFrame"];

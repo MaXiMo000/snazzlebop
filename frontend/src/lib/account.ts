@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { request } from "./api";
-import type { Account, BackupCodes, Board, Me, MfaSetup, MfaStatus, NewAccount, Ok, Shop, Stats, UserBody } from "./contract";
+import type { Account, BackupCodes, Board, Me, MfaSetup, MfaStatus, NewAccount, Ok, SessionList, Shop, Stats, UserBody } from "./contract";
 
 // The signed-in account (the session itself is an HttpOnly cookie: this page never sees it).
 export type { Account, Board, MfaSetup, MfaStatus, ShopItem, Stats } from "./contract";
@@ -109,6 +109,8 @@ export async function removeEmail(password: string): Promise<void> {
 }
 
 export const signOutOthers = () => post<Ok>("/api/me/sessions/revoke");
+export const mySessions = () => request<SessionList>("/api/me/sessions");
+export const signOutSession = (id: string) => post<Ok>(`/api/me/sessions/${encodeURIComponent(id)}/revoke`);
 
 export async function logOut(): Promise<void> {
   await post<Ok>("/api/auth/logout");

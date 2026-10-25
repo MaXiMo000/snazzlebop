@@ -1,18 +1,21 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ApiError } from "../lib/api";
 import {
   emailSignInLink,
   forgotPassword,
   logOut,
+  mySessions,
   removeEmail,
   resendEmail,
   resetPassword,
   setEmail,
   signOutOthers,
+  signOutSession,
   useAccount,
   signInWithLink,
   verifyEmail,
 } from "../lib/account";
+import type { SessionList } from "../lib/contract";
 import { sfx } from "../lib/sfx";
 import { Btn, Card } from "./ui";
 
@@ -579,29 +582,58 @@ export function EmailCard() {
 export function SessionCard({ onSignedOut }: { onSignedOut: () => void }) {
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [devices, setDevices] = useState<SessionList["sessions"] | null>(null);
+  const load = useCallback(() => mySessions().then((r) => setDevices(r.sessions), () => undefined), []);
+  useEffect(() => void load(), [load]);
+
   const act = async (fn: () => Promise<unknown>, ok?: string) => {
     setBusy(true);
     setNote(null);
     try {
       await fn();
       if (ok) setNote({ ok: true, text: ok });
+      await load();
     } catch (e) {
       setNote({ ok: false, text: errText(e) });
     } finally {
       setBusy(false);
     }
   };
+  const seen = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "a while ago";
+  const others = (devices ?? []).filter((d) => !d.current).length;
   return (
     <Card aria-labelledby="session-h">
-      <h3 id="session-h">Signing out</h3>
-      <p className="muted">Lost a phone, or signed in on a friend's laptop? Sign out everywhere else and keep this device.</p>
+      <h3 id="session-h">Where you're signed in</h3>
+      {devices && devices.length > 0 && (
+        <ul className="club-rooms">
+          {devices.map((d) => (
+            <li key={d.id}>
+              <span className="club-room-text">
+                <b>{d.device}</b>
+                <span className="muted">{d.current ? `Signed in ${seen(d.signed_in)}` : `Last used ${seen(d.last_seen)}`}</span>
+              </span>
+              {d.current ? (
+                <span className="chip teal">You're here</span>
+              ) : (
+                <Btn size="small" variant="ghost" disabled={busy} onClick={() => void act(() => signOutSession(d.id), `Signed out ${d.device}.`)}>
+                  Sign out<span className="sr-only"> {d.device}</span>
+                </Btn>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="muted space-top">Lost a phone, or signed in on a friend's laptop? Sign it out here.</p>
       <div className="row space-top">
         <Btn variant="gold" disabled={busy} onClick={() => void act(async () => (await logOut(), onSignedOut()))}>
           Sign out
         </Btn>
-        <Btn variant="ghost" disabled={busy} onClick={() => void act(signOutOthers, "Every other device is signed out.")}>
-          Sign out other devices
-        </Btn>
+        {others > 1 && (
+          <Btn variant="ghost" disabled={busy} onClick={() => void act(signOutOthers, "Every other device is signed out.")}>
+            Sign out all others
+          </Btn>
+        )}
       </div>
       {note && (
         <div className="space-top">
