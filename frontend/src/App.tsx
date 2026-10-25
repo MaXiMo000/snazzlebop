@@ -13,6 +13,7 @@ import { Safety } from "./pages/Safety";
 import { Places } from "./pages/Places";
 import { Ratings } from "./pages/Ratings";
 import { Coins } from "./pages/Coins";
+import { Battles } from "./pages/Battles";
 import { Staff } from "./pages/Staff";
 import { StaffPlaces } from "./pages/StaffPlaces";
 import { Home } from "./pages/Home";
@@ -30,6 +31,7 @@ const STAFF_PLACES_PATH = /^\/staff\/places\/?$/;
 const PLACES_PATH = /^\/places\/?$/;
 const RATINGS_PATH = /^\/ratings\/?$/;
 const COINS_PATH = /^\/coins\/?$/;
+const BATTLES_PATH = /^\/battles\/?$/;
 const JOIN_PATH = /^\/join\/([A-Za-z0-9-]{4,32})\/?$/;
 const INBOX_PATH = /^\/inbox\/?$/;
 
@@ -165,6 +167,8 @@ export function App() {
           <Ratings go={go} />
         ) : COINS_PATH.test(path) ? (
           <Coins go={go} />
+        ) : BATTLES_PATH.test(path) ? (
+          <Battles go={go} />
         ) : clubMatch ? (
           <ClubHome key={clubMatch[1]} slug={clubMatch[1]!} go={go} />
         ) : INBOX_PATH.test(path) ? (

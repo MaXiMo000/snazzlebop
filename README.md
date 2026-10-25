@@ -101,6 +101,9 @@ original has them.
   power-ups). Ratings use the Plackett-Luce model (as in OpenSkill), with placement games, tiers from
   Bronze to Diamond, eight-week seasons, and leaderboards for everyone, a club or a place, this season
   or this week. Fair-play limits stop repeat pairings and big swings in a day.
+- **Battles:** challenge a clubmate to a duel or open a group battle in your club. Free to enter: the
+  platform pays fixed prizes from the final scores, with daily limits, a cap on paid duels between the
+  same two people, and none between accounts on the same device. Trophies and head-to-head records.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced

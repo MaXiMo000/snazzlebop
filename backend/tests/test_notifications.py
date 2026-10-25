@@ -145,6 +145,7 @@ def test_settings_quiet_hours_caps_and_dead_subscriptions(client):
     assert r.json()["hidden"] is True and {k["id"]: k["on"] for k in r.json()["kinds"]} == {
         "club_up": True,
         "invite": False,
+        "battle": True,
     }
     assert r.json()["devices"] == 1
     assert client.post("/api/me/notify", json={"types": {"spam": True}}).status_code == 400

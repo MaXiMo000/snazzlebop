@@ -67,6 +67,11 @@ class ViewsMixin:
                 # everyone online has their own account (never who doesn't): a ranked game can start
                 "ready": self._all_signed_in(room),
             },
+            "battle": {
+                "game": room.battle.get("game") if room.battle else None,
+                "kind": room.battle.get("kind") if room.battle else None,
+                "news": room.battle_news if room.phase == "results" else {},
+            },
             "ready": self._ready_view(room),
             "last_standings": room.last_standings if room.phase == "lobby" else [],
             "scare": room.scares.get(pid, 0),  # only ever this viewer's own count

@@ -92,6 +92,7 @@ class Outbox:
         self.db = db
         self.sinks = sinks
         self.clock = clock or (lambda: datetime.now(UTC))
+        self.auto = True  # the background loop delivers (tests switch it off and call run_once)
 
     @property
     def names(self) -> list[str]:
@@ -121,7 +122,7 @@ class Outbox:
         """The background loop (main.py's lifespan). Quiet when there's nothing to send."""
         while True:
             try:
-                if self.sinks and self.db.ready:
+                if self.auto and self.sinks and self.db.ready:
                     await self.run_once()
             except Exception:  # noqa: BLE001 - the loop must survive a database hiccup
                 log.exception("outbox loop")

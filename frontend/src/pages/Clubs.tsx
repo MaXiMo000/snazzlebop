@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Btn, Card, CopyButton } from "../components/ui";
 import { ReportForm } from "../components/report";
 import { UpForGame } from "../components/upgame";
+import { ClubBattles } from "../components/battle";
 import { useAccount } from "../lib/account";
 import { ApiError, fetchGames } from "../lib/api";
 import {
@@ -382,6 +383,7 @@ export function ClubHome({ slug, go }: { slug: string; go: Go }) {
       )}
       <UpForGame c={c} go={go} name={user.username} update={setC} />
       <PlayNow c={c} go={go} name={user.username} />
+      <ClubBattles c={c} me={user.username} go={go} />
       {mayInvite(c.role) && <Invites c={c} refresh={refresh} />}
       <Members c={c} me={user.username} refresh={refresh} />
       {mayEdit(c.role) && <Settings c={c} refresh={refresh} />}
@@ -405,7 +407,10 @@ function PlayNow({ c, go, name }: { c: ClubDetail; go: Go; name: string }) {
           {c.rooms.map((r) => (
             <li key={r.code}>
               <span className="club-room-text">
-                <b>{r.host}'s room</b>
+                <b>
+                  {r.battle && <span aria-hidden="true">⚔️ </span>}
+                  {r.host}'s {r.battle ? "battle" : "room"}
+                </b>
                 <span className="muted">
                   {r.players} {r.players === 1 ? "player" : "players"} ·{" "}
                   {r.game ?? (r.open ? "in the lobby" : "between games")}

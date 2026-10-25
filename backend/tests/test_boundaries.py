@@ -34,6 +34,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.webpush": (set(), {"cryptography"}),  # push encryption and VAPID only
     "app.oidc": (set(), {"cryptography"}),  # Google sign-in protocol: state, PKCE, ID token checks
     "app.ratings": (set(), set()),  # the rating model, seasons and tiers
+    "app.battles": (set(), set()),  # battle prizes and limits
     "app.notify": ({"app.config", "app.webpush"}, set()),  # rules and fan-out; storage passed in
     "app.events": (set(), set()),  # pure: the versioned shape of events other systems receive
     "app.outbox": ({"app.config", "app.events"}, set()),  # delivery with retries; storage passed in
@@ -41,11 +42,11 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (
         {"app.rooms", "app.games", "app.config", "app.security", "app.calls", "app.persist", "app.prank"}
-        | {"app.coins", "app.show", "app.ratings"},
+        | {"app.coins", "app.show", "app.ratings", "app.battles"},
         set(),
     ),
     "app.contentgen": ({"app.games"}, {"anthropic"}),
-    "app.db": ({"app.ratings"}, {"alembic", "sqlalchemy"}),  # storage; uses the pure rating model
+    "app.db": ({"app.ratings", "app.battles"}, {"alembic", "sqlalchemy"}),  # storage; uses the pure rules
 }
 EDGES = {
     "app.main",

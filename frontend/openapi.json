@@ -79,6 +79,216 @@
         "title": "BackupCodes",
         "type": "object"
       },
+      "BattleBody": {
+        "additionalProperties": false,
+        "properties": {
+          "game": {
+            "maxLength": 32,
+            "title": "Game",
+            "type": "string"
+          },
+          "kind": {
+            "maxLength": 8,
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "opponent": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponent"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "game"
+        ],
+        "title": "BattleBody",
+        "type": "object"
+      },
+      "BattlePrize": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "place": {
+            "title": "Place",
+            "type": "integer"
+          },
+          "prize": {
+            "title": "Prize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "place",
+          "prize",
+          "note"
+        ],
+        "title": "BattlePrize",
+        "type": "object"
+      },
+      "BattleRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "challenges": {
+            "items": {
+              "$ref": "#/components/schemas/Challenge"
+            },
+            "title": "Challenges",
+            "type": "array"
+          },
+          "head_to_head": {
+            "items": {
+              "$ref": "#/components/schemas/HeadToHead"
+            },
+            "title": "Head To Head",
+            "type": "array"
+          },
+          "played": {
+            "title": "Played",
+            "type": "integer"
+          },
+          "prizes": {
+            "title": "Prizes",
+            "type": "integer"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/BattleRow"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "trophies": {
+            "title": "Trophies",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "played",
+          "trophies",
+          "prizes",
+          "head_to_head",
+          "recent",
+          "challenges"
+        ],
+        "title": "BattleRecord",
+        "type": "object"
+      },
+      "BattleRow": {
+        "additionalProperties": false,
+        "properties": {
+          "against": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Against",
+            "type": "array"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "place": {
+            "title": "Place",
+            "type": "integer"
+          },
+          "players": {
+            "title": "Players",
+            "type": "integer"
+          },
+          "prize": {
+            "title": "Prize",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game",
+          "title",
+          "kind",
+          "place",
+          "players",
+          "prize",
+          "note",
+          "against",
+          "at"
+        ],
+        "title": "BattleRow",
+        "type": "object"
+      },
+      "BattleView": {
+        "additionalProperties": false,
+        "properties": {
+          "game": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "news": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BattlePrize"
+            },
+            "title": "News",
+            "type": "object"
+          }
+        },
+        "required": [
+          "game",
+          "kind",
+          "news"
+        ],
+        "title": "BattleView",
+        "type": "object"
+      },
       "Belt": {
         "additionalProperties": false,
         "properties": {
@@ -436,6 +646,45 @@
         "title": "CategoryInfo",
         "type": "object"
       },
+      "Challenge": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "room": {
+            "title": "Room",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game",
+          "title",
+          "by",
+          "room",
+          "open",
+          "at"
+        ],
+        "title": "Challenge",
+        "type": "object"
+      },
       "Chat": {
         "additionalProperties": false,
         "properties": {
@@ -742,6 +991,10 @@
         "additionalProperties": false,
         "description": "A live room of the club, for members to walk into.",
         "properties": {
+          "battle": {
+            "title": "Battle",
+            "type": "boolean"
+          },
           "code": {
             "title": "Code",
             "type": "string"
@@ -780,7 +1033,8 @@
           "players",
           "phase",
           "game",
-          "open"
+          "open",
+          "battle"
         ],
         "title": "ClubRoom",
         "type": "object"
@@ -1562,6 +1816,35 @@
           "username"
         ],
         "title": "HandOverBody",
+        "type": "object"
+      },
+      "HeadToHead": {
+        "additionalProperties": false,
+        "properties": {
+          "drawn": {
+            "title": "Drawn",
+            "type": "integer"
+          },
+          "lost": {
+            "title": "Lost",
+            "type": "integer"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "username",
+          "won",
+          "lost",
+          "drawn"
+        ],
+        "title": "HeadToHead",
         "type": "object"
       },
       "Highlight": {
@@ -3827,6 +4110,9 @@
         "additionalProperties": false,
         "description": "The room as one screen sees it. Secrets are filtered per viewer before this is built.",
         "properties": {
+          "battle": {
+            "$ref": "#/components/schemas/BattleView"
+          },
           "call": {
             "$ref": "#/components/schemas/Call"
           },
@@ -4065,6 +4351,7 @@
           "intro",
           "teams",
           "ranked",
+          "battle",
           "ready",
           "last_standings",
           "scare",
@@ -7222,6 +7509,126 @@
         "summary": "Show"
       }
     },
+    "/api/clubs/{slug}/battles": {
+      "post": {
+        "description": "Challenge a member to a duel, or open a group battle: a club room whose first game is the\nbattle. Nobody stakes anything; the winner's prize comes from the platform.",
+        "operationId": "battle_api_clubs__slug__battles_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BattleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomPass"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Battle"
+      }
+    },
     "/api/clubs/{slug}/delete": {
       "post": {
         "operationId": "delete_club_api_clubs__slug__delete_post",
@@ -9931,6 +10338,104 @@
           }
         },
         "summary": "Me"
+      }
+    },
+    "/api/me/battles": {
+      "get": {
+        "operationId": "my_battles_api_me_battles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BattleRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "My Battles"
       }
     },
     "/api/me/coins": {

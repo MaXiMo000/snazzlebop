@@ -15,10 +15,11 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from .. import battles as battlelib
 from .. import schemas
 from ..accounts import check_same_origin, session_user
 from ..config import Settings
-from ..db import Club, ClubInvite, Database, aware
+from ..db import Club, ClubInvite, Database, aware, suspended
 from ..games import REGISTRY
 from ..notifications import Statuses, iso
 from ..notify import Notifier, merged
@@ -75,6 +76,14 @@ class HandOverBody(BaseModel):
 class RoomBody(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     name: str = Field(min_length=1, max_length=64)
+
+
+class BattleBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    name: str = Field(min_length=1, max_length=64)  # your name in the room
+    kind: str = Field(max_length=8)  # duel | group
+    game: str = Field(max_length=32)
+    opponent: str | None = Field(default=None, max_length=32)  # a duel: the member challenged
 
 
 class UpBody(BaseModel):
@@ -400,6 +409,72 @@ def router(
         )
         hub.set_hidden(user.id, await db.block_set(user.id))
         return JSONResponse({"code": room.code, "player_id": player.id, "token": token}, status_code=201)
+
+    # -- battles (battles.py) -----------------------------------------------------------------------------
+    @api.post("/api/clubs/{slug}/battles", status_code=201, response_model=schemas.RoomPass, responses=E)
+    async def battle(slug: str, body: BattleBody, request: Request) -> JSONResponse:
+        """Challenge a member to a duel, or open a group battle: a club room whose first game is the
+        battle. Nobody stakes anything; the winner's prize comes from the platform."""
+        write(request)
+        user = await me(request)
+        club, _ = await club_and_role(slug, user)
+        rules = policy.clean_rules(club.rules or None)
+        allowed = rules["games"]
+        if body.kind not in ("duel", "group"):
+            raise HubError("bad_input", "Pick a duel or a group battle")
+        cls = REGISTRY.get(body.game)
+        if cls is None or (allowed and body.game not in allowed):
+            raise HubError("bad_game", "Pick one of the club's games")
+        opponent = None
+        if body.kind == "duel":
+            if body.game not in battlelib.DUEL_GAMES:
+                raise HubError("bad_game", "Duels are played on a head-to-head game")
+            members = {m.username.casefold(): m for m in await store.members(club.id)}
+            target = members.get((body.opponent or "").strip().casefold())
+            if target is None or target.user_id == user.id:
+                raise HubError("no_member", "Pick another member of this club", 404)
+            other = await db.user_by_id(target.user_id)
+            blocks = await db.block_set(user.id)
+            if other is None or suspended(other) or target.user_id in blocks:
+                raise HubError("cant_battle", "You can't challenge that member", 403)
+            if await db.share_device(sorted({user.id, target.user_id})):
+                raise HubError("same_device", "Battles are between people on their own devices", 403)
+            opponent = target
+        elif cls.max_players < battlelib.GROUP_MIN:
+            raise HubError("bad_game", "A group battle needs a game for three or more")
+        circle = await db.circle(user.id)
+        mutes = {u: t.timestamp() for u, t in (await db.club_mutes(club.id)).items()}
+        room, player, token = hub.create_room(
+            body.name, user.id, circle, club_id=club.id, club_rules=rules, club_muted=mutes
+        )
+        hub.set_hidden(user.id, await db.block_set(user.id))
+        battle_id = await db.create_battle(
+            club.id, room.code, body.game, body.kind, user.id, opponent.user_id if opponent else None
+        )
+        hub.set_battle(room, battle_id, body.game, body.kind, [user.id, opponent.user_id] if opponent else [])
+        if opponent is not None:
+            await notifier.notify(
+                [opponent.user_id],
+                "battle",
+                f"{user.username} challenges you to {cls.title}",
+                f"A duel in {club.name}: the winner gets {battlelib.DUEL_PRIZE} coins. Tap to join the room.",
+                f"/r/{room.code}",
+                group=f"battle:{battle_id}",
+                club=(club.id, rules["quiet"]),
+            )
+        return JSONResponse({"code": room.code, "player_id": player.id, "token": token}, status_code=201)
+
+    @api.get("/api/me/battles", response_model=schemas.BattleRecord, responses=E)
+    async def my_battles(request: Request) -> JSONResponse:
+        user = await me(request)
+        body = await db.battle_record(user.id)
+        titles = {g: REGISTRY[g].title for g in REGISTRY}
+        for row in body["recent"]:
+            row["title"] = titles.get(row["game"], row["game"])
+        for row in body["challenges"]:
+            row["title"] = titles.get(row["game"], row["game"])
+            row["open"] = hub.get(row["room"]) is not None
+        return JSONResponse(body, headers={"Cache-Control": "no-store"})
 
     # -- up for a game ----------------------------------------------------------------------------------
     async def tell_club(club: Club, match: Any) -> None:

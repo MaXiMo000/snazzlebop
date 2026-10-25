@@ -45,6 +45,9 @@ class Hub(
         refund_powerup: Callable[[int, str], Awaitable[None]] | None = None,
         # Ranked games: (game, {account: place}) -> each account's rating change, or None if unrated.
         on_rated: Callable[[str, dict[int, int]], Awaitable[dict[int, dict[str, Any]] | None]] | None = None,
+        # Battles: (battle id, {account: place}, accounts that finished) -> each account's prize.
+        on_battle: Callable[[int, dict[int, int], set[int]], Awaitable[dict[int, dict[str, Any]] | None]]
+        | None = None,
         # (host's account, belt holder's name, forfeits): remembered for that host's next rooms
         save_circle: Callable[[int, str, list[str]], Awaitable[None]] | None = None,
         wall: Callable[[], float] = time.time,  # real time, for things that end at a set hour (mutes)
@@ -67,5 +70,6 @@ class Hub(
         self.spend_powerup = spend_powerup
         self.refund_powerup = refund_powerup
         self.on_rated = on_rated
+        self.on_battle = on_battle
         self.save_circle = save_circle
         self._saving: dict[str, bool] = {}  # room code -> another save is due once this one lands

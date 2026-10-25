@@ -47,6 +47,7 @@ def client(tmp_path):
     with TestClient(app) as c:
         c.sink = FakeSink()
         app.state.outbox.sinks = {"fake": c.sink}
+        app.state.outbox.auto = False  # deliveries happen only when a test calls deliver()
         yield c
 
 

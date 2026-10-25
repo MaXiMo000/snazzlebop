@@ -44,7 +44,7 @@ log = logging.getLogger("snazzlebop")
 # The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
 # /clubs/<slug> (and /reports), /join/<invite>, /places, /privacy, /safety and /staff (and /places).
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|ratings|coins|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|ratings|coins|battles|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 
@@ -92,6 +92,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         store=db,
         on_results=pay_coins,
         on_rated=db.rate_match,
+        on_battle=db.settle_battle,
         spend_powerup=db.spend_powerup,
         refund_powerup=db.refund_powerup,
         save_circle=db.save_circle,

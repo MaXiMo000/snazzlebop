@@ -203,6 +203,7 @@ def test_club_rooms_show_on_the_club_page_only(client):
             "phase": "lobby",
             "game": None,
             "open": True,
+            "battle": False,
         }
     assert client.post(f"/api/rooms/{room}/join", json={"name": "Bo"}).status_code == 200
     be(client, "Cy_77")

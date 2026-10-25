@@ -111,6 +111,7 @@ class RoutingMixin:
                 raise HubError("bad_game", "Unknown game")
             if room.club_games and cls.game_id not in room.club_games:
                 raise HubError("club_game", "This club doesn't play that one")
+            self._check_battle(room, cls.game_id)
             options = self._options(cls, msg.get("options"))
             want_teams, ranked = msg.get("teams", False), msg.get("ranked", False)
             if not isinstance(want_teams, bool) or not isinstance(ranked, bool):

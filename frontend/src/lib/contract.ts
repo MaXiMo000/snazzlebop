@@ -45,6 +45,7 @@ export type SessionList = Schemas["SessionList"];
 export type Identities = Schemas["Identities"];
 export type MyRatings = Schemas["MyRatings"];
 export type CoinHistory = Schemas["CoinHistory"];
+export type BattleRecord = Schemas["BattleRecord"];
 export type RatingBoard = Schemas["RatingBoard"];
 
 // The WebSocket "state" frame (backend app/schemas.py RoomFrame).

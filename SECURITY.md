@@ -52,6 +52,9 @@ Only the latest version on `main` (the live deployment) is supported.
   signed in with their own account, use fixed settings and allow no power-ups; leaving counts as last
   place. Repeat games between the same two accounts stop counting after a few a day, and a rating can
   only move so far in a day. Place leaderboards list only people who chose to appear on them.
+- **No stakes.** Coins are earned, never bought, and can't be staked, traded or cashed out. Battle prizes
+  come from the platform, are paid once per battle from the server's final scores, and are limited per
+  day, per pair of players and per device. Every coin change is an append-only ledger row.
 - **Abuse limits.** Rate limits per client on the API, room joins, sign-in and WebSocket messages, caps
   on connections, rooms, players and message size, and idle and age limits for rooms.
 - **Browser hardening.** A strict Content Security Policy (same origin only, no inline scripts or

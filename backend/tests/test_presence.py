@@ -102,7 +102,7 @@ class ForgettingTests(unittest.TestCase):
 class PrefsTests(unittest.TestCase):
     def test_defaults_and_updates(self):
         base = notify.merged(None)
-        self.assertEqual(base["types"], {"club_up": True, "invite": True})
+        self.assertEqual(base["types"], {"club_up": True, "invite": True, "battle": True})
         p = notify.clean_prefs({"hidden": True, "types": {"invite": False}, "tz": 330}, base)
         self.assertEqual(
             (p["hidden"], p["types"]["invite"], p["types"]["club_up"], p["tz"]), (True, False, True, 330)

@@ -68,3 +68,15 @@
   flex-wrap: wrap;
   gap: 0 14px;
 }
+
+/* Battles: the record's three numbers, side by side, wrapping as whole items */
+.battle-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 22px;
+}
+.battle-stats b {
+  font-family: var(--display);
+  font-size: 1.4rem;
+}

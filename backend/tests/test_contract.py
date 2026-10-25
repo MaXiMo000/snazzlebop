@@ -124,6 +124,12 @@ def test_every_route_matches_its_declared_model(client):
     spare = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={})
     c.call("POST", f"/api/clubs/{slug}/invites/{spare['id']}/revoke", club + "/invites/{invite_id}/revoke")
     seat = c.call("POST", f"/api/clubs/{slug}/rooms", club + "/rooms", json={"name": "Ana"})
+    c.call(
+        "POST",
+        f"/api/clubs/{slug}/battles",
+        club + "/battles",
+        json={"name": "Ana", "kind": "group", "game": "imposter"},
+    )
     room_code = seat["code"]
     me_in_room = {"player_id": seat["player_id"]}
     c.call(
@@ -228,6 +234,7 @@ def test_every_route_matches_its_declared_model(client):
     c.call("GET", "/api/me/identities")
     c.call("GET", "/api/ratings/me")
     c.call("GET", "/api/me/coins")
+    c.call("GET", "/api/me/battles")
     c.call("GET", "/api/ratings/board?game=chess&period=week", "/api/ratings/board")
     c.call("POST", "/api/me/place-boards", json={"on": True})
     c.call("POST", "/api/me/google/remove", json={"password": PW})  # nothing linked: still ok

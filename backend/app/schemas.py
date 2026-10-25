@@ -172,6 +172,43 @@ class SeasonReward(Strict):
     coins: int
 
 
+class BattleRow(Strict):
+    game: str
+    title: str
+    kind: str  # duel | group
+    place: int
+    players: int
+    prize: int
+    note: str  # why no prize: limit | pair | device | left
+    against: list[str]
+    at: str
+
+
+class HeadToHead(Strict):
+    username: str
+    won: int
+    lost: int
+    drawn: int
+
+
+class Challenge(Strict):
+    game: str
+    title: str
+    by: str  # who challenged you
+    room: str
+    open: bool  # the room is still there
+    at: str
+
+
+class BattleRecord(Strict):
+    played: int
+    trophies: int  # battles won
+    prizes: int  # coins won in battles
+    head_to_head: list[HeadToHead]
+    recent: list[BattleRow]
+    challenges: list[Challenge]  # duels waiting for you
+
+
 class MfaStatus(Strict):
     enabled: bool
     backup_codes_left: int
@@ -321,6 +358,7 @@ class ClubRoom(Strict):
     phase: str
     game: str | None
     open: bool  # still in the lobby and not locked
+    battle: bool  # a battle waiting to be played
 
 
 class InviteInfo(Strict):
@@ -872,6 +910,18 @@ class Ranked(Strict):
     ready: bool  # everyone online is signed in with their own account
 
 
+class BattlePrize(Strict):
+    place: int
+    prize: int
+    note: str  # why no prize: limit | pair | device | left ("" when paid)
+
+
+class BattleView(Strict):
+    game: str | None  # the battle waiting to be played here (None: none)
+    kind: str | None  # duel | group
+    news: dict[str, BattlePrize]  # results: player id -> prize
+
+
 class RoomFrame(Strict):
     """The room as one screen sees it. Secrets are filtered per viewer before this is built."""
 
@@ -898,6 +948,7 @@ class RoomFrame(Strict):
     intro: Intro | None
     teams: Teams | None
     ranked: Ranked
+    battle: BattleView
     ready: Ready
     last_standings: list[Standing]
     scare: int

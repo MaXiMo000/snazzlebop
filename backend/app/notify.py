@@ -30,6 +30,7 @@ KINDS = {
     # kind: (label for settings, limit per 24 hours, is the limit per club)
     "club_up": ("A club game is filling up", 3, True),
     "invite": ("A friend or club member invites you to a room", 10, False),
+    "battle": ("A club member challenges you to a battle", 10, False),
 }
 PUSH_CAP = 8
 GROUP_HOURS = 6

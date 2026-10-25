@@ -26,6 +26,7 @@ import {
 } from "../components/show";
 import { MarketFloor, MarketMoves } from "../components/market";
 import { BoostPanel, CardReveal, CoinNews, MvpVote, PowerCard, RatingNews, Rivals } from "../components/extras";
+import { BattleBanner, BattleNews } from "../components/battle";
 import { useAccount } from "../lib/account";
 import { TeamBadge, TeamResult } from "../components/teams";
 import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
@@ -294,6 +295,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
               <CardReveal state={state} />
               <CoinNews state={state} />
               <RatingNews state={state} />
+              <BattleNews state={state} />
               <Highlights items={state.highlights} />
               {state.market && <MarketMoves m={state.market} players={state.players} you={state.you} />}
               <MvpVote state={state} send={send} />
@@ -522,6 +524,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
                 <CardReveal state={state} />
                 <CoinNews state={state} />
                 <RatingNews state={state} />
+                <BattleNews state={state} />
                 <Highlights items={state.highlights} />
                 {state.market && <MarketMoves m={state.market} players={state.players} you="" />}
                 <MvpVote state={state} send={noop} />
@@ -902,6 +905,7 @@ function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; sen
     <div className="stack enter">
       <RoomSign state={state} />
       <LastStandings state={state} />
+      <BattleBanner state={state} />
       <AvatarPicker you={state.you} name={state.players.find((p) => p.id === state.you)?.name ?? "?"} send={send} />
 
       <Contestants

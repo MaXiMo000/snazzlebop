@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from .. import battles as battlelib
 from .. import ratings as ratinglib
 from .. import show as showlib
 from ..games import REGISTRY, Game, GameError, Player
@@ -23,6 +24,25 @@ class FlowMixin:
     def _all_signed_in(room: Room) -> bool:
         accounts = [room.accounts.get(p.id) for p in room.connected_players()]
         return None not in accounts and len(set(accounts)) == len(accounts)
+
+    def _check_battle(self, room: Room, game_id: str) -> None:
+        """A battle room plays its battle first: that game, and (a duel) just the two players in it."""
+        b = room.battle
+        if not b:
+            return
+        if game_id != b["game"]:
+            raise HubError(
+                "battle_game", f"This room's battle is {REGISTRY[b['game']].title}: start that one"
+            )
+        online = {room.accounts.get(p.id) for p in room.connected_players()}
+        if b["kind"] == "duel" and online != set(b["accounts"]):
+            raise HubError("battle_players", "A duel starts when both players are here, and only them")
+        short = len(online) < battlelib.GROUP_MIN or not self._all_signed_in(room)
+        if b["kind"] == "group" and short:
+            raise HubError(
+                "battle_players",
+                f"A group battle needs {battlelib.GROUP_MIN} or more players, each signed in",
+            )
 
     def _check_ranked(self, room: Room, game_id: str) -> None:
         """A ranked game: a ranked kind of game, enough players, every one of them signed in (one seat
@@ -80,6 +100,7 @@ class FlowMixin:
         room.card_news, room.rival_news, room.rivals, room.mvp_votes = [], [], [], {}
         room.game_no += 1
         room.boost_peeks, room.coin_news, room.team_news, room.rating_news = {}, {}, {}, {}
+        room.battle_news = {}
         room.chat = [m for m in room.chat if m["team"] is None]  # new game, new teams: old team talk goes
         s = room.show
         if s is not None:
@@ -237,6 +258,43 @@ class FlowMixin:
                 log.exception("failed to record game result")
         self._pay_coins(room, game, scores)
         self._rate(room, game, scores)
+        self._settle_battle(room, game, scores)
+
+    def _settle_battle(self, room: Room, game: Game, scores: dict[str, int]) -> None:
+        """The room's battle has been played: pay its prizes from the final scores (once)."""
+        b = room.battle
+        if not b or game.game_id != b["game"] or self.on_battle is None:
+            return
+        room.battle = {}  # played: the room goes on as a normal one
+        online = {p.id for p in room.connected_players()}
+        placing = ratinglib.ranks({p: v for p, v in scores.items() if p in online})
+        last = max(placing.values(), default=0) + 1
+        by_account = {room.accounts[p]: placing.get(p, last) for p in scores if p in room.accounts}
+        finished = {room.accounts[p] for p in scores if p in room.accounts and p in online}
+        try:
+            task = asyncio.get_running_loop().create_task(
+                self._battle_paid(room, room.game_no, int(b["id"]), by_account, finished)
+            )
+        except RuntimeError:
+            return
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def _battle_paid(
+        self, room: Room, game_no: int, battle_id: int, placing: dict[int, int], finished: set[int]
+    ) -> None:
+        if self.on_battle is None:
+            return
+        try:
+            paid = await self.on_battle(battle_id, placing, finished)
+        except Exception:
+            log.exception("could not pay a battle")
+            return
+        if paid is None or room.game_no != game_no:
+            return
+        seat = {uid: pid for pid, uid in room.accounts.items()}
+        room.battle_news = {seat[u]: r for u, r in paid.items() if u in seat}
+        await self.broadcast(room)
 
     def _rate(self, room: Room, game: Game, scores: dict[str, int]) -> None:
         """A ranked game's ratings, from the server's final scores. Anyone who left before the end is

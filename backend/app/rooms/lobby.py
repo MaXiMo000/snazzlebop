@@ -84,9 +84,15 @@ class LobbyMixin:
                     "phase": room.phase,
                     "game": room.game.title if room.game is not None else None,
                     "open": not room.locked and room.phase == "lobby",
+                    "battle": bool(room.battle),
                 }
             )
         return sorted(out, key=lambda r: (not r["open"], -r["players"]))
+
+    def set_battle(self, room: Room, battle_id: int, game: str, kind: str, accounts: list[int]) -> None:
+        """This room's first game is a battle (battles.py): that game, and for a duel those two players."""
+        room.battle = {"id": battle_id, "game": game, "kind": kind, "accounts": list(accounts)}
+        self._persist(room)
 
     def get(self, code: str) -> Room | None:
         if not isinstance(code, str) or not ROOM_CODE_RE.match(code):

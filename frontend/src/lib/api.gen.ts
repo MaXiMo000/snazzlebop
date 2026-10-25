@@ -258,6 +258,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clubs/{slug}/battles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Battle
+         * @description Challenge a member to a duel, or open a group battle: a club room whose first game is the
+         *     battle. Nobody stakes anything; the winner's prize comes from the platform.
+         */
+        post: operations["battle_api_clubs__slug__battles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/clubs/{slug}/delete": {
         parameters: {
             query?: never;
@@ -683,6 +704,23 @@ export interface paths {
         };
         /** Me */
         get: operations["me_api_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/battles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Battles */
+        get: operations["my_battles_api_me_battles_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1611,6 +1649,73 @@ export interface components {
             /** Codes */
             codes: string[];
         };
+        /** BattleBody */
+        BattleBody: {
+            /** Game */
+            game: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Opponent */
+            opponent?: string | null;
+        };
+        /** BattlePrize */
+        BattlePrize: {
+            /** Note */
+            note: string;
+            /** Place */
+            place: number;
+            /** Prize */
+            prize: number;
+        };
+        /** BattleRecord */
+        BattleRecord: {
+            /** Challenges */
+            challenges: components["schemas"]["Challenge"][];
+            /** Head To Head */
+            head_to_head: components["schemas"]["HeadToHead"][];
+            /** Played */
+            played: number;
+            /** Prizes */
+            prizes: number;
+            /** Recent */
+            recent: components["schemas"]["BattleRow"][];
+            /** Trophies */
+            trophies: number;
+        };
+        /** BattleRow */
+        BattleRow: {
+            /** Against */
+            against: string[];
+            /** At */
+            at: string;
+            /** Game */
+            game: string;
+            /** Kind */
+            kind: string;
+            /** Note */
+            note: string;
+            /** Place */
+            place: number;
+            /** Players */
+            players: number;
+            /** Prize */
+            prize: number;
+            /** Title */
+            title: string;
+        };
+        /** BattleView */
+        BattleView: {
+            /** Game */
+            game: string | null;
+            /** Kind */
+            kind: string | null;
+            /** News */
+            news: {
+                [key: string]: components["schemas"]["BattlePrize"];
+            };
+        };
         /** Belt */
         Belt: {
             /** Holder */
@@ -1729,6 +1834,21 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** Challenge */
+        Challenge: {
+            /** At */
+            at: string;
+            /** By */
+            by: string;
+            /** Game */
+            game: string;
+            /** Open */
+            open: boolean;
+            /** Room */
+            room: string;
+            /** Title */
+            title: string;
+        };
         /** Chat */
         Chat: {
             /** Can Send */
@@ -1831,6 +1951,8 @@ export interface components {
          * @description A live room of the club, for members to walk into.
          */
         ClubRoom: {
+            /** Battle */
+            battle: boolean;
             /** Code */
             code: string;
             /** Game */
@@ -2088,6 +2210,17 @@ export interface components {
         HandOverBody: {
             /** Username */
             username: string;
+        };
+        /** HeadToHead */
+        HeadToHead: {
+            /** Drawn */
+            drawn: number;
+            /** Lost */
+            lost: number;
+            /** Username */
+            username: string;
+            /** Won */
+            won: number;
         };
         /** Highlight */
         Highlight: {
@@ -2882,6 +3015,7 @@ export interface components {
          * @description The room as one screen sees it. Secrets are filtered per viewer before this is built.
          */
         RoomFrame: {
+            battle: components["schemas"]["BattleView"];
             call: components["schemas"]["Call"];
             cards: components["schemas"]["Cards"] | null;
             /** Categories */
@@ -4859,6 +4993,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClubDetail"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    battle_api_clubs__slug__battles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BattleBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomPass"];
                 };
             };
             /** @description Bad request */
@@ -7206,6 +7438,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    my_battles_api_me_battles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BattleRecord"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

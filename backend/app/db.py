@@ -40,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
 
+from . import battles as battlelib
 from . import ratings as ratinglib
 
 log = logging.getLogger("snazzlebop.db")
@@ -415,6 +416,41 @@ class LedgerEntry(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
     )
+
+
+class Battle(Base):
+    """A challenge between club members (battles.py): a duel with one named opponent, or a group battle
+    in a club room. Played once, in the room it opened."""
+
+    __tablename__ = "battles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    club_id: Mapped[int | None] = mapped_column(ForeignKey("clubs.id", ondelete="SET NULL"), nullable=True)
+    room_code: Mapped[str] = mapped_column(String(8))
+    game_id: Mapped[str] = mapped_column(String(32))
+    kind: Mapped[str] = mapped_column(String(8))  # duel | group
+    challenger_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    opponent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(10), default="open")  # open | played | expired
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    played_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class BattleResult(Base):
+    """One account's finish in a battle, and the prize it was paid (0 when a limit applied)."""
+
+    __tablename__ = "battle_results"
+
+    battle_id: Mapped[int] = mapped_column(ForeignKey("battles.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    place: Mapped[int] = mapped_column(Integer)
+    finished: Mapped[bool] = mapped_column(default=True)
+    prize: Mapped[int] = mapped_column(Integer, default=0)
+    note: Mapped[str] = mapped_column(String(16), default="")  # why no prize: limit | pair | device | left
 
 
 class Friend(Base):
@@ -931,6 +967,10 @@ class Database:
             await session.execute(delete(Identity).where(Identity.user_id == user_id))
             await session.execute(delete(SkillRating).where(SkillRating.user_id == user_id))
             await session.execute(delete(LedgerEntry).where(LedgerEntry.user_id == user_id))
+            await session.execute(delete(BattleResult).where(BattleResult.user_id == user_id))
+            await session.execute(
+                delete(Battle).where(or_(Battle.challenger_id == user_id, Battle.opponent_id == user_id))
+            )
             await session.execute(delete(RatingEvent).where(RatingEvent.user_id == user_id))
             await session.execute(delete(PlaceCode).where(PlaceCode.user_id == user_id))
             await session.execute(
@@ -2017,6 +2057,188 @@ class Database:
         ):
             return None
         return {"game": row.game_id, "season": row.season, "tier": tier, "coins": coins}
+
+    # -- battles (battles.py) ---------------------------------------------------------------------------
+    async def create_battle(
+        self, club_id: int, room_code: str, game_id: str, kind: str, challenger: int, opponent: int | None
+    ) -> int:
+        async with self.sessions() as session:
+            battle = Battle(
+                club_id=club_id,
+                room_code=room_code,
+                game_id=game_id,
+                kind=kind,
+                challenger_id=challenger,
+                opponent_id=opponent,
+            )
+            session.add(battle)
+            await session.commit()
+            return battle.id
+
+    async def share_device(self, user_ids: list[int]) -> set[int]:
+        """The accounts among these that have signed in on the same browser as another of them."""
+        if len(user_ids) < 2:
+            return set()
+        async with self.sessions() as session:
+            rows = (
+                await session.execute(
+                    select(KnownDevice.device_hash, KnownDevice.user_id).where(
+                        KnownDevice.user_id.in_(user_ids)
+                    )
+                )
+            ).all()
+        seen: dict[str, set[int]] = {}
+        for device, uid in rows:
+            seen.setdefault(device, set()).add(int(uid))
+        return {u for users in seen.values() if len(users) > 1 for u in users}
+
+    async def settle_battle(
+        self, battle_id: int, placing: dict[int, int], finished: set[int]
+    ) -> dict[int, dict[str, Any]] | None:
+        """Pay a played battle once (None if it was already settled or doesn't exist): each account's
+        prize, with the daily limit, the same-pair limit for duels and the same-device rule."""
+        if not self.ready or not placing:
+            return None
+        shared = await self.share_device(list(placing))
+        since = datetime.now(UTC) - timedelta(days=1)
+        async with self.sessions() as session:
+            battle = (
+                await session.execute(select(Battle).where(Battle.id == battle_id).with_for_update())
+            ).scalar_one_or_none()
+            if battle is None or battle.status != "open":
+                return None
+            pair_full = False
+            if battle.kind == "duel" and len(placing) == 2:
+                a, b = sorted(placing)
+                mine = select(BattleResult.battle_id).where(BattleResult.user_id == a, BattleResult.prize > 0)
+                paid = await session.scalar(
+                    select(func.count())
+                    .select_from(BattleResult)
+                    .join(Battle, Battle.id == BattleResult.battle_id)
+                    .where(
+                        BattleResult.user_id == b,
+                        BattleResult.battle_id.in_(mine),
+                        Battle.played_at >= since,
+                    )
+                )
+                pair_full = (paid or 0) >= battlelib.PAIR_PAID
+            due = battlelib.prizes(battle.kind, placing, finished)
+            out: dict[int, dict[str, Any]] = {}
+            for uid in sorted(placing):
+                await session.execute(select(User.id).where(User.id == uid).with_for_update())
+                won = await session.scalar(
+                    select(func.count()).where(
+                        LedgerEntry.user_id == uid,
+                        LedgerEntry.reason == "battle",
+                        LedgerEntry.created_at >= since,
+                    )
+                )
+                prize, note = due[uid], ""
+                if uid not in finished:
+                    note = "left"
+                elif uid in shared:
+                    prize, note = 0, "device"
+                elif pair_full:
+                    prize, note = 0, "pair"
+                elif battlelib.limited(int(won or 0), prize) == 0 and prize:
+                    prize, note = 0, "limit"
+                if prize:
+                    await self._post(session, uid, prize, "battle", "battle", str(battle.id))
+                session.add(
+                    BattleResult(
+                        battle_id=battle.id,
+                        user_id=uid,
+                        place=placing[uid],
+                        finished=uid in finished,
+                        prize=prize,
+                        note=note,
+                    )
+                )
+                out[uid] = {"place": placing[uid], "prize": prize, "note": note}
+            battle.status, battle.played_at = "played", datetime.now(UTC)
+            await session.commit()
+        return out
+
+    async def battle_record(self, user_id: int) -> dict[str, Any]:
+        """Wins, trophies, head-to-head records, recent battles and challenges waiting for you."""
+        lapse = datetime.now(UTC) - timedelta(hours=battlelib.OPEN_HOURS)
+        async with self.sessions() as session:
+            await session.execute(
+                update(Battle)
+                .where(Battle.status == "open", Battle.created_at < lapse)
+                .values(status="expired")
+            )
+            await session.commit()
+            mine = (
+                await session.execute(
+                    select(BattleResult, Battle)
+                    .join(Battle, Battle.id == BattleResult.battle_id)
+                    .where(BattleResult.user_id == user_id)
+                    .order_by(Battle.played_at.desc())
+                )
+            ).all()
+            ids = [b.id for _, b in mine]
+            others = (
+                (
+                    await session.execute(
+                        select(BattleResult.battle_id, BattleResult.place, User.username)
+                        .join(User, User.id == BattleResult.user_id)
+                        .where(BattleResult.battle_id.in_(ids), BattleResult.user_id != user_id)
+                    )
+                ).all()
+                if ids
+                else []
+            )
+            waiting = (
+                await session.execute(
+                    select(Battle, User.username)
+                    .join(User, User.id == Battle.challenger_id)
+                    .where(Battle.opponent_id == user_id, Battle.status == "open")
+                    .order_by(Battle.created_at.desc())
+                )
+            ).all()
+        rivals: dict[int, list[tuple[str, int]]] = {}
+        for bid, place, name in others:
+            rivals.setdefault(bid, []).append((name, place))
+        head: dict[str, dict[str, int]] = {}
+        recent = []
+        for res, battle in mine:
+            vs = rivals.get(battle.id, [])
+            if battle.kind == "duel" and len(vs) == 1:
+                name, their = vs[0]
+                row = head.setdefault(name, {"won": 0, "lost": 0, "drawn": 0})
+                row["won" if res.place < their else "lost" if res.place > their else "drawn"] += 1
+            recent.append(
+                {
+                    "game": battle.game_id,
+                    "kind": battle.kind,
+                    "place": res.place,
+                    "players": len(vs) + 1,
+                    "prize": res.prize,
+                    "note": res.note,
+                    "against": [n for n, _ in vs][:7],
+                    "at": aware(battle.played_at or battle.created_at).isoformat(),
+                }
+            )
+        return {
+            "played": len(mine),
+            "trophies": sum(1 for res, _ in mine if res.place == 1 and res.finished),
+            "prizes": sum(res.prize for res, _ in mine),
+            "head_to_head": sorted(
+                ({"username": n, **r} for n, r in head.items()),
+                key=lambda r: -(r["won"] + r["lost"] + r["drawn"]),
+            ),
+            "recent": recent[:20],
+            "challenges": [
+                {
+                    "game": b.game_id,
+                    "by": name,
+                    "room": b.room_code,
+                    "at": aware(b.created_at).isoformat(),
+                }
+                for b, name in waiting
+            ],
+        }
 
     # -- ratings (ratings.py) ---------------------------------------------------------------------------
     @staticmethod
