@@ -112,7 +112,12 @@ export function Coins({ go }: { go: Go }) {
             })}
           </ul>
         ) : (
-          <p className="muted">Nothing yet. Finish a game with at least one other player to earn your first coins.</p>
+          <div className="empty-state">
+            <span aria-hidden="true">🪙</span>
+            <p>
+              <b>No coins yet.</b> Finish a game with at least one other player to earn your first.
+            </p>
+          </div>
         )}
       </Card>
 

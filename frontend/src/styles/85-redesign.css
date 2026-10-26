@@ -1049,3 +1049,20 @@
     right: 8px;
   }
 }
+
+/* checkbox rows: even spacing, and the label's text lines up beside the box */
+label.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 4px 0;
+}
+label.check > input {
+  flex: none;
+  margin-top: 2px;
+}
+.empty-state p {
+  margin: 0;
+  max-width: 42ch;
+}

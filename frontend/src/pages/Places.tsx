@@ -101,7 +101,12 @@ export function Places({ go }: { go: Go }) {
             ))}
           </ul>
         ) : (
-          <p className="muted">None yet.</p>
+          <div className="empty-state">
+            <span aria-hidden="true">🎓</span>
+            <p>
+              <b>None yet.</b> Verify a college or work email below for its badge.
+            </p>
+          </div>
         )}
       </Card>
 

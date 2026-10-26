@@ -95,7 +95,12 @@ export function InboxPage({ go }: { go: Go }) {
             ))}
           </ul>
         ) : (
-          <p className="muted">Nothing yet. When your club gets a game going, or a friend invites you to a room, it lands here.</p>
+          <div className="empty-state">
+            <span aria-hidden="true">📭</span>
+            <p>
+              <b>All quiet.</b> When your club gets a game going, or a friend invites you to a room, it lands here.
+            </p>
+          </div>
         )}
       </Card>
       <NotifySettings serverKey={inbox?.push_key ?? ""} />

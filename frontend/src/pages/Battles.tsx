@@ -108,7 +108,12 @@ export function Battles({ go }: { go: Go }) {
             ))}
           </ul>
         ) : (
-          <p className="muted">No duels yet. Challenge a clubmate from your club's page.</p>
+          <div className="empty-state">
+            <span aria-hidden="true">⚔️</span>
+            <p>
+              <b>No duels yet.</b> Challenge a clubmate from your club's page.
+            </p>
+          </div>
         )}
       </Card>
 
@@ -135,7 +140,12 @@ export function Battles({ go }: { go: Go }) {
             ))}
           </ul>
         ) : (
-          <p className="muted">Your battles show up here once you've played one.</p>
+          <div className="empty-state">
+            <span aria-hidden="true">🏆</span>
+            <p>
+              <b>No battles yet.</b> They show up here once you've played one.
+            </p>
+          </div>
         )}
       </Card>
 
