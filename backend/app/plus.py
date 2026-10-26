@@ -131,14 +131,16 @@ def router(settings: Settings, db: Any) -> APIRouter:
                 raise ValueError(kind)
         except Exception:
             raise HubError("bad_event", "Not a Paddle event", 400) from None
-        if kind in SUBSCRIPTION_EVENTS:
+        sub_id = data.get("id")
+        if kind in SUBSCRIPTION_EVENTS and isinstance(sub_id, str) and sub_id.startswith("sub_"):
             user_id = billing.account_of(settings, data.get("custom_data")) or await db.subscription_user(
-                str(data.get("id", ""))
+                sub_id
             )
             if user_id is not None and settings.paddle_plus_price in _prices(data):
-                period = data.get("current_billing_period") or {}
+                period = data.get("current_billing_period")
+                period = period if isinstance(period, dict) else {}
                 await db.set_subscription(
-                    str(data["id"]),
+                    sub_id,
                     user_id,
                     str(data.get("customer_id") or ""),
                     str(data.get("status") or ""),

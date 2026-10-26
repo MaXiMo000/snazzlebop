@@ -152,8 +152,9 @@ function Rank({ view, you, send }: Pick<Props, "view" | "you" | "send">) {
               send({ t: "act", a: "rank", order, ...(guess ? { predict: guess } : {}) });
             }}
           >
-            {guess ? "Lock it in!" : "Lock it in (no mirror guess)"}
+            Lock it in!
           </Btn>
+          {!guess && <p className="muted center space-top">The mirror guess is optional: lock in without one if you like.</p>}
         </div>
       </Card>
     </>

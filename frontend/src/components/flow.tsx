@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Btn, Card, ShowHead, nameOf } from "./ui";
 import { SEGMENT_ICON } from "./show";
 import { sfx } from "../lib/sfx";
 import { TeamsCard } from "./teams";
 import { OPTION_LABELS } from "../lib/options";
+import { Sheet } from "./sheet";
 import type { GameCard, RoomState } from "../types";
 
 type Send = (msg: Record<string, unknown>) => void;
@@ -116,6 +117,12 @@ const READY_LABEL: Record<string, string> = {
   peek: "Seen it, bid ▶",
   teams: "Teams set, deal ▶",
   album: "Next page ▶",
+  roles: "Got my role ▶",
+  cards: "Seen my card ▶",
+  dawn: "Onward ▶",
+  review: "Done reading ▶",
+  hand_over: "Next hand ▶",
+  sold: "Next box ▶",
 };
 
 /** On results screens: everyone taps Ready to move on together instead of waiting for the clock. */
@@ -144,16 +151,25 @@ export function ReadyBar({ state, send }: { state: RoomState; send: Send }) {
 
 /** The rules, one tap away during a game. */
 export function HowToPlay({ lines }: { lines: string[] }) {
+  const [open, setOpen] = useState(false);
   if (!lines.length) return null;
+  // A small button by the game, not a bar above it: the rules open in a sheet when wanted.
   return (
-    <details className="how-to card">
-      <summary>❓ How to play</summary>
-      <ol className="how-to-list">
-        {lines.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ol>
-    </details>
+    <div className="rules-row">
+      <button type="button" className="rules-btn" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        <span aria-hidden="true">❓</span> Rules
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} labelledBy="rules-sheet-h">
+        <h2 id="rules-sheet-h">How to play</h2>
+        <ol className="how-steps space-top">
+          {lines.map((line) => (
+            <li key={line}>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ol>
+      </Sheet>
+    </div>
   );
 }
 

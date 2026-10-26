@@ -145,6 +145,9 @@
 }
 .fold-content {
   padding: 0 12px 12px;
+}
+/* only while open: a closed fold's content isn't drawn, and an animation on it would never finish */
+.fold[open] > .fold-content {
   animation: enter var(--mid) var(--ease-out);
 }
 /* a card inside a fold drops its own frame: the fold is the frame */
@@ -881,5 +884,168 @@
   .card.intro-ready > .btn.block {
     min-height: 54px;
     font-size: 1.05rem;
+  }
+}
+
+/* ---- in a game: the rules button and the host's slim bar ----------------------------------------- */
+.rules-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -6px;
+}
+.rules-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 16px;
+  border: var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 0.95rem / 1 var(--body);
+  cursor: pointer;
+}
+.rules-btn:focus-visible {
+  outline: 4px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.rules-btn:hover {
+  background: var(--surface-2);
+}
+.host-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px dashed var(--edge);
+  border-radius: var(--radius-sm);
+}
+.host-bar-label {
+  flex: 1 1 auto;
+  font-weight: 700;
+  color: var(--muted);
+}
+@media (max-width: 480px) {
+  .host-bar-label {
+    flex-basis: 100%;
+  }
+}
+
+/* phones: the game's header card takes less of the screen, so the game starts higher up */
+@media (max-width: 560px) {
+  .card.accent:has(> .show-head) {
+    padding: 14px 16px 16px;
+  }
+  .show-head {
+    grid-template-columns: minmax(0, 1fr) 58px;
+  }
+  .show-head .timer {
+    width: 58px;
+    height: 58px;
+    font-size: 1.4rem;
+    border-width: 3px;
+  }
+  .show-head .grow > :nth-child(n + 3) {
+    margin-top: 6px;
+  }
+}
+
+/* ---- account: tabs and the shop's grid ----------------------------------------------------------- */
+.acct-tabs {
+  position: sticky;
+  top: 8px;
+  z-index: 4;
+}
+.shop-group {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.shop-group h4 {
+  margin: 0;
+}
+.shop-grid {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+}
+.shop-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 8px 12px;
+  padding: 12px;
+  border: var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.shop-item-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 1.5rem;
+}
+.shop-item-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.shop-item-game {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.shop-item-desc {
+  font-size: 0.88rem;
+  line-height: 1.3;
+}
+.shop-item > .btn {
+  grid-column: 2;
+  justify-self: start;
+}
+.shop-owned {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* phones: the account card's shortcuts as a two-column grid, not a stack of seven buttons */
+@media (max-width: 600px) {
+  .acct > .card.stage .row.center {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .acct > .card.stage .row.center > .btn {
+    min-height: 48px;
+    padding: 8px 10px;
+    font-size: 0.82rem;
+  }
+  .acct > .card.stage .row.center > .btn:first-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 600px) {
+  .shop-item {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+    align-items: center;
+    padding: 10px;
+  }
+  .shop-item > .btn {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .shop-owned {
+    top: -8px;
+    right: 8px;
   }
 }

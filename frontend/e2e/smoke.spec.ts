@@ -48,15 +48,22 @@ async function newPlayer(browser: Browser, baseURL: string, problems: string[]):
 /** axe-core WCAG 2.x A/AA scan; violations are collected and asserted at the end of the test. */
 async function axe(page: Page, where: string, found: string[]) {
   // Let entrance fades finish first: half-faded text would be judged on its mid-animation colour.
+  // At most 3 s: an animation on something not drawn (in a closed panel) would never finish.
   await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((a) => (a.effect as KeyframeEffect | null)?.getKeyframes().some((k) => "opacity" in k) && a.playState !== "finished" && (a.effect?.getTiming().iterations ?? 1) !== Infinity)
-        .map((a) => a.finished.catch(() => undefined)),
-    ),
+    Promise.race([
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => (a.effect as KeyframeEffect | null)?.getKeyframes().some((k) => "opacity" in k) && a.playState !== "finished" && (a.effect?.getTiming().iterations ?? 1) !== Infinity)
+          .map((a) => a.finished.catch(() => undefined)),
+      ),
+      new Promise((done) => setTimeout(done, 3000)),
+    ]).then(() => undefined),
   );
+  // Scan with motion off: an entrance fade that starts during the scan can't be judged mid-fade.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+  await page.emulateMedia({ reducedMotion: null });
   for (const v of violations) found.push(`${where}: ${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
 }
 

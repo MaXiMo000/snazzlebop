@@ -223,3 +223,20 @@ class PlusInRoomTests(unittest.IsolatedAsyncioTestCase):
             await s.commit()
         assert await db.owns_item(uid, "emote_spooky")
         assert not await db.owns_item(uid, "party_confetti")  # only emote packs come with Plus
+
+
+def test_malformed_signed_events_change_nothing(shop):
+    signup(shop)
+    ref = shop.post("/api/billing/checkout").json()["custom_data"]
+    odd = [
+        {**subscription(ref), "id": None},  # no subscription id
+        {**subscription(ref), "id": "../../etc"},  # not a Paddle subscription id
+        {**subscription(ref), "current_billing_period": ["2026"]},  # a period that isn't an object
+    ]
+    for i, data in enumerate(odd):
+        r = send(shop, event("subscription.activated", data, f"evt_odd{i}"))
+        assert r.status_code == 200, r.text
+    assert send(shop, {"event_type": "x", "event_id": "evt_y", "data": []}).status_code == 400
+    assert shop.get("/api/me").json()["user"]["plus_until"] is None  # without a period end, no Plus
+    plus = shop.get("/api/me/plus").json()
+    assert plus["until"] is None

@@ -182,10 +182,12 @@ export function Clubs({ go }: { go: Go }) {
             ))}
           </ul>
         ) : (
-          <p className="muted">
-            You're not in a club yet. Start one below, or open an invite link
-            from a friend.
-          </p>
+          <div className="empty-state">
+            <span aria-hidden="true">🏠</span>
+            <p>
+              <b>No clubs yet.</b> Start one below for your hostel, team or friends, or open an invite link from a friend.
+            </p>
+          </div>
         )}
       </Card>
 

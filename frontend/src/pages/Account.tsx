@@ -315,6 +315,19 @@ function RecoveryCode({ code, done }: { code: string; done: () => void }) {
   );
 }
 
+type AcctTab = "profile" | "shop" | "security";
+const ACCT_TABS: [AcctTab, string][] = [
+  ["profile", "👤 Profile"],
+  ["shop", "🛒 Shop"],
+  ["security", "🔒 Security"],
+];
+// The shop's shelves: by what an item is for (the server's "game" line for each item).
+const SHOP_GROUPS: [string, (game: string) => boolean][] = [
+  ["Party items: any game", (g) => g.startsWith("Party")],
+  ["Emote packs", (g) => g === "Emotes"],
+  ["Power-ups for each game", (g) => !g.startsWith("Party") && g !== "Emotes"],
+];
+
 function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSignedOut: () => void; notice: Notice }) {
   const { user, staff } = useAccount();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -322,6 +335,7 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
   const [items, setItems] = useState<ShopItem[]>([]);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<AcctTab>(() => (location.hash === "#shop" ? "shop" : location.hash === "#security" ? "security" : "profile"));
 
   useEffect(() => {
     myStats().then(setStats, () => undefined);
@@ -331,6 +345,60 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
   }, [user?.coins]);
 
   if (!user) return null;
+  const shopCard = (
+    <Card aria-labelledby="shop-h">
+      <h3 id="shop-h">Shop</h3>
+      <p className="muted">
+        Power-ups work one per game in casual rooms (never ranked games or battles), and everyone sees when you use one. Party items work anywhere; emote packs are
+        yours for good.
+      </p>
+      {SHOP_GROUPS.map(([title, test]) => {
+        const group = items.filter((it) => test(it.game));
+        if (!group.length) return null;
+        return (
+          <section key={title} className="shop-group" aria-label={title}>
+            <h4>{title}</h4>
+            <ul className="shop-grid">
+              {group.map((it) => {
+                const owned = user.powerups[it.id] ?? 0;
+                const kept = it.id.startsWith("emote_"); // emote packs are bought once and kept
+                return (
+                  <li key={it.id} className="shop-item">
+                    <span className="shop-item-icon" aria-hidden="true">
+                      {it.icon}
+                    </span>
+                    <span className="shop-item-text">
+                      <b>{it.name}</b>
+                      {title.startsWith("Power-ups") && <span className="muted shop-item-game">{it.game}</span>}
+                      <span className="muted shop-item-desc">{it.text}</span>
+                    </span>
+                    {owned > 0 && <span className="chip teal shop-owned">{kept ? "Yours" : `×${owned}`}</span>}
+                    <Btn
+                      variant="gold"
+                      size="small"
+                      disabled={user.coins < it.price || (kept && owned > 0)}
+                      aria-label={`Buy ${it.name} for ${it.price} coins`}
+                      onClick={async () => {
+                        setError(null);
+                        try {
+                          await buy(it.id);
+                          sfx.ding();
+                        } catch (e) {
+                          setError(errText(e));
+                        }
+                      }}
+                    >
+                      🪙 {it.price}
+                    </Btn>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
+    </Card>
+  );
   const season = stats?.season;
   const month = season ? new Date(`${season.id}-01T00:00:00Z`).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" }) : "";
   return (
@@ -383,119 +451,102 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
         </p>
       )}
 
-      <Card aria-labelledby="shop-h">
-        <h3 id="shop-h">Power-up shop</h3>
-        <p className="muted">
-          Each game has its own. Use one per game in casual rooms (never ranked games or battles); everyone sees when you use one. Party items work anywhere, and
-          emote packs add to your live reactions for good.
-        </p>
-        <ul className="acct-shop">
-          {items.map((it) => {
-            const owned = user.powerups[it.id] ?? 0;
-            const kept = it.id.startsWith("emote_"); // emote packs are bought once and kept
-            return (
-              <li key={it.id} className="acct-item">
-                <span className="acct-item-icon" aria-hidden="true">
-                  {it.icon}
-                </span>
-                <p className="acct-item-name">
-                  <b>{it.name}</b>
-                </p>
-                <p className="muted acct-item-text">
-                  <span className="acct-item-game">{it.game}</span>
-                  {owned > 0 && <span className="chip teal acct-owned">{kept ? "Yours" : `You have ${owned}`}</span>}
-                  {it.text}
-                </p>
-                <Btn
-                  variant="gold"
-                  disabled={user.coins < it.price || (kept && owned > 0)}
-                  aria-label={`Buy ${it.name} for ${it.price} coins`}
-                  onClick={async () => {
-                    setError(null);
-                    try {
-                      await buy(it.id);
-                      sfx.ding();
-                    } catch (e) {
-                      setError(errText(e));
-                    }
-                  }}
-                >
-                  🪙 {it.price}
-                </Btn>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+      <div className="auth-tabs acct-tabs" role="group" aria-label="Your account">
+        {ACCT_TABS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={`auth-tab ${tab === id ? "on" : ""}`}
+            aria-pressed={tab === id}
+            onClick={() => {
+              setTab(id);
+              history.replaceState(null, "", id === "profile" ? location.pathname : `#${id}`);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <div className="grid">
-        <Card aria-labelledby="board-h">
-          <h3 id="board-h">{month ? `${month} leaderboard` : "Season leaderboard"}</h3>
-          {board && board.rows.length ? (
-            <ol className="score-rows">
-              {board.rows.map((r, i) => (
-                <li key={r.username} className={r.username === user.username ? "on" : ""}>
-                  <b>
-                    {i === 0 ? "👑 " : `${i + 1}. `}
-                    {r.username}
-                  </b>
-                  <span className="score-tally">
-                    <span>{r.wins} {r.wins === 1 ? "win" : "wins"}</span>
-                    <span className="score-pts">{r.points}</span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="muted">Nobody's scored this month yet. Be first!</p>
-          )}
-        </Card>
+      {tab === "shop" && shopCard}
 
-        <Card aria-labelledby="stats-h">
-          <h3 id="stats-h">Your games</h3>
-          {stats && stats.totals.played ? (
-            <>
-              <p className="acct-totals">
-                <span>{stats.totals.played} played</span>
-                <span>{stats.totals.wins} won</span>
-                <span>🪙 {stats.totals.coins} earned</span>
-              </p>
-              <ul className="score-rows space-top">
-                {Object.entries(stats.games)
-                  .sort((a, b) => b[1].played - a[1].played)
-                  .map(([g, s]) => (
-                    <li key={g}>
-                      <b>{titles[g] ?? g}</b>
+      {tab === "profile" && (
+        <>
+          <div className="grid">
+            <Card aria-labelledby="board-h">
+              <h3 id="board-h">{month ? `${month} leaderboard` : "Season leaderboard"}</h3>
+              {board && board.rows.length ? (
+                <ol className="score-rows">
+                  {board.rows.map((r, i) => (
+                    <li key={r.username} className={r.username === user.username ? "on" : ""}>
+                      <b>
+                        {i === 0 ? "👑 " : `${i + 1}. `}
+                        {r.username}
+                      </b>
                       <span className="score-tally">
-                        <span>
-                          {s.wins}/{s.played} won
-                        </span>
-                        <span className="score-pts">{s.best}</span>
+                        <span>{r.wins} {r.wins === 1 ? "win" : "wins"}</span>
+                        <span className="score-pts">{r.points}</span>
                       </span>
                     </li>
                   ))}
-              </ul>
-              <p className="muted space-top">The number on the right is your best score in that game.</p>
-            </>
-          ) : (
-            <p className="muted">Your games show up here once you've finished one while signed in.</p>
-          )}
-        </Card>
-      </div>
+                </ol>
+              ) : (
+                <p className="muted">Nobody's scored this month yet. Be first!</p>
+              )}
+            </Card>
 
-      <Card aria-labelledby="coins-h">
-        <h3 id="coins-h">Coins</h3>
-        <p className="muted">Every game you finish pays coins: 50 for 1st down to 5 for taking part, up to 600 a day. See where every coin came from and went.</p>
-        <Btn className="space-top" variant="ghost" onClick={() => go("/coins")}>
-          Coin history
-        </Btn>
-      </Card>
+            <Card aria-labelledby="stats-h">
+              <h3 id="stats-h">Your games</h3>
+              {stats && stats.totals.played ? (
+                <>
+                  <p className="acct-totals">
+                    <span>{stats.totals.played} played</span>
+                    <span>{stats.totals.wins} won</span>
+                    <span>🪙 {stats.totals.coins} earned</span>
+                  </p>
+                  <ul className="score-rows space-top">
+                    {Object.entries(stats.games)
+                      .sort((a, b) => b[1].played - a[1].played)
+                      .map(([g, s]) => (
+                        <li key={g}>
+                          <b>{titles[g] ?? g}</b>
+                          <span className="score-tally">
+                            <span>
+                              {s.wins}/{s.played} won
+                            </span>
+                            <span className="score-pts">{s.best}</span>
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                  <p className="muted space-top">The number on the right is your best score in that game.</p>
+                </>
+              ) : (
+                <p className="muted">Your games show up here once you've finished one while signed in.</p>
+              )}
+            </Card>
+          </div>
 
-      <EmailCard />
-      <GoogleCard />
-      <Authenticator />
-      <SessionCard onSignedOut={onSignedOut} />
-      <Settings />
+          <Card aria-labelledby="coins-h">
+            <h3 id="coins-h">Coins</h3>
+            <p className="muted">Every game you finish pays coins: 50 for 1st down to 5 for taking part, up to 600 a day. See where every coin came from and went.</p>
+            <Btn className="space-top" variant="ghost" onClick={() => go("/coins")}>
+              Coin history
+            </Btn>
+          </Card>
+
+        </>
+      )}
+
+      {tab === "security" && (
+        <>
+          <EmailCard />
+          <GoogleCard />
+          <Authenticator />
+          <SessionCard onSignedOut={onSignedOut} />
+          <Settings />
+        </>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Alert, errText } from "../components/auth";
 import { Btn, Card } from "../components/ui";
 import { useAccount } from "../lib/account";
 import { myBattles, type BattleRecord } from "../lib/battles";
+import { Fold } from "../components/sheet";
 
 type Go = (path: string) => void;
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
@@ -138,8 +139,7 @@ export function Battles({ go }: { go: Go }) {
         )}
       </Card>
 
-      <Card aria-labelledby="battle-how-h">
-        <h2 id="battle-how-h">How battles work</h2>
+      <Fold icon="💡" title="How battles work" hint="The rules, in short">
         <ul className="evidence">
           <li>Challenge a clubmate to a duel, or open a group battle for three to eight. Nobody puts anything in.</li>
           <li>The platform pays the prizes: 40 coins for winning a duel, 60 for first in a group, 10 for everyone who finishes. The week's featured format pays its winners more.</li>
@@ -149,7 +149,7 @@ export function Battles({ go }: { go: Go }) {
           <li>Prizes start once an account is 3 days old with a confirmed email (or Google). A battle that ends within 45 seconds pays nothing.</li>
           <li>Tick Ranked game before starting and the battle counts for your rating too.</li>
         </ul>
-      </Card>
+      </Fold>
     </div>
   );
 }

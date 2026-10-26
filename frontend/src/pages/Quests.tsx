@@ -5,6 +5,7 @@ import { refreshAccount, useAccount } from "../lib/account";
 import type { Progress } from "../lib/contract";
 import { claimQuest, claimSeason, claimWeekly, myProgress, rerollQuest } from "../lib/quests";
 import { sfx } from "../lib/sfx";
+import { Fold } from "../components/sheet";
 
 type Go = (path: string) => void;
 type Quest = Progress["quests"][number];
@@ -183,8 +184,7 @@ export function Quests({ go }: { go: Go }) {
         </Card>
       )}
 
-      <Card aria-labelledby="xp-h">
-        <h2 id="xp-h">How XP works</h2>
+      <Fold icon="💡" title="How XP works" hint="The rules, in short">
         <ul className="evidence">
           <li>Finish a game with other signed-in players: 10 XP, 15 for a win, and 25 more for your first win of the day.</li>
           <li>
@@ -193,7 +193,7 @@ export function Quests({ go }: { go: Go }) {
           <li>Every level pays 30 coins and a power-up. Every 7 days in a row with all three quests done pays 100 coins and a confetti cannon.</li>
           <li>Only fair games count: not ones that end in seconds, the same group over and over, or accounts on one device.</li>
         </ul>
-      </Card>
+      </Fold>
     </div>
   );
 }

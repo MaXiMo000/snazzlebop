@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -166,6 +168,22 @@ def test_spa_fallback_and_no_path_traversal(tmp_path):
         for evil in ("/../secret.txt", "/%2e%2e/secret.txt", "/..%2fsecret.txt", "/assets/../../secret.txt"):
             assert "TOPSECRET" not in c.get(evil).text
         assert c.get("/api/nope").status_code == 404
+
+
+def test_every_page_of_the_app_is_served():
+    """Each page the frontend routes to (App.tsx's *_PATH patterns) gets index.html, not a 404: opening
+    a page directly, or a payment provider sending you back to one, must work."""
+    import re
+
+    from app.main import SPA_ROUTE
+
+    app_tsx = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "App.tsx").read_text(
+        encoding="utf-8"
+    )
+    pages = set(re.findall(r"_PATH = /\^\\/([a-z]+)", app_tsx))
+    assert {"account", "clubs", "quests", "plus", "coins"} <= pages  # the pattern still reads App.tsx
+    for page in sorted(pages - {"r", "join"}):  # rooms and invites need a code: checked above
+        assert SPA_ROUTE.fullmatch(page), f"/{page} isn't served (add it to SPA_ROUTE in main.py)"
 
 
 def test_ws_requires_valid_auth(client):

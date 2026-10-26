@@ -9,6 +9,7 @@ import type { ClubList, MyPlaces } from "../lib/contract";
 import { myPlaces } from "../lib/places";
 import { myRatings, ratingBoard, setPlaceBoards, type MyRatings, type Period, type RatingBoard, type Scope } from "../lib/ratings";
 import type { GameCard } from "../types";
+import { Fold } from "../components/sheet";
 
 type Go = (path: string) => void;
 
@@ -110,8 +111,7 @@ export function Ratings({ go }: { go: Go }) {
 
       {mine && <Board games={mine.games} clubs={clubs} places={places} placeBoards={mine.place_boards} onPlaceBoards={(on) => setMine({ ...mine, place_boards: on })} />}
 
-      <Card aria-labelledby="how-ranked-h">
-        <h2 id="how-ranked-h">How ranked works</h2>
+      <Fold icon="💡" title="How ranked works" hint="The rules, in short">
         <ul className="evidence">
           <li>The host ticks Ranked game before starting. Everyone has to be signed in, and the game uses its standard settings with no power-ups.</li>
           <li>Your rating moves by where you finish and who you beat: beating stronger players counts for more. Leaving early counts as last place.</li>
@@ -119,7 +119,7 @@ export function Ratings({ go }: { go: Go }) {
           <li>Seasons last eight weeks. A new season brings every rating halfway back to the start, so everyone has something to climb, and pays a reward for the tier you ended on: 20 coins for Bronze up to 200 for Diamond.</li>
           <li>To keep it fair, the same two players only count five times a day, and a rating moves at most 150 points a day.</li>
         </ul>
-      </Card>
+      </Fold>
     </div>
   );
 }

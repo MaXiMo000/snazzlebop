@@ -4,6 +4,7 @@ import { Btn, Card } from "../components/ui";
 import { fetchGames } from "../lib/api";
 import { myCoins, shopItems, useAccount } from "../lib/account";
 import type { CoinHistory } from "../lib/contract";
+import { Fold } from "../components/sheet";
 
 type Go = (path: string) => void;
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
@@ -115,8 +116,7 @@ export function Coins({ go }: { go: Go }) {
         )}
       </Card>
 
-      <Card aria-labelledby="coins-how-h">
-        <h2 id="coins-how-h">How coins work</h2>
+      <Fold icon="💡" title="How coins work" hint="The rules, in short">
         <ul className="evidence">
           <li>Finish a game with at least one other player: 1st 50, 2nd 30, 3rd 20, 4th 10, everyone else 5.</li>
           <li>Ties share the better place. Up to {data?.daily_cap ?? 600} coins a day from playing.</li>
@@ -127,9 +127,9 @@ export function Coins({ go }: { go: Go }) {
             a day, and accounts on the same device never earn from each other.
           </li>
           <li>Place coins need another signed-in player in the game. Playing only with guests pays 5 coins for finishing.</li>
-          <li>Coins can't be bought, sold, traded or bet. Every change is recorded here.</li>
+          <li>Coins can't be sold, traded or bet, and only come from playing (Plus adds a monthly bonus). Every change is recorded here.</li>
         </ul>
-      </Card>
+      </Fold>
     </div>
   );
 }

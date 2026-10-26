@@ -59,7 +59,7 @@ log = logging.getLogger("snazzlebop")
 # The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
 # /clubs/<slug> (and /reports), /join/<invite>, /places, /privacy, /safety and /staff (and /places).
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|ratings|coins|battles|quests|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|ratings|coins|battles|quests|plus|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 

@@ -698,19 +698,17 @@ function HostGameBar({ state, send }: { state: RoomState; send: Send }) {
   }, [sure]);
   const what = state.show ? "the show" : "the game";
   return (
-    <Card tone="soft">
-      <div className="row between">
-        <p className="muted">You’re the host.</p>
-        <div className="row">
-          <Btn variant="ghost" onClick={() => send({ t: "skip", stage: state.stage })}>
-            Skip wait <span aria-hidden="true">⏭</span>
-          </Btn>
-          <Btn variant={sure ? "danger" : "ghost"} onClick={() => (sure ? send({ t: "lobby" }) : setSure(true))}>
-            {sure ? `Tap again to end ${what}` : `End ${what}`}
-          </Btn>
-        </div>
-      </div>
-    </Card>
+    <div className="host-bar" role="group" aria-label="Host controls">
+      <span className="host-bar-label">
+        <span aria-hidden="true">🎙️</span> You're the host
+      </span>
+      <Btn variant="ghost" size="small" onClick={() => send({ t: "skip", stage: state.stage })}>
+        Skip wait <span aria-hidden="true">⏭</span>
+      </Btn>
+      <Btn variant={sure ? "danger" : "ghost"} size="small" onClick={() => (sure ? send({ t: "lobby" }) : setSure(true))}>
+        {sure ? `Tap again to end ${what}` : `End ${what}`}
+      </Btn>
+    </div>
   );
 }
 
