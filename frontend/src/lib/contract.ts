@@ -27,6 +27,7 @@ export type BackupCodes = Schemas["BackupCodes"];
 export type ClubSummary = Schemas["ClubSummary"];
 export type ClubList = Schemas["ClubList"];
 export type ClubDetail = Schemas["ClubDetail"];
+export type ClubBoards = Schemas["ClubBoards"];
 export type ClubRules = Schemas["ClubRules"];
 export type NewInvite = Schemas["NewInvite"];
 export type Inbox = Schemas["Inbox"];

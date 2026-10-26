@@ -9,6 +9,14 @@ export const DUEL_PRIZE = 40;
 export const GROUP_PRIZE = 60;
 export const FINISH_PRIZE = 10;
 
+type Format = BattleRecord["format"];
+/** Is a battle of this kind and game in the week's featured format? */
+export const isFeatured = (f: Format | null, kind: string, game: string) =>
+  !!f && f.kinds.includes(kind) && (!f.games.length || f.games.includes(game));
+/** The winner's prize for a kind of battle, with the featured bonus when it applies. */
+export const winPrize = (kind: string, featured: boolean, bonus = 1.5) =>
+  Math.floor((kind === "duel" ? DUEL_PRIZE : GROUP_PRIZE) * (featured ? bonus : 1));
+
 /** Challenge a member to a duel, or open a group battle; takes the host's seat. Returns the room code. */
 export async function startBattle(
   slug: string,

@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { fetchGames } from "../lib/api";
-import { DUEL_GAMES, DUEL_PRIZE, FINISH_PRIZE, GROUP_PRIZE, startBattle } from "../lib/battles";
+import { DUEL_GAMES, FINISH_PRIZE, isFeatured, myBattles, startBattle, winPrize, type BattleRecord } from "../lib/battles";
 import { heldBack } from "../lib/fairplay";
 import type { ClubDetail } from "../lib/contract";
 import type { GameCard, RoomState } from "../types";
@@ -20,7 +20,9 @@ export function ClubBattles({ c, me, go }: { c: ClubDetail; me: string; go: Go }
   const [game, setGame] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [format, setFormat] = useState<BattleRecord["format"] | null>(null);
   useEffect(() => void fetchGames().then(setGames, () => undefined), []);
+  useEffect(() => void myBattles().then((r) => setFormat(r.format), () => undefined), []);
 
   const allowed = (g: GameCard) => !c.rules.games.length || c.rules.games.includes(g.id);
   const duelOrder = DUEL_GAMES as readonly string[];
@@ -29,6 +31,7 @@ export function ClubBattles({ c, me, go }: { c: ClubDetail; me: string; go: Go }
   const choices = kind === "duel" ? duelGames : groupGames;
   const others = c.members.filter((m) => m.username !== me);
   const pickedGame = choices.some((g) => g.id === game) ? game : (choices[0]?.id ?? "");
+  const featured = isFeatured(format, kind, pickedGame);
   const pickedRival = others.some((m) => m.username === opponent) ? opponent : (others[0]?.username ?? "");
 
   const submit = async (e: FormEvent) => {
@@ -55,9 +58,15 @@ export function ClubBattles({ c, me, go }: { c: ClubDetail; me: string; go: Go }
         <span aria-hidden="true">⚔️ </span>Battles
       </h3>
       <p className="muted">
-        Free to enter: nobody bets anything. The winner gets {kind === "duel" ? DUEL_PRIZE : GROUP_PRIZE} coins from us, and everyone who
+        Free to enter: nobody bets anything. The winner gets {winPrize(kind, featured, format?.bonus)} coins from us, and everyone who
         finishes gets {FINISH_PRIZE}.
       </p>
+      {format && (
+        <p className={`battle-format space-top ${featured ? "on" : ""}`}>
+          <span aria-hidden="true">🔥 </span>
+          <b>{format.title}:</b> {format.features.toLowerCase()} pay the winner {Math.round((format.bonus - 1) * 100)}% more this week.
+        </p>
+      )}
       <div className="auth-tabs board-period space-top" role="group" aria-label="Kind of battle">
         {(["duel", "group"] as Kind[]).map((k) => (
           <button key={k} type="button" className={`auth-tab ${kind === k ? "on" : ""}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
@@ -137,8 +146,8 @@ export function BattleBanner({ state }: { state: RoomState }) {
       </h3>
       <p>
         {b.kind === "duel"
-          ? `Starts when both players are here (and only them). The winner gets ${DUEL_PRIZE} coins, the other ${FINISH_PRIZE}.`
-          : `Starts with three or more players, each signed in. First place gets ${GROUP_PRIZE} coins, everyone who finishes ${FINISH_PRIZE}.`}
+          ? `Starts when both players are here (and only them). The winner gets ${winPrize("duel", b.featured)} coins, the other ${FINISH_PRIZE}.${b.featured ? " This week's featured battle: a bigger prize!" : ""}`
+          : `Starts with three or more players, each signed in. First place gets ${winPrize("group", b.featured)} coins, everyone who finishes ${FINISH_PRIZE}.${b.featured ? " This week's featured battle: a bigger prize!" : ""}`}
       </p>
     </Card>
   );

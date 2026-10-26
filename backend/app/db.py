@@ -501,6 +501,10 @@ class Activity(Base):
     at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
     )
+    # the club whose room it happened in (club challenges count these)
+    club_id: Mapped[int | None] = mapped_column(
+        ForeignKey("clubs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
 
 class QuestReroll(Base):
@@ -2125,7 +2129,7 @@ class Database:
                 else:
                     row.last_at, row.games = now, row.games + 1
 
-    async def log_activity(self, user_ids: list[int], kind: str) -> None:
+    async def log_activity(self, user_ids: list[int], kind: str, club_id: int | None = None) -> None:
         """Things done in rooms that quests count (power-ups, party items, hosting, club games, shows,
         the audience's MVP, reactions). Only signed-in accounts; nothing here pays by itself."""
         ids = sorted(set(user_ids))
@@ -2133,7 +2137,7 @@ class Database:
             return
         try:
             async with self.sessions() as session:
-                session.add_all([Activity(user_id=uid, kind=kind[:16]) for uid in ids])
+                session.add_all([Activity(user_id=uid, kind=kind[:16], club_id=club_id) for uid in ids])
                 await session.commit()
         except Exception:
             log.exception("could not log activity")
@@ -2180,6 +2184,7 @@ class Database:
                 .where(
                     BattleResult.user_id == user_id,
                     BattleResult.finished.is_(True),
+                    BattleResult.note.not_in(fairplay.UNFAIR),
                     Battle.played_at >= since,
                 )
             )
@@ -2324,6 +2329,7 @@ class Database:
                     }
                 )
             streak = await self._streak(session, user_id, today)
+            season = await self._season_view(session, user_id, today)
         level = progresslib.level_of(xp)
         ends = progresslib.week_start(today.date()) + timedelta(days=6)
         return {
@@ -2343,7 +2349,65 @@ class Database:
                 "challenges": weekly,
                 "reward": {"xp": progresslib.WEEKLY_XP, "coins": progresslib.WEEKLY_COINS},
             },
+            "season": season,
         }
+
+    async def _season_view(self, session: Any, user_id: int, today: datetime) -> dict[str, Any]:
+        """This ratings season's challenges, and the seasons whose badge you've earned (all done)."""
+        n = ratinglib.season_of(today)
+        start, end = ratinglib.season_dates(n)
+        since = datetime.combine(start, datetime.min.time(), UTC)
+        refs = (
+            await session.execute(
+                select(XpEvent.ref).where(XpEvent.user_id == user_id, XpEvent.reason == "season")
+            )
+        ).scalars()
+        done: dict[str, set[str]] = {}
+        for ref in refs:
+            season, _, cid = ref.partition(":")
+            done.setdefault(season, set()).add(cid)
+        challenges = []
+        for cid, info in progresslib.SEASON.items():
+            target = int(info["target"])  # type: ignore[call-overload]
+            got = await self._measure(session, user_id, info, since)
+            challenges.append(
+                {
+                    "id": cid,
+                    "title": info["title"],
+                    "kind": info["kind"],
+                    "social": info["kind"] == "social",
+                    "progress": min(got, target),
+                    "target": target,
+                    "claimed": cid in done.get(str(n), set()),
+                }
+            )
+        badges = sorted(int(k) for k, v in done.items() if k.isdigit() and set(progresslib.SEASON) <= v)
+        return {
+            "season": n,
+            "ends": end.isoformat(),
+            "challenges": challenges,
+            "reward": {"xp": progresslib.SEASON_XP, "coins": progresslib.SEASON_COINS},
+            "badges": badges,
+        }
+
+    async def claim_season(self, user_id: int, challenge: str) -> str:
+        """Claim a finished challenge of this ratings season: XP and coins, once."""
+        if challenge not in progresslib.SEASON:
+            return "not_today"
+        today = self._today()
+        n = ratinglib.season_of(today)
+        since = datetime.combine(ratinglib.season_dates(n)[0], datetime.min.time(), UTC)
+        ref = f"{n}:{challenge}"
+        async with self.sessions() as session:
+            await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+            info = progresslib.SEASON[challenge]
+            if await self._measure(session, user_id, info, since) < int(info["target"]):  # type: ignore[call-overload]
+                return "not_done"
+            if not await self._xp(session, user_id, progresslib.SEASON_XP, "season", ref):
+                return "claimed"
+            await self._post(session, user_id, progresslib.SEASON_COINS, "season_ch", "season", ref)
+            await session.commit()
+        return ""
 
     async def claim_quest(self, user_id: int, quest: str) -> str:
         """Claim a finished quest of today's: XP and coins, once; the third of the day may complete a
@@ -2412,6 +2476,97 @@ class Database:
             if not await self._xp(session, user_id, progresslib.WEEKLY_XP, "weekly", ref):
                 return "claimed"
             await self._post(session, user_id, progresslib.WEEKLY_COINS, "weekly", "weekly", ref)
+            await session.commit()
+        return ""
+
+    # -- club challenges ---------------------------------------------------------------------------------
+    async def _club_measure(self, session: Any, club_id: int, measure: str, since: datetime) -> int:
+        """A club's progress this week, from club-room games fair play passed (flow.py logs only those)."""
+        if measure == "club_battles":
+            got = await session.scalar(
+                select(func.count())
+                .select_from(Battle)
+                .where(Battle.club_id == club_id, Battle.status == "played", Battle.played_at >= since)
+            )
+            return int(got or 0)
+        kind = "club_host" if measure == "club_hosts" else "club_game"
+        rows = (
+            await session.execute(
+                select(Activity.user_id, Activity.at).where(
+                    Activity.club_id == club_id, Activity.kind == kind, Activity.at >= since
+                )
+            )
+        ).all()
+        if measure in ("club_members", "club_hosts"):
+            return len({uid for uid, _ in rows})
+        per_day: dict[tuple[int, Any], int] = {}
+        for uid, at in rows:
+            key = (uid, aware(at).date())
+            per_day[key] = per_day.get(key, 0) + 1
+        return sum(min(n, progresslib.CLUB_DAY_GAMES) for n in per_day.values())
+
+    async def club_challenge(self, club_id: int, user_id: int, members: int) -> dict[str, Any]:
+        """This week's club challenge: the goal, the club's progress and where you stand."""
+        today = self._today()
+        start = progresslib.week_start(today.date())
+        since = datetime.combine(start, datetime.min.time(), UTC)
+        cid = progresslib.club_challenge(club_id, today.date())
+        title, measure, *_ = progresslib.CLUB[cid]
+        target = progresslib.club_target(cid, members)
+        async with self.sessions() as session:
+            progress = await self._club_measure(session, club_id, measure, since)
+            helped = await self._club_helped(session, club_id, user_id, since)
+            claimed = await session.scalar(
+                select(func.count())
+                .select_from(XpEvent)
+                .where(
+                    XpEvent.user_id == user_id, XpEvent.reason == "club", XpEvent.ref == f"{club_id}:{start}"
+                )
+            )
+        return {
+            "id": cid,
+            "title": title.format(n=target),
+            "progress": min(progress, target),
+            "target": target,
+            "ends": (start + timedelta(days=6)).isoformat(),
+            "helped": helped,
+            "claimed": bool(claimed),
+            "reward": {"xp": progresslib.CLUB_XP, "coins": progresslib.CLUB_COINS},
+        }
+
+    @staticmethod
+    async def _club_helped(session: Any, club_id: int, user_id: int, since: datetime) -> bool:
+        got = await session.scalar(
+            select(Activity.id)
+            .where(
+                Activity.club_id == club_id,
+                Activity.user_id == user_id,
+                Activity.kind == "club_game",
+                Activity.at >= since,
+            )
+            .limit(1)
+        )
+        return got is not None
+
+    async def claim_club_challenge(self, club_id: int, user_id: int, members: int) -> str:
+        """Claim this week's club reward: the club reached the goal and you played a club game in it."""
+        today = self._today()
+        start = progresslib.week_start(today.date())
+        since = datetime.combine(start, datetime.min.time(), UTC)
+        cid = progresslib.club_challenge(club_id, today.date())
+        measure = progresslib.CLUB[cid][1]
+        ref = f"{club_id}:{start}"
+        async with self.sessions() as session:
+            await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+            if await self._club_measure(session, club_id, measure, since) < progresslib.club_target(
+                cid, members
+            ):
+                return "not_done"
+            if not await self._club_helped(session, club_id, user_id, since):
+                return "not_helped"
+            if not await self._xp(session, user_id, progresslib.CLUB_XP, "club", ref):
+                return "claimed"
+            await self._post(session, user_id, progresslib.CLUB_COINS, "club_challenge", "club", ref)
             await session.commit()
         return ""
 
@@ -2575,7 +2730,9 @@ class Database:
                     await session.execute(select(Identity.user_id).where(Identity.user_id.in_(list(placing))))
                 ).scalars()
             )
-            due = battlelib.prizes(battle.kind, placing, finished)
+            fmt = battlelib.format_of(aware(battle.created_at).date())
+            bonus = battlelib.featured(fmt, battle.kind, battle.game_id)
+            due = battlelib.prizes(battle.kind, placing, finished, bonus)
             out: dict[int, dict[str, Any]] = {}
             for uid in sorted(placing):
                 await session.execute(select(User.id).where(User.id == uid).with_for_update())
@@ -2793,6 +2950,44 @@ class Database:
             await session.commit()
         return out
 
+    async def win_trade(self, placing: dict[int, int]) -> dict[str, Any] | None:
+        """After a two-account rated game: does this pair's week look like win-trading (fairplay.py)?
+        Returns the winner, the loser and the tally, or None."""
+        if len(placing) != 2:
+            return None
+        a, b = sorted(placing)
+        since = datetime.now(UTC) - timedelta(days=fairplay.WIN_TRADE_DAYS)
+        async with self.sessions() as session:
+            mine = select(RatingEvent.match).where(RatingEvent.user_id == a, RatingEvent.at >= since)
+            rows = (
+                await session.execute(
+                    select(RatingEvent.match, RatingEvent.user_id, RatingEvent.place).where(
+                        RatingEvent.match.in_(mine)
+                    )
+                )
+            ).all()
+            names = dict(
+                (await session.execute(select(User.id, User.username).where(User.id.in_([a, b])))).all()
+            )
+        matches: dict[str, dict[int, int]] = {}
+        for match, uid, place in rows:
+            matches.setdefault(match, {})[int(uid)] = place
+        pair = [m for m in matches.values() if set(m) == {a, b}]
+        wins = {a: sum(m[a] < m[b] for m in pair), b: sum(m[b] < m[a] for m in pair)}
+        winner = max(wins, key=lambda u: wins[u])
+        # looked at every WIN_TRADE_GAMES games, so an open case gets one line per batch, not per game
+        if len(pair) % fairplay.WIN_TRADE_GAMES or not fairplay.win_trading(wins[winner], len(pair)):
+            return None
+        loser = b if winner == a else a
+        return {
+            "winner": winner,
+            "loser": loser,
+            "winner_name": names.get(winner, "?"),
+            "loser_name": names.get(loser, "?"),
+            "wins": wins[winner],
+            "games": len(pair),
+        }
+
     async def my_ratings(self, user_id: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Your ratings as they stand this season, and any season rewards this paid just now."""
         season = ratinglib.season_of()
@@ -2883,6 +3078,95 @@ class Database:
                 select(Membership.user_id).where(Membership.club_id == club_id, Membership.banned.is_(False))
             )
             return set(rows.scalars())
+
+    async def club_legends(self, club_id: int, limit: int = 50) -> list[dict[str, Any]]:
+        """A club's Legend board: each member's best rating this season (placement done), best first."""
+        season = ratinglib.season_of()
+        async with self.sessions() as session:
+            rows = (
+                await session.execute(
+                    select(
+                        User.username,
+                        SkillRating.game_id,
+                        SkillRating.mu,
+                        SkillRating.sigma,
+                        SkillRating.games,
+                    )
+                    .join(User, User.id == SkillRating.user_id)
+                    .join(Membership, Membership.user_id == SkillRating.user_id)
+                    .where(
+                        Membership.club_id == club_id,
+                        Membership.banned.is_(False),
+                        SkillRating.season == season,
+                        SkillRating.games >= ratinglib.PROVISIONAL_GAMES,
+                    )
+                )
+            ).all()
+        best: dict[str, dict[str, Any]] = {}
+        for name, game, mu, sigma, games in rows:
+            shown = ratinglib.Rating(mu, sigma).display
+            if name not in best or shown > best[name]["rating"]:
+                best[name] = {
+                    "username": name,
+                    "rating": shown,
+                    "tier": ratinglib.tier(shown, games),
+                    "game": game,
+                }
+        return sorted(best.values(), key=lambda r: (-r["rating"], r["username"]))[:limit]
+
+    async def club_scores(self, club_id: int, limit: int = 50) -> list[dict[str, Any]]:
+        """A club's Club score this ratings season: club games, hosting and fair battles (progress.py)."""
+        start = datetime.combine(ratinglib.season_dates(ratinglib.season_of())[0], datetime.min.time(), UTC)
+        async with self.sessions() as session:
+            members = dict(
+                (
+                    await session.execute(
+                        select(Membership.user_id, User.username)
+                        .join(User, User.id == Membership.user_id)
+                        .where(Membership.club_id == club_id, Membership.banned.is_(False))
+                    )
+                ).all()
+            )
+            acts = (
+                await session.execute(
+                    select(Activity.user_id, Activity.kind, Activity.at).where(
+                        Activity.club_id == club_id,
+                        Activity.kind.in_(("club_game", "club_host")),
+                        Activity.at >= start,
+                    )
+                )
+            ).all()
+            battles = (
+                await session.execute(
+                    select(BattleResult.user_id, func.count())
+                    .join(Battle, Battle.id == BattleResult.battle_id)
+                    .where(
+                        Battle.club_id == club_id,
+                        Battle.played_at >= start,
+                        BattleResult.finished.is_(True),
+                        BattleResult.note.not_in(fairplay.UNFAIR),
+                    )
+                    .group_by(BattleResult.user_id)
+                )
+            ).all()
+        per_day: dict[tuple[int, str, Any], int] = {}
+        for uid, kind, at in acts:
+            key = (uid, kind, aware(at).date())
+            per_day[key] = per_day.get(key, 0) + 1
+        score: dict[int, int] = dict.fromkeys(members, 0)
+        games: dict[int, int] = dict.fromkeys(members, 0)
+        for (uid, kind, _), n in per_day.items():
+            if uid in score:
+                counted = min(n, progresslib.CLUB_DAY_GAMES)
+                score[uid] += counted * progresslib.CLUB_SCORE[kind]
+                games[uid] += counted if kind == "club_game" else 0
+        for uid, n in battles:
+            if uid in score:
+                score[uid] += int(n) * progresslib.CLUB_SCORE["battle"]
+        rows = [
+            {"username": members[u], "score": score[u], "games": games[u]} for u in members if score[u] > 0
+        ]
+        return sorted(rows, key=lambda r: (-r["score"], r["username"]))[:limit]
 
     async def place_board_ids(self, place_id: int) -> set[int]:
         """Accounts verified at the place now that chose to be on its boards."""

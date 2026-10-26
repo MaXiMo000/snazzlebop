@@ -3,9 +3,11 @@ import { Btn, Card, CopyButton } from "../components/ui";
 import { ReportForm } from "../components/report";
 import { UpForGame } from "../components/upgame";
 import { ClubBattles } from "../components/battle";
-import { useAccount } from "../lib/account";
+import { refreshAccount, useAccount } from "../lib/account";
 import { ApiError, fetchGames } from "../lib/api";
 import {
+  claimClubChallenge,
+  clubBoards,
   closeClub,
   club as loadClub,
   clubRoom,
@@ -25,6 +27,7 @@ import {
   saveClub,
   setRole,
   STATUS_TEXT,
+  type ClubBoards,
   type ClubDetail,
   type ClubSummary,
   type NewInvite,
@@ -32,6 +35,7 @@ import {
 import { allPlaces } from "../lib/places";
 import { block, report } from "../lib/safety";
 import { sfx } from "../lib/sfx";
+import { TIER_ICON } from "./Ratings";
 
 type Go = (path: string) => void;
 const errText = (e: unknown) =>
@@ -383,12 +387,122 @@ export function ClubHome({ slug, go }: { slug: string; go: Go }) {
       )}
       <UpForGame c={c} go={go} name={user.username} update={setC} />
       <PlayNow c={c} go={go} name={user.username} />
+      {c.challenge && <ClubChallenge c={c} update={setC} />}
       <ClubBattles c={c} me={user.username} go={go} />
+      <Boards slug={c.slug} />
       {mayInvite(c.role) && <Invites c={c} refresh={refresh} />}
       <Members c={c} me={user.username} refresh={refresh} />
       {mayEdit(c.role) && <Settings c={c} refresh={refresh} />}
       <Leave c={c} go={go} />
     </div>
+  );
+}
+
+/** This week's shared goal: the club's progress, and the reward for everyone who played. */
+function ClubChallenge({ c, update }: { c: ClubDetail; update: (c: ClubDetail) => void }) {
+  const ch = c.challenge!;
+  const { busy, error, run } = useAction();
+  const [done, setDone] = useState(false);
+  const reached = ch.progress >= ch.target;
+  const ends = new Date(`${ch.ends}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", timeZone: "UTC" });
+  const claim = () =>
+    void run(async () => {
+      update(await claimClubChallenge(c.slug));
+      sfx.ding();
+      setDone(true);
+      await refreshAccount();
+    });
+  return (
+    <Card aria-labelledby="challenge-h">
+      <h2 id="challenge-h">This week's club challenge</h2>
+      <p className="muted">Everyone who plays a club game this week shares the reward. Ends after {ends}.</p>
+      <ul className="quest-list">
+        <li className={`quest ${ch.claimed ? "claimed" : reached && ch.helped ? "done" : ""}`}>
+          <span className="quest-icon" aria-hidden="true">
+            🏠
+          </span>
+          <span className="quest-text">
+            <b>{ch.title}</b>
+            <span className="muted coin-detail">
+              <span>
+                {ch.progress} of {ch.target}
+              </span>
+              <span className="no-break">
+                +{ch.reward.xp} XP · 🪙 {ch.reward.coins}
+              </span>
+            </span>
+            <progress className="coin-meter" max={ch.target} value={ch.progress} aria-label={`${ch.progress} of ${ch.target}`} />
+          </span>
+          <span className="quest-actions">
+            {ch.claimed ? (
+              <span className="chip teal">Claimed</span>
+            ) : (
+              <Btn size="small" variant={reached && ch.helped ? "go" : "ghost"} disabled={!reached || !ch.helped || busy} onClick={claim}>
+                Claim
+              </Btn>
+            )}
+          </span>
+        </li>
+      </ul>
+      {!ch.helped && !ch.claimed && <p className="muted space-top">Play a game in a club room this week to share the reward.</p>}
+      {done && (
+        <p className="alert calm space-top" role="status">
+          Claimed: +{ch.reward.xp} XP and {ch.reward.coins} coins.
+        </p>
+      )}
+      <Alert text={error} />
+    </Card>
+  );
+}
+
+/** The club's two boards this season: Legends (best ratings) and the Club score (who plays most). */
+function Boards({ slug }: { slug: string }) {
+  const [tab, setTab] = useState<"score" | "legends">("score");
+  const [data, setData] = useState<ClubBoards | null>(null);
+  useEffect(() => void clubBoards(slug).then(setData, () => undefined), [slug]);
+  if (!data) return null;
+  const empty =
+    tab === "score" ? "Nobody has played a club game this season yet. Start a club room!" : "Nobody here has finished placement in a ranked game this season yet.";
+  const rows =
+    tab === "score"
+      ? data.scores.map((r) => ({ name: r.username, you: r.you, value: `${r.score}`, detail: `${r.games} ${r.games === 1 ? "game" : "games"}` }))
+      : data.legends.map((r) => ({ name: r.username, you: r.you, value: `${TIER_ICON[r.tier] ?? ""} ${r.rating}`, detail: r.title }));
+  return (
+    <Card aria-labelledby="boards-h">
+      <h2 id="boards-h">Club boards</h2>
+      <p className="muted">
+        Season {data.season.number}.{" "}
+        {tab === "score"
+          ? "The Club score counts playing, not winning: club games, hosting and battles."
+          : "Legends: each member's best ranked rating this season."}
+      </p>
+      <div className="auth-tabs board-period space-top" role="group" aria-label="Which board">
+        {(["score", "legends"] as const).map((t) => (
+          <button key={t} type="button" className={`auth-tab ${tab === t ? "on" : ""}`} aria-pressed={tab === t} onClick={() => setTab(t)}>
+            {t === "score" ? "Club score" : "Legends"}
+          </button>
+        ))}
+      </div>
+      {rows.length ? (
+        <ol className="score-rows space-top">
+          {rows.map((r, i) => (
+            <li key={r.name} className={r.you ? "on" : ""}>
+              <b>
+                {i === 0 ? "👑 " : `${i + 1}. `}
+                {r.name}
+                {r.you ? " (you)" : ""}
+                <span className="muted board-detail">{r.detail}</span>
+              </b>
+              <span className="score-tally">
+                <span className="score-pts">{r.value}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="muted space-top">{empty}</p>
+      )}
+    </Card>
   );
 }
 

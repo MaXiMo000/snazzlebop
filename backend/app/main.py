@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from . import (
     accounts,
     calls,
+    events,
     integrations,
     notifications,
     oidc,
@@ -95,6 +96,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def pay_coins(rows: list[dict[str, Any]]) -> dict[int, int]:
         return await db.record_results(rows, season_of(), DAILY_COIN_CAP)
 
+    async def rate_match(game_id: str, placing: dict[int, int]) -> dict[int, dict[str, Any]] | None:
+        """Rate a ranked game, then look for win-trading between the two (a flag for moderators)."""
+        out = await db.rate_match(game_id, placing)
+        if out is not None:
+            flag = await db.win_trade(placing)
+            if flag is not None:
+                await db.add_report(
+                    {
+                        "reporter_id": None,
+                        "target_id": flag["winner"],
+                        "target_name": flag["winner_name"][:40],
+                        "club_id": None,
+                        "room_code": None,
+                        "reason": "cheating",
+                        "note": f"Possible win-trading: beat {flag['loser_name']} in {flag['wins']} of "
+                        f"{flag['games']} rated games this week. Flagged automatically for review.",
+                        "context": [],
+                        "priority": "normal",
+                        "staff": True,
+                    },
+                    "system",
+                    outbox.names,
+                    lambda report, club: events.report_payload(
+                        report, club, settings.site, settings.secret_key
+                    ),
+                )
+        return out
+
     # Wall-clock time (not monotonic) so a room's timers still mean something after a restart.
     hub = Hub(
         settings,
@@ -103,7 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         on_game_started=generator.request,
         store=db,
         on_results=pay_coins,
-        on_rated=db.rate_match,
+        on_rated=rate_match,
         on_battle=db.settle_battle,
         on_activity=db.log_activity,
         spend_powerup=db.spend_powerup,

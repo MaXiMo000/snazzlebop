@@ -119,6 +119,10 @@ def test_every_route_matches_its_declared_model(client):
     c.call("GET", "/api/clubs")
     club = "/api/clubs/{slug}"
     c.call("GET", f"/api/clubs/{slug}", club)
+    c.call("GET", f"/api/clubs/{slug}/boards", club + "/boards")
+    c.call(
+        "POST", f"/api/clubs/{slug}/challenge/claim", club + "/challenge/claim"
+    )  # not reached: an error body
     c.call("POST", f"/api/clubs/{slug}/settings", club + "/settings", json={"rules": {"chat": False}})
     invite = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={"uses": 5})
     spare = c.call("POST", f"/api/clubs/{slug}/invites", club + "/invites", json={})
@@ -241,6 +245,7 @@ def test_every_route_matches_its_declared_model(client):
     )  # not done yet: the error body
     c.call("POST", "/api/me/quests/nope/reroll", "/api/me/quests/{quest}/reroll")  # not today's: error body
     c.call("POST", "/api/me/weekly/nope/claim", "/api/me/weekly/{challenge}/claim")
+    c.call("POST", "/api/me/season/nope/claim", "/api/me/season/{challenge}/claim")
     c.call("GET", "/api/ratings/board?game=chess&period=week", "/api/ratings/board")
     c.call("POST", "/api/me/place-boards", json={"on": True})
     c.call("POST", "/api/me/google/remove", json={"password": PW})  # nothing linked: still ok

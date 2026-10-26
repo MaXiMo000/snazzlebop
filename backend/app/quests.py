@@ -56,6 +56,15 @@ def router(settings: Settings, db: Any) -> APIRouter:
             raise HubError(*WHY[why])
         return JSONResponse(await db.progress(user.id), headers={"Cache-Control": "no-store"})
 
+    @api.post("/api/me/season/{challenge}/claim", response_model=schemas.Progress, responses=schemas.ERRORS)
+    async def claim_season(challenge: str, request: Request) -> JSONResponse:
+        check_same_origin(request, settings)
+        user = await me(request)
+        why = await db.claim_season(user.id, challenge[:32])
+        if why:
+            raise HubError(*WHY[why])
+        return JSONResponse(await db.progress(user.id), headers={"Cache-Control": "no-store"})
+
     @api.post("/api/me/weekly/{challenge}/claim", response_model=schemas.Progress, responses=schemas.ERRORS)
     async def claim_weekly(challenge: str, request: Request) -> JSONResponse:
         check_same_origin(request, settings)

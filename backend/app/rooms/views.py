@@ -81,6 +81,7 @@ class ViewsMixin:
             "battle": {
                 "game": room.battle.get("game") if room.battle else None,
                 "kind": room.battle.get("kind") if room.battle else None,
+                "featured": bool(room.battle and room.battle.get("featured")),
                 "news": room.battle_news if room.phase == "results" else {},
             },
             "ready": self._ready_view(room),

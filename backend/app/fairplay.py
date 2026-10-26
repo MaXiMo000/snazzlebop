@@ -10,7 +10,9 @@ dodged by switching from one way of earning to another:
   everyone gets the finisher amount (playing against your own guest tab);
 - same device: accounts that have signed in on the same browser earn nothing against each other;
 - seated at the start: only accounts in their seat when the game began are paid;
-- new accounts: battle prizes need an account NEW_ACCOUNT_DAYS old with a confirmed email or Google.
+- new accounts: battle prizes need an account NEW_ACCOUNT_DAYS old with a confirmed email or Google;
+- win-trading: two accounts whose rated games against each other over a week nearly always go the same
+  way are flagged for platform moderators (a person decides; nothing is taken automatically).
 """
 
 from __future__ import annotations
@@ -23,6 +25,9 @@ REPEAT_LIMIT = 5  # paid games a day with exactly the same accounts
 BATTLE_REPEAT_LIMIT = 3  # paid battles a day with exactly the same accounts
 SOLO_COINS = 5  # place coins without another signed-in player: everyone gets the finisher amount
 NEW_ACCOUNT_DAYS = 3
+WIN_TRADE_DAYS = 7  # the window looked at
+WIN_TRADE_GAMES = 8  # rated games between the same two accounts before a pattern counts
+WIN_TRADE_SHARE = 0.9  # the share one side must win
 
 # Held-back reasons that also keep a game out of XP, quests and "new connections".
 UNFAIR = frozenset({"quick", "device", "repeat", "solo"})
@@ -54,3 +59,8 @@ def solo_coins(coins: int, accounts: int) -> tuple[int, str]:
     if accounts >= 2 or coins <= SOLO_COINS:
         return coins, ""
     return SOLO_COINS, "solo"
+
+
+def win_trading(wins: int, games: int) -> bool:
+    """One account beat the same other one in nearly all of their many rated games this week."""
+    return games >= WIN_TRADE_GAMES and wins >= games * WIN_TRADE_SHARE

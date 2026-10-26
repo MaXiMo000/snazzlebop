@@ -1,7 +1,7 @@
 import { request, saveSession } from "./api";
-import type { ClubDetail, ClubList, ClubRules, NewInvite, Ok, RoomPass } from "./contract";
+import type { ClubBoards, ClubDetail, ClubList, ClubRules, NewInvite, Ok, RoomPass } from "./contract";
 
-export type { ClubDetail, ClubRules, ClubSummary, NewInvite } from "./contract";
+export type { ClubBoards, ClubDetail, ClubRules, ClubSummary, NewInvite } from "./contract";
 
 export const ROLE_NAMES: Record<string, string> = {
   owner: "Owner",
@@ -29,6 +29,8 @@ const who = (name: string) => encodeURIComponent(name);
 
 export const myClubs = () => request<ClubList>("/api/clubs");
 export const club = (slug: string) => request<ClubDetail>(at(slug));
+/** The Legend board and the Club score, this ratings season. */
+export const clubBoards = (slug: string) => request<ClubBoards>(`${at(slug)}/boards`);
 export const createClub = (name: string, about: string) => post<ClubDetail>("/api/clubs", { name, about });
 export const saveClub = (slug: string, body: { name?: string; about?: string; rules?: Partial<ClubRules> }) =>
   post<ClubDetail>(`${at(slug)}/settings`, body);
@@ -43,6 +45,8 @@ export const removeMember = (slug: string, username: string, ban: boolean) =>
 export const handOver = (slug: string, username: string) => post<Ok>(`${at(slug)}/transfer`, { username });
 export const leaveClub = (slug: string) => post<Ok>(`${at(slug)}/leave`);
 export const closeClub = (slug: string) => post<Ok>(`${at(slug)}/delete`);
+/** This week's club reward (the club reached the goal and you played a club game). */
+export const claimClubChallenge = (slug: string) => post<ClubDetail>(`${at(slug)}/challenge/claim`);
 
 /** Open a room for the club and take the host's seat in this tab. Returns the room code. */
 export async function clubRoom(slug: string, name: string): Promise<string> {

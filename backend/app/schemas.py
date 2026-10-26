@@ -139,6 +139,28 @@ class BoardRow(Strict):
     you: bool
 
 
+class LegendRow(Strict):
+    username: str
+    rating: int  # their best this season
+    tier: str
+    game: str  # the game it's in
+    title: str
+    you: bool
+
+
+class ClubScoreRow(Strict):
+    username: str
+    score: int
+    games: int  # club games that counted
+    you: bool
+
+
+class ClubBoards(Strict):
+    season: RatingSeason
+    legends: list[LegendRow]  # top 50: each member's best rating this season
+    scores: list[ClubScoreRow]  # top 50: activity this season (club games, hosting, battles)
+
+
 class RatingBoard(Strict):
     game: str
     title: str
@@ -207,6 +229,7 @@ class BattleRecord(Strict):
     head_to_head: list[HeadToHead]
     recent: list[BattleRow]
     challenges: list[Challenge]  # duels waiting for you
+    format: BattleFormat  # this week's featured format
 
 
 class Quest(Strict):
@@ -237,12 +260,30 @@ class Progress(Strict):
     streak: int  # days in a row with all three claimed
     streak_every: int  # a bonus every this many days
     weekly: WeeklyChallenges
+    season: SeasonChallenges
 
 
 class WeeklyChallenges(Strict):
     ends: str  # ISO date (Sunday)
     challenges: list[Quest]
     reward: QuestReward
+
+
+class SeasonChallenges(Strict):
+    season: int  # the ratings season's number
+    ends: str  # ISO date (the season's last day)
+    challenges: list[Quest]
+    reward: QuestReward
+    badges: list[int]  # seasons whose challenges you finished, all five
+
+
+class BattleFormat(Strict):
+    id: str
+    title: str
+    features: str  # what it features, in words ("Chess duels")
+    games: list[str]  # game ids (empty = any game)
+    kinds: list[str]  # duel | group
+    bonus: float  # winners get this many times the usual prize
 
 
 class MfaStatus(Strict):
@@ -414,6 +455,17 @@ class NewInvite(Strict):
     expires_at: str
 
 
+class ClubChallenge(Strict):
+    id: str
+    title: str
+    progress: int  # the club's, capped at the target
+    target: int
+    ends: str  # the last day (ISO date, UTC)
+    helped: bool  # you've played a club game this week (needed to claim)
+    claimed: bool
+    reward: QuestReward
+
+
 class ClubDetail(Strict):
     slug: str
     name: str
@@ -429,6 +481,7 @@ class ClubDetail(Strict):
     open_reports: int  # reports waiting for the moderators (0 unless you're one)
     place: PlaceRef | None  # the place the club is for, when it requires one
     secure_nudge: bool  # you run this club without the authenticator app: suggest turning it on
+    challenge: ClubChallenge | None  # this week's shared goal (None while accounts are down)
 
 
 class InboxItem(Strict):
@@ -989,6 +1042,7 @@ class BattlePrize(Strict):
 class BattleView(Strict):
     game: str | None  # the battle waiting to be played here (None: none)
     kind: str | None  # duel | group
+    featured: bool  # in the week's featured format: the winners get more
     news: dict[str, BattlePrize]  # results: player id -> prize
 
 

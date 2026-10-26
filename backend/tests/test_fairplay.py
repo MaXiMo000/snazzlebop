@@ -6,17 +6,33 @@ from __future__ import annotations
 
 import asyncio
 import unittest
+import unittest.mock
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import update
+from fastapi.testclient import TestClient
+from sqlalchemy import select, update
 
 from app import battles as B
 from app import fairplay as F
 from app import ratings as R
 from app.config import Settings
-from app.db import Database, User
+from app.db import Database, RatingEvent, User
+from app.main import create_app
 from app.rooms import Hub
+from tests.test_api import settings
 from tests.test_rooms import Clock, FakeConn
+
+
+def setUpModule():  # noqa: N802 - the unittest hook
+    """Pin the week's featured battle format to one these tests never play (Battleships duels), so
+    prizes are the usual ones whatever the date."""
+    global _pin
+    _pin = unittest.mock.patch.object(B, "format_of", lambda day: "fleet")
+    _pin.start()
+
+
+def tearDownModule():  # noqa: N802
+    _pin.stop()
 
 
 def finish(uid, coins, group, accounts=2, place=1):
@@ -169,3 +185,42 @@ class RatingRingTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(await db.rate_match("trivia", {a: 1, b: 2, c: 3}))
         self.assertIsNone(await db.rate_match("trivia", {c: 1, a: 2, b: 3}))
         self.assertIsNotNone(await db.rate_match("trivia", {a: 1, b: 2, c: 3, d: 4}))  # a new face counts
+
+
+class WinTradingTests(unittest.IsolatedAsyncioTestCase):
+    def test_the_rule(self):
+        self.assertFalse(F.win_trading(F.WIN_TRADE_GAMES - 1, F.WIN_TRADE_GAMES - 1))  # too few to tell
+        self.assertTrue(F.win_trading(F.WIN_TRADE_GAMES, F.WIN_TRADE_GAMES))
+        self.assertFalse(F.win_trading(6, 10))  # a better player, not a pattern
+
+    async def test_a_pair_that_always_goes_one_way_is_flagged(self):
+        db = Database("sqlite+aiosqlite:///:memory:")
+        await db.init()
+        a, b = [(await db.create_user(f"W{i}_00", "x", "y")).id for i in range(2)]
+        flags = []
+        for n in range(F.WIN_TRADE_GAMES):
+            if n and n % R.PAIR_LIMIT == 0:  # the same pair only rates a few a day: a day goes by
+                async with db.sessions() as s:
+                    for row in (await s.execute(select(RatingEvent))).scalars():
+                        row.at = row.at - timedelta(days=1)
+                    await s.commit()
+            self.assertIsNotNone(await db.rate_match("chess", {a: 2, b: 1}))
+            flags.append(await db.win_trade({a: 2, b: 1}))
+        self.assertEqual(flags[:-1], [None] * (F.WIN_TRADE_GAMES - 1))
+        self.assertEqual(
+            {k: flags[-1][k] for k in ("winner", "loser", "wins", "games")},
+            {"winner": b, "loser": a, "wins": F.WIN_TRADE_GAMES, "games": F.WIN_TRADE_GAMES},
+        )
+
+
+def test_the_app_files_a_report_for_a_person_to_review(tmp_path):
+    """A flag becomes a platform report from no one, for staff to look at; nothing is taken."""
+    with TestClient(create_app(settings(tmp_path))) as client:
+        db, hub = client.app.state.db, client.app.state.hub
+        a, b = [client.portal.call(db.create_user, f"X{i}_00", "x", "y").id for i in range(2)]
+        flag = {"winner": b, "loser": a, "winner_name": "X1_00", "loser_name": "X0_00", "wins": 8, "games": 8}
+        with unittest.mock.patch.object(db, "win_trade", unittest.mock.AsyncMock(return_value=flag)):
+            client.portal.call(hub.on_rated, "chess", {a: 2, b: 1})
+        [report] = client.portal.call(db.staff_reports)
+        assert (report.target_id, report.reporter_id, report.reason) == (b, None, "cheating")
+        assert "win-trading" in report.note

@@ -3,7 +3,7 @@ import { Alert, errText } from "../components/auth";
 import { Btn, Card } from "../components/ui";
 import { refreshAccount, useAccount } from "../lib/account";
 import type { Progress } from "../lib/contract";
-import { claimQuest, claimWeekly, myProgress, rerollQuest } from "../lib/quests";
+import { claimQuest, claimSeason, claimWeekly, myProgress, rerollQuest } from "../lib/quests";
 import { sfx } from "../lib/sfx";
 
 type Go = (path: string) => void;
@@ -16,6 +16,7 @@ const KIND: Record<string, [string, string]> = {
   club: ["🏠", "Club"],
   fun: ["🎉", "Fun"],
 };
+const longDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "long", timeZone: "UTC" });
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", timeZone: "UTC" });
 
 /** /quests: your level, today's three quests (one always social), your streak and this week's challenges. */
@@ -68,6 +69,12 @@ export function Quests({ go }: { go: Go }) {
   const swap = (q: Quest) => void act(`swap-${q.id}`, () => rerollQuest(q.id), () => `Swapped “${q.title}” for another ${KIND[q.kind]?.[1].toLowerCase() ?? ""} quest.`);
   const claimWeek = (q: Quest) =>
     void act(q.id, () => claimWeekly(q.id), (before, next) => `“${q.title}” done: +${next.weekly.reward.xp} XP and ${next.weekly.reward.coins} coins.${levelUp(before, next)}`);
+
+  const claimSeasonal = (q: Quest) =>
+    void act(q.id, () => claimSeason(q.id), (before, next) => {
+      const badge = next.season.badges.length > (before?.season.badges.length ?? 0) ? ` Every season challenge done: the Season ${next.season.season} badge is yours!` : "";
+      return `“${q.title}” done: +${next.season.reward.xp} XP and ${next.season.reward.coins} coins.${levelUp(before, next)}${badge}`;
+    });
 
   const row = (q: Quest, reward: { xp: number; coins: number }, onClaim: (q: Quest) => void, canSwap: boolean) => {
     const done = q.progress >= q.target;
@@ -154,6 +161,25 @@ export function Quests({ go }: { go: Go }) {
           <h2 id="weekly-h">This week's challenges</h2>
           <p className="muted">Bigger goals, until the end of {day(data.weekly.ends)}.</p>
           <ul className="quest-list">{data.weekly.challenges.map((q) => row(q, data.weekly.reward, claimWeek, false))}</ul>
+        </Card>
+      )}
+
+      {data && (
+        <Card aria-labelledby="season-h">
+          <h2 id="season-h">Season {data.season.season} challenges</h2>
+          <p className="muted">
+            Five long goals for this ratings season, until {longDay(data.season.ends)}. Finish all five for the season's badge.
+          </p>
+          {data.season.badges.length > 0 && (
+            <p className="season-badges space-top" aria-label="Your season badges">
+              {data.season.badges.map((n) => (
+                <span key={n} className="chip">
+                  🏅 Season {n}
+                </span>
+              ))}
+            </p>
+          )}
+          <ul className="quest-list">{data.season.challenges.map((q) => row(q, data.season.reward, claimSeasonal, false))}</ul>
         </Card>
       )}
 

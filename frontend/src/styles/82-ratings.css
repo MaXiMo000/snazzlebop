@@ -194,3 +194,24 @@
 .streak {
   margin-bottom: 0;
 }
+
+/* Season badges on the Quests page; the week's battle format on a club's battle form */
+.season-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.battle-format {
+  padding: 10px 14px;
+  border: 2px dashed var(--edge);
+  border-radius: 14px;
+}
+.battle-format.on {
+  border-style: solid;
+  border-color: var(--accent, var(--teal));
+}
+/* Club boards: the game or the count sits under the name, so the score keeps to the right */
+.board-detail {
+  display: block;
+  font-size: 0.9em;
+}

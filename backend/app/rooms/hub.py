@@ -46,8 +46,8 @@ class Hub(
         # Ranked games: (game, {account: place}) -> each account's rating change, or None if unrated.
         on_rated: Callable[[str, dict[int, int]], Awaitable[dict[int, dict[str, Any]] | None]] | None = None,
         # Battles: (battle id, {account: place}, accounts that finished) -> each account's prize.
-        # Quests count things done in rooms: (accounts, kind) is logged in the background.
-        on_activity: Callable[[list[int], str], Awaitable[None]] | None = None,
+        # Quests count things done in rooms: (accounts, kind, the room's club) is logged in the background.
+        on_activity: Callable[[list[int], str, int | None], Awaitable[None]] | None = None,
         # (battle id, {account: place}, accounts that finished, too quick) -> each account's prize
         on_battle: Callable[
             [int, dict[int, int], set[int], bool], Awaitable[dict[int, dict[str, Any]] | None]

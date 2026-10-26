@@ -51,6 +51,18 @@ export function Battles({ go }: { go: Go }) {
         )}
       </Card>
       <Alert text={error} />
+      {data && (
+        <Card tone="soft" aria-labelledby="format-h">
+          <h2 id="format-h">
+            <span aria-hidden="true">🔥 </span>
+            {data.format.title}
+          </h2>
+          <p>
+            This week's featured battles: {data.format.features.toLowerCase()}. Their winners get {Math.round((data.format.bonus - 1) * 100)}% more coins. A new format
+            every Monday.
+          </p>
+        </Card>
+      )}
 
       {data && data.challenges.length > 0 && (
         <Card aria-labelledby="challenges-h">
@@ -130,7 +142,7 @@ export function Battles({ go }: { go: Go }) {
         <h2 id="battle-how-h">How battles work</h2>
         <ul className="evidence">
           <li>Challenge a clubmate to a duel, or open a group battle for three to eight. Nobody puts anything in.</li>
-          <li>The platform pays the prizes: 40 coins for winning a duel, 60 for first in a group, 10 for everyone who finishes.</li>
+          <li>The platform pays the prizes: 40 coins for winning a duel, 60 for first in a group, 10 for everyone who finishes. The week's featured format pays its winners more.</li>
           <li>
             Up to 10 battle prizes a day. The same group of people gets paid for three battles a day, and accounts on the same device never do.
           </li>

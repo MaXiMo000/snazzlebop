@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from app import progress as P
 
@@ -247,6 +247,111 @@ class VarietyTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue((await self.db.progress(a))["weekly"]["challenges"][2]["claimed"])
 
 
+class SeasonChallengeTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.db = Database("sqlite+aiosqlite:///:memory:")
+        await self.db.init()
+        self.ids = [(await self.db.create_user(f"S{i}_00", "x", "y")).id for i in range(2)]
+
+    async def test_claims_once_and_the_badge_needs_all_five(self):
+        from app import ratings as R
+
+        a, _ = self.ids
+        season = R.season_of(self.db._today())
+        self.assertEqual(await self.db.claim_season(a, "s_ranked20"), "not_done")
+        self.assertEqual(await self.db.claim_season(a, "nope"), "not_today")
+        with unittest.mock.patch.object(self.db, "_measure", lambda *args: _done(100)):
+            for cid in list(P.SEASON)[:-1]:
+                self.assertEqual(await self.db.claim_season(a, cid), "")
+            self.assertEqual(await self.db.claim_season(a, cid), "claimed")
+            view = (await self.db.progress(a))["season"]
+            self.assertEqual(view["badges"], [])  # four of five
+            self.assertEqual(await self.db.claim_season(a, list(P.SEASON)[-1]), "")
+            view = (await self.db.progress(a))["season"]
+        self.assertEqual((view["season"], view["badges"]), (season, [season]))
+        self.assertTrue(all(c["claimed"] for c in view["challenges"]))
+        history = await self.db.coin_history(a)
+        self.assertEqual(
+            sum(e["delta"] for e in history["entries"] if e["reason"] == "season_ch"), 5 * P.SEASON_COINS
+        )
+
+    async def test_battles_that_paid_nothing_for_farming_dont_count(self):
+        from app.db import Battle, BattleResult
+
+        a, b = self.ids
+        async with self.db.sessions() as s:
+            for note in ("", "repeat", "device", "quick"):
+                battle = Battle(room_code="X", game_id="four", kind="duel", challenger_id=a, status="played")
+                battle.played_at = datetime.now(UTC)
+                s.add(battle)
+                await s.flush()
+                s.add(BattleResult(battle_id=battle.id, user_id=a, place=1, prize=0, note=note))
+            await s.commit()
+            got = await self.db._measure(s, a, P.SEASON["s_battles10"], datetime.now(UTC) - timedelta(days=1))
+        self.assertEqual(got, 1)
+
+
+async def _done(n):
+    return n
+
+
+class ClubChallengeRuleTests(unittest.TestCase):
+    def test_one_a_week_sized_to_the_club(self):
+        monday = date(2026, 10, 5)
+        week = [P.club_challenge(3, monday + timedelta(days=d)) for d in range(7)]
+        self.assertEqual(len(set(week)), 1)  # the same all week
+        seen = {P.club_challenge(3, monday + timedelta(weeks=w)) for w in range(len(P.CLUB))}
+        self.assertEqual(seen, set(P.CLUB))  # every kind comes round
+        self.assertEqual(P.club_target("c_games", 2), 15)  # a pair needs more than one day
+        self.assertEqual(P.club_target("c_games", 100), 60)
+        self.assertEqual(P.club_target("c_members", 1), 1)  # never more people than the club has
+        for cid in P.CLUB:
+            self.assertIn("{n}", P.CLUB[cid][0])
+
+
+class ClubChallengeStoreTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        from app.db import Club
+
+        self.db = Database("sqlite+aiosqlite:///:memory:")
+        await self.db.init()
+        self.ids = [(await self.db.create_user(f"C{i}_00", "x", "y")).id for i in range(3)]
+        async with self.db.sessions() as s:
+            club = Club(slug="c-1", name="C", about="", rules={}, created_by=self.ids[0])
+            s.add(club)
+            await s.commit()
+            self.club = club.id
+
+    async def test_claim_when_the_club_gets_there_and_only_if_you_helped(self):
+        a, b, c = self.ids
+        with unittest.mock.patch.object(P, "club_challenge", lambda cid, day: "c_members"):
+            self.assertEqual(await self.db.claim_club_challenge(self.club, a, 3), "not_done")
+            await self.db.log_activity([a, b], "club_game", self.club)
+            await self.db.log_activity([a, b], "club_game", None)  # not in a club room: doesn't count
+            info = await self.db.club_challenge(self.club, a, 3)
+            self.assertEqual(
+                (info["progress"], info["target"], info["title"]),
+                (2, 2, "2 different members play a club game"),
+            )
+            self.assertEqual(await self.db.claim_club_challenge(self.club, c, 3), "not_helped")
+            self.assertEqual(await self.db.claim_club_challenge(self.club, a, 3), "")
+            self.assertEqual(await self.db.claim_club_challenge(self.club, a, 3), "claimed")  # once a week
+            self.assertTrue((await self.db.club_challenge(self.club, a, 3))["claimed"])
+        history = await self.db.coin_history(a)
+        self.assertEqual(
+            [e["delta"] for e in history["entries"] if e["reason"] == "club_challenge"], [P.CLUB_COINS]
+        )
+
+    async def test_two_members_cant_play_the_goal_in_alone(self):
+        a, b, _ = self.ids
+        with unittest.mock.patch.object(P, "club_challenge", lambda cid, day: "c_games"):
+            for _ in range(40):  # a farming pair, all in one day
+                await self.db.log_activity([a, b], "club_game", self.club)
+            info = await self.db.club_challenge(self.club, a, 2)
+            self.assertEqual(info["progress"], 2 * P.CLUB_DAY_GAMES)
+            self.assertEqual(await self.db.claim_club_challenge(self.club, a, 2), "not_done")
+
+
 # -- HTTP ----------------------------------------------------------------------------------------------
 import pytest  # noqa: E402
 
@@ -305,9 +410,11 @@ class ActivityHookTests(unittest.IsolatedAsyncioTestCase):
         from tests.test_ranked import room_of
 
         logged: list[tuple[list[int], str]] = []
+        clubs: dict[str, int | None] = {}
 
-        async def on_activity(ids, kind):
+        async def on_activity(ids, kind, club_id=None):
             logged.append((sorted(ids), kind))
+            clubs[kind] = club_id
 
         hub, room, pids, conns = await room_of(2)
         hub.on_activity = on_activity
@@ -328,4 +435,5 @@ class ActivityHookTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kinds.count("party"), 1)
         self.assertEqual(kinds.count("host"), 1)  # the quick game logged nothing
         self.assertIn(([1, 2], "club_game"), logged)
+        self.assertEqual(clubs["club_game"], 9)  # club challenges count it for that club
         self.assertIn(([1], "club_host"), logged)

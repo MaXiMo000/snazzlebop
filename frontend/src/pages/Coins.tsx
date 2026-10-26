@@ -7,6 +7,16 @@ import type { CoinHistory } from "../lib/contract";
 
 type Go = (path: string) => void;
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+// Rewards that aren't from one game: [icon, what, detail]
+const REWARDS: Record<string, [string, string, string]> = {
+  quest: ["🎯", "Daily quest", "Quests"],
+  weekly: ["🗓️", "Weekly challenge", "Quests"],
+  streak: ["🔥", "Quest streak bonus", "Quests"],
+  level: ["⭐", "Level up", "Levels"],
+  battle: ["⚔️", "Battle prize", "Battles"],
+  club_challenge: ["🏠", "Club challenge", "Clubs"],
+  season_ch: ["🏅", "Season challenge", "Quests"],
+};
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 /** /coins: your balance, today's earnings against the daily limit, and every change, newest first. */
@@ -43,7 +53,7 @@ export function Coins({ go }: { go: Go }) {
     if (e.reason === "shop") return ["🛒", `Bought ${items[e.ref ?? ""] ?? "a power-up"}`, "Power-up shop"];
     if (e.reason === "season") return ["🏆", `Season ${e.season} reward`, titles[e.ref ?? ""] ?? "Ranked"];
     if (e.reason === "opening") return ["📒", "Starting balance", "Before coin history began"];
-    return ["🪙", e.reason, ""];
+    return REWARDS[e.reason] ?? ["🪙", "Coins", ""];
   };
   const left = data ? Math.max(0, data.daily_cap - data.earned_today) : 0;
   return (

@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import battles as battlelib
+from .. import ratings as ratinglib
 from .. import schemas
 from ..accounts import check_same_origin, session_user
 from ..config import Settings
@@ -31,6 +32,11 @@ from .policy import PolicyError
 from .store import ClubStore
 
 E = schemas.ERRORS
+CLAIM_REFUSED = {
+    "not_done": ("not_done", "The club hasn't reached this week's goal yet", 409),
+    "not_helped": ("not_helped", "Play a game in a club room this week to share the reward", 409),
+    "claimed": ("claimed", "You've already claimed this week's club reward", 409),
+}
 
 
 class NewClubBody(BaseModel):
@@ -189,6 +195,7 @@ def router(
             "secure_nudge": role in ("owner", "admin") and not await mfa_on(user.id),
             "muted": muted,
             "open_reports": await db.open_reports(club.id) if policy.may_invite(role) else 0,
+            "challenge": await db.club_challenge(club.id, user.id, len(members)),
         }
 
     async def mfa_on(user_id: int) -> bool:
@@ -384,6 +391,40 @@ def router(
             presence.leave_club(club.id, user.id)
         return JSONResponse({"ok": True})
 
+    @api.get("/api/clubs/{slug}/boards", response_model=schemas.ClubBoards, responses=E)
+    async def boards(slug: str, request: Request) -> JSONResponse:
+        """The club's Legend board (best ratings) and Club score (activity), this ratings season."""
+        user = await me(request)
+        club, _ = await club_and_role(slug, user)
+        n = ratinglib.season_of()
+        start, end = ratinglib.season_dates(n)
+        legends = [
+            {
+                **r,
+                "title": REGISTRY[r["game"]].title if r["game"] in REGISTRY else r["game"],
+                "you": r["username"] == user.username,
+            }
+            for r in await db.club_legends(club.id)
+        ]
+        scores = [{**r, "you": r["username"] == user.username} for r in await db.club_scores(club.id)]
+        body = {
+            "season": {"number": n, "starts": start.isoformat(), "ends": end.isoformat()},
+            "legends": legends,
+            "scores": scores,
+        }
+        return JSONResponse(body, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/clubs/{slug}/challenge/claim", response_model=schemas.ClubDetail, responses=E)
+    async def claim_challenge(slug: str, request: Request) -> JSONResponse:
+        """This week's club reward: once the club reaches the goal, for members who played a club game."""
+        write(request)
+        user = await me(request)
+        club, role = await club_and_role(slug, user)
+        why = await db.claim_club_challenge(club.id, user.id, len(await store.members(club.id)))
+        if why:
+            raise HubError(*CLAIM_REFUSED[why])
+        return JSONResponse(await detail(club, role, user), headers={"Cache-Control": "no-store"})
+
     @api.post("/api/clubs/{slug}/delete", response_model=schemas.Ok, responses=E)
     async def delete_club(slug: str, request: Request) -> JSONResponse:
         write(request)
@@ -451,14 +492,17 @@ def router(
         battle_id = await db.create_battle(
             club.id, room.code, body.game, body.kind, user.id, opponent.user_id if opponent else None
         )
-        hub.set_battle(room, battle_id, body.game, body.kind, [user.id, opponent.user_id] if opponent else [])
+        bonus = battlelib.featured(battlelib.format_of(datetime.now(UTC).date()), body.kind, body.game)
+        accounts = [user.id, opponent.user_id] if opponent else []
+        hub.set_battle(room, battle_id, body.game, body.kind, accounts, featured=bonus)
         await db.log_activity([user.id], "battle_sent")
+        prize = int(battlelib.DUEL_PRIZE * (battlelib.FEATURE_BONUS if bonus else 1))
         if opponent is not None:
             await notifier.notify(
                 [opponent.user_id],
                 "battle",
                 f"{user.username} challenges you to {cls.title}",
-                f"A duel in {club.name}: the winner gets {battlelib.DUEL_PRIZE} coins. Tap to join the room.",
+                f"A duel in {club.name}: the winner gets {prize} coins. Tap to join the room.",
                 f"/r/{room.code}",
                 group=f"battle:{battle_id}",
                 club=(club.id, rules["quiet"]),
@@ -475,6 +519,16 @@ def router(
         for row in body["challenges"]:
             row["title"] = titles.get(row["game"], row["game"])
             row["open"] = hub.get(row["room"]) is not None
+        fmt = battlelib.format_of(datetime.now(UTC).date())
+        title, features, games, kinds = battlelib.FORMATS[fmt]
+        body["format"] = {
+            "id": fmt,
+            "title": title,
+            "features": features,
+            "games": list(games or ()),
+            "kinds": list(kinds),
+            "bonus": battlelib.FEATURE_BONUS,
+        }
         return JSONResponse(body, headers={"Cache-Control": "no-store"})
 
     # -- up for a game ----------------------------------------------------------------------------------

@@ -11,6 +11,13 @@ holds at least a week of them: a quest can't come back within seven days. One re
 quest for another of its kind. Finishing all three on consecutive days builds a streak, with a bonus
 every seventh day. Weekly challenges are three bigger goals, Monday to Sunday.
 
+Club challenges are one shared goal a week for a whole club, sized to its members. Everyone who played
+a club game that week can claim the reward once the club reaches it. Each member counts for at most
+CLUB_DAY_GAMES games a day, so two people can't play the goal in on their own.
+
+Season challenges are five long goals for each 8-week ratings season, tied to ranked play and
+battles. Finishing all five earns that season's badge.
+
 Each quest names a measure (how its progress is counted, from what really happened, in db.py) and a
 target; some carry an argument (a game category, a player count, an activity kind).
 """
@@ -33,6 +40,14 @@ STREAK_DAYS = 7  # a bonus every this many days of all three quests in a row
 STREAK_COINS = 100
 STREAK_GIFT = "party_confetti"
 WEEKLY_XP = 150
+CLUB_XP = 100
+CLUB_COINS = 60
+CLUB_DAY_GAMES = 5  # the most club games one member adds to a club's goal in a day
+SEASON_XP = 200
+# The Club score: activity in a club this ratings season, not skill, so casual players climb too. Club
+# games and hosting count up to CLUB_DAY_GAMES a day each; battles only when fair play passed them.
+CLUB_SCORE = {"club_game": 10, "club_host": 5, "battle": 15}
+SEASON_COINS = 150
 WEEKLY_COINS = 100
 EPOCH = date(2026, 1, 5)  # a Monday: day and week numbers count from here
 
@@ -104,6 +119,14 @@ WEEKLY: dict[str, dict[str, object]] = {
     "w_ranked5": q("Play 5 ranked games", "skill", "ranked", 5),
     "w_club10": q("Finish 10 games in club rooms", "club", "activity", 10, "club_game"),
     "w_cats4": q("Play a game from 4 different categories", "games", "categories", 4),
+}
+
+SEASON: dict[str, dict[str, object]] = {
+    "s_ranked20": q("Play 20 ranked games", "skill", "ranked", 20),
+    "s_ranked_wins8": q("Win 8 ranked games", "skill", "ranked_wins", 8),
+    "s_battles10": q("Play 10 battles", "skill", "battles", 10),
+    "s_battle_wins5": q("Win 5 battles", "skill", "battle_wins", 5),
+    "s_people20": q("Play with 20 different people", "social", "people", 20),
 }
 
 
@@ -200,3 +223,27 @@ def weekly_challenges(user_id: int, day: date) -> list[str]:
     ids = sorted(WEEKLY)
     random.Random(_seed("weekly", user_id)).shuffle(ids)  # noqa: S311 - a shuffle, not a secret
     return [ids[(week * 3 + i) % len(ids)] for i in range(3)]
+
+
+# Club challenges: (title with {n} for the target, measure, target per member, smallest, largest).
+CLUB: dict[str, tuple[str, str, float, int, int]] = {
+    "c_games": ("Members play {n} games in club rooms", "club_games", 4, 15, 60),
+    "c_members": ("{n} different members play a club game", "club_members", 0.6, 2, 12),
+    "c_hosts": ("{n} different members host a club game", "club_hosts", 0.3, 2, 5),
+    "c_battles": ("Play {n} battles in the club", "club_battles", 0.5, 2, 10),
+}
+
+
+def club_challenge(club_id: int, day: date) -> str:
+    """This week's challenge for a club: each club walks its own order, one a week."""
+    week = day_number(week_start(day)) // 7
+    ids = sorted(CLUB)
+    random.Random(_seed("club", club_id)).shuffle(ids)  # noqa: S311 - a shuffle, not a secret
+    return ids[week % len(ids)]
+
+
+def club_target(challenge: str, members: int) -> int:
+    _, measure, per, low, high = CLUB[challenge]
+    target = max(low, min(high, round(per * members)))
+    # counting people: never more than the club has
+    return min(target, max(members, 1)) if measure in ("club_members", "club_hosts") else target

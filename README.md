@@ -100,9 +100,11 @@ original has them.
 - **Ranked play:** ten skill games can be played ranked (signed-in players, standard settings, no
   power-ups). Ratings use the Plackett-Luce model (as in OpenSkill), with placement games, tiers from
   Bronze to Diamond, eight-week seasons, and leaderboards for everyone, a club or a place, this season
-  or this week. Fair-play limits stop repeat pairings and big swings in a day.
+  or this week. Fair-play limits stop repeat pairings and big swings in a day. Each club has a Legend
+  board (members' best ratings) and a Club score that counts playing, not winning.
 - **Battles:** challenge a clubmate to a duel or open a group battle in your club. Free to enter: the
-  platform pays fixed prizes from the final scores. Trophies and head-to-head records.
+  platform pays fixed prizes from the final scores. Trophies and head-to-head records. Each week features
+  one format (Chess duels, Trivia showdown, big group battles...) whose winners get 50% more.
 - **Power-ups:** games have their own (Trivia 50/50 and +5 seconds, Draw & Guess letter, Liar's Dice
   peek, Chicken Run shield, Imposter vote change, Four in a Row undo, Would You Rather ask the room,
   Battleships sonar, Hangman vowel, Truth or Dare another card, Word Race free letter, Code Crackers
@@ -113,10 +115,13 @@ original has them.
   room, played on every screen (the TV too), no effect on scores, with spam limits.
 - **Levels and daily quests:** XP from fair games (and a bonus for the day's first win), levels that pay
   coins and a power-up, and three quests a day from a pool of 42 (one always social, no repeats within a
-  week, one swap a day), a 7-day streak bonus and weekly challenges.
+  week, one swap a day), a 7-day streak bonus, weekly challenges and a weekly club challenge (one
+  shared goal sized to the club; everyone who played a club game shares the reward), and five season
+  challenges per ratings season with a badge for finishing them all.
 - **Fair play:** coins, battle prizes and ratings can't be farmed: thrown quick games, the same group
   replaying each other, second accounts on one device, a guest tab to beat and brand-new accounts are
-  all held back, and players see why.
+  all held back, and players see why. Two accounts whose rated games nearly always go one way are
+  flagged for moderators to review.
 - **Clubs:** private groups (a hostel, a team, an office) with invite links, roles, club rules (which
   games, chat on or off) and club rooms that members can see and walk into.
 - **Every device:** phones from 320 px up, tablets, laptops and TVs, in dark and light themes. Reduced

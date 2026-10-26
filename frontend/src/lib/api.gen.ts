@@ -279,6 +279,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clubs/{slug}/boards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Boards
+         * @description The club's Legend board (best ratings) and Club score (activity), this ratings season.
+         */
+        get: operations["boards_api_clubs__slug__boards_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubs/{slug}/challenge/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim Challenge
+         * @description This week's club reward: once the club reaches the goal, for members who played a club game.
+         */
+        post: operations["claim_challenge_api_clubs__slug__challenge_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/clubs/{slug}/delete": {
         parameters: {
             query?: never;
@@ -1139,6 +1179,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/season/{challenge}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Claim Season */
+        post: operations["claim_season_api_me_season__challenge__claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/sessions": {
         parameters: {
             query?: never;
@@ -1734,6 +1791,21 @@ export interface components {
             /** Opponent */
             opponent?: string | null;
         };
+        /** BattleFormat */
+        BattleFormat: {
+            /** Bonus */
+            bonus: number;
+            /** Features */
+            features: string;
+            /** Games */
+            games: string[];
+            /** Id */
+            id: string;
+            /** Kinds */
+            kinds: string[];
+            /** Title */
+            title: string;
+        };
         /** BattlePrize */
         BattlePrize: {
             /** Note */
@@ -1747,6 +1819,7 @@ export interface components {
         BattleRecord: {
             /** Challenges */
             challenges: components["schemas"]["Challenge"][];
+            format: components["schemas"]["BattleFormat"];
             /** Head To Head */
             head_to_head: components["schemas"]["HeadToHead"][];
             /** Played */
@@ -1781,6 +1854,8 @@ export interface components {
         };
         /** BattleView */
         BattleView: {
+            /** Featured */
+            featured: boolean;
             /** Game */
             game: string | null;
             /** Kind */
@@ -1956,10 +2031,37 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** ClubBoards */
+        ClubBoards: {
+            /** Legends */
+            legends: components["schemas"]["LegendRow"][];
+            /** Scores */
+            scores: components["schemas"]["ClubScoreRow"][];
+            season: components["schemas"]["RatingSeason"];
+        };
+        /** ClubChallenge */
+        ClubChallenge: {
+            /** Claimed */
+            claimed: boolean;
+            /** Ends */
+            ends: string;
+            /** Helped */
+            helped: boolean;
+            /** Id */
+            id: string;
+            /** Progress */
+            progress: number;
+            reward: components["schemas"]["QuestReward"];
+            /** Target */
+            target: number;
+            /** Title */
+            title: string;
+        };
         /** ClubDetail */
         ClubDetail: {
             /** About */
             about: string;
+            challenge: components["schemas"]["ClubChallenge"] | null;
             /** Invites */
             invites: components["schemas"]["InviteInfo"][];
             /** Member Count */
@@ -2051,6 +2153,17 @@ export interface components {
             /** Place */
             place: string | null;
             quiet: components["schemas"]["QuietHours"] | null;
+        };
+        /** ClubScoreRow */
+        ClubScoreRow: {
+            /** Games */
+            games: number;
+            /** Score */
+            score: number;
+            /** Username */
+            username: string;
+            /** You */
+            you: boolean;
         };
         /** ClubSummary */
         ClubSummary: {
@@ -2475,6 +2588,21 @@ export interface components {
             rows: components["schemas"]["LeaderRow"][];
             /** Season */
             season: string;
+        };
+        /** LegendRow */
+        LegendRow: {
+            /** Game */
+            game: string;
+            /** Rating */
+            rating: number;
+            /** Tier */
+            tier: string;
+            /** Title */
+            title: string;
+            /** Username */
+            username: string;
+            /** You */
+            you: boolean;
         };
         /** LinkBody */
         LinkBody: {
@@ -2936,6 +3064,7 @@ export interface components {
             /** Reroll Left */
             reroll_left: boolean;
             reward: components["schemas"]["QuestReward"];
+            season: components["schemas"]["SeasonChallenges"];
             /** Streak */
             streak: number;
             /** Streak Every */
@@ -3303,6 +3432,18 @@ export interface components {
             table: {
                 [key: string]: components["schemas"]["SeasonRow"];
             };
+        };
+        /** SeasonChallenges */
+        SeasonChallenges: {
+            /** Badges */
+            badges: number[];
+            /** Challenges */
+            challenges: components["schemas"]["Quest"][];
+            /** Ends */
+            ends: string;
+            reward: components["schemas"]["QuestReward"];
+            /** Season */
+            season: number;
         };
         /** SeasonReward */
         SeasonReward: {
@@ -5283,6 +5424,194 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RoomPass"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    boards_api_clubs__slug__boards_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClubBoards"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    claim_challenge_api_clubs__slug__challenge_claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClubDetail"];
                 };
             };
             /** @description Bad request */
@@ -9906,6 +10235,100 @@ export interface operations {
             header?: never;
             path: {
                 quest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Progress"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    claim_season_api_me_season__challenge__claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                challenge: string;
             };
             cookie?: never;
         };

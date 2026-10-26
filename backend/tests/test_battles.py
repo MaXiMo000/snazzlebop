@@ -3,8 +3,24 @@
 from __future__ import annotations
 
 import unittest
+import unittest.mock
+from datetime import date, timedelta
 
 from app import battles as B
+
+FORMAT_OF = B.format_of  # the real rotation (the tests below pin it)
+
+
+def setUpModule():  # noqa: N802 - the unittest hook
+    """Pin the week's featured battle format to one these tests never play (Battleships duels), so
+    prizes are the usual ones whatever the date."""
+    global _pin
+    _pin = unittest.mock.patch.object(B, "format_of", lambda day: "fleet")
+    _pin.start()
+
+
+def tearDownModule():  # noqa: N802
+    _pin.stop()
 
 
 class PrizeTests(unittest.TestCase):
@@ -22,10 +38,27 @@ class PrizeTests(unittest.TestCase):
         self.assertEqual(B.limited(B.DAILY_PRIZES - 1, 40), 40)
         self.assertEqual(B.limited(B.DAILY_PRIZES, 40), 0)
 
+    def test_the_featured_format(self):
+        monday = date(2026, 10, 26)
+        self.assertEqual(
+            {FORMAT_OF(monday + timedelta(days=d)) for d in range(7)}, {FORMAT_OF(monday)}
+        )  # all week
+        self.assertEqual(
+            {FORMAT_OF(monday + timedelta(weeks=w)) for w in range(len(B.FORMATS))}, set(B.FORMATS)
+        )
+        self.assertTrue(B.featured("speed", "duel", "four"))
+        self.assertFalse(B.featured("speed", "group", "four"))
+        self.assertTrue(B.featured("crowd", "group", "imposter"))  # any game
+        self.assertFalse(B.featured("chess", "duel", "four"))
+        got = B.prizes("duel", {1: 1, 2: 2}, {1, 2}, bonus=True)
+        self.assertEqual(got, {1: int(B.DUEL_PRIZE * B.FEATURE_BONUS), 2: B.FINISH_PRIZE})  # winners only
+        draw = B.prizes("duel", {1: 1, 2: 1}, {1, 2}, bonus=True)
+        self.assertEqual(sum(draw.values()), int(B.DUEL_PRIZE * B.FEATURE_BONUS))
+
 
 # -- storage: payouts, limits, the record ----------------------------------------------------------
 import asyncio  # noqa: E402
-from datetime import UTC, datetime, timedelta  # noqa: E402
+from datetime import UTC, datetime  # noqa: E402
 
 from sqlalchemy import update  # noqa: E402
 

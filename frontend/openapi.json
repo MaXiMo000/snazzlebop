@@ -119,6 +119,51 @@
         "title": "BattleBody",
         "type": "object"
       },
+      "BattleFormat": {
+        "additionalProperties": false,
+        "properties": {
+          "bonus": {
+            "title": "Bonus",
+            "type": "number"
+          },
+          "features": {
+            "title": "Features",
+            "type": "string"
+          },
+          "games": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Games",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "features",
+          "games",
+          "kinds",
+          "bonus"
+        ],
+        "title": "BattleFormat",
+        "type": "object"
+      },
       "BattlePrize": {
         "additionalProperties": false,
         "properties": {
@@ -153,6 +198,9 @@
             "title": "Challenges",
             "type": "array"
           },
+          "format": {
+            "$ref": "#/components/schemas/BattleFormat"
+          },
           "head_to_head": {
             "items": {
               "$ref": "#/components/schemas/HeadToHead"
@@ -186,7 +234,8 @@
           "prizes",
           "head_to_head",
           "recent",
-          "challenges"
+          "challenges",
+          "format"
         ],
         "title": "BattleRecord",
         "type": "object"
@@ -251,6 +300,10 @@
       "BattleView": {
         "additionalProperties": false,
         "properties": {
+          "featured": {
+            "title": "Featured",
+            "type": "boolean"
+          },
           "game": {
             "anyOf": [
               {
@@ -284,6 +337,7 @@
         "required": [
           "game",
           "kind",
+          "featured",
           "news"
         ],
         "title": "BattleView",
@@ -782,12 +836,99 @@
         "title": "ChatMessage",
         "type": "object"
       },
+      "ClubBoards": {
+        "additionalProperties": false,
+        "properties": {
+          "legends": {
+            "items": {
+              "$ref": "#/components/schemas/LegendRow"
+            },
+            "title": "Legends",
+            "type": "array"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/ClubScoreRow"
+            },
+            "title": "Scores",
+            "type": "array"
+          },
+          "season": {
+            "$ref": "#/components/schemas/RatingSeason"
+          }
+        },
+        "required": [
+          "season",
+          "legends",
+          "scores"
+        ],
+        "title": "ClubBoards",
+        "type": "object"
+      },
+      "ClubChallenge": {
+        "additionalProperties": false,
+        "properties": {
+          "claimed": {
+            "title": "Claimed",
+            "type": "boolean"
+          },
+          "ends": {
+            "title": "Ends",
+            "type": "string"
+          },
+          "helped": {
+            "title": "Helped",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "integer"
+          },
+          "reward": {
+            "$ref": "#/components/schemas/QuestReward"
+          },
+          "target": {
+            "title": "Target",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "progress",
+          "target",
+          "ends",
+          "helped",
+          "claimed",
+          "reward"
+        ],
+        "title": "ClubChallenge",
+        "type": "object"
+      },
       "ClubDetail": {
         "additionalProperties": false,
         "properties": {
           "about": {
             "title": "About",
             "type": "string"
+          },
+          "challenge": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClubChallenge"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "invites": {
             "items": {
@@ -869,7 +1010,8 @@
           "muted",
           "open_reports",
           "place",
-          "secure_nudge"
+          "secure_nudge",
+          "challenge"
         ],
         "title": "ClubDetail",
         "type": "object"
@@ -1087,6 +1229,35 @@
           "place"
         ],
         "title": "ClubRules",
+        "type": "object"
+      },
+      "ClubScoreRow": {
+        "additionalProperties": false,
+        "properties": {
+          "games": {
+            "title": "Games",
+            "type": "integer"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "you": {
+            "title": "You",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "username",
+          "score",
+          "games",
+          "you"
+        ],
+        "title": "ClubScoreRow",
         "type": "object"
       },
       "ClubSummary": {
@@ -2327,6 +2498,45 @@
           "rows"
         ],
         "title": "Leaderboard",
+        "type": "object"
+      },
+      "LegendRow": {
+        "additionalProperties": false,
+        "properties": {
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "you": {
+            "title": "You",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "username",
+          "rating",
+          "tier",
+          "game",
+          "title",
+          "you"
+        ],
+        "title": "LegendRow",
         "type": "object"
       },
       "LinkBody": {
@@ -3653,6 +3863,9 @@
           "reward": {
             "$ref": "#/components/schemas/QuestReward"
           },
+          "season": {
+            "$ref": "#/components/schemas/SeasonChallenges"
+          },
           "streak": {
             "title": "Streak",
             "type": "integer"
@@ -3685,7 +3898,8 @@
           "reroll_left",
           "streak",
           "streak_every",
-          "weekly"
+          "weekly",
+          "season"
         ],
         "title": "Progress",
         "type": "object"
@@ -4764,6 +4978,45 @@
           "table"
         ],
         "title": "Season",
+        "type": "object"
+      },
+      "SeasonChallenges": {
+        "additionalProperties": false,
+        "properties": {
+          "badges": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Badges",
+            "type": "array"
+          },
+          "challenges": {
+            "items": {
+              "$ref": "#/components/schemas/Quest"
+            },
+            "title": "Challenges",
+            "type": "array"
+          },
+          "ends": {
+            "title": "Ends",
+            "type": "string"
+          },
+          "reward": {
+            "$ref": "#/components/schemas/QuestReward"
+          },
+          "season": {
+            "title": "Season",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "season",
+          "ends",
+          "challenges",
+          "reward",
+          "badges"
+        ],
+        "title": "SeasonChallenges",
         "type": "object"
       },
       "SeasonReward": {
@@ -7950,6 +8203,226 @@
           }
         },
         "summary": "Battle"
+      }
+    },
+    "/api/clubs/{slug}/boards": {
+      "get": {
+        "description": "The club's Legend board (best ratings) and Club score (activity), this ratings season.",
+        "operationId": "boards_api_clubs__slug__boards_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubBoards"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Boards"
+      }
+    },
+    "/api/clubs/{slug}/challenge/claim": {
+      "post": {
+        "description": "This week's club reward: once the club reaches the goal, for members who played a club game.",
+        "operationId": "claim_challenge_api_clubs__slug__challenge_claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Claim Challenge"
       }
     },
     "/api/clubs/{slug}/delete": {
@@ -13280,6 +13753,115 @@
           }
         },
         "summary": "Reroll"
+      }
+    },
+    "/api/me/season/{challenge}/claim": {
+      "post": {
+        "operationId": "claim_season_api_me_season__challenge__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "challenge",
+            "required": true,
+            "schema": {
+              "title": "Challenge",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Progress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Claim Season"
       }
     },
     "/api/me/sessions": {

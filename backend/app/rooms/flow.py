@@ -27,7 +27,7 @@ class FlowMixin:
         if not accounts or self.on_activity is None:
             return
         try:
-            task = asyncio.get_running_loop().create_task(self.on_activity(accounts, kind))
+            task = asyncio.get_running_loop().create_task(self.on_activity(accounts, kind, room.club_id))
         except RuntimeError:
             return
         self._tasks.add(task)
