@@ -52,6 +52,8 @@ async function targets(page: Page, where: string, found: string[]) {
   const small = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>("button, a[href], input, select, summary, [role=tab], [tabindex='0']")]
       .filter((el) => el.offsetParent !== null && !el.classList.contains("sr-only") && !el.closest(".skip-link"))
+      // a text link inside a sentence is exempt (WCAG 2.5.8 "inline"): it's sized by the line it sits in
+      .filter((el) => !(el.tagName === "A" && getComputedStyle(el).display === "inline"))
       .filter((el) => {
         const r = el.getBoundingClientRect();
         // checkboxes count their whole label (the tap target), not the box alone
@@ -845,4 +847,33 @@ test("Codewords: team game from the lobby, setup, a clue, marks and a reveal", a
   await shot("28-codewords-board");
   expect(a11y).toEqual([]);
   expect(problems).toEqual([]);
+});
+
+test("every page, signed out and signed in: fits the screen, passes axe, 44px targets, no errors", async ({ page, baseURL }) => {
+  const problems: string[] = [];
+  page.on("pageerror", (e) => problems.push(e.message));
+  const found: string[] = [];
+  const pages = ["/", "/clubs", "/quests", "/ratings", "/battles", "/coins", "/plus", "/account", "/privacy", "/safety", "/places", "/inbox"];
+  const visit = async (who: string) => {
+    for (const path of pages) {
+      await page.goto(path);
+      await page.locator("main").waitFor();
+      await page.waitForLoadState("networkidle");
+      const where = `${who} ${path}`;
+      const wide = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+      if (wide) found.push(`${where}: sideways scroll`);
+      await axe(page, where, found);
+      await targets(page, where, found);
+    }
+  };
+  await visit("guest");
+  const name = `Pg${Date.now() % 100000}`;
+  const r = await page.request.post(`${baseURL}/api/auth/signup`, {
+    data: { username: name, password: "every page check 42" },
+    headers: { Origin: baseURL! },
+  });
+  expect(r.status()).toBe(201);
+  await visit("member");
+  expect(problems).toEqual([]);
+  expect(found).toEqual([]);
 });

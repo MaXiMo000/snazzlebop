@@ -3,6 +3,7 @@ import { ApiError, createRoom, joinRoom } from "../lib/api";
 import { Btn, Card } from "../components/ui";
 import { useAccount } from "../lib/account";
 import { Friends, InstallApp } from "../components/friends";
+import { HappeningNow } from "../components/happening";
 import { YourCorner } from "../components/nav";
 
 export function Home({ go }: { go: (path: string) => void }) {
@@ -54,6 +55,8 @@ export function Home({ go }: { go: (path: string) => void }) {
         <h1 id="show-title">Snazzlebop!</h1>
         <p className="tagline">The party game show where your friends are the contestants</p>
       </section>
+
+      {user && <HappeningNow name={name} go={go} />}
 
       <Card tone="stage" className="center">
         <p className="lead">

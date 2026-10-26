@@ -28,6 +28,7 @@ export type ClubSummary = Schemas["ClubSummary"];
 export type ClubList = Schemas["ClubList"];
 export type ClubDetail = Schemas["ClubDetail"];
 export type ClubBoards = Schemas["ClubBoards"];
+export type Happening = Schemas["Happening"];
 export type BillingConfig = Schemas["BillingConfig"];
 export type PlusCheckout = Schemas["PlusCheckout"];
 export type MyPlus = Schemas["MyPlus"];

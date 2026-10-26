@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { CallButton } from "./components/call";
 import { ChatButton } from "./components/chat";
 import { SoundToggle, ThemeToggle } from "./components/ui";
@@ -6,21 +6,23 @@ import { useAccount } from "./lib/account";
 import { useInbox } from "./lib/notify";
 import { Account, type AccountView } from "./pages/Account";
 import { ClubHome, Clubs, JoinClub } from "./pages/Clubs";
-import { ClubReports } from "./pages/ClubReports";
-import { InboxPage } from "./pages/Inbox";
-import { Privacy } from "./pages/Privacy";
-import { Safety } from "./pages/Safety";
-import { Places } from "./pages/Places";
 import { Ratings } from "./pages/Ratings";
-import { Coins } from "./pages/Coins";
-import { Battles } from "./pages/Battles";
-import { Plus } from "./pages/Plus";
-import { Quests } from "./pages/Quests";
 import { SiteNav } from "./components/nav";
-import { Staff } from "./pages/Staff";
-import { StaffPlaces } from "./pages/StaffPlaces";
 import { Home } from "./pages/Home";
 import { Room } from "./pages/Room";
+
+// Pages most visits never open load on demand, so the first page load stays small.
+const ClubReports = lazy(() => import("./pages/ClubReports").then((m) => ({ default: m.ClubReports })));
+const InboxPage = lazy(() => import("./pages/Inbox").then((m) => ({ default: m.InboxPage })));
+const Privacy = lazy(() => import("./pages/Privacy").then((m) => ({ default: m.Privacy })));
+const Safety = lazy(() => import("./pages/Safety").then((m) => ({ default: m.Safety })));
+const Places = lazy(() => import("./pages/Places").then((m) => ({ default: m.Places })));
+const Coins = lazy(() => import("./pages/Coins").then((m) => ({ default: m.Coins })));
+const Battles = lazy(() => import("./pages/Battles").then((m) => ({ default: m.Battles })));
+const Plus = lazy(() => import("./pages/Plus").then((m) => ({ default: m.Plus })));
+const Quests = lazy(() => import("./pages/Quests").then((m) => ({ default: m.Quests })));
+const Staff = lazy(() => import("./pages/Staff").then((m) => ({ default: m.Staff })));
+const StaffPlaces = lazy(() => import("./pages/StaffPlaces").then((m) => ({ default: m.StaffPlaces })));
 
 const ROOM_PATH = /^\/r\/([A-Za-z]{3,8})\/?$/;
 const ACCOUNT_PATH = /^\/account(?:\/(forgot|reset|verify|link))?\/?$/;
@@ -151,6 +153,7 @@ export function App() {
       </header>
       {!match && <SiteNav path={path} go={go} />}
       <main id="main" className={`app ${match ? "" : "with-nav"}`}>
+        <Suspense fallback={<p className="muted center">Loading…</p>}>
         {match ? (
           <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} tv={new URLSearchParams(window.location.search).get("tv") === "1"} />
         ) : accountMatch ? (
@@ -188,6 +191,7 @@ export function App() {
         ) : (
           <Home go={go} />
         )}
+        </Suspense>
       </main>
       {!match && <SiteFooter go={go} />}
     </>

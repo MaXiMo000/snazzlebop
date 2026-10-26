@@ -509,6 +509,21 @@ def router(
             )
         return JSONResponse({"code": room.code, "player_id": player.id, "token": token}, status_code=201)
 
+    @api.get("/api/me/happening", response_model=schemas.Happening, responses=E)
+    async def happening(request: Request) -> JSONResponse:
+        """The home page's "Happening now": every live room in your clubs, and challenges for you."""
+        user = await me(request)
+        rooms = [
+            {**r, "club": club.name, "slug": club.slug}
+            for club, _, _ in await store.mine(user.id)
+            for r in hub.club_rooms(club.id)
+        ]
+        rooms.sort(key=lambda r: (not r["open"], -r["players"]))
+        waiting = len((await db.battle_record(user.id))["challenges"])
+        return JSONResponse(
+            {"rooms": rooms[:8], "challenges": waiting}, headers={"Cache-Control": "no-store"}
+        )
+
     @api.get("/api/me/battles", response_model=schemas.BattleRecord, responses=E)
     async def my_battles(request: Request) -> JSONResponse:
         user = await me(request)

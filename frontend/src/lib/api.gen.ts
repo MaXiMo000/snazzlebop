@@ -951,6 +951,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/happening": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Happening
+         * @description The home page's "Happening now": every live room in your clubs, and challenges for you.
+         */
+        get: operations["happening_api_me_happening_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/identities": {
         parameters: {
             query?: never;
@@ -2520,6 +2540,37 @@ export interface components {
         HandOverBody: {
             /** Username */
             username: string;
+        };
+        /**
+         * Happening
+         * @description What's on for you right now: live rooms in your clubs and battle challenges waiting.
+         */
+        Happening: {
+            /** Challenges */
+            challenges: number;
+            /** Rooms */
+            rooms: components["schemas"]["HappeningRoom"][];
+        };
+        /** HappeningRoom */
+        HappeningRoom: {
+            /** Battle */
+            battle: boolean;
+            /** Club */
+            club: string;
+            /** Code */
+            code: string;
+            /** Game */
+            game: string | null;
+            /** Host */
+            host: string;
+            /** Open */
+            open: boolean;
+            /** Phase */
+            phase: string;
+            /** Players */
+            players: number;
+            /** Slug */
+            slug: string;
         };
         /** HeadToHead */
         HeadToHead: {
@@ -9001,6 +9052,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    happening_api_me_happening_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Happening"];
                 };
             };
             /** @description Bad request */

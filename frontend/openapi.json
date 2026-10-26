@@ -2067,6 +2067,90 @@
         "title": "HandOverBody",
         "type": "object"
       },
+      "Happening": {
+        "additionalProperties": false,
+        "description": "What's on for you right now: live rooms in your clubs and battle challenges waiting.",
+        "properties": {
+          "challenges": {
+            "title": "Challenges",
+            "type": "integer"
+          },
+          "rooms": {
+            "items": {
+              "$ref": "#/components/schemas/HappeningRoom"
+            },
+            "title": "Rooms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rooms",
+          "challenges"
+        ],
+        "title": "Happening",
+        "type": "object"
+      },
+      "HappeningRoom": {
+        "additionalProperties": false,
+        "properties": {
+          "battle": {
+            "title": "Battle",
+            "type": "boolean"
+          },
+          "club": {
+            "title": "Club",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "game": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "players": {
+            "title": "Players",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "host",
+          "players",
+          "phase",
+          "game",
+          "open",
+          "battle",
+          "club",
+          "slug"
+        ],
+        "title": "HappeningRoom",
+        "type": "object"
+      },
       "HeadToHead": {
         "additionalProperties": false,
         "properties": {
@@ -12392,6 +12476,105 @@
           }
         },
         "summary": "Unlink Google"
+      }
+    },
+    "/api/me/happening": {
+      "get": {
+        "description": "The home page's \"Happening now\": every live room in your clubs, and challenges for you.",
+        "operationId": "happening_api_me_happening_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Happening"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Happening"
       }
     },
     "/api/me/identities": {

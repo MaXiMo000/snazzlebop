@@ -505,6 +505,18 @@ class ClubChallenge(Strict):
     reward: QuestReward
 
 
+class HappeningRoom(ClubRoom):
+    club: str  # the club's name
+    slug: str
+
+
+class Happening(Strict):
+    """What's on for you right now: live rooms in your clubs and battle challenges waiting."""
+
+    rooms: list[HappeningRoom]  # open lobbies first, then the fullest
+    challenges: int  # battle challenges waiting for your answer
+
+
 class ClubDetail(Strict):
     slug: str
     name: str

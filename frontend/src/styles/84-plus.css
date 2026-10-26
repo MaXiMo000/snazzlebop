@@ -53,3 +53,16 @@
   display: inline-flex;
   align-items: center;
 }
+
+/* Home: Happening now */
+.happening-detail {
+  display: block;
+  font-size: 0.9em;
+}
+.happening-challenges {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 8px;
+}

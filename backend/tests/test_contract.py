@@ -241,6 +241,7 @@ def test_every_route_matches_its_declared_model(client):
     c.call("GET", "/api/me/battles")
     c.call("GET", "/api/me/progress")
     c.call("GET", "/api/billing/config")
+    c.call("GET", "/api/me/happening")
     c.call("POST", "/api/billing/checkout")  # payments are off here: an error body
     c.call("POST", "/api/billing/paddle", content=b"{}")  # unsigned: refused
     c.call("GET", "/api/me/plus")

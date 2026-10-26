@@ -208,6 +208,9 @@ def test_challenges_over_http(tmp_path):
         assert inbox[0]["kind"] == "battle" and inbox[0]["link"] == f"/r/{room}"
         record = client.get("/api/me/battles").json()
         assert record["challenges"][0]["by"] == "Ana_99" and record["challenges"][0]["open"] is True
+        now = client.get("/api/me/happening").json()  # the home page's "Happening now"
+        assert now["challenges"] == 1
+        assert now["rooms"] == []  # nobody is in the room yet: only rooms with someone in them show
         assert client.post(url, json={"name": "Bo", "kind": "group", "game": "imposter"}).status_code == 201
         # the same browser for two accounts: no duel
         client.post("/api/auth/logout")

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { OPTION_LABELS } from "../lib/options";
 import { AvatarPicker, FaceHost } from "../components/avatar";
 import { CallHost, CallStrip } from "../components/call";
@@ -33,47 +33,49 @@ import { useAccount } from "../lib/account";
 import { TeamBadge, TeamResult } from "../components/teams";
 import { HowToPlay, IntroScreen, LastStandings, ReadyBar, useScrollToTopOn } from "../components/flow";
 import { JumpScare } from "../components/JumpScare";
-import { Alibi } from "../games/Alibi";
-import { Frenemy } from "../games/Frenemy";
-import { Blackjack } from "../games/Blackjack";
-import { Crossword } from "../games/Crossword";
-import { Jackpot } from "../games/Jackpot";
-import { Codewords } from "../games/Codewords";
-import { TruthDare } from "../games/TruthDare";
-import { WordRace } from "../games/WordRace";
-import { DrawGuess } from "../games/DrawGuess";
-import { Telephone } from "../games/Telephone";
-import { Tycoon } from "../games/Tycoon";
-import { LastCard } from "../games/LastCard";
-import { Ludo } from "../games/Ludo";
-import { Chess } from "../games/Chess";
-import { Boxes } from "../games/Boxes";
-import { Lonely } from "../games/Lonely";
-import { Imposter } from "../games/Imposter";
-import { Ships } from "../games/Ships";
-import { Snakes } from "../games/Snakes";
-import { Reflex } from "../games/Reflex";
-import { Trivia } from "../games/Trivia";
-import { Rather } from "../games/Rather";
-import { Four } from "../games/Four";
-import { Lists } from "../games/Lists";
-import { Hangman } from "../games/Hangman";
-import { FiveDice } from "../games/FiveDice";
-import { OnHead } from "../games/OnHead";
-import { Bomb } from "../games/Bomb";
-import { Mafia } from "../games/Mafia";
-import { Roulette } from "../games/Roulette";
-import { Codes } from "../games/Codes";
-import { Wits } from "../games/Wits";
-import { Chicken } from "../games/Chicken";
-import { Split } from "../games/Split";
-import { Dice } from "../games/Dice";
-import { Mural } from "../games/Mural";
-import { Price } from "../games/Price";
-import { Telepathy } from "../games/Telepathy";
 import type { GameCard, RoomState, Session } from "../types";
 import { Select } from "../components/Select";
 import { AdSlot } from "../components/ad";
+
+// Each game's screen loads when it's played, so the first page load stays small.
+const Alibi = lazy(() => import("../games/Alibi").then((m) => ({ default: m.Alibi })));
+const Frenemy = lazy(() => import("../games/Frenemy").then((m) => ({ default: m.Frenemy })));
+const Blackjack = lazy(() => import("../games/Blackjack").then((m) => ({ default: m.Blackjack })));
+const Crossword = lazy(() => import("../games/Crossword").then((m) => ({ default: m.Crossword })));
+const Jackpot = lazy(() => import("../games/Jackpot").then((m) => ({ default: m.Jackpot })));
+const Codewords = lazy(() => import("../games/Codewords").then((m) => ({ default: m.Codewords })));
+const TruthDare = lazy(() => import("../games/TruthDare").then((m) => ({ default: m.TruthDare })));
+const WordRace = lazy(() => import("../games/WordRace").then((m) => ({ default: m.WordRace })));
+const DrawGuess = lazy(() => import("../games/DrawGuess").then((m) => ({ default: m.DrawGuess })));
+const Telephone = lazy(() => import("../games/Telephone").then((m) => ({ default: m.Telephone })));
+const Tycoon = lazy(() => import("../games/Tycoon").then((m) => ({ default: m.Tycoon })));
+const LastCard = lazy(() => import("../games/LastCard").then((m) => ({ default: m.LastCard })));
+const Ludo = lazy(() => import("../games/Ludo").then((m) => ({ default: m.Ludo })));
+const Chess = lazy(() => import("../games/Chess").then((m) => ({ default: m.Chess })));
+const Boxes = lazy(() => import("../games/Boxes").then((m) => ({ default: m.Boxes })));
+const Lonely = lazy(() => import("../games/Lonely").then((m) => ({ default: m.Lonely })));
+const Imposter = lazy(() => import("../games/Imposter").then((m) => ({ default: m.Imposter })));
+const Ships = lazy(() => import("../games/Ships").then((m) => ({ default: m.Ships })));
+const Snakes = lazy(() => import("../games/Snakes").then((m) => ({ default: m.Snakes })));
+const Reflex = lazy(() => import("../games/Reflex").then((m) => ({ default: m.Reflex })));
+const Trivia = lazy(() => import("../games/Trivia").then((m) => ({ default: m.Trivia })));
+const Rather = lazy(() => import("../games/Rather").then((m) => ({ default: m.Rather })));
+const Four = lazy(() => import("../games/Four").then((m) => ({ default: m.Four })));
+const Lists = lazy(() => import("../games/Lists").then((m) => ({ default: m.Lists })));
+const Hangman = lazy(() => import("../games/Hangman").then((m) => ({ default: m.Hangman })));
+const FiveDice = lazy(() => import("../games/FiveDice").then((m) => ({ default: m.FiveDice })));
+const OnHead = lazy(() => import("../games/OnHead").then((m) => ({ default: m.OnHead })));
+const Bomb = lazy(() => import("../games/Bomb").then((m) => ({ default: m.Bomb })));
+const Mafia = lazy(() => import("../games/Mafia").then((m) => ({ default: m.Mafia })));
+const Roulette = lazy(() => import("../games/Roulette").then((m) => ({ default: m.Roulette })));
+const Codes = lazy(() => import("../games/Codes").then((m) => ({ default: m.Codes })));
+const Wits = lazy(() => import("../games/Wits").then((m) => ({ default: m.Wits })));
+const Chicken = lazy(() => import("../games/Chicken").then((m) => ({ default: m.Chicken })));
+const Split = lazy(() => import("../games/Split").then((m) => ({ default: m.Split })));
+const Dice = lazy(() => import("../games/Dice").then((m) => ({ default: m.Dice })));
+const Mural = lazy(() => import("../games/Mural").then((m) => ({ default: m.Mural })));
+const Price = lazy(() => import("../games/Price").then((m) => ({ default: m.Price })));
+const Telepathy = lazy(() => import("../games/Telepathy").then((m) => ({ default: m.Telepathy })));
 
 type Send = (m: Record<string, unknown>) => void;
 
@@ -349,7 +351,15 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
   );
 }
 
-function GameRouter({ state, receivedAt, send }: { state: RoomState; receivedAt: number; send: Send }) {
+function GameRouter(props: { state: RoomState; receivedAt: number; send: Send }) {
+  return (
+    <Suspense fallback={<p className="muted center game-loading">Loading the game…</p>}>
+      <GameScreen {...props} />
+    </Suspense>
+  );
+}
+
+function GameScreen({ state, receivedAt, send }: { state: RoomState; receivedAt: number; send: Send }) {
   const g = state.game!;
   const players = state.players.map((p) => ({ id: p.id, name: p.name }));
   const tv = state.role !== "player"; // TV and audience get the read-only screens
