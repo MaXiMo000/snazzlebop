@@ -155,14 +155,17 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
       {view.phase !== "final" && (
         <Card>
           <h3>Who’s out</h3>
-          <ul className="evidence" aria-live="polite">
+          <ul className="score-rows" aria-live="polite">
             {view.players.map((p) => {
               const c = view.cashed[p.id];
               const boomed = view.result?.boomed.includes(p.id);
               return (
-                <li key={p.id}>
-                  <b>{p.name}</b>
-                  {p.id === you ? " (you)" : ""}:{" "}
+                <li key={p.id} className={p.id === you ? "on" : ""}>
+                  <b>
+                    {p.name}
+                    {p.id === you ? " (you)" : ""}
+                  </b>
+                  <span className="score-tally muted">
                   {c
                     ? `banked ${c.value} at ${c.t.toFixed(1)}s`
                     : boomed
@@ -171,6 +174,7 @@ export function Chicken({ view, you, receivedAt, send, tv = false }: Props) {
                         ? "🤐 secret till the bang"
                         : "waiting"}
                   {view.insured.includes(p.id) ? " · 🛟 insured" : ""}
+                  </span>
                 </li>
               );
             })}

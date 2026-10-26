@@ -222,11 +222,18 @@ export function Split({ view, you, receivedAt, send, tv = false }: Props) {
 
       <Card>
         <h3>Trust record</h3>
-        <ul className="evidence">
+        <ul className="score-rows">
           {view.players.map((p) => (
-            <li key={p.id}>
-              <b>{p.name}</b>
-              {p.id === you ? " (you)" : ""}: 🤝 {view.record[p.id]?.split ?? 0} · 🦹 {view.record[p.id]?.steal ?? 0}
+            <li key={p.id} className={p.id === you ? "on" : ""}>
+              <b>
+                {p.name}
+                {p.id === you ? " (you)" : ""}
+              </b>
+              <span className="score-tally">
+                <span aria-label={`${view.record[p.id]?.split ?? 0} splits, ${view.record[p.id]?.steal ?? 0} steals`}>
+                  🤝 {view.record[p.id]?.split ?? 0} · 🦹 {view.record[p.id]?.steal ?? 0}
+                </span>
+              </span>
             </li>
           ))}
         </ul>

@@ -122,14 +122,20 @@ export function Lonely({ view, you, receivedAt, send, tv = false }: Props) {
 
       <Card>
         <h3>{view.phase === "final" ? "Rounds won" : "Wins so far"}</h3>
-        <ul className="evidence">
+        <ul className="score-rows">
           {[...view.players]
             .sort((a, b) => (view.wins[b.id] ?? 0) - (view.wins[a.id] ?? 0))
             .map((p) => (
-              <li key={p.id}>
-                <b>{p.name}</b>
-                {p.id === you ? " (you)" : ""}: {view.wins[p.id] ?? 0}
-              </li>
+            <li key={p.id} className={p.id === you ? "on" : ""}>
+              <b>
+                {p.name}
+                {p.id === you ? " (you)" : ""}
+              </b>
+              <span className="score-tally">
+                <span className="score-pts">{view.wins[p.id] ?? 0}</span>
+                <span className="sr-only"> rounds won</span>
+              </span>
+            </li>
             ))}
         </ul>
         {view.history && (

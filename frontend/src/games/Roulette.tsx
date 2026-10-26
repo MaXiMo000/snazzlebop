@@ -152,16 +152,23 @@ export function Roulette({ view, you, receivedAt, send, tv = false }: Props) {
 
       <Card>
         <h3>{view.phase === "final" ? "Final stacks" : "Stacks"}</h3>
-        <ul className="evidence">
+        <ol className="score-rows">
           {[...view.players]
             .sort((a, b) => (view.chips[b.id] ?? 0) - (view.chips[a.id] ?? 0))
-            .map((p) => (
-              <li key={p.id}>
-                <b>{p.name}</b>
-                {p.id === you ? " (you)" : ""}: {view.chips[p.id]} chips
+            .map((p, i) => (
+              <li key={p.id} className={p.id === you ? "on" : ""}>
+                <b>
+                  {i === 0 ? "👑 " : ""}
+                  {p.name}
+                  {p.id === you ? " (you)" : ""}
+                </b>
+                <span className="score-tally">
+                  <span className="score-pts">{(view.chips[p.id] ?? 0).toLocaleString()}</span>
+                  <span className="sr-only"> chips</span>
+                </span>
               </li>
             ))}
-        </ul>
+        </ol>
       </Card>
     </div>
   );

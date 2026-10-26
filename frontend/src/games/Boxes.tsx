@@ -179,11 +179,17 @@ export function Boxes({ view, you, receivedAt, send, tv = false }: Props) {
 
       <Card>
         <h3>Purses</h3>
-        <ul className="evidence">
+        <ul className="score-rows">
           {view.players.map((p) => (
-            <li key={p.id}>
-              <b>{p.name}</b>
-              {p.id === you ? " (you)" : ""}: {view.coins[p.id]} coins
+            <li key={p.id} className={p.id === you ? "on" : ""}>
+              <b>
+                {p.name}
+                {p.id === you ? " (you)" : ""}
+              </b>
+              <span className="score-tally">
+                <span className="score-pts">🪙 {view.coins[p.id]}</span>
+                <span className="sr-only"> coins</span>
+              </span>
             </li>
           ))}
         </ul>
