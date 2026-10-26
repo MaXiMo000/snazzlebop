@@ -18,7 +18,6 @@ import {
   HostLine,
   ReactionBar,
   ReactionOverlay,
-  SEGMENT_ICON,
   ShowBuilder,
   ShowHostBar,
   ShowStrip,
@@ -36,6 +35,8 @@ import { JumpScare } from "../components/JumpScare";
 import type { GameCard, RoomState, Session } from "../types";
 import { Select } from "../components/Select";
 import { AdSlot } from "../components/ad";
+import { Fold, Sheet } from "../components/sheet";
+import { fitsRoom, GameInfo, GameTile } from "../components/gamecards";
 
 // Each game's screen loads when it's played, so the first page load stays small.
 const Alibi = lazy(() => import("../games/Alibi").then((m) => ({ default: m.Alibi })));
@@ -313,7 +314,14 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
           )}
           <ReactionBar send={send} />
           <CrowdPanel state={state} send={send} />
-          <Contestants players={state.players} you={state.you} title={state.show ? "Show scoreboard" : "Scoreboard"} />
+          {phase === "results" ? (
+            <Contestants players={state.players} you={state.you} title={state.show ? "Show scoreboard" : "Scoreboard"} />
+          ) : (
+            // During a game the game shows its own scores: the room's running total folds away.
+            <Fold icon="🏆" title={state.show ? "Show scoreboard" : "Room scoreboard"} hint={leaderLine(state.players)}>
+              <Contestants players={state.players} you={state.you} title={state.show ? "Show scoreboard" : "Scoreboard"} />
+            </Fold>
+          )}
           {isHost ? (
             phase === "game" ? (
               <HostGameBar state={state} send={send} />
@@ -349,6 +357,12 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       <Recap state={state} send={send} />
     </div>
   );
+}
+
+/** "Ana leads with 1,200": the folded scoreboard's summary. */
+function leaderLine(players: RoomState["players"]): string {
+  const top = [...players].sort((a, b) => b.total - a.total)[0];
+  return top && top.total > 0 ? `${top.name} leads with ${top.total.toLocaleString()}` : "Everyone on 0 so far";
 }
 
 function GameRouter(props: { state: RoomState; receivedAt: number; send: Send }) {
@@ -645,15 +659,16 @@ function RoomSign({ state }: { state: RoomState }) {
         <FlapCode code={state.room.code} />
       </div>
       <p className="space-top">Friends type this code on the home page, or open the invite link.</p>
-      <div className="row center">
+      {/* One row of actions; a panel one of them opens (invite, report) takes the full width under it. */}
+      <div className="room-actions">
         <CopyButton text={link} label="Copy invite link" />
         <a className="btn small ghost" href={`/r/${state.room.code}?tv=1`} target="_blank" rel="noopener noreferrer">
-          Open TV mode<span className="sr-only"> (opens in a new tab)</span>
+          <span aria-hidden="true">📺 </span>TV mode<span className="sr-only"> (opens in a new tab)</span>
         </a>
+        {state.role === "player" && <InviteFriends code={state.room.code} />}
+        {state.role === "player" && <ReportInRoom code={state.room.code} players={state.players} you={state.you} />}
       </div>
       {state.room.theme && <p className="chip space-top">Show pack: {state.themes[state.room.theme]}</p>}
-      {state.role === "player" && <InviteFriends code={state.room.code} />}
-      {state.role === "player" && <ReportInRoom code={state.room.code} players={state.players} you={state.you} />}
     </Card>
   );
 }
@@ -810,51 +825,44 @@ function StartGame({
   );
 }
 
-/** "all" shows every shelf as its own section, "start" the newcomers' row, else one category. */
+/** "all" shows every shelf as its own section, "start" the newcomers' picks, else one category. */
 type ShelfPick = "all" | "start" | string;
-const fitsRoom = (g: GameCard, online: number) => online >= g.min_players && online <= g.max_players;
 // Team games: those with a Teams switch, plus the games that are played in two teams anyway (Codewords).
 const teamGame = (g: GameCard) => g.teams || (!g.show && !g.classic);
 
+/** The game picker: compact tiles by category; a tile opens the game's sheet (rules, options, Start). */
 function GameShelf({ state, online, isHost, send }: { state: RoomState; online: number; isHost: boolean; send: Send }) {
   const [pick, setPick] = useState<ShelfPick>("all");
   const [fits, setFits] = useState(false);
   const [teams, setTeams] = useState(false);
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
   const q = query.trim().toLowerCase();
   const passes = (g: GameCard) =>
     (!fits || fitsRoom(g, online)) && (!teams || teamGame(g)) && (!q || g.title.toLowerCase().includes(q) || g.blurb.toLowerCase().includes(q));
   const featured = state.games.filter((g) => g.featured !== null && passes(g)).sort((a, b) => (a.featured ?? 0) - (b.featured ?? 0));
-  const sections = [
-    ...((pick === "all" && !q) || pick === "start"
+  const sections =
+    pick === "start"
       ? [{ id: "start", title: "Start here", blurb: "Learned in a minute and great with people you just met.", games: featured }]
-      : []),
-    ...state.categories
-      .filter((c) => pick === "all" || pick === c.id)
-      .map((c) => ({ id: c.id, title: c.title, blurb: c.blurb, games: state.games.filter((g) => g.category === c.id && passes(g)) })),
-  ].filter((s) => s.games.length > 0);
+      : state.categories
+          .filter((c) => pick === "all" || pick === c.id)
+          .map((c) => ({ id: c.id, title: c.title, blurb: c.blurb, games: state.games.filter((g) => g.category === c.id && passes(g)) }))
+          .filter((s) => s.games.length > 0);
   const count = (id: ShelfPick) => (id === "start" ? featured.length : state.games.filter((g) => (id === "all" || g.category === id) && passes(g)).length);
-  const chips: [ShelfPick, string][] = [["all", "All games"], ["start", "Start here"], ...state.categories.map((c): [string, string] => [c.id, c.label])];
+  const chips: [ShelfPick, string][] = [["all", "All"], ["start", "⭐ Start here"], ...state.categories.map((c): [string, string] => [c.id, c.label])];
+  const game = state.games.find((g) => g.id === open) ?? null;
   const surprise = () => {
     const pool = state.games.filter((g) => fitsRoom(g, online));
     const g = pool[Math.floor(Math.random() * pool.length)];
-    if (!g) return;
-    setPick(g.category);
-    setFits(false);
-    setTeams(false);
-    setQuery("");
-    setPicked(g.id);
-    window.setTimeout(() => {
-      const el = document.getElementById(`tile-${g.id}`);
-      el?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-      el?.querySelector<HTMLButtonElement>("button.start-game")?.focus({ preventScroll: true });
-    }, 50);
+    if (g) setOpen(g.id);
   };
   return (
-    <section className="stack" aria-labelledby="games-h">
-      <div className="row between shelf-head">
-        <h2 id="games-h">{isHost ? "Or play a single game" : "Waiting for the host to pick a game…"}</h2>
+    <section className="shelf" aria-labelledby="games-h">
+      <div className="shelf-head">
+        <div>
+          <h2 id="games-h">{isHost ? "Pick a game" : "The games"}</h2>
+          <p className="muted">{isHost ? `${online} online. Tap a game for its rules and to start it.` : "The host picks one. Tap any game to read how it works."}</p>
+        </div>
         {isHost && (
           <Btn variant="gold" onClick={surprise}>
             <span aria-hidden="true">🎲</span> Surprise me
@@ -862,7 +870,19 @@ function GameShelf({ state, online, isHost, send }: { state: RoomState; online: 
         )}
       </div>
       <div className="shelf-tools">
-        <div className="shelf-filters" role="group" aria-label="Shelf">
+        <label className="sr-only" htmlFor="shelf-search">
+          Find a game
+        </label>
+        <input
+          id="shelf-search"
+          type="text"
+          className="shelf-search"
+          placeholder="🔎 Find a game…"
+          autoComplete="off"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div className="shelf-filters scroll-row" role="group" aria-label="Shelf">
           {chips.map(([id, label]) => (
             <button key={id} type="button" className="shelf-chip" aria-pressed={pick === id} onClick={() => setPick(id)}>
               {label}
@@ -872,114 +892,108 @@ function GameShelf({ state, online, isHost, send }: { state: RoomState; online: 
         </div>
         <div className="shelf-filters" role="group" aria-label="Only show">
           <button type="button" className="shelf-chip toggle" aria-pressed={fits} onClick={() => setFits((v) => !v)}>
-            <span aria-hidden="true">{fits ? "✓" : "+"}</span> Fits the room now
+            <span aria-hidden="true">{fits ? "✓" : "+"}</span> Fits {online} {online === 1 ? "player" : "players"}
           </button>
           <button type="button" className="shelf-chip toggle" aria-pressed={teams} onClick={() => setTeams((v) => !v)}>
             <span aria-hidden="true">{teams ? "✓" : "+"}</span> Team games
           </button>
         </div>
-        <label className="sr-only" htmlFor="shelf-search">
-          Find a game
-        </label>
-        <input
-          id="shelf-search"
-          type="text"
-          className="shelf-search"
-          placeholder="Find a game…"
-          autoComplete="off"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
       </div>
       {sections.length === 0 ? (
-        <p className="muted center">No game matches that. Try another shelf or filter.</p>
+        <div className="empty-state">
+          <span aria-hidden="true">🔍</span>
+          <p>No game matches that. Try another shelf or filter.</p>
+        </div>
       ) : (
         sections.map((s) => (
           <section key={s.id} className="shelf-section" aria-labelledby={`shelf-${s.id}`}>
-            <h3 id={`shelf-${s.id}`}>{s.title}</h3>
-            <p className="muted shelf-blurb">{s.blurb}</p>
-            <div className="grid">
+            <div className="shelf-section-head">
+              <h3 id={`shelf-${s.id}`}>{s.title}</h3>
+              <p className="muted shelf-blurb">{s.blurb}</p>
+            </div>
+            <div className="tile-grid">
               {s.games.map((g) => (
-                <GameCardTile
-                  key={g.id}
-                  g={g}
-                  online={online}
-                  isHost={isHost}
-                  send={send}
-                  prefix={s.id === "start" ? "start-" : ""}
-                  highlight={picked === g.id && s.id !== "start"}
-                  teamsFirst={teams && g.teams}
-                  rankedReady={state.ranked.ready}
-                />
+                <GameTile key={g.id} g={g} dim={!fitsRoom(g, online)} onOpen={() => setOpen(g.id)} />
               ))}
             </div>
           </section>
         ))
       )}
+      <Sheet open={!!game} onClose={() => setOpen(null)} labelledBy="game-sheet-h" className={game ? `seg-${game.id}` : ""}>
+        {game && (
+          <GameSheet
+            key={game.id}
+            g={game}
+            online={online}
+            isHost={isHost}
+            send={send}
+            teamsFirst={teams && game.teams}
+            rankedReady={state.ranked.ready}
+          />
+        )}
+      </Sheet>
     </section>
+  );
+}
+
+/** One game, opened from its tile: the shared game info, and for the host its options and Start. */
+function GameSheet({
+  g,
+  online,
+  isHost,
+  send,
+  teamsFirst,
+  rankedReady,
+}: {
+  g: GameCard;
+  online: number;
+  isHost: boolean;
+  send: Send;
+  teamsFirst: boolean;
+  rankedReady: boolean;
+}) {
+  return (
+    <GameInfo g={g}>
+      {isHost ? (
+        <StartGame game={g} enough={fitsRoom(g, online)} online={online} send={send} prefix="sheet-" teamsFirst={teamsFirst} rankedReady={rankedReady} />
+      ) : (
+        <p className="muted center space-top">The host starts the game. The full rules show again before it begins.</p>
+      )}
+    </GameInfo>
   );
 }
 
 function Lobby({ state, isHost, send }: { state: RoomState; isHost: boolean; send: Send }) {
   const online = state.players.filter((p) => p.connected).length;
   return (
-    <div className="stack enter">
+    <div className="lobby stack enter">
       <RoomSign state={state} />
       <LastStandings state={state} />
       <BattleBanner state={state} />
-      <AvatarPicker you={state.you} name={state.players.find((p) => p.id === state.you)?.name ?? "?"} send={send} />
-
-      <Contestants
-        players={state.players}
-        you={state.you}
-        title={`In the room (${online} online)`}
-        onKick={isHost ? (id) => send({ t: "kick", target: id }) : undefined}
-      />
-      <Night state={state} send={send} isHost={isHost} />
-      {isHost && <HostTools state={state} send={send} />}
-      {isHost && <ShowBuilder state={state} send={send} />}
-
-      <GameShelf state={state} online={online} isHost={isHost} send={send} />
+      <div className="lobby-layout">
+        <div className="lobby-side stack">
+          <Contestants
+            players={state.players}
+            you={state.you}
+            title={`In the room (${online} online)`}
+            onKick={isHost ? (id) => send({ t: "kick", target: id }) : undefined}
+          />
+          <AvatarPicker you={state.you} name={state.players.find((p) => p.id === state.you)?.name ?? "?"} send={send} />
+          <Night state={state} send={send} isHost={isHost} />
+          {isHost && (
+            <Fold icon="📺" title="Plan a show night" hint="2-6 games on one scoreboard, a finale and a highlight reel">
+              <ShowBuilder state={state} send={send} />
+            </Fold>
+          )}
+          {isHost && (
+            <Fold icon="🛠️" title="Host tools" hint="Show title, lock the room, show pack, audience">
+              <HostTools state={state} send={send} />
+            </Fold>
+          )}
+        </div>
+        <GameShelf state={state} online={online} isHost={isHost} send={send} />
+      </div>
     </div>
-  );
-}
-
-function GameCardTile({
-  g,
-  online,
-  isHost,
-  send,
-  prefix = "",
-  teamsFirst = false,
-  highlight = false,
-  rankedReady = false,
-}: {
-  g: GameCard;
-  online: number;
-  isHost: boolean;
-  send: Send;
-  prefix?: string;
-  teamsFirst?: boolean;
-  highlight?: boolean;
-  rankedReady?: boolean;
-}) {
-  const enough = online >= g.min_players && online <= g.max_players;
-  return (
-    <Card as="article" id={`${prefix}tile-${g.id}`} className={`segment-card seg-${g.id} game-card ${prefix === "start-" ? "start-copy" : ""} ${highlight ? "picked" : ""}`} aria-labelledby={`${prefix}seg-${g.id}`}>
-      <div className="band">
-        <span className="chip plum">
-          {g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`} players
-        </span>
-        <h3 id={`${prefix}seg-${g.id}`}>
-          <span aria-hidden="true">{SEGMENT_ICON[g.id]} </span>
-          {g.title}
-        </h3>
-      </div>
-      <div className="body">
-        <p>{g.blurb}</p>
-        {isHost && <StartGame game={g} enough={enough} online={online} send={send} prefix={prefix} teamsFirst={teamsFirst} rankedReady={rankedReady} />}
-      </div>
-    </Card>
   );
 }
 

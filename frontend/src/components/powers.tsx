@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { refreshAccount, useAccount } from "../lib/account";
 import { sfx } from "../lib/sfx";
 import type { RoomState } from "../types";
-import { Btn, Card } from "./ui";
+import { Btn } from "./ui";
 
 type Send = (msg: Record<string, unknown>) => void;
 
@@ -16,47 +16,53 @@ export function GamePowers({ state, send }: { state: RoomState; send: Send }) {
   }, [p.used]);
   if (!user || state.room.phase !== "game" || (!p.offer.length && !p.mine)) return null;
   const owned = (id: string) => user.powerups[id] ?? 0;
+  const mine = p.offer.filter((item) => owned(item.id) > 0);
+  // Compact: what it showed you, or the ones you own as a row; a single line about the shop otherwise.
   return (
-    <Card tone="soft" className="boost-panel" aria-labelledby="powers-h">
-      <h3 id="powers-h">
+    <section className="power-strip" aria-labelledby="powers-h">
+      <h3 id="powers-h" className="power-strip-title">
         <span aria-hidden="true">⚡ </span>Power-ups
       </h3>
       {p.mine && (
-        <p className="lead" role="status">
+        <p className="power-result" role="status">
           <span aria-hidden="true">👁️ </span>
           {p.mine}
         </p>
       )}
       {p.used ? (
         <p className="muted">You've used yours this game.</p>
-      ) : (
+      ) : mine.length ? (
         <>
-          <p className="muted">One per game. Everyone sees when you use one.</p>
-          <ul className="boost-list space-top">
-            {p.offer.map((item) => (
+          <ul className="power-row">
+            {mine.map((item) => (
               <li key={item.id}>
                 <Btn
                   variant="gold"
-                  block
-                  disabled={owned(item.id) < 1}
+                  size="small"
+                  title={item.text}
+                  aria-describedby={`power-${item.id}-text`}
                   onClick={() => {
                     sfx.pop();
                     send({ t: "power", item: item.id });
                   }}
                 >
                   <span aria-hidden="true">{item.icon} </span>
-                  {item.name} <span className="no-break">({owned(item.id)})</span>
+                  {item.name} <span className="power-count">×{owned(item.id)}</span>
                 </Btn>
-                <p className="muted acct-hint">{item.text}</p>
+                <span id={`power-${item.id}-text`} className="sr-only">
+                  {item.text}
+                </span>
               </li>
             ))}
           </ul>
-          {p.offer.every((item) => owned(item.id) < 1) && (
-            <p className="muted space-top">Get these in the power-up shop on your account page.</p>
-          )}
+          <p className="muted power-note">One per game. Everyone sees when you use one.</p>
         </>
+      ) : (
+        <p className="muted power-note">
+          For this game: {p.offer.map((item) => item.name).join(", ")}. Get them in the shop on your account page.
+        </p>
       )}
-    </Card>
+    </section>
   );
 }
 

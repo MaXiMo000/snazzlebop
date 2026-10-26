@@ -126,7 +126,11 @@ export function AvatarPicker({ you, name, send }: { you: string; name: string; s
     <div className="avatar-pick">
       <button type="button" className="avatar-pick-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
         <Avatar pid={you} name={name} className="lg" />
-        <span>{mine ? "Change your look" : "Pick your look"}</span>
+        <span className="avatar-pick-text">
+          <b>{mine ? "Change your look" : "Pick your look"}</b>
+          <span className="muted">The face and colour by your name</span>
+        </span>
+        <span className="fold-arrow" aria-hidden="true" />
       </button>
       {open && (
         <div className="avatar-pick-panel">

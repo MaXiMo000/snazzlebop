@@ -37,7 +37,7 @@ from .coins import DAILY_COIN_CAP, season_of
 from .config import Settings, load_settings
 from .contentgen import ContentGenerator, add_items, claude_caller, known, split_kind
 from .db import Database
-from .games import catalog
+from .games import catalog, catalogue
 from .logging_setup import setup_logging
 from .mailer import Mailer
 from .notify import Notifier
@@ -240,6 +240,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/games", response_model=list[schemas.GameCard])
     async def games() -> list[dict[str, Any]]:
         return catalog()
+
+    @app.get("/api/categories", response_model=list[schemas.CategoryInfo])
+    async def categories() -> list[dict[str, str]]:
+        """The game shelves, in order (the home page's gallery groups games by these)."""
+        return catalogue.categories()
 
     @app.get("/api/stats", response_model=dict[str, int])
     async def stats() -> dict[str, int]:

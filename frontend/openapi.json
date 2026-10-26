@@ -8177,6 +8177,29 @@
         "summary": "Unblock"
       }
     },
+    "/api/categories": {
+      "get": {
+        "description": "The game shelves, in order (the home page's gallery groups games by these).",
+        "operationId": "categories_api_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryInfo"
+                  },
+                  "title": "Response Categories Api Categories Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Categories"
+      }
+    },
     "/api/clubs": {
       "get": {
         "operationId": "my_clubs_api_clubs_get",

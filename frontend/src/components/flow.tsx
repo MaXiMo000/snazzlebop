@@ -45,19 +45,24 @@ export function IntroScreen({ state, receivedAt, send, readOnly }: { state: Room
           </p>
         )}
       </ShowHead>
-      <Card tone="stage">
-        <p className="sign">
-          <span aria-hidden="true">{SEGMENT_ICON[intro.game as GameCard["id"]] ?? "💎"} </span>The rules
-        </p>
-        <ol className="how-to-list space-top">
+      <section className="intro-rules" aria-labelledby="rules-h">
+        <div className="intro-title">
+          <span className="intro-icon" aria-hidden="true">
+            {SEGMENT_ICON[intro.game as GameCard["id"]] ?? "💎"}
+          </span>
+          <h3 id="rules-h">How to play</h3>
+        </div>
+        <ol className="how-steps intro-steps">
           {intro.how_to.map((line) => (
-            <li key={line}>{line}</li>
+            <li key={line}>
+              <span>{line}</span>
+            </li>
           ))}
         </ol>
-      </Card>
+      </section>
       <TeamsCard state={state} send={send} readOnly={readOnly} />
       {!readOnly && (
-        <Card tone="soft" className="center">
+        <Card tone="soft" className="center intro-ready">
           {imReady ? (
             <p className="lead">You’re ready! Waiting for {waitingOn.length ? waitingOn.map((p) => p.name).join(", ") : "the others"}…</p>
           ) : (
@@ -73,6 +78,17 @@ export function IntroScreen({ state, receivedAt, send, readOnly }: { state: Room
               Got it, I’m ready!
             </Btn>
           )}
+          <ul className="ready-people" aria-label="Who's ready">
+            {state.players
+              .filter((p) => p.connected)
+              .map((p) => (
+                <li key={p.id} className={intro.ready.includes(p.id) ? "on" : ""}>
+                  <span aria-hidden="true">{intro.ready.includes(p.id) ? "✓" : "…"}</span> {p.id === state.you ? "You" : p.name}
+                  <span className="sr-only">{intro.ready.includes(p.id) ? ", ready" : ", reading"}</span>
+                </li>
+              ))}
+          </ul>
+          <progress className="coin-meter ready-meter" max={Math.max(1, intro.needed)} value={intro.ready.length} aria-label={`${intro.ready.length} of ${intro.needed} ready`} />
           <p className="muted space-top" aria-live="polite">
             {intro.ready.length} of {intro.needed} ready. It starts when everyone is, or when the clock runs out.
           </p>
