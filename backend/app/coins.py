@@ -33,6 +33,10 @@ GAME_POWER_PRICES = {
     "snakes_repel": 25,
     "fivedice_roll": 30,
 }
+# Emote packs (party.py): bought once, kept for good.
+EMOTE_PRICES = {
+    pack: 40 for pack in ("emote_spooky", "emote_animals", "emote_snacks", "emote_royal", "emote_weather")
+}
 # Party items (party.py): no effect on scores, used anywhere in a room.
 PARTY_PRICES = {
     "party_confetti": 15,
@@ -40,6 +44,7 @@ PARTY_PRICES = {
     "party_drumroll": 20,
     "party_ovation": 20,
     "party_spotlight": 25,
+    "party_replay": 25,
 }
 
 

@@ -14,7 +14,18 @@ export const PARTY: [string, string, string][] = [
   ["party_drumroll", "🥁", "Drum roll"],
   ["party_ovation", "👏", "Standing ovation"],
   ["party_spotlight", "🔦", "Spotlight"],
+  ["party_replay", "🎬", "Slow-mo replay"],
 ];
+// Emote packs (backend app/party.py EMOTES): kept for good, they add to your live reactions.
+export const EMOTE_PACKS: Record<string, [string, string][]> = {
+  emote_spooky: [["👻", "Ghost"], ["🎃", "Pumpkin"], ["🦇", "Bat"], ["🕸️", "Web"]],
+  emote_animals: [["🐸", "Frog"], ["🦄", "Unicorn"], ["🐙", "Octopus"], ["🦖", "Dinosaur"]],
+  emote_snacks: [["🍕", "Pizza"], ["🌮", "Taco"], ["🍩", "Doughnut"], ["🍿", "Popcorn"]],
+  emote_royal: [["👑", "Crown"], ["💎", "Diamond"], ["🏆", "Trophy"], ["🥇", "Gold medal"]],
+  emote_weather: [["🌈", "Rainbow"], ["⚡", "Lightning"], ["🌪️", "Tornado"], ["❄️", "Snowflake"]],
+};
+const REPLAY_MS = 6000;
+type Moment = NonNullable<RoomState["party"]["effects"][number]["moment"]>;
 const COOLDOWN_MS = 20000; // the server's wait between one player's items
 
 /** Your party items, for any moment in the room. Shown only when you have some. */
@@ -59,6 +70,12 @@ export function PartyBar({ state, send }: { state: RoomState; send: Send }) {
 /** Every screen (TV too) plays each party item once, as it arrives. Decorative: aria-hidden. */
 export function PartyOverlay({ state }: { state: RoomState }) {
   const fx = useShow();
+  const [replay, setReplay] = useState<{ id: number; by: string; moment: Moment } | null>(null);
+  useEffect(() => {
+    if (!replay) return;
+    const t = window.setTimeout(() => setReplay(null), REPLAY_MS);
+    return () => window.clearTimeout(t);
+  }, [replay]);
   const effects = state.party.effects;
   const seen = useRef<number>(Math.max(0, ...effects.map((e) => e.id)));
   useEffect(() => {
@@ -82,7 +99,24 @@ export function PartyOverlay({ state }: { state: RoomState }) {
     } else if (e.item === "party_spotlight") {
       fx.stinger(`🔦 ${e.by}`);
       sfx.ding();
+    } else if (e.item === "party_replay" && e.moment) {
+      setReplay({ id: e.id, by: e.by, moment: e.moment });
+      sfx.drumroll();
     }
   }, [effects, fx]);
-  return fx.node;
+  return (
+    <>
+      {fx.node}
+      {replay && (
+        <div key={replay.id} className="slowmo" aria-hidden="true">
+          <div className="slowmo-frame">
+            <p className="slowmo-tag">🎬 Instant replay · {replay.by}</p>
+            <p className="slowmo-icon">{replay.moment.icon}</p>
+            <p className="slowmo-title">{replay.moment.title}</p>
+            <p className="slowmo-text">{replay.moment.text}</p>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }

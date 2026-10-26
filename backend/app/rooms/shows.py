@@ -192,6 +192,26 @@ class ShowMixin:
         last = room.party_effects[-1]["at"] if room.party_effects else -1e9
         if now - last < partylib.ROOM_GAP:
             raise HubError("slow_down", "Someone just did: let it land first")
+        if item == partylib.REPLAY and self._replay_moment(room) is None:
+            raise HubError("nothing_to_replay", "Nothing to replay yet: use it after a game")
+
+    @staticmethod
+    def _replay_moment(room: Room) -> dict[str, str] | None:
+        """The big moment a replay shows: the last game's first highlight, or the show reel's latest."""
+        moments = room.highlights or (room.show.reel if room.show is not None else [])
+        if not moments:
+            return None
+        m = moments[0] if room.highlights else moments[-1]
+        return {k: str(m.get(k, ""))[:120] for k in ("icon", "title", "text")}
+
+    async def _check_emote(self, room: Room, pid: str, pack: str) -> None:
+        """A reaction from an emote pack: only for signed-in players who own it (remembered for the room)."""
+        if pack in room.emote_packs.get(pid, []):
+            return
+        user_id = room.accounts.get(pid)
+        if user_id is None or self.owns_item is None or not await self.owns_item(user_id, pack):
+            raise HubError("no_emotes", "Get that emote pack in the shop first")
+        room.emote_packs[pid] = [*room.emote_packs.get(pid, []), pack]
 
     async def _use_party(self, room: Room, pid: str, msg: dict[str, Any]) -> None:
         """Spend a party item: every screen in the room plays it. Checked before and after spending, and
@@ -214,7 +234,13 @@ class ShowMixin:
             room.party_seq += 1
             room.party_effects = [
                 *room.party_effects[-(partylib.KEEP - 1) :],
-                {"id": room.party_seq, "item": str(item), "by": room.players[pid].name, "at": now},
+                {
+                    "id": room.party_seq,
+                    "item": str(item),
+                    "by": room.players[pid].name,
+                    "at": now,
+                    **({"moment": self._replay_moment(room)} if item == partylib.REPLAY else {}),
+                },
             ]
             self._activity(room, [pid], "party")
 

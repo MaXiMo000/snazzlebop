@@ -2900,6 +2900,7 @@ export interface components {
             id: number;
             /** Item */
             item: string;
+            moment: components["schemas"]["Highlight"] | null;
         };
         /** PasswordBody */
         PasswordBody: {

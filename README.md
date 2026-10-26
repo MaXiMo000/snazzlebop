@@ -111,8 +111,9 @@ original has them.
   peek, Last Card peek the pile, Snakes and Ladders snake repellent, Five Dice extra roll), bought with
   coins or won on level-ups,
   used one per game in casual rooms. Everyone sees that you used one; what it shows is yours alone.
-- **Party items:** confetti cannon, air horn, drum roll, standing ovation and spotlight: used any time in a
-  room, played on every screen (the TV too), no effect on scores, with spam limits.
+- **Party items:** confetti cannon, air horn, drum roll, standing ovation, spotlight and a slow-mo replay
+  of the last game's big moment: used any time in a room, played on every screen (the TV too), no effect
+  on scores, with spam limits. Emote packs (bought once, kept) add emoji to your live reactions.
 - **Levels and daily quests:** XP from fair games (and a bonus for the day's first win), levels that pay
   coins and a power-up, and three quests a day from a pool of 42 (one always social, no repeats within a
   week, one swap a day), a 7-day streak bonus, weekly challenges and a weekly club challenge (one

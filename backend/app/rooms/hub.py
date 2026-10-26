@@ -43,6 +43,8 @@ class Hub(
         on_results: Callable[[list[dict[str, Any]]], Awaitable[dict[int, dict[str, Any]]]] | None = None,
         spend_powerup: Callable[[int, str], Awaitable[bool]] | None = None,
         refund_powerup: Callable[[int, str], Awaitable[None]] | None = None,
+        # (account, item) -> do they own it? (emote packs, which are kept, not spent)
+        owns_item: Callable[[int, str], Awaitable[bool]] | None = None,
         # Ranked games: (game, {account: place}) -> each account's rating change, or None if unrated.
         on_rated: Callable[[str, dict[int, int]], Awaitable[dict[int, dict[str, Any]] | None]] | None = None,
         # Battles: (battle id, {account: place}, accounts that finished) -> each account's prize.
@@ -74,6 +76,7 @@ class Hub(
         self.on_results = on_results
         self.spend_powerup = spend_powerup
         self.refund_powerup = refund_powerup
+        self.owns_item = owns_item
         self.on_rated = on_rated
         self.on_battle = on_battle
         self.on_activity = on_activity

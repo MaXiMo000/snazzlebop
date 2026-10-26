@@ -7,6 +7,7 @@ import contextlib
 from typing import Any
 
 from .. import calls
+from .. import party as partylib
 from ..games import Game
 from .models import (
     CALL_GAP,
@@ -42,7 +43,7 @@ class SocialMixin:
 
     def _react(self, room: Room, pid: str, msg: dict[str, Any]) -> bool:
         emoji = msg.get("e")
-        if emoji not in REACTIONS:
+        if emoji not in REACTIONS and emoji not in partylib.PACK_OF:
             raise HubError("bad_reaction", "Unknown reaction")
         now = self.clock()
         if now - room.react_last.get(pid, -1e9) < REACT_GAP:

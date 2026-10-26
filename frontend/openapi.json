@@ -3392,12 +3392,23 @@
           "item": {
             "title": "Item",
             "type": "string"
+          },
+          "moment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Highlight"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "id",
           "item",
-          "by"
+          "by",
+          "moment"
         ],
         "title": "PartyEffect",
         "type": "object"

@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 from typing import Any
 
+from .. import party as partylib
 from .. import show as showlib
 from ..games import REGISTRY, GameError
 from ..games.content import THEMES
@@ -63,6 +64,8 @@ class RoutingMixin:
             if kind == "party":
                 await self._use_party(room, pid, msg)
                 return await self.broadcast(room)
+            if kind == "react" and msg.get("e") in partylib.PACK_OF:
+                await self._check_emote(room, pid, partylib.PACK_OF[msg["e"]])
             async with room.lock:
                 changed = self._apply(room, pid, kind, msg)
             if changed:

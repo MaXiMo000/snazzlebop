@@ -215,3 +215,62 @@
   display: block;
   font-size: 0.9em;
 }
+
+/* The slow-mo replay party item: the last game's big moment, framed like film, played slowly */
+.slowmo {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  pointer-events: none;
+  background: rgb(20 10 30 / 0.55);
+  animation: slowmo-fade 6s ease-in-out both;
+}
+.slowmo-frame {
+  max-width: min(92vw, 640px);
+  padding: 22px 26px;
+  border-radius: 18px;
+  border-block: 14px dashed var(--plum);
+  background: var(--cream);
+  color: var(--plum);
+  text-align: center;
+  box-shadow: 0 10px 0 var(--shadow);
+  animation: slowmo-zoom 6s ease-out both;
+}
+.slowmo-tag {
+  font-family: var(--display);
+  font-size: 0.95rem;
+}
+.slowmo-icon {
+  font-size: clamp(2.6rem, 12vw, 4.5rem);
+  line-height: 1.2;
+}
+.slowmo-title {
+  font-family: var(--display);
+  font-size: clamp(1.4rem, 6vw, 2.4rem);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.slowmo-text {
+  margin-top: 8px;
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+@keyframes slowmo-fade {
+  0%, 100% { opacity: 0; }
+  8%, 88% { opacity: 1; }
+}
+@keyframes slowmo-zoom {
+  from { transform: scale(0.86); filter: blur(2px); }
+  30% { filter: none; }
+  to { transform: scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slowmo,
+  .slowmo-frame {
+    animation: none;
+  }
+}

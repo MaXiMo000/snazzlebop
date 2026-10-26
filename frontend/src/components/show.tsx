@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Season } from "./extras";
 import { Btn, Card, nameList, nameOf } from "./ui";
 import { useShow } from "./fx";
+import { useAccount } from "../lib/account";
 import { sfx } from "../lib/sfx";
+import { EMOTE_PACKS } from "./party";
 import type { GameCard, Highlight, Reaction, RoomState, ShowState } from "../types";
 import { MarketFinale } from "./market";
 import { Select } from "./Select";
@@ -62,12 +64,14 @@ const REACTIONS: [string, string][] = [
 const COOLDOWN_MS = 900; // the server ignores taps closer than 0.8 s anyway
 
 export function ReactionBar({ send }: { send: Send }) {
+  const { user } = useAccount();
+  const extra = Object.entries(EMOTE_PACKS).flatMap(([pack, emoji]) => ((user?.powerups[pack] ?? 0) > 0 ? emoji : []));
   const [cooling, setCooling] = useState(false);
   const timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
   return (
     <div className="react-bar" role="group" aria-label="Send a reaction to the room">
-      {REACTIONS.map(([e, label]) => (
+      {[...REACTIONS, ...extra].map(([e, label]) => (
         <button
           key={e}
           type="button"

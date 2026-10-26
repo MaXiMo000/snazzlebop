@@ -1006,6 +1006,7 @@ class PartyEffect(Strict):
     id: int  # rises with each one: a screen plays the ones it hasn't yet
     item: str
     by: str  # the player's name in this room
+    moment: Highlight | None  # the slow-mo replay's big moment (other items: None)
 
 
 class Party(Strict):

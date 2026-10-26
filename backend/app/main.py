@@ -137,6 +137,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         on_activity=db.log_activity,
         spend_powerup=db.spend_powerup,
         refund_powerup=db.refund_powerup,
+        owns_item=db.owns_item,
         save_circle=db.save_circle,
     )
 

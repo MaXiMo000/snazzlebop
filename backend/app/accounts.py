@@ -42,7 +42,7 @@ from starlette.requests import HTTPConnection
 
 from . import emails, mfa, oidc, schemas
 from . import party as partylib
-from .coins import DAILY_COIN_CAP, GAME_POWER_PRICES, PARTY_PRICES, season_of
+from .coins import DAILY_COIN_CAP, EMOTE_PRICES, GAME_POWER_PRICES, PARTY_PRICES, season_of
 from .config import Settings
 from .db import aware, suspended
 from .games import REGISTRY
@@ -1057,15 +1057,30 @@ def router(
                     items.append({"id": item, "price": GAME_POWER_PRICES[item], "game": cls.title, **info})
         for item, info in partylib.ITEMS.items():
             items.append({"id": item, "price": PARTY_PRICES[item], "game": "Party: any game", **info})
+        for item, pack in partylib.EMOTES.items():
+            emoji = " ".join(pack["emoji"])  # type: ignore[arg-type]
+            text = f"{emoji} in your live reactions, in every room. Yours to keep"
+            items.append(
+                {
+                    "id": item,
+                    "price": EMOTE_PRICES[item],
+                    "game": "Emotes",
+                    "name": pack["name"],
+                    "icon": pack["icon"],
+                    "text": text,
+                }
+            )
         return {"items": items}
 
     @api.post("/api/shop/buy", response_model=schemas.UserBody, responses=schemas.ERRORS)
     async def buy(body: BuyBody, request: Request) -> JSONResponse:
         same_origin(request)
         user = await require_user(request)
-        price = GAME_POWER_PRICES.get(body.item) or PARTY_PRICES.get(body.item)
+        price = GAME_POWER_PRICES.get(body.item) or PARTY_PRICES.get(body.item) or EMOTE_PRICES.get(body.item)
         if price is None:
             raise HubError("bad_item", "That's not in the shop")
+        if body.item in EMOTE_PRICES and (user.powerups or {}).get(body.item):
+            raise HubError("owned", "You have that emote pack already")
         updated = await db.buy(user.id, body.item, price)
         if updated is None:
             raise HubError("not_enough_coins", "Not enough coins for that yet")

@@ -68,7 +68,10 @@ class ViewsMixin:
                 "ready": self._all_signed_in(room),
             },
             "party": {
-                "effects": [{k: e[k] for k in ("id", "item", "by")} for e in room.party_effects],
+                "effects": [
+                    {"id": e["id"], "item": e["item"], "by": e["by"], "moment": e.get("moment")}
+                    for e in room.party_effects
+                ],
             },
             "powers": {
                 "offer": [{"id": k, **v} for k, v in self._power_offer(room).items()]

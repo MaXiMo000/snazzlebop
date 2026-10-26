@@ -1971,6 +1971,12 @@ class Database:
             await session.commit()
             return user
 
+    async def owns_item(self, user_id: int, item: str) -> bool:
+        """Whether an account holds at least one of an item (emote packs are kept, not spent)."""
+        async with self.sessions() as session:
+            user = await session.get(User, user_id)
+            return bool(user is not None and (user.powerups or {}).get(item, 0) > 0)
+
     async def spend_powerup(self, user_id: int, item: str) -> bool:
         """Use one owned power-up (False if there's none left)."""
         try:

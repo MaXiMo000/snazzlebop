@@ -382,10 +382,14 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
 
       <Card aria-labelledby="shop-h">
         <h3 id="shop-h">Power-up shop</h3>
-        <p className="muted">Each game has its own. Use one per game in casual rooms (never ranked games or battles); everyone sees when you use one.</p>
+        <p className="muted">
+          Each game has its own. Use one per game in casual rooms (never ranked games or battles); everyone sees when you use one. Party items work anywhere, and
+          emote packs add to your live reactions for good.
+        </p>
         <ul className="acct-shop">
           {items.map((it) => {
             const owned = user.powerups[it.id] ?? 0;
+            const kept = it.id.startsWith("emote_"); // emote packs are bought once and kept
             return (
               <li key={it.id} className="acct-item">
                 <span className="acct-item-icon" aria-hidden="true">
@@ -396,12 +400,12 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
                 </p>
                 <p className="muted acct-item-text">
                   <span className="acct-item-game">{it.game}</span>
-                  {owned > 0 && <span className="chip teal acct-owned">You have {owned}</span>}
+                  {owned > 0 && <span className="chip teal acct-owned">{kept ? "Yours" : `You have ${owned}`}</span>}
                   {it.text}
                 </p>
                 <Btn
                   variant="gold"
-                  disabled={user.coins < it.price}
+                  disabled={user.coins < it.price || (kept && owned > 0)}
                   aria-label={`Buy ${it.name} for ${it.price} coins`}
                   onClick={async () => {
                     setError(null);
