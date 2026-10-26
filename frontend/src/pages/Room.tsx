@@ -535,7 +535,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
         </div>
       ) : phase === "lobby" || !state.game ? (
         <div className="tv-split">
-          <Card tone="stage" className="center">
+          <Card tone="stage" className="center tv-lobby">
             <p className="sign">{state.room.title ? `Tonight: ${state.room.title}` : "Now seating contestants"}</p>
             <p className="lead space-top">
               Join at <b>{window.location.host}</b> with code

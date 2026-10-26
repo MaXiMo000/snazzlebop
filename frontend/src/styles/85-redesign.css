@@ -1185,3 +1185,60 @@ label.check > input {
 .podium .podium-pts {
   color: var(--bulb);
 }
+
+/* ---- TV: fill a big screen, read from the sofa ---------------------------------------------------- */
+@media (min-width: 1600px) {
+  body:has(.tv) .topbar,
+  .app:has(.tv) {
+    max-width: min(1800px, 94vw);
+  }
+  .tv {
+    font-size: clamp(1.2rem, 1.25vw, 1.9rem);
+  }
+  .tv .card.accent:has(> .show-head) h2 {
+    font-size: clamp(2rem, 2.6vw, 3.2rem);
+  }
+  .tv .timer {
+    width: 96px;
+    height: 96px;
+    font-size: 2.4rem;
+  }
+}
+/* the TV lobby: the join address and a giant code are the whole point */
+.tv-lobby {
+  padding-block: clamp(36px, 6vh, 80px);
+}
+.tv-lobby .lead {
+  font-size: clamp(1.3rem, 2vw, 2.4rem);
+}
+.tv-lobby .flap {
+  gap: clamp(8px, 1vw, 16px);
+  margin-block: clamp(10px, 3vh, 30px);
+}
+.tv-lobby .flap span {
+  width: clamp(64px, 7vw, 140px);
+  height: clamp(84px, 9.5vw, 180px);
+  font-size: clamp(2.6rem, 5.5vw, 6rem);
+  border-radius: 16px;
+  animation: flap-in var(--slow) var(--ease-spring) both;
+}
+.tv-lobby .flap span:nth-child(2) { animation-delay: 80ms; }
+.tv-lobby .flap span:nth-child(3) { animation-delay: 160ms; }
+.tv-lobby .flap span:nth-child(4) { animation-delay: 240ms; }
+.tv-lobby .flap span:nth-child(5) { animation-delay: 320ms; }
+@keyframes flap-in {
+  from {
+    transform: rotateX(90deg);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tv-lobby .flap span {
+    animation: none;
+  }
+}
+@media (min-width: 1100px) {
+  .tv .contestant {
+    font-size: 1.25em;
+  }
+}
