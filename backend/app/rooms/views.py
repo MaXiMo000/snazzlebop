@@ -39,6 +39,14 @@ class ViewsMixin:
             "themes": THEMES if between else {},
             "show": self._show_view(room),
             "highlights": room.highlights if room.phase == "results" else [],
+            # The results podium: this game's top three (already public on the game's own final screen).
+            "podium": [
+                {"id": p, "points": pts}
+                for p, pts in sorted(room.last_scores.items(), key=lambda kv: -kv[1])[:3]
+                if p in room.players
+            ]
+            if room.phase == "results"
+            else [],
             "quip": room.quip if room.phase in ("results", "finale") else "",
             "reactions": room.reactions,
             "chat": self._chat_view(room, pid),

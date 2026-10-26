@@ -36,6 +36,7 @@ import type { GameCard, RoomState, Session } from "../types";
 import { Select } from "../components/Select";
 import { AdSlot } from "../components/ad";
 import { Fold, Sheet } from "../components/sheet";
+import { Podium } from "../components/podium";
 import { fitsRoom, GameInfo, GameTile } from "../components/gamecards";
 
 // Each game's screen loads when it's played, so the first page load stays small.
@@ -291,6 +292,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
           {/* a team game: your team above the game; at the results, the team score is the headline */}
           <TeamBadge state={state} />
           {phase === "results" && <TeamResult state={state} />}
+          {phase === "results" && !state.teams?.news && <Podium state={state} />}
           <PowerNews state={state} />
           <GameRouter state={state} receivedAt={receivedAt} send={send} />
           {phase === "game" && <ReadyBar state={state} send={send} />}

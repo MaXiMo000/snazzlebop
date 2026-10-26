@@ -3949,6 +3949,25 @@
         "title": "PlusPerks",
         "type": "object"
       },
+      "PodiumSpot": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "points"
+        ],
+        "title": "PodiumSpot",
+        "type": "object"
+      },
       "PowerItem": {
         "additionalProperties": false,
         "properties": {
@@ -5028,6 +5047,13 @@
             "title": "Players",
             "type": "array"
           },
+          "podium": {
+            "items": {
+              "$ref": "#/components/schemas/PodiumSpot"
+            },
+            "title": "Podium",
+            "type": "array"
+          },
           "powers": {
             "$ref": "#/components/schemas/Powers"
           },
@@ -5138,6 +5164,7 @@
           "themes",
           "show",
           "highlights",
+          "podium",
           "quip",
           "reactions",
           "chat",

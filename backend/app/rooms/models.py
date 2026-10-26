@@ -163,6 +163,7 @@ class Room:
     show: showlib.Show | None = None
     total_scores: dict[str, int] = field(default_factory=dict)
     highlights: list[dict[str, str]] = field(default_factory=list)  # from the last finished game
+    last_scores: dict[str, int] = field(default_factory=dict)  # the last finished game's scores (the podium)
     quip: str = ""  # the host's line about the last finished game
     predictions: dict[str, str] = field(default_factory=dict)  # audience id -> predicted winner
     reactions: list[dict[str, Any]] = field(default_factory=list)

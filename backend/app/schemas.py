@@ -780,6 +780,11 @@ ERRORS: dict[int | str, dict[str, object]] = {
 
 
 # -- realtime: the "state" frame every screen receives over the WebSocket --------------------------------
+class PodiumSpot(Strict):
+    id: str  # player id
+    points: int
+
+
 class Highlight(Strict):
     icon: str
     title: str
@@ -1110,6 +1115,7 @@ class RoomFrame(Strict):
     themes: dict[str, str]
     show: Show | None
     highlights: list[Highlight]
+    podium: list[PodiumSpot]  # results: this game's top three, best first
     quip: str
     reactions: list[Reaction]
     chat: Chat

@@ -121,6 +121,7 @@ class FlowMixin:
         room.ready, room.ready_stage, room.last_standings = set(), "", []
         room.predictions, room.highlights, room.quip = {}, [], ""
         room.card_news, room.rival_news, room.rivals, room.mvp_votes = [], [], [], {}
+        room.last_scores = {}
         room.game_no += 1
         room.boost_peeks, room.coin_news, room.team_news, room.rating_news = {}, {}, {}, {}
         room.battle_news = {}
@@ -245,6 +246,7 @@ class FlowMixin:
                     scores[r["winner"]] = scores.get(r["winner"], 0) + showlib.RIVAL_BONUS
         for pid, pts in scores.items():
             room.total_scores[pid] = room.total_scores.get(pid, 0) + pts
+        room.last_scores = dict(scores)
         if room.teams:
             totals = [sum(v for p, v in scores.items() if room.teams.get(p) == t) for t in (0, 1)]
             room.team_news = {

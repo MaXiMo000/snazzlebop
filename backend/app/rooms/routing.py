@@ -240,7 +240,7 @@ class RoutingMixin:
                 self._close_intro(room)
                 return True
             if room.game is None or room.phase != "game":
-                raise HubError("no_game", "No game is running")
+                return False  # a late tap: the game already ended, nothing to skip
             seen = msg.get("stage")
             if seen is not None:
                 if not isinstance(seen, str) or len(seen) > 32:

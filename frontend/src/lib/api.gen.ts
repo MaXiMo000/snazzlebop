@@ -3219,6 +3219,13 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** PodiumSpot */
+        PodiumSpot: {
+            /** Id */
+            id: string;
+            /** Points */
+            points: number;
+        };
         /** PowerItem */
         PowerItem: {
             /** Icon */
@@ -3581,6 +3588,8 @@ export interface components {
             party: components["schemas"]["Party"];
             /** Players */
             players: components["schemas"]["PlayerRow"][];
+            /** Podium */
+            podium: components["schemas"]["PodiumSpot"][];
             powers: components["schemas"]["Powers"];
             /** Quip */
             quip: string;
