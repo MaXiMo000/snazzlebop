@@ -64,8 +64,14 @@ Only the latest version on `main` (the live deployment) is supported.
   on connections, rooms, players and message size, and idle and age limits for rooms.
 - **Browser hardening.** A strict Content Security Policy (same origin only, no inline scripts or
   styles), plus framing, sniffing, referrer and cross-origin isolation headers, and HSTS in
-  production. The only third party is the voice/video service when calls are configured: the browser
-  may then connect to that host, and camera and microphone are allowed for this site only.
+  production. Third parties appear only when they're configured: the voice/video service for calls
+  (camera and microphone for this site only), the payment provider's checkout for Plus, and the ad
+  network on the lobby and results screens. Without them the page stays same-origin and
+  cross-origin isolated.
+- **Payments.** Card details never touch this site: the payment provider's own checkout takes them.
+  A membership turns on only from the provider's signed notifications (checked against a shared
+  secret and a time limit, recorded once), tied to the account by a server-signed reference; monthly
+  perks pay once per payment through the same ledger as every other coin.
 - **Privacy.** Play is anonymous by default. Logs contain no names, tokens, room codes or chat. Rooms,
   their chat and their snapshots are deleted when the room ends. Call media never passes through the
   app's server.

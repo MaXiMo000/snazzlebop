@@ -42,6 +42,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.events": (set(), set()),  # pure: the versioned shape of events other systems receive
     "app.outbox": ({"app.config", "app.events"}, set()),  # delivery with retries; storage passed in
     "app.calls": ({"app.config"}, set()),
+    "app.billing": ({"app.config"}, set()),  # Plus and ads rules, Paddle signatures (stdlib only)
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (
         {"app.rooms", "app.games", "app.config", "app.security", "app.calls", "app.persist", "app.prank"}
@@ -50,7 +51,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     ),
     "app.contentgen": ({"app.games"}, {"anthropic"}),
     "app.db": (
-        {"app.ratings", "app.battles", "app.fairplay", "app.progress", "app.games"},
+        {"app.ratings", "app.battles", "app.fairplay", "app.progress", "app.games", "app.billing"},
         {"alembic", "sqlalchemy"},
     ),  # storage; uses the pure rules
 }
@@ -65,6 +66,7 @@ EDGES = {
     "app.places",
     "app.ranked",
     "app.quests",
+    "app.plus",
     "app.ws",
     "app.migrations",
 }  # may use the frameworks

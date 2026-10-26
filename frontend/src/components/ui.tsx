@@ -120,8 +120,14 @@ function Contestant({ p, you, leader, onKick }: { p: PlayerInfo; you: boolean; l
         <span className="nm">{p.name}</span>
         {you && <span>(you)</span>}
         {p.host ? <span title="Host">★</span> : null}
+        {p.plus ? (
+          <span className="plus-badge" aria-hidden="true">
+            PLUS
+          </span>
+        ) : null}
         <span className="sr-only">
           {p.host ? ", host" : ""}
+          {p.plus ? ", Plus member" : ""}
           {p.connected ? "" : ", offline"}
         </span>
       </span>

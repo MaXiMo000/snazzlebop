@@ -49,6 +49,8 @@ def test_signup_sets_a_safe_cookie_and_shows_the_recovery_code_once(client):
         "email": None,
         "email_verified": False,
         "has_password": True,
+        "plus_until": None,
+        "ads": False,  # a new account: its ad-free days
     }
     assert len(body["recovery_code"].replace("-", "")) == 20
     cookie = r.headers["set-cookie"].lower()
@@ -164,6 +166,8 @@ def test_coins_for_places_daily_cap_shop_and_leaderboard(client):
         "email": None,
         "email_verified": False,
         "has_password": True,
+        "plus_until": None,
+        "ads": False,  # a new account: its ad-free days
     }
     assert client.post("/api/shop/buy", json={"item": "gold bar"}).status_code == 400
     assert (

@@ -18,12 +18,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from . import (
     accounts,
+    billing,
     calls,
     events,
     integrations,
     notifications,
     oidc,
     places,
+    plus,
     quests,
     ranked,
     safety,
@@ -212,6 +214,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ws_hosts=settings.ws_hosts,
         production=settings.is_production,
         call_hosts=calls.csp_hosts(settings),
+        third_party=billing.csp_hosts(settings),
     )
     app.add_middleware(HostGuard, allowed_hosts=settings.allowed_hosts, edge_secret=settings.edge_secret)
 
@@ -259,6 +262,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(clubs.router(settings, db, hub, limiters["auth"], notifier, presence, statuses))
     app.include_router(notifications.router(settings, db, hub, notifier, presence, statuses))
     app.include_router(safety.router(settings, db, hub, presence, outbox))
+    app.include_router(plus.router(settings, db))
     app.include_router(integrations.router(settings, db, outbox))
     app.include_router(staff.router(settings, db, outbox))
     app.include_router(places.router(settings, db, mailer))

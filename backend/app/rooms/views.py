@@ -97,6 +97,7 @@ class ViewsMixin:
                     "connected": p.connected,
                     "host": p.id == room.host_id,
                     "total": room.total_scores.get(p.id, 0),
+                    "plus": p.id in room.plus,
                 }
                 for p in room.players.values()
             ],

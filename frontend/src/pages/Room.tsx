@@ -73,6 +73,7 @@ import { Price } from "../games/Price";
 import { Telepathy } from "../games/Telepathy";
 import type { GameCard, RoomState, Session } from "../types";
 import { Select } from "../components/Select";
+import { AdSlot } from "../components/ad";
 
 type Send = (m: Record<string, unknown>) => void;
 
@@ -265,6 +266,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       {state.show && phase !== "lobby" && phase !== "finale" && <ShowStrip show={state.show} />}
       {phase === "lobby" &&
         (audience ? <AudienceLobby state={state} /> : <Lobby state={state} isHost={isHost} send={send} />)}
+      {phase === "lobby" && <AdSlot go={go} />}
       {phase === "finale" && state.show && <Finale state={state} isHost={isHost} send={send} />}
       {phase === "intro" && state.intro && (
         <>
@@ -304,6 +306,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
               <Highlights items={state.highlights} />
               {state.market && <MarketMoves m={state.market} players={state.players} you={state.you} />}
               <MvpVote state={state} send={send} />
+              <AdSlot go={go} />
             </>
           )}
           <ReactionBar send={send} />

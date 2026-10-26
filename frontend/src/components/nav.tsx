@@ -10,6 +10,7 @@ const LINKS: { to: string; icon: string; label: string; match: RegExp; wide?: bo
   { to: "/ratings", icon: "📈", label: "Ranked", match: /^\/ratings\b/ },
   { to: "/battles", icon: "⚔️", label: "Battles", match: /^\/battles\b/, wide: true },
   { to: "/coins", icon: "🪙", label: "Coins", match: /^\/coins\b/, wide: true },
+  { to: "/plus", icon: "⭐", label: "Plus", match: /^\/plus\b/, wide: true },
   { to: "/account", icon: "👤", label: "Me", match: /^\/(account|places|inbox|privacy|safety)\b/ },
 ];
 

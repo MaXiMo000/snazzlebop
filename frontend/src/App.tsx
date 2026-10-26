@@ -14,6 +14,7 @@ import { Places } from "./pages/Places";
 import { Ratings } from "./pages/Ratings";
 import { Coins } from "./pages/Coins";
 import { Battles } from "./pages/Battles";
+import { Plus } from "./pages/Plus";
 import { Quests } from "./pages/Quests";
 import { SiteNav } from "./components/nav";
 import { Staff } from "./pages/Staff";
@@ -35,6 +36,7 @@ const RATINGS_PATH = /^\/ratings\/?$/;
 const COINS_PATH = /^\/coins\/?$/;
 const BATTLES_PATH = /^\/battles\/?$/;
 const QUESTS_PATH = /^\/quests\/?$/;
+const PLUS_PATH = /^\/plus\/?$/;
 const JOIN_PATH = /^\/join\/([A-Za-z0-9-]{4,32})\/?$/;
 const INBOX_PATH = /^\/inbox\/?$/;
 
@@ -175,6 +177,8 @@ export function App() {
           <Battles go={go} />
         ) : QUESTS_PATH.test(path) ? (
           <Quests go={go} />
+        ) : PLUS_PATH.test(path) ? (
+          <Plus go={go} />
         ) : clubMatch ? (
           <ClubHome key={clubMatch[1]} slug={clubMatch[1]!} go={go} />
         ) : INBOX_PATH.test(path) ? (

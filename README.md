@@ -111,6 +111,11 @@ original has them.
   peek, Last Card peek the pile, Snakes and Ladders snake repellent, Five Dice extra roll), bought with
   coins or won on level-ups,
   used one per game in casual rooms. Everyone sees that you used one; what it shows is yours alone.
+- **Snazzlebop Plus:** a cheap monthly membership sold worldwide through Paddle (local currencies,
+  cards, PayPal, Apple Pay, Google Pay, UPI; tax handled): no ads, coins and party items every month,
+  every emote pack and a badge. It turns on only from Paddle's signed notifications.
+- **Ads:** optional Google AdSense, only on the lobby and results screens, never during a game, never
+  for Plus members and never in an account's (or a new visitor's) first 15 days.
 - **Party items:** confetti cannon, air horn, drum roll, standing ovation, spotlight and a slow-mo replay
   of the last game's big moment: used any time in a room, played on every screen (the TV too), no effect
   on scores, with spam limits. Emote packs (bought once, kept) add emoji to your live reactions.
@@ -171,6 +176,8 @@ Everything is read from the environment; [.env.example](.env.example) lists ever
 | `CLIENT_IP_HEADER` / `TRUSTED_PROXY_HOPS` | behind a proxy | how to find the client's IP for rate limits |
 | `ANTHROPIC_API_KEY` | no | grows the content pools with fresh, validated items |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | no | turns on voice and video calls |
+| `PADDLE_CLIENT_TOKEN`, `PADDLE_WEBHOOK_SECRET`, `PADDLE_PLUS_PRICE` (+ `PADDLE_ENV`, `PADDLE_API_KEY`) | no | sells Snazzlebop Plus worldwide through Paddle |
+| `ADSENSE_CLIENT`, `ADSENSE_SLOT` | no | Google AdSense ads on the lobby and results screens |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no | turns on sign in with Google (redirect URI `<PUBLIC_URL>/api/auth/google/callback`) |
 | `JUMPSCARE_NAMES` | no | a private, comma-separated list of friends who get a walk-on and a jump scare |
 

@@ -1,0 +1,55 @@
+/* Snazzlebop Plus: the page, the badge by a member's name, and the one ad slot between games */
+.plus-price {
+  font-size: 1.2rem;
+}
+.plus-price b {
+  font-family: var(--display);
+  font-size: 1.6rem;
+}
+.plus-perks {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 1.05rem;
+}
+.plus-perks li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.plus-badge {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--mustard);
+  color: var(--plum);
+  font-family: var(--display);
+  font-size: 0.62rem;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+}
+
+.ad-slot {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 10px 0;
+}
+.ad-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.ad-unit {
+  display: block;
+  width: 100%;
+  min-height: 100px;
+}
+.ad-remove {
+  font-size: 0.9rem;
+  font-weight: 700;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}

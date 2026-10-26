@@ -77,6 +77,45 @@ class PublicUser(Strict):
     email: str | None
     email_verified: bool
     has_password: bool  # false for an account that signs in only with Google
+    plus_until: str | None  # Snazzlebop Plus is on until then (ISO 8601); None: not a member
+    ads: bool  # ads may show to this account (not Plus, and past its first ad-free days)
+
+
+class AdIds(Strict):
+    client: str  # ca-pub-...
+    slot: str
+
+
+class PlusPerks(Strict):
+    coins: int  # each paid month
+    items: dict[str, int]  # party items each paid month
+
+
+class BillingConfig(Strict):
+    payments: bool  # Plus is on sale (Paddle is set up)
+    environment: str  # sandbox | production
+    client_token: str  # Paddle.js client-side token ("" when off)
+    plus_price: str  # Paddle price id for Plus ("" when off)
+    ads: AdIds | None  # AdSense ids (None: no ads on this site)
+    ad_free_days: int  # new accounts (and a guest's first visit) see no ads for this long
+    perks: PlusPerks
+
+
+class PlusCheckout(Strict):
+    price: str
+    custom_data: dict[str, str]  # your account, signed by the server (Paddle hands it back)
+    email: str | None  # prefilled at checkout when confirmed
+
+
+class MyPlus(Strict):
+    active: bool
+    until: str | None  # ISO 8601
+    status: str | None  # Paddle's: active | canceled | past_due | paused ...
+    can_manage: bool  # a link to Paddle's page to change or cancel is available
+
+
+class PlusManage(Strict):
+    url: str
 
 
 class UserBody(Strict):
@@ -758,6 +797,7 @@ class PlayerRow(Strict):
     connected: bool
     host: bool
     total: int
+    plus: bool  # a Snazzlebop Plus member: the badge by their name
 
 
 class PlaylistItem(Strict):

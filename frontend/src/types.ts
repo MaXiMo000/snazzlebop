@@ -6,6 +6,8 @@ export interface PlayerInfo {
   connected: boolean;
   host: boolean;
   total: number;
+  /** a Snazzlebop Plus member: the badge by their name */
+  plus: boolean;
 }
 
 /** A game's lobby card: the API contract's card (lib/contract.ts), with its id narrowed to the games we know. */

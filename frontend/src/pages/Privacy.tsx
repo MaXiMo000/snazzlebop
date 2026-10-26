@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card } from "../components/ui";
+import { billingConfig, type BillingConfig } from "../lib/billing";
 import { siteInfo } from "../lib/safety";
 
 type Go = (path: string) => void;
@@ -21,6 +22,8 @@ function Link({ to, go, children }: { to: string; go: Go; children: string }) {
 /** The privacy notice: what's kept, why, for how long, who else touches it, and your rights. */
 export function Privacy({ go }: { go: Go }) {
   const [contact, setContact] = useState<string | null>(null);
+  const [billing, setBilling] = useState<BillingConfig | null>(null);
+  useEffect(() => void billingConfig().then(setBilling, () => undefined), []);
   useEffect(() => {
     document.title = "Privacy · Snazzlebop";
     siteInfo().then((s) => setContact(s.privacy_contact), () => undefined);
@@ -59,9 +62,24 @@ export function Privacy({ go }: { go: Go }) {
           <li>If email is on, an email delivery service sends our messages.</li>
           <li>Pushes travel through your browser maker's push service (Google, Mozilla, Apple or Microsoft). They're encrypted: only your device can read them.</li>
           <li>Voice and video calls, if used, go through our call provider while the call lasts. We don't record them.</li>
+          {billing?.payments && (
+            <li>
+              Snazzlebop Plus is sold by Paddle, our reseller: they take the payment and handle tax, and keep what that needs (your email, country and payment details). We
+              only learn that your account has Plus and until when; we never see your card.
+            </li>
+          )}
+          {billing?.ads && (
+            <li>
+              Ads come from Google AdSense, only in the lobby and on the results screens, never during a game, never for Plus members and never in your first{" "}
+              {billing.ad_free_days} days. Google may use cookies to choose and measure them; where the law requires it, you're asked first and can say no.
+            </li>
+          )}
           <li>If we use a support or ticketing tool to handle reports, a report goes to it with the reported person's name and what they said, but no emails, and the person who reported only as an anonymous reference.</li>
         </ul>
-        <p className="space-top">We don't sell personal data, and there are no third-party trackers on the site.</p>
+        <p className="space-top">
+          We don't sell personal data.{" "}
+          {billing?.ads ? "Apart from the ads described above, there are no third-party trackers on the site." : "There are no third-party trackers on the site."}
+        </p>
       </Card>
 
       <Card aria-labelledby="pv-rights">

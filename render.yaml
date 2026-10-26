@@ -44,6 +44,22 @@ services:
         sync: false
       - key: LIVEKIT_API_SECRET
         sync: false
+      # Optional Snazzlebop Plus through Paddle (see .env.example). Unset = no Plus.
+      - key: PADDLE_ENV
+        sync: false
+      - key: PADDLE_CLIENT_TOKEN
+        sync: false
+      - key: PADDLE_WEBHOOK_SECRET
+        sync: false
+      - key: PADDLE_PLUS_PRICE
+        sync: false
+      - key: PADDLE_API_KEY
+        sync: false
+      # Optional Google AdSense ads (client and slot). Unset = no ads.
+      - key: ADSENSE_CLIENT
+        sync: false
+      - key: ADSENSE_SLOT
+        sync: false
       # Optional account email: MAIL_FROM plus Resend (RESEND_API_KEY) or SMTP (host, user, pass).
       # Unset = no email. PUBLIC_URL only for a custom domain (links default to the Render address).
       - key: MAIL_FROM

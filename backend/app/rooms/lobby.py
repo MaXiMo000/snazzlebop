@@ -253,6 +253,13 @@ class LobbyMixin:
         room.accounts[pid] = user_id
         self._persist(room)
 
+    def set_plus(self, room: Room, pid: str, on: bool) -> None:
+        """Show (or drop) the Plus badge by a signed-in seat, as their account stands when they connect."""
+        if on and pid in room.accounts and pid not in room.plus:
+            room.plus = [*room.plus, pid]
+        elif not on and pid in room.plus:
+            room.plus = [p for p in room.plus if p != pid]
+
     def issue_tv(self, code: str) -> tuple[Room, str]:
         """A read-only big-screen seat. Same trust as joining: anyone holding the room code."""
         room = self.get(code.upper() if isinstance(code, str) else code)

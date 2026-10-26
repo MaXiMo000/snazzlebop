@@ -211,13 +211,30 @@ class HostGuard:
 
 class SecurityHeaders:
     def __init__(
-        self, app: ASGIApp, ws_hosts: tuple[str, ...], production: bool, call_hosts: tuple[str, ...] = ()
+        self,
+        app: ASGIApp,
+        ws_hosts: tuple[str, ...],
+        production: bool,
+        call_hosts: tuple[str, ...] = (),
+        third_party: dict[str, tuple[str, ...]] | None = None,
     ) -> None:
         self.app = app
-        # call_hosts: the LiveKit server, only when calls are configured (the one exception to "self").
+        # call_hosts: the LiveKit server, only when calls are configured. third_party: Paddle's checkout
+        # and Google's ads, only when they're configured (billing.py): {"script": ..., "frame": ...,
+        # "connect": ..., "img": ...}. With none of them, everything stays same-origin.
+        extra = third_party or {}
         connect = " ".join(
-            ["'self'", *[f"wss://{h}" for h in ws_hosts if h not in ("testserver",)], *call_hosts]
+            [
+                "'self'",
+                *[f"wss://{h}" for h in ws_hosts if h not in ("testserver",)],
+                *call_hosts,
+                *extra.get("connect", ()),
+            ]
         )
+        script = " ".join(["'self'", *extra.get("script", ())])
+        frame = " ".join(extra.get("frame", ())) or "'none'"
+        img = " ".join(["'self'", "data:", *extra.get("img", ())])
+        self.open = any(extra.values())
         # Camera and microphone are allowed for this site only, and only when calls are on.
         media = "(self)" if call_hosts else "()"
         self.permissions = f"camera={media}, microphone={media}, geolocation=(), payment=(), usb=()".encode()
@@ -226,9 +243,10 @@ class SecurityHeaders:
         self.csp = "; ".join(
             [
                 "default-src 'none'",
-                "script-src 'self'",
+                f"script-src {script}",
                 "style-src 'self'",
-                "img-src 'self' data:",
+                f"img-src {img}",
+                f"frame-src {frame}",
                 "font-src 'self'",
                 f"connect-src {connect}",
                 "manifest-src 'self'",
@@ -254,10 +272,14 @@ class SecurityHeaders:
                     b"x-frame-options": b"DENY",
                     b"referrer-policy": b"no-referrer",
                     b"permissions-policy": self.permissions,
-                    b"cross-origin-opener-policy": b"same-origin",
+                    # Checkout and ad windows open from the page; their frames aren't ours to mark.
+                    b"cross-origin-opener-policy": b"same-origin-allow-popups"
+                    if self.open
+                    else b"same-origin",
                     b"cross-origin-resource-policy": b"same-origin",
-                    b"cross-origin-embedder-policy": b"require-corp",  # everything is same-origin
                 }
+                if not self.open:
+                    add[b"cross-origin-embedder-policy"] = b"require-corp"  # everything is same-origin
                 if self.production:
                     add[b"strict-transport-security"] = b"max-age=63072000; includeSubDomains; preload"
                 if is_api:

@@ -110,6 +110,16 @@ class Settings:
     report_webhook_url: str = ""  # each report event is POSTed here, signed
     report_webhook_secret: str = field(default="", repr=False)
     integration_token: str = field(default="", repr=False)  # bearer token for /api/integrations/*
+    # Optional: Snazzlebop Plus through Paddle (billing.py). Unset = no Plus, no checkout.
+    paddle_env: str = "sandbox"  # sandbox | production
+    paddle_client_token: str = ""  # client-side token (public by design: it's used in the browser)
+    paddle_api_key: str = field(default="", repr=False)  # server key: only for "manage my subscription"
+    paddle_webhook_secret: str = field(default="", repr=False)
+    paddle_plus_price: str = ""  # the Plus monthly price id (pri_...)
+    # Optional: Google AdSense on the lobby and results screens (billing.py). Unset = no ads.
+    adsense_client: str = ""  # ca-pub-...
+    adsense_slot: str = ""  # the display ad unit's id
+
     # Platform staff (staff.py): these usernames, and only with an authenticator app turned on.
     staff_usernames: tuple[str, ...] = field(default=(), repr=False)
 
@@ -146,6 +156,12 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         livekit_url.startswith("wss://") or (not production and livekit_url.startswith("ws://"))
     ):
         raise ValueError("LIVEKIT_URL must start with wss:// (ws:// only outside production)")
+    paddle_env = e.get("PADDLE_ENV", "sandbox").strip().lower() or "sandbox"
+    if paddle_env not in ("sandbox", "production"):
+        raise ValueError("PADDLE_ENV must be sandbox or production")
+    adsense_client = e.get("ADSENSE_CLIENT", "").strip()
+    if adsense_client and not re.fullmatch(r"ca-pub-\d{10,20}", adsense_client):
+        raise ValueError("ADSENSE_CLIENT must look like ca-pub-1234567890123456")
     if production and len(secret) < 32:
         raise RuntimeError("SECRET_KEY must be set to at least 32 characters in production")
     if not secret:
@@ -231,6 +247,13 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         report_webhook_secret=webhook_secret,
         integration_token=integration_token,
         staff_usernames=tuple(n.casefold() for n in _csv(e.get("STAFF_USERNAMES"))),
+        paddle_env=paddle_env,
+        paddle_client_token=e.get("PADDLE_CLIENT_TOKEN", "").strip(),
+        paddle_api_key=e.get("PADDLE_API_KEY", "").strip(),
+        paddle_webhook_secret=e.get("PADDLE_WEBHOOK_SECRET", "").strip(),
+        paddle_plus_price=e.get("PADDLE_PLUS_PRICE", "").strip(),
+        adsense_client=adsense_client,
+        adsense_slot=e.get("ADSENSE_SLOT", "").strip(),
         jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
         jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )

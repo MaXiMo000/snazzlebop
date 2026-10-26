@@ -361,6 +361,9 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
           <Btn variant="ghost" onClick={() => go("/ratings")}>
             Your ratings
           </Btn>
+          <Btn variant="ghost" onClick={() => go("/plus")}>
+            {user.plus_until ? "Your Plus" : "Get Plus"}
+          </Btn>
           <Btn variant="ghost" onClick={() => go("/battles")}>
             Your battles
           </Btn>

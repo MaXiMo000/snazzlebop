@@ -240,6 +240,7 @@ class Room:
     party_seq: int = 0
     party_last: dict[str, float] = field(default_factory=dict)
     emote_packs: dict[str, list[str]] = field(default_factory=dict)  # pid -> emote packs they own (checked)
+    plus: list[str] = field(default_factory=list)  # seats whose account is a Plus member (the badge)
     react_logged: dict[str, int] = field(
         default_factory=dict
     )  # pid -> the game a reaction was last logged in

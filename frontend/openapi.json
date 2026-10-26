@@ -61,6 +61,25 @@
         "title": "ActionRow",
         "type": "object"
       },
+      "AdIds": {
+        "additionalProperties": false,
+        "properties": {
+          "client": {
+            "title": "Client",
+            "type": "string"
+          },
+          "slot": {
+            "title": "Slot",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client",
+          "slot"
+        ],
+        "title": "AdIds",
+        "type": "object"
+      },
       "BackupCodes": {
         "additionalProperties": false,
         "description": "Shown once: each works once if the phone is lost.",
@@ -367,6 +386,55 @@
           "holder"
         ],
         "title": "Belt",
+        "type": "object"
+      },
+      "BillingConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "ad_free_days": {
+            "title": "Ad Free Days",
+            "type": "integer"
+          },
+          "ads": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdIds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "client_token": {
+            "title": "Client Token",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "payments": {
+            "title": "Payments",
+            "type": "boolean"
+          },
+          "perks": {
+            "$ref": "#/components/schemas/PlusPerks"
+          },
+          "plus_price": {
+            "title": "Plus Price",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payments",
+          "environment",
+          "client_token",
+          "plus_price",
+          "ads",
+          "ad_free_days",
+          "perks"
+        ],
+        "title": "BillingConfig",
         "type": "object"
       },
       "BlockList": {
@@ -3046,6 +3114,49 @@
         "title": "MyPlaces",
         "type": "object"
       },
+      "MyPlus": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          }
+        },
+        "required": [
+          "active",
+          "until",
+          "status",
+          "can_manage"
+        ],
+        "title": "MyPlus",
+        "type": "object"
+      },
       "MyRating": {
         "additionalProperties": false,
         "properties": {
@@ -3645,6 +3756,10 @@
             "title": "Name",
             "type": "string"
           },
+          "plus": {
+            "title": "Plus",
+            "type": "boolean"
+          },
           "total": {
             "title": "Total",
             "type": "integer"
@@ -3655,7 +3770,8 @@
           "name",
           "connected",
           "host",
-          "total"
+          "total",
+          "plus"
         ],
         "title": "PlayerRow",
         "type": "object"
@@ -3677,6 +3793,76 @@
           "title"
         ],
         "title": "PlaylistItem",
+        "type": "object"
+      },
+      "PlusCheckout": {
+        "additionalProperties": false,
+        "properties": {
+          "custom_data": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Custom Data",
+            "type": "object"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          }
+        },
+        "required": [
+          "price",
+          "custom_data",
+          "email"
+        ],
+        "title": "PlusCheckout",
+        "type": "object"
+      },
+      "PlusManage": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "PlusManage",
+        "type": "object"
+      },
+      "PlusPerks": {
+        "additionalProperties": false,
+        "properties": {
+          "coins": {
+            "title": "Coins",
+            "type": "integer"
+          },
+          "items": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Items",
+            "type": "object"
+          }
+        },
+        "required": [
+          "coins",
+          "items"
+        ],
+        "title": "PlusPerks",
         "type": "object"
       },
       "PowerItem": {
@@ -3919,6 +4105,10 @@
         "additionalProperties": false,
         "description": "Your own account (only ever sent to its owner).",
         "properties": {
+          "ads": {
+            "title": "Ads",
+            "type": "boolean"
+          },
           "coins": {
             "title": "Coins",
             "type": "integer"
@@ -3942,6 +4132,17 @@
             "title": "Has Password",
             "type": "boolean"
           },
+          "plus_until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plus Until"
+          },
           "powerups": {
             "additionalProperties": {
               "type": "integer"
@@ -3960,7 +4161,9 @@
           "powerups",
           "email",
           "email_verified",
-          "has_password"
+          "has_password",
+          "plus_until",
+          "ads"
         ],
         "title": "PublicUser",
         "type": "object"
@@ -7361,6 +7564,221 @@
           }
         },
         "summary": "Verify"
+      }
+    },
+    "/api/billing/checkout": {
+      "post": {
+        "operationId": "checkout_api_billing_checkout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlusCheckout"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Checkout"
+      }
+    },
+    "/api/billing/config": {
+      "get": {
+        "operationId": "config_api_billing_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Config"
+      }
+    },
+    "/api/billing/paddle": {
+      "post": {
+        "description": "Paddle's signed notifications. Anything unsigned, stale or about someone else is refused.",
+        "operationId": "paddle_webhook_api_billing_paddle_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Paddle Webhook"
       }
     },
     "/api/blocks": {
@@ -13447,6 +13865,203 @@
           }
         },
         "summary": "Remove"
+      }
+    },
+    "/api/me/plus": {
+      "get": {
+        "operationId": "my_plus_api_me_plus_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPlus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "My Plus"
+      }
+    },
+    "/api/me/plus/manage": {
+      "post": {
+        "description": "A one-time link to Paddle's page for your subscription: change the card, or cancel.",
+        "operationId": "manage_api_me_plus_manage_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlusManage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Manage"
       }
     },
     "/api/me/progress": {

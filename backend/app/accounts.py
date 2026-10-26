@@ -40,7 +40,7 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.requests import HTTPConnection
 
-from . import emails, mfa, oidc, schemas
+from . import billing, emails, mfa, oidc, schemas
 from . import party as partylib
 from .coins import DAILY_COIN_CAP, EMOTE_PRICES, GAME_POWER_PRICES, PARTY_PRICES, season_of
 from .config import Settings
@@ -295,6 +295,8 @@ def public_user(user: Any) -> dict[str, Any]:
         "email": user.email,
         "email_verified": bool(user.email_verified),
         "has_password": bool(user.pw_hash),
+        "plus_until": aware(user.plus_until).isoformat() if billing.is_plus(user.plus_until) else None,
+        "ads": billing.shows_ads(user.created_at, user.plus_until),
     }
 
 

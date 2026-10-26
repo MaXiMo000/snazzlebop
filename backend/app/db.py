@@ -41,6 +41,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
 
 from . import battles as battlelib
+from . import billing as billinglib
 from . import fairplay
 from . import progress as progresslib
 from . import ratings as ratinglib
@@ -114,6 +115,8 @@ class User(Base):
     # Shown on the leaderboards of places this account is verified at (off unless switched on).
     place_boards: Mapped[bool] = mapped_column(default=False)
     xp: Mapped[int] = mapped_column(Integer, default=0)  # the cached sum of xp_events (progress.py)
+    # Snazzlebop Plus is on until then (billing.py; set only by Paddle's signed webhooks).
+    plus_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class EmailToken(Base):
@@ -487,6 +490,30 @@ class PlayedWith(Base):
     first_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     last_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     games: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Subscription(Base):
+    """A Plus subscription at Paddle, as its signed webhooks last described it."""
+
+    __tablename__ = "subscriptions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # Paddle's sub_...
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    customer_id: Mapped[str] = mapped_column(String(64), default="")  # Paddle's ctm_...
+    status: Mapped[str] = mapped_column(String(16))
+    period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class BillingEvent(Base):
+    """Each Paddle webhook handled, by its event id: a resend changes nothing."""
+
+    __tablename__ = "billing_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # Paddle's evt_...
+    kind: Mapped[str] = mapped_column(String(48))
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class Activity(Base):
@@ -1971,11 +1998,80 @@ class Database:
             await session.commit()
             return user
 
+    # -- Snazzlebop Plus (billing.py) -----------------------------------------------------------------------
+    async def billing_seen(self, event_id: str, kind: str, user_id: int | None) -> bool:
+        """Record a Paddle event once. True if it was already handled (a resend)."""
+        try:
+            async with self.sessions() as session:
+                session.add(BillingEvent(id=event_id[:64], kind=kind[:48], user_id=user_id))
+                await session.commit()
+            return False
+        except IntegrityError:
+            return True
+
+    async def set_subscription(
+        self,
+        sub_id: str,
+        user_id: int,
+        customer_id: str,
+        status: str,
+        period_end: datetime | None,
+        at: datetime,
+    ) -> None:
+        """Remember a subscription's state and move the account's Plus end date with it. `at`: when
+        Paddle says it happened; an older event arriving late changes nothing."""
+        until = billinglib.plus_until(status, period_end, datetime.now(UTC))
+        async with self.sessions() as session:
+            row = await session.get(Subscription, sub_id[:64])
+            if row is None:
+                row = Subscription(id=sub_id[:64], user_id=user_id)
+                session.add(row)
+            elif row.user_id != user_id or aware(row.updated_at) > at:
+                return  # someone else's subscription, or old news
+            row.customer_id, row.status, row.period_end = customer_id[:64], status[:16], period_end
+            row.updated_at = at
+            await session.execute(update(User).where(User.id == user_id).values(plus_until=until))
+            await session.commit()
+
+    async def subscription_user(self, sub_id: str) -> int | None:
+        async with self.sessions() as session:
+            row = await session.get(Subscription, sub_id[:64])
+            return row.user_id if row is not None else None
+
+    async def grant_plus_month(self, user_id: int, ref: str) -> bool:
+        """A paid month's coins and party items, once per payment (the ledger's reference rule)."""
+        async with self.sessions() as session:
+            await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+            if not await self._post(session, user_id, billinglib.PLUS_COINS, "plus", "payment", ref):
+                return False
+            user = await session.get(User, user_id)
+            if user is not None:
+                owned = dict(user.powerups or {})
+                for item, n in billinglib.PLUS_ITEMS.items():
+                    owned[item] = owned.get(item, 0) + n
+                user.powerups = owned
+            await session.commit()
+        return True
+
+    async def my_subscription(self, user_id: int) -> Subscription | None:
+        async with self.sessions() as session:
+            return await session.scalar(
+                select(Subscription)
+                .where(Subscription.user_id == user_id)
+                .order_by(Subscription.updated_at.desc())
+                .limit(1)
+            )
+
     async def owns_item(self, user_id: int, item: str) -> bool:
-        """Whether an account holds at least one of an item (emote packs are kept, not spent)."""
+        """Whether an account holds at least one of an item (emote packs are kept, not spent; Plus
+        members have every emote pack while they're members)."""
         async with self.sessions() as session:
             user = await session.get(User, user_id)
-            return bool(user is not None and (user.powerups or {}).get(item, 0) > 0)
+            if user is None:
+                return False
+            if item.startswith("emote_") and billinglib.is_plus(user.plus_until):
+                return True
+            return (user.powerups or {}).get(item, 0) > 0
 
     async def spend_powerup(self, user_id: int, item: str) -> bool:
         """Use one owned power-up (False if there's none left)."""
