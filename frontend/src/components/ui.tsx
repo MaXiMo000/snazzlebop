@@ -102,8 +102,15 @@ export function ErrorBanner({ message, onClose }: { message: string | null; onCl
   if (!message) return null;
   return (
     <div role="alert" className="toast">
-      <button type="button" className="alert" onClick={onClose}>
-        {message} <span className="sr-only">(dismiss)</span>
+      <button type="button" className="alert toast-pill" onClick={onClose}>
+        <span className="toast-icon" aria-hidden="true">
+          !
+        </span>
+        <span className="toast-text">{message}</span>
+        <span className="toast-x" aria-hidden="true">
+          ✕
+        </span>
+        <span className="sr-only">(dismiss)</span>
       </button>
     </div>
   );

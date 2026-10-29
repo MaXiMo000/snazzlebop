@@ -335,3 +335,104 @@ body {
     flex-basis: 100%;
   }
 }
+
+/* ---- notices: a calm pill at the bottom, not an alarm at the top ---------------------------------- */
+.toast {
+  top: auto;
+  bottom: calc(18px + var(--safe-bottom));
+  animation: toast-up var(--mid) var(--ease-spring);
+}
+@media (max-width: 720px) {
+  .toast {
+    bottom: calc(92px + var(--safe-bottom)); /* above the tab bar */
+  }
+}
+@keyframes toast-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+}
+.toast .toast-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--card-edge);
+  border-radius: 18px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 600 0.98rem / 1.3 var(--body);
+  text-align: left;
+  box-shadow: 0 14px 36px rgb(5 2 10 / 0.45);
+  cursor: pointer;
+}
+.toast-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--tangerine);
+  color: var(--plum);
+  font: 400 0.95rem / 1 var(--display);
+}
+.toast-text {
+  flex: 1;
+}
+.toast-x {
+  flex: none;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+/* the Rules button rides in the game header's top-right corner instead of taking its own row */
+.rules-row {
+  position: relative;
+  z-index: 3;
+  height: 0;
+  margin: 0 !important;
+}
+.rules-row + * {
+  margin-top: 0 !important;
+}
+.rules-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+  border: 1.5px solid rgb(0 0 0 / 0.2);
+  background: rgb(255 255 255 / 0.92);
+  color: var(--plum);
+  font: 400 1.2rem / 1 var(--display);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+}
+.rules-btn:hover {
+  background: #fff;
+}
+/* the header's sign and chips leave room for it */
+.rules-row + .card.accent .show-head .sign,
+.rules-row ~ * .card.accent .show-head .sign {
+  margin-right: 52px;
+}
+@media (min-width: 561px) {
+  .rules-row + .card.accent .show-head,
+  .rules-row ~ * .card.accent .show-head {
+    padding-right: 56px;
+  }
+  .rules-row + .card.accent .show-head .sign,
+  .rules-row ~ * .card.accent .show-head .sign {
+    margin-right: 0;
+  }
+}

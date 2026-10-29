@@ -157,7 +157,8 @@ export function HowToPlay({ lines }: { lines: string[] }) {
   return (
     <div className="rules-row">
       <button type="button" className="rules-btn" aria-haspopup="dialog" onClick={() => setOpen(true)}>
-        <span aria-hidden="true">❓</span> Rules
+        <span aria-hidden="true">?</span>
+        <span className="sr-only">Rules</span>
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} labelledBy="rules-sheet-h">
         <h2 id="rules-sheet-h">How to play</h2>
