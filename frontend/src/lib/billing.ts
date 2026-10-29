@@ -62,9 +62,14 @@ function paddle(cfg: BillingConfig, onDone: () => void): Promise<PaddleJs> {
 /** Plus's price in the buyer's own currency, as Paddle shows it ("$1.99", "₹99"...). */
 export async function plusPrice(cfg: BillingConfig): Promise<string | null> {
   try {
-    const p = await paddle(cfg, () => undefined);
-    const r = await p.PricePreview({ items: [{ priceId: cfg.plus_price, quantity: 1 }] });
-    return r.data.details.lineItems[0]?.formattedTotals.total ?? null;
+    // At most 5 s: a blocked script or a slow network shows the plain wording instead.
+    const late = new Promise<null>((done) => setTimeout(() => done(null), 5000));
+    const ask = (async () => {
+      const p = await paddle(cfg, () => undefined);
+      const r = await p.PricePreview({ items: [{ priceId: cfg.plus_price, quantity: 1 }] });
+      return r.data.details.lineItems[0]?.formattedTotals.total ?? null;
+    })();
+    return await Promise.race([ask, late]);
   } catch {
     return null;
   }

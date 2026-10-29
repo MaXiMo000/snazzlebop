@@ -113,7 +113,7 @@ const READY_LABEL: Record<string, string> = {
   // Short enough for one line on a 360px phone.
   briefing: "Got it, go ▶",
   talk: "Done talking ▶",
-  ready: "Ready to run ▶",
+  ready: "I’m ready ▶",
   peek: "Seen it, bid ▶",
   teams: "Teams set, deal ▶",
   album: "Next page ▶",

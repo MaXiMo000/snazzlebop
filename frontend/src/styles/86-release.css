@@ -436,3 +436,30 @@ body {
     margin-right: 0;
   }
 }
+
+/* phones: a card that's one big face and a line (whose turn, who's choosing) is a compact row */
+@media (max-width: 600px) {
+  .card.stage:has(> .avatar.xl:first-child) {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 18px;
+    text-align: left;
+  }
+  .card.stage:has(> .avatar.xl:first-child) > .avatar.xl {
+    grid-row: span 3;
+    width: 72px;
+    height: 72px;
+    font-size: 2rem;
+  }
+  .card.stage:has(> .avatar.xl:first-child) > :not(.avatar) {
+    margin: 0 !important;
+    justify-self: start;
+  }
+  /* long header labels: a size down so most fit one line */
+  .show-head .sign {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+  }
+}
