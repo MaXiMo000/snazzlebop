@@ -36,6 +36,7 @@ import { allPlaces } from "../lib/places";
 import { block, report } from "../lib/safety";
 import { sfx } from "../lib/sfx";
 import { TIER_ICON } from "./Ratings";
+import { Mascot } from "../components/mascot";
 
 type Go = (path: string) => void;
 const errText = (e: unknown) =>
@@ -183,7 +184,7 @@ export function Clubs({ go }: { go: Go }) {
           </ul>
         ) : (
           <div className="empty-state">
-            <span aria-hidden="true">🏠</span>
+            <Mascot size={96} mood="sleepy" />
             <p>
               <b>No clubs yet.</b> Start one below for your hostel, team or friends, or open an invite link from a friend.
             </p>

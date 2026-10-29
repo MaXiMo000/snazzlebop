@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { Alert, errText } from "../components/auth";
 import { Btn, Card } from "../components/ui";
+import { Mascot } from "../components/mascot";
 import { useAccount } from "../lib/account";
 import {
   disablePush,
@@ -96,7 +97,7 @@ export function InboxPage({ go }: { go: Go }) {
           </ul>
         ) : (
           <div className="empty-state">
-            <span aria-hidden="true">📭</span>
+            <Mascot size={96} mood="sleepy" />
             <p>
               <b>All quiet.</b> When your club gets a game going, or a friend invites you to a room, it lands here.
             </p>
