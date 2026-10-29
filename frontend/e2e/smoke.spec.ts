@@ -128,6 +128,7 @@ test("home, create, join, lobby and every game's first screen", async ({ page: h
   const bo = await newPlayer(browser, baseURL!, problems);
   await bo.goto("/");
   await bo.locator("#host-name").fill("Bo");
+  await bo.getByRole("tab", { name: /Join/ }).click();
   await bo.getByLabel("Room code").fill(code.toLowerCase());
   await bo.getByRole("button", { name: "Join", exact: true }).click();
   await expect(bo).toHaveURL(new RegExp(`/r/${code}$`));

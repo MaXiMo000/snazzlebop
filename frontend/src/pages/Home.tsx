@@ -7,6 +7,7 @@ import { HappeningNow } from "../components/happening";
 import { YourCorner } from "../components/nav";
 import { GameInfo, GameTile } from "../components/gamecards";
 import { Sheet } from "../components/sheet";
+import { Mascot } from "../components/mascot";
 import type { GameCard } from "../types";
 
 type Category = { id: string; label: string; title: string; blurb: string };
@@ -21,6 +22,7 @@ const STEPS: [string, string, string][] = [
 export function Home({ go }: { go: (path: string) => void }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [mode, setMode] = useState<"host" | "join">("host");
   const { user } = useAccount();
   const nameRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -68,7 +70,9 @@ export function Home({ go }: { go: (path: string) => void }) {
 
   return (
     <div className="home stack enter">
+      <div className="home-top">
       <section className="hero home-hero" aria-labelledby="show-title">
+        <Mascot className="home-mascot" size={150} />
         <h1 id="show-title">Snazzlebop!</h1>
         <p className="tagline">The party game show where your friends are the contestants</p>
         <ul className="home-facts" aria-label="At a glance">
@@ -107,34 +111,54 @@ export function Home({ go }: { go: (path: string) => void }) {
             else host();
           }}
           placeholder="e.g. Sam"
+          aria-describedby="name-hint"
         />
-        <div className="play-actions">
+        <p id="name-hint" className="muted play-hint">
+          {nameOk ? "That's what the show calls you." : "Needed to host or join."}
+        </p>
+        <div className="auth-tabs play-tabs" role="tablist" aria-label="Host or join">
+          {(["host", "join"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              id={`tab-${m}`}
+              aria-selected={mode === m}
+              aria-controls={`panel-${m}`}
+              className={`auth-tab ${mode === m ? "on" : ""}`}
+              onClick={() => setMode(m)}
+            >
+              {m === "host" ? "🎤 Host" : "🎟️ Join"}
+            </button>
+          ))}
+        </div>
+        {mode === "host" ? (
           <form
-            className="play-host"
-            aria-labelledby="host-h"
+            id="panel-host"
+            role="tabpanel"
+            aria-labelledby="tab-host"
+            className="play-panel"
             onSubmit={(e) => {
               e.preventDefault();
               host();
             }}
           >
-            <h3 id="host-h">Host a show</h3>
-            <p className="muted">Start a room and get a code for your friends.</p>
+            <p className="muted">Start a room and get a five-letter code for your friends. They join on their phones.</p>
             <Btn type="submit" size="big" block disabled={busy || !nameOk}>
-              {nameOk ? "Create room" : "Type your name first"}
+              Create room
             </Btn>
           </form>
-          <p className="play-or" aria-hidden="true">
-            or
-          </p>
+        ) : (
           <form
-            className="play-join"
-            aria-labelledby="join-h"
+            id="panel-join"
+            role="tabpanel"
+            aria-labelledby="tab-join"
+            className="play-panel"
             onSubmit={(e) => {
               e.preventDefault();
               join();
             }}
           >
-            <h3 id="join-h">Join a show</h3>
             <label className="field" htmlFor="join-code">
               Room code
             </label>
@@ -152,19 +176,20 @@ export function Home({ go }: { go: (path: string) => void }) {
               placeholder="ABCDE"
             />
             <Btn type="submit" variant="go" size="big" block disabled={busy || !nameOk || code.length < 3}>
-              {nameOk ? "Join" : "Type your name first"}
+              Join
             </Btn>
             <p id="join-hint" className="muted">
               The host sees the code on their screen. An invite link works too.
             </p>
           </form>
-        </div>
+        )}
         {error && (
           <p className="alert space-top" role="alert">
             {error}
           </p>
         )}
       </Card>
+      </div>
 
       {user && <HappeningNow name={name} go={go} />}
       <YourCorner go={go} />
