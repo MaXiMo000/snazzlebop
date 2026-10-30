@@ -486,3 +486,36 @@ body {
 .game-stage.with-podium > :first-child > * + * {
   margin-top: 18px;
 }
+
+/* a contestant chip never runs past its card: a very wide name shortens with an ellipsis */
+.contestant {
+  max-width: 100%;
+  min-width: 0;
+}
+.contestant .who {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.contestant .nm {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contestant .pts,
+.contestant .kick,
+.contestant .lamp {
+  flex: none;
+}
+/* the lobby's column never grows past the screen for a long name */
+.lobby-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1040px) {
+  .lobby-layout {
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  }
+}
+.lobby-layout > *,
+.lobby-side > * {
+  min-width: 0;
+}

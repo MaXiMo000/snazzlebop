@@ -119,18 +119,44 @@ def clean_name(raw: object, max_len: int = 16) -> str:
     """Normalise and validate a display name (or room title). Raises HubError if unacceptable."""
     if not isinstance(raw, str):
         raise HubError("bad_name", f"Pick a name between 1 and {max_len} characters")
-    if any(unicodedata.category(ch) in ("Cc", "Cf", "Co", "Cs") for ch in raw):
+    # Invisible and direction-flipping characters are refused, except the zero-width joiner that
+    # builds one emoji out of several (checked in place below).
+    if any(unicodedata.category(ch) in ("Cc", "Cf", "Co", "Cs") and ch != ZWJ for ch in raw):
         raise HubError("bad_name", "That name has characters we can't use")
     name = unicodedata.normalize("NFKC", raw)
     name = re.sub(r"\s+", " ", name).strip()
     if not 1 <= len(name) <= max_len:
         raise HubError("bad_name", f"Pick a name between 1 and {max_len} characters")
-    for ch in name:
+    marks = 0
+    for i, ch in enumerate(name):
         cat = unicodedata.category(ch)
-        # letters, numbers, space, dash/underscore punctuation, apostrophe, dot, and emoji symbols
-        if not (cat[0] in "LN" or cat in ("Zs", "Pd", "Pc", "So") or ch in "'."):
+        prev = name[i - 1] if i else ""
+        nxt = name[i + 1] if i + 1 < len(name) else ""
+        if cat[0] == "M":
+            # vowel signs and viramas (Hindi, Tamil, Bengali, Arabic...) and emoji variation selectors:
+            # only after a letter, number or symbol, and never piled up ("Zalgo" text)
+            marks += 1
+            if not prev or prev == " " or marks > MAX_MARKS:
+                raise HubError("bad_name", "That name has characters we can't use")
+            continue
+        marks = 0
+        if ch == ZWJ:
+            # joins two emoji (a family, a profession): never at the edges or next to a letter
+            if not (prev and nxt and _emojiish(prev) and _emojiish(nxt)):
+                raise HubError("bad_name", "That name has characters we can't use")
+            continue
+        # letters, numbers, space, dash/underscore punctuation, apostrophe, dot, emoji and skin tones
+        if not (cat[0] in "LN" or cat in ("Zs", "Pd", "Pc", "So", "Sk") or ch in "'."):
             raise HubError("bad_name", "That name has characters we can't use")
     return name
+
+
+ZWJ = "‍"
+MAX_MARKS = 3  # combining marks in a row (Indian scripts use one or two; more is decoration)
+
+
+def _emojiish(ch: str) -> bool:
+    return unicodedata.category(ch) in ("So", "Sk", "Mn") or ch == "️"
 
 
 @dataclass

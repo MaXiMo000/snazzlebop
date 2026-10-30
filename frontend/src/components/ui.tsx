@@ -124,7 +124,9 @@ function Contestant({ p, you, leader, onKick }: { p: PlayerInfo; you: boolean; l
       {/* The name never breaks inside; the crown, "(you)" and the host star wrap around it as pieces. */}
       <span className="who">
         {leader && <span aria-hidden="true">👑</span>}
-        <span className="nm">{p.name}</span>
+        <span className="nm" title={p.name}>
+          {p.name}
+        </span>
         {you && <span>(you)</span>}
         {p.host ? <span title="Host">★</span> : null}
         {p.plus ? (

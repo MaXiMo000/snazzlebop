@@ -37,6 +37,7 @@ import { Select } from "../components/Select";
 import { AdSlot } from "../components/ad";
 import { Fold, Sheet } from "../components/sheet";
 import { Podium } from "../components/podium";
+import { Mascot } from "../components/mascot";
 import { fitsRoom, GameInfo, GameTile } from "../components/gamecards";
 
 // Each game's screen loads when it's played, so the first page load stays small.
@@ -117,6 +118,21 @@ function JoinGate({ code, onJoined, go }: { code: string; onJoined: (s: Session)
       setBusy(false);
     }
   };
+  if (error?.code === "room_not_found")
+    return (
+      <Card className="center room-gone" aria-labelledby="gone-h">
+        <Mascot size={120} mood="wow" />
+        <h2 id="gone-h" className="space-top">
+          This show has ended
+        </h2>
+        <p className="muted">
+          Room {code} isn’t on air: it may have finished, or the code has a typo. Ask the host for a fresh link, or start your own.
+        </p>
+        <Btn className="space-top" variant="gold" onClick={() => go("/")}>
+          Back to the home page
+        </Btn>
+      </Card>
+    );
   return (
     <div className="stack enter">
       <Card tone="stage" className="center">

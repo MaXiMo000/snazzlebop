@@ -909,3 +909,68 @@ test("every page, signed out and signed in: fits the screen, passes axe, 44px ta
   expect(problems).toEqual([]);
   expect(found).toEqual([]);
 });
+
+/** Layout faults a screenshot would show: text spilling out of its box, two controls overlapping. */
+async function layout(page: Page, where: string, found: string[]) {
+  const bad = await page.evaluate(() => {
+    const out: string[] = [];
+    const visible = (el: Element) => {
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return cs.visibility !== "hidden" && cs.display !== "none" && r.width > 0 && r.height > 0 && !el.closest(".sr-only, [aria-hidden=true]");
+    };
+    for (const el of document.querySelectorAll("main *")) {
+      if (el.children.length || !el.textContent?.trim() || !visible(el) || el.closest(".scroll-row, .lc-hand, .marquee")) continue;
+      const cs = getComputedStyle(el);
+      if (cs.overflowX === "visible" && cs.textOverflow !== "ellipsis" && el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0)
+        out.push(`text spills: "${el.textContent.trim().slice(0, 24)}"`);
+    }
+    const vw = document.documentElement.clientWidth;
+    for (const el of document.querySelectorAll("main *")) {
+      const r = el.getBoundingClientRect();
+      if (r.width && r.right > vw + 1 && !el.closest(".scroll-row, .lc-hand, .react-overlay, .confetti, .stinger, .sr-only, dialog") && getComputedStyle(el).position !== "fixed") {
+        out.push(`past the screen edge: ${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}`);
+        break;
+      }
+    }
+    const controls = [...document.querySelectorAll("main button, main a.btn, main input, main select, main summary")].filter(visible);
+    for (let i = 0; i < controls.length; i++)
+      for (let j = i + 1; j < controls.length; j++) {
+        const a = controls[i]!.getBoundingClientRect();
+        const b = controls[j]!.getBoundingClientRect();
+        const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (w > 6 && h > 6 && !controls[i]!.contains(controls[j]!) && !controls[j]!.contains(controls[i]!))
+          out.push(`controls overlap: "${controls[i]!.textContent?.trim().slice(0, 16)}" / "${controls[j]!.textContent?.trim().slice(0, 16)}"`);
+      }
+    return [...new Set(out)].slice(0, 8);
+  });
+  for (const b of bad) found.push(`${where}: ${b}`);
+}
+
+test("layout sweep: every page at 320, phone, tablet, laptop and TV widths, both themes", async ({ browser, baseURL }, info) => {
+  test.skip(info.project.name !== "desktop", "one sweep covers every width");
+  test.setTimeout(600_000);
+  const found: string[] = [];
+  const pages = ["/", "/clubs", "/quests", "/ratings", "/battles", "/coins", "/plus", "/account", "/privacy", "/safety", "/places", "/inbox"];
+  const ctx = await context(browser, { baseURL });
+  const name = `Ly${Date.now() % 100000}`;
+  const r = await ctx.request.post(`${baseURL}/api/auth/signup`, { data: { username: name, password: "layout sweep check 42" }, headers: { Origin: baseURL! } });
+  expect(r.status()).toBe(201);
+  const page = await ctx.newPage();
+  for (const theme of ["dark", "light"] as const) {
+    await page.addInitScript((t) => localStorage.setItem("snazzlebop:theme", t), theme);
+    for (const [w, h] of [[320, 640], [390, 844], [768, 1024], [1366, 768], [1920, 1080]] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      for (const path of pages) {
+        await page.goto(path);
+        await page.locator("main").waitFor();
+        await page.waitForLoadState("networkidle");
+        const where = `${theme} ${w}px ${path}`;
+        if (await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) found.push(`${where}: sideways scroll`);
+        await layout(page, where, found);
+      }
+    }
+  }
+  expect(found).toEqual([]);
+});

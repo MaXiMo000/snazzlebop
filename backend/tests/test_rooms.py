@@ -54,8 +54,27 @@ class NameTests(unittest.TestCase):
         self.assertEqual(clean_name("Sam 🎲"), "Sam 🎲")
         self.assertEqual(clean_name("O'Neil-Jr."), "O'Neil-Jr.")
 
+    def test_accepts_names_in_every_script(self):
+        for name in (
+            "प्रिया",  # Hindi: vowel signs and a virama
+            "அருண்",  # Tamil
+            "সৌরভ",  # Bengali
+            "محمد",  # Arabic
+            "李小龍",  # Chinese
+            "Иван",  # Cyrillic
+            "José",  # a combining accent (decomposed): NFKC composes it
+            "👩‍👩‍👧",  # a family emoji (zero-width joiners)
+            "👍🏽 Sam",  # a skin tone
+            "❤️",  # an emoji with its variation selector
+        ):
+            self.assertTrue(clean_name(name), name)
+
     def test_rejects_bad_names(self):
-        for bad in ("", "   ", "x" * 17, "<script>", "a\nb", "a​b", "‮evil", None, 5, "a;b", 'a"b', "a/b"):
+        zalgo = "Z" + "́̂̃̄̅"  # a letter buried in stacked marks
+        for bad in (
+            "", "   ", "x" * 17, "<script>", "a\nb", "a​b", "‮evil", None, 5, "a;b", 'a"b', "a/b",
+            zalgo, "́abc", "a‍b", "‍🎉", "🎉‍",
+        ):  # fmt: skip
             with self.assertRaises(HubError, msg=repr(bad)):
                 clean_name(bad)
 
