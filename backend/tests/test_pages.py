@@ -20,7 +20,7 @@ class PageTests(unittest.TestCase):
         self.cats = catalogue.categories()
 
     def test_home_links_every_game(self):
-        title, desc, body = pages.page_for("", self.games, self.cats)
+        title, desc, body, data = pages.page_for("", self.games, self.cats, "https://s.test")
         self.assertIn("Snazzlebop", title)
         self.assertTrue(desc)
         for g in self.games:
@@ -30,7 +30,8 @@ class PageTests(unittest.TestCase):
         for g in self.games:
             page = pages.page_for(f"games/{g['id']}", self.games, self.cats)
             self.assertIsNotNone(page, g["id"])
-            title, _desc, body = page
+            title, _desc, body, data = page
+            self.assertEqual(data[0]["@type"], "VideoGame")
             self.assertIn("How to play", body)
             self.assertGreater(body.count("<li>"), 0, g["id"])
             self.assertTrue(title.startswith(g["title"].replace("&", "&amp;")) or g["title"] in title)
@@ -42,19 +43,22 @@ class PageTests(unittest.TestCase):
     def test_catalogue_text_is_escaped(self):
         evil = [{**self.games[0], "id": "x1", "title": "<script>alert(1)</script>", "blurb": '"><img src=x>'}]
         cats = [{**self.cats[0], "id": evil[0]["category"]}]
-        title, desc, body = pages.page_for("games/x1", evil, cats)
-        out = pages.render(INDEX, (title, desc, body))
+        page = pages.page_for("games/x1", evil, cats, "https://s.test")
+        out = pages.render(INDEX, page, "https://s.test/games/x1", "https://s.test")
         self.assertNotIn("<script>alert", out)
         self.assertNotIn('"><img', out)
+        self.assertNotIn("</script>alert", out)  # the structured data can't be closed early
+        self.assertIn("\u003cscript", out)
 
     def test_render_and_sitemap(self):
-        out = pages.render(INDEX, ("New & shiny", 'Say "hi"', "<p>body</p>"))
+        out = pages.render(INDEX, ("New & shiny", 'Say "hi"', "<p>body</p>", []))
         self.assertIn("<title>New &amp; shiny</title>", out)
         self.assertIn('content="Say &quot;hi&quot;"', out)
         self.assertIn('<div id="root"><p>body</p></div>', out)
-        xml = pages.sitemap("https://snazzlebop.com/", self.games)
+        xml = pages.sitemap("https://snazzlebop.com/", self.games, self.cats)
         self.assertIn("<loc>https://snazzlebop.com/games/trivia</loc>", xml)
-        self.assertEqual(xml.count("<url>"), 7 + len(self.games))
+        self.assertEqual(xml.count("<url>"), 7 + len(self.cats) + len(self.games))
+        self.assertIn("<loc>https://snazzlebop.com/games/party</loc>", xml)
 
 
 if __name__ == "__main__":
@@ -72,11 +76,11 @@ def test_the_server_sends_each_public_page_with_its_content(tmp_path):
     (static / "index.html").write_text(INDEX, encoding="utf-8")
     with TestClient(create_app(settings(tmp_path, static_dir=str(static)))) as c:
         r = c.get("/games/trivia")
-        assert r.status_code == 200 and "<title>Trivia Tonight: how to play" in r.text
+        assert r.status_code == 200 and "<title>Trivia Tonight: Free Online" in r.text
         assert "How to play" in r.text and "<li>" in r.text
         assert '<link rel="canonical" href="' in r.text and '/games/trivia" />' in r.text
         home = c.get("/").text
-        assert 'href="/games/chess"' in home and "<title>Snazzlebop: party game show" in home
+        assert 'href="/games/chess"' in home and "<title>Snazzlebop: Free Party Games" in home
         assert c.get("/about").status_code == 200
         room = c.get("/r/ABCDE").text
         assert room == INDEX  # rooms: just the app, nothing for a crawler
@@ -86,3 +90,29 @@ def test_the_server_sends_each_public_page_with_its_content(tmp_path):
         assert c.head("/games/trivia").status_code == 200
         xml = c.get("/sitemap.xml")
         assert xml.headers["content-type"].startswith("application/xml") and "/games/trivia</loc>" in xml.text
+
+
+class SearchTests(unittest.TestCase):
+    def setUp(self):
+        self.games = catalog()
+        self.cats = catalogue.categories()
+
+    def test_previews_and_structured_data_are_on_every_public_page(self):
+        import json
+        import re
+
+        for path in ("", "games", "games/party", "games/trivia", "about"):
+            page = pages.page_for(path, self.games, self.cats, "https://s.test")
+            out = pages.render(INDEX, page, f"https://s.test/{path}", "https://s.test")
+            self.assertIn('property="og:image" content="https://s.test/og.png"', out, path)
+            self.assertIn('name="twitter:card"', out, path)
+            m = re.search(r'<script type="application/ld\+json">(.*?)</script>', out)
+            if path != "about":
+                graph = json.loads(m.group(1))["@graph"]  # valid JSON, as Google needs
+                self.assertTrue(graph, path)
+
+    def test_category_pages_list_their_games(self):
+        title, desc, body, data = pages.page_for("games/classics", self.games, self.cats, "https://s.test")
+        self.assertIn("Online With Friends", title)
+        for g in (x for x in self.games if x.get("category") == "classics"):
+            self.assertIn(f'href="/games/{g["id"]}"', body)

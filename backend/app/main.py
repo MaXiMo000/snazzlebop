@@ -247,7 +247,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # GET and HEAD: crawlers (Google, AdSense) may check that a file exists before reading it
     @app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
     async def sitemap_xml() -> Response:
-        body = pages.sitemap(settings.site, catalog())
+        body = pages.sitemap(settings.site, catalog(), catalogue.categories())
         return Response(body, media_type="application/xml", headers={"Cache-Control": "public, max-age=3600"})
 
     # GET and HEAD: crawlers (Google, AdSense) may check that a file exists before reading it
@@ -379,10 +379,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Only the SPA's own routes get index.html; anything else (/docs, /admin, typos) is a real 404.
         if index.is_file() and SPA_ROUTE.fullmatch(full_path):
             # public pages carry their own title, description and text for crawlers (pages.py)
-            page = pages.page_for(full_path, catalog(), catalogue.categories())
+            page = pages.page_for(full_path, catalog(), catalogue.categories(), settings.site)
             if page is not None:
                 canonical = f"{settings.site}/{full_path.strip('/')}" if settings.site else ""
-                html = pages.render(index.read_text(encoding="utf-8"), page, canonical)
+                html = pages.render(index.read_text(encoding="utf-8"), page, canonical, settings.site)
                 return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
             return FileResponse(index, headers={"Cache-Control": "no-cache"})
         return _error(404, "not_found", "Not found")

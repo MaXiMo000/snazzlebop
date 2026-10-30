@@ -33,7 +33,7 @@ export function Home({ go }: { go: (path: string) => void }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = "Snazzlebop: party game show for friends";
+    document.title = "Snazzlebop: Free Party Games to Play With Friends Online";
   }, []);
 
   const wrap = async (fn: () => Promise<void>) => {

@@ -7,23 +7,42 @@ import type { GameCard } from "../types";
 
 type Go = (path: string) => void;
 type Category = { id: string; label: string; title: string; blurb: string };
+// What each shelf is called in searches (the server's pages.GENRE says the same).
+// Each shelf's page title, in the words people search with (pages.SHELF_NAME on the server).
+const SHELF_NAME: Record<string, string> = {
+  party: "Party Games",
+  quiz: "Quiz and Word Games",
+  bluff: "Bluffing and Social Deduction Games",
+  nerve: "Game Show Games",
+  classics: "Classic Board and Card Games",
+};
+const GENRE: Record<string, string> = {
+  party: "Party Game",
+  quiz: "Quiz and Word Game",
+  bluff: "Bluffing Game",
+  nerve: "Game Show Game",
+  classics: "Classic Game",
+};
 
 function useCatalogue() {
   const [games, setGames] = useState<GameCard[] | null>(null);
   const [cats, setCats] = useState<Category[]>([]);
+  const [catsReady, setCatsReady] = useState(false);
   useEffect(() => {
     void fetchGames().then(setGames, () => setGames([]));
-    void request<Category[]>("/api/categories").then(setCats, () => undefined);
+    void request<Category[]>("/api/categories")
+      .then(setCats, () => undefined)
+      .finally(() => setCatsReady(true));
   }, []);
-  return { games, cats };
+  return { games, cats, catsReady };
 }
 
 /** Every game by shelf, each with its own page of rules. */
 export function GamesIndex({ go }: { go: Go }) {
   const { games, cats } = useCatalogue();
   useEffect(() => {
-    document.title = "All games · Snazzlebop";
-  }, []);
+    document.title = games ? `All ${games.length} Free Party Games Online · Snazzlebop` : "All games · Snazzlebop";
+  }, [games]);
   if (games === null) return <Loading page />;
   return (
     <div className="stack enter">
@@ -37,7 +56,17 @@ export function GamesIndex({ go }: { go: Go }) {
         if (!rows.length) return null;
         return (
           <section key={c.id} className="shelf-section" aria-labelledby={`games-${c.id}`}>
-            <h2 id={`games-${c.id}`}>{c.title}</h2>
+            <h2 id={`games-${c.id}`}>
+              <a
+                href={`/games/${c.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  go(`/games/${c.id}`);
+                }}
+              >
+                {c.title}
+              </a>
+            </h2>
             <p className="muted shelf-blurb">{c.blurb}</p>
             <div className="tile-grid">
               {rows.map((g) => (
@@ -51,14 +80,47 @@ export function GamesIndex({ go }: { go: Go }) {
   );
 }
 
-/** One game: what it is, who it's for, and how it's played. */
-export function GamePage({ id, go }: { id: string; go: Go }) {
-  const { games } = useCatalogue();
-  const g = games?.find((x) => x.id === id);
+/** One shelf (party, quiz, bluff, nerve, classics): its games, at /games/<shelf>. */
+function ShelfPage({ cat, games, go }: { cat: Category; games: GameCard[]; go: Go }) {
+  const rows = games.filter((g) => g.category === cat.id);
+  const name = SHELF_NAME[cat.id] ?? cat.title;
   useEffect(() => {
-    if (g) document.title = `${g.title}: how to play · Snazzlebop`;
+    document.title = `Free ${name} to Play Online With Friends · Snazzlebop`;
+  }, [name]);
+  return (
+    <div className="stack enter">
+      <Card tone="stage" className="center">
+        <p className="sign">The games</p>
+        <h1 className="space-top prose-title">{name} to play with friends</h1>
+        <p className="space-top">{cat.blurb}</p>
+      </Card>
+      <div className="tile-grid">
+        {rows.map((g) => (
+          <GameTile key={g.id} g={g} onOpen={() => go(`/games/${g.id}`)} />
+        ))}
+      </div>
+      <div className="row center">
+        <Btn variant="gold" onClick={() => go("/")}>
+          Host a room
+        </Btn>
+        <Btn variant="ghost" onClick={() => go("/games")}>
+          All games
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+/** One game: what it is, who it's for, and how it's played (or one shelf, when the id names one). */
+export function GamePage({ id, go }: { id: string; go: Go }) {
+  const { games, cats, catsReady } = useCatalogue();
+  const g = games?.find((x) => x.id === id);
+  const shelf = cats.find((c) => c.id === id);
+  useEffect(() => {
+    if (g) document.title = `${g.title}: Free Online ${GENRE[g.category] ?? "Party Game"} for Friends · Snazzlebop`;
   }, [g]);
-  if (games === null) return <Loading page />;
+  if (games === null || (!g && !catsReady)) return <Loading page />;
+  if (shelf) return <ShelfPage cat={shelf} games={games} go={go} />;
   if (!g)
     return (
       <Card className="center">
