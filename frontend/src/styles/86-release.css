@@ -765,3 +765,29 @@ li,
 .game-tile-blurb {
   text-wrap: pretty;
 }
+/* the server-written page text (for crawlers) shown for a moment before the app starts */
+.prerender {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px var(--gutter) 32px;
+  color: var(--ink);
+}
+.prerender nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 18px;
+}
+.prerender a {
+  color: var(--ink);
+}
+/* a game's own page: its icon, big */
+.game-page-icon {
+  margin: 0;
+  font-size: 3rem;
+  line-height: 1;
+}
+/* text pages: paragraphs in a card keep a breath between them */
+.prose-page .card p + p {
+  margin-top: 10px;
+}

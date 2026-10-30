@@ -43,6 +43,7 @@ RULES: dict[str, tuple[set[str], set[str]]] = {
     "app.outbox": ({"app.config", "app.events"}, set()),  # delivery with retries; storage passed in
     "app.calls": ({"app.config"}, set()),
     "app.billing": ({"app.config"}, set()),  # Plus and ads rules, Paddle signatures (stdlib only)
+    "app.pages": (set(), set()),  # pure: public pages' HTML for crawlers, catalogue passed in
     "app.persist": ({"app.rooms"}, set()),
     "app.rooms": (
         {"app.rooms", "app.games", "app.config", "app.security", "app.calls", "app.persist", "app.prank"}

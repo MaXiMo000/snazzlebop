@@ -1,4 +1,12 @@
 User-agent: *
 Allow: /
+Allow: /api/games
+Allow: /api/categories
 Disallow: /r/
 Disallow: /api/
+
+# Google's ad crawler reads the pages where ads appear (room lobbies and results show only a join screen to it)
+User-agent: Mediapartners-Google
+Allow: /
+
+Sitemap: https://snazzlebop.com/sitemap.xml

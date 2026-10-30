@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import (
@@ -24,6 +24,7 @@ from . import (
     integrations,
     notifications,
     oidc,
+    pages,
     places,
     plus,
     quests,
@@ -57,9 +58,10 @@ from .ws import ConnectionCounter, serve_socket
 log = logging.getLogger("snazzlebop")
 
 # The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
-# /clubs/<slug> (and /reports), /join/<invite>, /places, /privacy, /terms, /safety and /staff (and /places).
+# /clubs/<slug> (and /reports), /join/<invite>, /places, /privacy, /terms, /about, /games (and /games/<id>),
+# /safety and /staff (and /places).
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|terms|ratings|coins|battles|quests|plus|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|terms|about|games|games/[a-z0-9]{2,24}|ratings|coins|battles|quests|plus|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 
@@ -238,6 +240,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def healthz() -> dict[str, bool]:
         return {"ok": True}
 
+    @app.get("/sitemap.xml", include_in_schema=False)
+    async def sitemap_xml() -> Response:
+        body = pages.sitemap(settings.site, catalog())
+        return Response(body, media_type="application/xml", headers={"Cache-Control": "public, max-age=3600"})
+
     @app.get("/ads.txt", include_in_schema=False)
     async def ads_txt() -> PlainTextResponse:
         """Who may sell this site's ad space. Served from the publisher id alone: AdSense checks it
@@ -354,7 +361,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     static_root = Path(settings.static_dir).resolve()
 
     @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False, response_model=None)
-    async def spa(full_path: str) -> FileResponse | JSONResponse:
+    async def spa(full_path: str) -> FileResponse | HTMLResponse | JSONResponse:
         if full_path.startswith(("api/", "ws/")) or not static_root.is_dir():
             return _error(404, "not_found", "Not found")
         candidate = (static_root / full_path).resolve()
@@ -365,6 +372,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         index = static_root / "index.html"
         # Only the SPA's own routes get index.html; anything else (/docs, /admin, typos) is a real 404.
         if index.is_file() and SPA_ROUTE.fullmatch(full_path):
+            # public pages carry their own title, description and text for crawlers (pages.py)
+            page = pages.page_for(full_path, catalog(), catalogue.categories())
+            if page is not None:
+                html = pages.render(index.read_text(encoding="utf-8"), page)
+                return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
             return FileResponse(index, headers={"Cache-Control": "no-cache"})
         return _error(404, "not_found", "Not found")
 
