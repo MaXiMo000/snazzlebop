@@ -1083,3 +1083,27 @@ test("inside the store app: nothing is sold and no web ads, while the website ke
   await web.close();
   await app.close();
 });
+
+test("Paddle's checkout frame and loader get full-screen styling from our stylesheet (the CSP blocks theirs)", async ({ page }) => {
+  await page.goto("/plus");
+  await page.locator("main").waitFor();
+  const box = await page.evaluate(() => {
+    const frame = document.createElement("iframe");
+    frame.className = "paddle-frame paddle-frame-overlay";
+    const loader = document.createElement("div");
+    loader.className = "paddle-loader";
+    document.body.append(frame, loader);
+    const f = getComputedStyle(frame);
+    const l = getComputedStyle(loader);
+    const r = frame.getBoundingClientRect();
+    const out = { pos: f.position, z: f.zIndex, w: r.width, h: r.height, vw: innerWidth, vh: innerHeight, loader: l.position };
+    frame.remove();
+    loader.remove();
+    return out;
+  });
+  expect(box.pos).toBe("fixed");
+  expect(box.loader).toBe("fixed");
+  expect(Number(box.z)).toBeGreaterThan(1000);
+  expect(Math.round(box.w)).toBe(box.vw);
+  expect(Math.round(box.h)).toBe(box.vh);
+});

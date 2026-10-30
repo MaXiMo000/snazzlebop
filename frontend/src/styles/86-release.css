@@ -997,3 +997,44 @@ li,
   font-size: 1.8rem;
   line-height: 36px;
 }
+
+/* Paddle's checkout: Paddle.js styles its overlay frame and loader with inline style attributes, which
+   this site's Content Security Policy blocks (style-src 'self'), so the same styling comes from here. */
+.paddle-frame-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow-x: hidden;
+  overflow-y: auto;
+  visibility: visible;
+  color-scheme: normal;
+}
+.paddle-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  display: block;
+  margin: 0;
+  padding: 0;
+  background: rgb(0 0 0 / 0.38);
+}
+.paddle-loader > main {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 90%;
+  margin: 0.5rem 0;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
