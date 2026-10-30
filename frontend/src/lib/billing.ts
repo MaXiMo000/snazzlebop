@@ -1,4 +1,5 @@
 import { request } from "./api";
+import { inApp } from "./app";
 import type { Account, BillingConfig, MyPlus, PlusCheckout, PlusManage } from "./contract";
 
 export type { BillingConfig, MyPlus } from "./contract";
@@ -21,7 +22,8 @@ declare global {
 
 let config: Promise<BillingConfig> | null = null;
 /** What's on here: Plus on sale, ads, and the perks (asked once per page load). */
-export const billingConfig = () => (config ??= request<BillingConfig>("/api/billing/config"));
+export const billingConfig = () =>
+  (config ??= request<BillingConfig>("/api/billing/config").then((c) => (inApp ? { ...c, payments: false, ads: null } : c)));
 export const myPlus = () => request<MyPlus>("/api/me/plus");
 export const manageLink = () => request<PlusManage>("/api/me/plus/manage", { method: "POST" });
 

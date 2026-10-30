@@ -1063,3 +1063,23 @@ test("leaving a room takes its call button with it", async ({ page }) => {
   await page.waitForURL((u) => u.pathname === "/");
   await expect(page.locator(".call-button")).toHaveCount(0);
 });
+
+test("inside the store app: nothing is sold and no web ads, while the website keeps both", async ({ browser, baseURL }) => {
+  const web = await browser.newContext({ baseURL });
+  const plain = await web.newPage();
+  const ua = await plain.evaluate(() => navigator.userAgent);
+  const app = await browser.newContext({ baseURL, userAgent: `${ua} SnazzlebopApp/1.0` });
+  const p = await app.newPage();
+  await p.goto("/plus");
+  await p.locator("main").waitFor();
+  await expect(p.getByRole("button", { name: /Join Plus/ })).toHaveCount(0);
+  await expect(p.getByText("Payments are handled by Paddle")).toHaveCount(0);
+  await expect(p.getByRole("button", { name: /Sign in to join/ })).toHaveCount(0);
+  await expect(p.locator(".site-nav a[href='/plus']")).toHaveCount(0);
+  await plain.goto("/plus");
+  await plain.locator("main").waitFor();
+  if ((await plain.evaluate(() => fetch("/api/billing/config").then((r) => r.json()))).payments)
+    await expect(plain.getByRole("button", { name: /Sign in to join/ })).toBeVisible();
+  await web.close();
+  await app.close();
+});

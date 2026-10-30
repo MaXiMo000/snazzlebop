@@ -1,4 +1,5 @@
 import { useAccount } from "../lib/account";
+import { inApp } from "../lib/app";
 
 type Go = (path: string) => void;
 
@@ -20,7 +21,7 @@ export function SiteNav({ path, go }: { path: string; go: Go }) {
   return (
     <nav className="site-nav" aria-label="Site">
       <ul>
-        {LINKS.map((l) => {
+        {LINKS.filter((l) => !(inApp && l.to === "/plus")).map((l) => {
           const here = l.match.test(path);
           return (
             <li key={l.to} className={l.wide ? "wide-only" : ""}>

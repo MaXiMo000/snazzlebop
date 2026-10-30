@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "../components/ui";
 import { siteInfo } from "../lib/safety";
+import { inApp } from "../lib/app";
 
 type Go = (path: string) => void;
 
@@ -67,8 +68,16 @@ export function About({ go }: { go: Go }) {
         <h2 id="ab-free">How it stays free</h2>
         <p>
           Every game is free. An optional free account adds coins, daily quests, ratings, clubs and voice and video calls. A small ad
-          may show in the lobby or on the results screen, never during a game. <Link to="/plus" go={go}>Snazzlebop Plus</Link> removes
-          ads and adds a few extras for the price of a coffee a month.
+          may show in the lobby or on the results screen, never during a game.
+          {!inApp && (
+            <>
+              {" "}
+              <Link to="/plus" go={go}>
+                Snazzlebop Plus
+              </Link>{" "}
+              removes ads and adds a few extras for the price of a coffee a month.
+            </>
+          )}
         </p>
       </Card>
 

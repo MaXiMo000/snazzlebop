@@ -4,6 +4,7 @@ import { PARTY } from "../components/party";
 import { Btn, Card } from "../components/ui";
 import { refreshAccount, useAccount } from "../lib/account";
 import { billingConfig, buyPlus, manageLink, myPlus, plusPrice, type BillingConfig, type MyPlus } from "../lib/billing";
+import { inApp } from "../lib/app";
 
 type Go = (path: string) => void;
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
@@ -79,6 +80,8 @@ export function Plus({ go }: { go: Go }) {
             <>
               {price === undefined ? "…" : price === null ? "A small price" : <b>{price}</b>} a month, in your own currency. Cancel any time.
             </>
+          ) : inApp ? (
+            "No ads and a few extras, for members."
           ) : (
             "Coming soon."
           )}
@@ -118,9 +121,11 @@ export function Plus({ go }: { go: Go }) {
           </li>
         </ul>
         {!loaded ? null : !user ? (
+          inApp ? null : (
           <Btn className="space-top" variant="gold" onClick={() => go("/account")}>
             Sign in to join
           </Btn>
+          )
         ) : mine?.gift ? (
           <p className="space-top">
             <span className="chip teal">Plus</span> A gift from Snazzlebop: every perk, nothing to pay or renew.
@@ -130,7 +135,7 @@ export function Plus({ go }: { go: Go }) {
             <p>
               <span className="chip teal">Plus</span> {mine.status === "canceled" ? "Ends" : "Renews"} on {mine.until ? day(mine.until) : "…"}.
             </p>
-            {mine.can_manage && (
+            {mine.can_manage && !inApp && (
               <Btn variant="ghost" disabled={busy} onClick={() => void manage()}>
                 Change or cancel
               </Btn>
@@ -147,8 +152,12 @@ export function Plus({ go }: { go: Go }) {
         <h2 id="plus-how-h">Good to know</h2>
         <ul className="evidence">
           <li>Plus never changes who wins: ranked games and battles stay the same for everyone.</li>
-          <li>Payments are handled by Paddle, our reseller, in your own currency. We never see your card.</li>
-          <li>It renews each month until you cancel. Cancel any time and you keep Plus to the end of the month you paid for.</li>
+          {!inApp && (
+            <>
+              <li>Payments are handled by Paddle, our reseller, in your own currency. We never see your card.</li>
+              <li>It renews each month until you cancel. Cancel any time and you keep Plus to the end of the month you paid for.</li>
+            </>
+          )}
           <li>Ads only ever appear in the lobby and on the results screen, never during a game.</li>
         </ul>
       </Card>

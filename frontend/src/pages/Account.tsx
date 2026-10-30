@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AccountPerks } from "../components/nav";
+import { inApp } from "../lib/app";
 import {
   Alert,
   AuthMessage,
@@ -464,9 +465,11 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
           <Btn variant="ghost" onClick={() => go("/ratings")}>
             Your ratings
           </Btn>
-          <Btn variant="ghost" onClick={() => go("/plus")}>
-            {user.plus ? "Your Plus" : "Get Plus"}
-          </Btn>
+          {(user.plus || !inApp) && (
+            <Btn variant="ghost" onClick={() => go("/plus")}>
+              {user.plus ? "Your Plus" : "Get Plus"}
+            </Btn>
+          )}
           <Btn variant="ghost" onClick={() => go("/battles")}>
             Your battles
           </Btn>
