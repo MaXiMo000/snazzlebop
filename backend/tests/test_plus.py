@@ -375,3 +375,34 @@ def test_app_user_ids_round_trip_and_reject_tampering():
         assert B.account_of_app_user(s, bad) is None
     assert B.store_status("RENEWAL") == "active" and B.store_status("EXPIRATION") == "expired"
     assert B.store_status("TRANSFER") is None
+
+
+def test_a_full_size_paddle_event_gets_through_and_a_huge_body_does_not(shop):
+    """Real subscription events carry whole price and product objects (well over the 4 KB form cap)."""
+    signup(shop)
+    ref = shop.post("/api/billing/checkout").json()["custom_data"]
+    sub = subscription(ref)
+    sub["items"][0]["price"].update(
+        {"description": "Plus monthly " * 200, "product": {"name": "Plus", "description": "x" * 7000}}
+    )
+    raw = json.dumps(event("subscription.activated", sub, event_id="evt_big")).encode()
+    assert 8_000 < len(raw) < 64 * 1024
+    r = shop.post(
+        "/api/billing/paddle",
+        content=raw,
+        headers={"Paddle-Signature": sign(raw), "content-type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+    assert shop.get("/api/me").json()["user"]["plus"] is True
+    huge = b'{"x":"' + b"y" * 100_000 + b'"}'
+    r = shop.post(
+        "/api/billing/paddle",
+        content=huge,
+        headers={"Paddle-Signature": sign(huge), "content-type": "application/json"},
+    )
+    assert r.status_code == 413
+    form = b'{"username":"' + b"z" * 6000 + b'"}'
+    assert (
+        shop.post("/api/auth/login", content=form, headers={"content-type": "application/json"}).status_code
+        == 413
+    )

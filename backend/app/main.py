@@ -60,6 +60,8 @@ log = logging.getLogger("snazzlebop")
 # The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
 # /clubs/<slug> (and /reports), /join/<invite>, /places, /privacy, /terms, /about, /games (and /games/<id>),
 # /safety and /staff (and /places).
+WEBHOOK_BYTES = 64 * 1024  # the most a payment provider's signed notification may be
+
 SPA_ROUTE = re.compile(
     r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|terms|about|games|games/[a-z0-9]{2,24}|ratings|coins|battles|quests|plus|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
@@ -211,7 +213,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         trusted_hops=settings.trusted_proxy_hops,
         ip_header=settings.client_ip_header,
     )
-    app.add_middleware(BodyLimit, max_bytes=settings.max_body_bytes)
+    # Payment webhooks carry whole subscription objects (well over 4 KB); they're signed and checked.
+    webhooks = {"/api/billing/paddle": WEBHOOK_BYTES, "/api/billing/revenuecat": WEBHOOK_BYTES}
+    app.add_middleware(BodyLimit, max_bytes=settings.max_body_bytes, larger=webhooks)
     app.add_middleware(
         SecurityHeaders,
         ws_hosts=settings.ws_hosts,

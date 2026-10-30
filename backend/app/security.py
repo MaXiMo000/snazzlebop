@@ -293,19 +293,22 @@ class SecurityHeaders:
 
 
 class BodyLimit:
-    """Cap request bodies: by Content-Length up front, and by counting streamed bytes."""
+    """Cap request bodies: by Content-Length up front, and by counting streamed bytes. `larger` gives
+    named paths their own cap (payment webhooks: signed, and bigger than any form a person sends)."""
 
-    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+    def __init__(self, app: ASGIApp, max_bytes: int, larger: dict[str, int] | None = None) -> None:
         self.app = app
-        self.max = max_bytes
+        self.default = max_bytes
+        self.larger = larger or {}
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
+        cap = self.larger.get(scope.get("path", ""), self.default)
         declared = header(scope, b"content-length")
         if declared is not None:
             try:
-                if int(declared) > self.max:
+                if int(declared) > cap:
                     return await send_json(send, 413, _error("too_large", "Request too large"))
             except ValueError:
                 return await send_json(send, 400, _error("bad_request", "Bad Content-Length"))
@@ -316,7 +319,7 @@ class BodyLimit:
             message = await receive()
             if message["type"] == "http.request":
                 seen += len(message.get("body", b""))
-                if seen > self.max:
+                if seen > cap:
                     return {"type": "http.disconnect"}
             return message
 
