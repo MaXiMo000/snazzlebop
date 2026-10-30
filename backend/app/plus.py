@@ -157,6 +157,50 @@ def router(settings: Settings, db: Any) -> APIRouter:
         await db.billing_seen(event_id, kind, user_id)
         return JSONResponse({"ok": True})
 
+    @api.get("/api/billing/app-user", response_model=schemas.AppUser, responses=schemas.ERRORS)
+    async def app_user(request: Request) -> JSONResponse:
+        """The id the store app gives RevenueCat for a purchase: this account, signed by this server."""
+        user = await me(request)
+        return JSONResponse(
+            {"app_user_id": billing.app_user_id(settings, user.id)}, headers={"Cache-Control": "no-store"}
+        )
+
+    @api.post("/api/billing/revenuecat", response_model=schemas.Ok, responses=schemas.ERRORS)
+    async def revenuecat_webhook(request: Request) -> JSONResponse:
+        """Plus bought in the apps (App Store, Google Play), as RevenueCat reports it. Refused without the
+        shared Authorization value; only accounts this server signed can be credited."""
+        if not billing.revenuecat_ok(settings, request.headers.get("authorization", "")):
+            raise HubError("bad_signature", "Not from RevenueCat", 401)
+        if not db.ready:
+            raise HubError("accounts_down", "Try again later", 503)  # RevenueCat retries
+        try:
+            event = json.loads(await request.body())["event"]
+            kind, event_id = str(event["type"]), str(event["id"])
+        except Exception:
+            raise HubError("bad_event", "Not a RevenueCat event", 400) from None
+        store = billing.STORES.get(str(event.get("store", "")))
+        status = billing.store_status(kind)
+        ids = [event.get("app_user_id"), event.get("original_app_user_id"), *(event.get("aliases") or [])]
+        user_id = next((u for u in (billing.account_of_app_user(settings, i) for i in ids) if u), None)
+        wants_plus = settings.revenuecat_entitlement in (event.get("entitlement_ids") or [])
+        original = str(event.get("original_transaction_id") or "")
+        if store and status and user_id is not None and wants_plus and original:
+            ends = event.get("expiration_at_ms")
+            period_end = datetime.fromtimestamp(ends / 1000, UTC) if isinstance(ends, int | float) else None
+            at_ms = event.get("event_timestamp_ms")
+            at = (
+                datetime.fromtimestamp(at_ms / 1000, UTC)
+                if isinstance(at_ms, int | float)
+                else datetime.now(UTC)
+            )
+            await db.set_subscription(f"{store}:{original}", user_id, "", status, period_end, at)
+            if kind in ("INITIAL_PURCHASE", "RENEWAL") and event.get("transaction_id"):
+                await db.grant_plus_month(user_id, f"{store}:{event['transaction_id']}")
+        else:
+            user_id = None
+        await db.billing_seen(f"rc:{event_id}", kind, user_id)
+        return JSONResponse({"ok": True})
+
     @api.get("/api/me/plus", response_model=schemas.MyPlus, responses=schemas.ERRORS)
     async def my_plus(request: Request) -> JSONResponse:
         user = await me(request)
@@ -167,6 +211,7 @@ def router(settings: Settings, db: Any) -> APIRouter:
             "until": aware(user.plus_until).isoformat() if user.plus_until else None,
             "status": sub.status if sub is not None else None,
             "can_manage": bool(sub is not None and sub.customer_id and settings.paddle_api_key),
+            "source": None if sub is None else sub.id.split(":", 1)[0] if ":" in sub.id else "paddle",
         }
         return JSONResponse(body, headers={"Cache-Control": "no-store"})
 

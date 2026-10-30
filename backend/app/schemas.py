@@ -107,12 +107,38 @@ class PlusCheckout(Strict):
     email: str | None  # prefilled at checkout when confirmed
 
 
+class LookOption(Strict):
+    id: str
+    name: str
+    level: int  # the level that unlocks it (0: Plus members only)
+    plus: bool
+    unlocked: bool
+
+
+class MyLook(Strict):
+    """Your level unlocks: power-up slots, avatar frames and victory animations, and your picks."""
+
+    level: int
+    plus: bool
+    slots: int  # power-ups you can use in one casual game
+    slot_level: int  # the level that opens a second slot
+    frame: str
+    win: str
+    frames: list[LookOption]
+    wins: list[LookOption]
+
+
 class MyPlus(Strict):
     active: bool
     until: str | None  # ISO 8601
     status: str | None  # Paddle's: active | canceled | past_due | paused ...
     can_manage: bool  # a link to Paddle's page to change or cancel is available
     gift: bool  # Plus as a friend of the site (nothing to renew or cancel)
+    source: str | None  # where the latest subscription was bought: paddle | app_store | play_store
+
+
+class AppUser(Strict):
+    app_user_id: str  # what the store app passes to RevenueCat (this account, signed)
 
 
 class PlusManage(Strict):
@@ -1088,7 +1114,9 @@ class PowerUse(Strict):
 
 class Powers(Strict):
     offer: list[PowerItem]  # this game's power-ups you could use now (casual rooms, signed in)
-    used: bool  # you've used yours this game
+    used: bool  # no power-up slots left this game
+    left: int  # power-ups you can still use this game
+    slots: int  # your slots per game (1, or 2 from level 10 or with Plus)
     news: list[PowerUse]  # who used what (everyone sees)
     mine: str | None  # what your power-up showed you alone
 
@@ -1123,6 +1151,7 @@ class RoomFrame(Strict):
     chat: Chat
     call: Call
     faces: dict[str, list[int]]
+    looks: dict[str, dict[str, str]]  # pid -> the frame and victory animation their level unlocked
     night: Night
     entrance: Entrance | None
     crowd: Crowd

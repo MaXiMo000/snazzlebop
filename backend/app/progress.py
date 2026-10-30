@@ -174,6 +174,61 @@ def level_gift(user_id: int, level: int) -> str:
     return LEVEL_GIFTS[_seed("gift", user_id, level) % len(LEVEL_GIFTS)]
 
 
+# -- unlocks: what levels (and Plus) open up. Cosmetic only, never an advantage in ranked or battles. --
+# id -> (name, level needed); level 0 = Plus members only.
+FRAMES: dict[str, tuple[str, int]] = {
+    "none": ("No frame", 1),
+    "bronze": ("Bronze", 3),
+    "silver": ("Silver", 6),
+    "gold": ("Gold", 10),
+    "neon": ("Neon", 15),
+    "rainbow": ("Rainbow", 20),
+    "starlight": ("Starlight", 30),
+    "plus": ("Plus spotlight", 0),
+}
+WINS: dict[str, tuple[str, int]] = {  # the victory animation the room sees when you win
+    "confetti": ("Confetti", 1),
+    "fireworks": ("Fireworks", 5),
+    "spotlight": ("Spotlight", 8),
+    "disco": ("Disco ball", 12),
+    "rocket": ("Rocket", 18),
+    "crown": ("Crown rain", 25),
+}
+DEFAULT_LOOK = {"frame": "none", "win": "confetti"}
+SLOT_LEVEL = 10  # a second power-up slot from this level
+MAX_SLOTS = 2
+
+
+def power_slots(level: int, plus: bool) -> int:
+    """How many power-ups an account can use in one casual game."""
+    return MAX_SLOTS if plus or level >= SLOT_LEVEL else 1
+
+
+def unlocked(need: int, level: int, plus: bool) -> bool:
+    return plus if need == 0 else level >= need
+
+
+def clean_look(raw: object, level: int, plus: bool) -> dict[str, str]:
+    """The look an account shows: its saved pick where still unlocked (Plus can lapse), else the default."""
+    saved = raw if isinstance(raw, dict) else {}
+    look = dict(DEFAULT_LOOK)
+    for key, table in (("frame", FRAMES), ("win", WINS)):
+        pick = saved.get(key)
+        if isinstance(pick, str) and pick in table and unlocked(table[pick][1], level, plus):
+            look[key] = pick
+    return look
+
+
+def look_options(level: int, plus: bool) -> dict[str, list[dict[str, object]]]:
+    def rows(table: dict[str, tuple[str, int]]) -> list[dict[str, object]]:
+        return [
+            {"id": k, "name": name, "level": need, "plus": need == 0, "unlocked": unlocked(need, level, plus)}
+            for k, (name, need) in table.items()
+        ]
+
+    return {"frames": rows(FRAMES), "wins": rows(WINS)}
+
+
 def day_number(day: date) -> int:
     return (day - EPOCH).days
 

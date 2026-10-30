@@ -119,6 +119,12 @@ export function Plus({ go }: { go: Go }) {
           <li>
             <span aria-hidden="true">⭐</span> A Plus badge by your name in every room
           </li>
+          <li>
+            <span aria-hidden="true">⚡</span> Two power-ups in each casual game (never ranked or battles)
+          </li>
+          <li>
+            <span aria-hidden="true">🔆</span> The Plus spotlight avatar frame
+          </li>
         </ul>
         {!loaded ? null : !user ? (
           inApp ? null : (
@@ -135,6 +141,12 @@ export function Plus({ go }: { go: Go }) {
             <p>
               <span className="chip teal">Plus</span> {mine.status === "canceled" ? "Ends" : "Renews"} on {mine.until ? day(mine.until) : "…"}.
             </p>
+            {(mine.source === "app_store" || mine.source === "play_store") && (
+              <p className="muted">
+                Bought in the app: change or cancel it in {mine.source === "app_store" ? "the App Store" : "Google Play"}, under
+                Subscriptions.
+              </p>
+            )}
             {mine.can_manage && !inApp && (
               <Btn variant="ghost" disabled={busy} onClick={() => void manage()}>
                 Change or cancel

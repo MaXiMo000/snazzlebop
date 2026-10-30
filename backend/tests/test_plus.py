@@ -289,3 +289,89 @@ def test_ads_txt_names_only_the_configured_publisher(tmp_path):
         r = c.get("/ads.txt")
         assert r.text == "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n"
         assert r.headers["content-type"].startswith("text/plain")
+
+
+# -- the app stores through RevenueCat: one Plus for the website and the apps ---------------------------
+RC_AUTH = "Bearer rc-test-webhook-secret"
+
+
+@pytest.fixture()
+def stores(tmp_path):
+    s = settings(
+        tmp_path,
+        rate_auth_burst=1000,
+        paddle_client_token="test_abc",
+        paddle_webhook_secret=SECRET,
+        paddle_plus_price=PRICE,
+        revenuecat_webhook_auth=RC_AUTH,
+    )
+    with TestClient(create_app(s)) as c:
+        yield c
+
+
+def rc(
+    client, kind, app_user, event_id, days=30, store="PLAY_STORE", tx="t1", auth=RC_AUTH, entitlement="plus"
+):
+    now = datetime.now(UTC)
+    event = {
+        "id": event_id,
+        "type": kind,
+        "app_user_id": app_user,
+        "aliases": [app_user],
+        "store": store,
+        "entitlement_ids": [entitlement],
+        "original_transaction_id": "orig1",
+        "transaction_id": tx,
+        "expiration_at_ms": int((now + timedelta(days=days)).timestamp() * 1000),
+        "event_timestamp_ms": int(now.timestamp() * 1000),
+    }
+    return client.post("/api/billing/revenuecat", json={"event": event}, headers={"Authorization": auth})
+
+
+def test_store_purchases_need_the_secret_and_a_signed_account(stores):
+    signup(stores)
+    me = stores.get("/api/billing/app-user").json()["app_user_id"]
+    assert rc(stores, "INITIAL_PURCHASE", me, "e0", auth="Bearer wrong").status_code == 401
+    assert stores.post("/api/billing/revenuecat", json={"event": {}}).status_code == 401  # no header
+    forged = me.split(".")[0] + ".00000000000000000000000000000000"
+    assert rc(stores, "INITIAL_PURCHASE", forged, "e1").status_code == 200
+    assert stores.get("/api/me").json()["user"]["plus"] is False  # credited nobody
+    assert rc(stores, "INITIAL_PURCHASE", me, "e2", entitlement="other").status_code == 200
+    assert stores.get("/api/me").json()["user"]["plus"] is False  # not the Plus entitlement
+    assert rc(stores, "INITIAL_PURCHASE", me, "e3", store="PADDLE").status_code == 200
+    assert stores.get("/api/me").json()["user"]["plus"] is False  # Paddle comes straight from Paddle
+    coins = stores.get("/api/me").json()["user"]["coins"]
+    assert rc(stores, "INITIAL_PURCHASE", me, "e4").status_code == 200
+    me_now = stores.get("/api/me").json()["user"]
+    assert me_now["plus"] is True and me_now["ads"] is False and me_now["coins"] == coins + 300
+    mine = stores.get("/api/me/plus").json()
+    assert mine["source"] == "play_store" and mine["can_manage"] is False
+    rc(stores, "INITIAL_PURCHASE", me, "e5")  # the same payment again (a resend): perks once
+    assert stores.get("/api/me").json()["user"]["coins"] == coins + 300
+
+
+def test_a_store_expiry_never_cuts_short_a_paid_month_on_the_web(stores):
+    signup(stores)
+    me = stores.get("/api/billing/app-user").json()["app_user_id"]
+    ref = stores.post("/api/billing/checkout").json()["custom_data"]
+    send(
+        stores,
+        event("subscription.activated", subscription(ref, ends=datetime.now(UTC) + timedelta(days=20))),
+    )
+    rc(stores, "INITIAL_PURCHASE", me, "s1", days=3)
+    rc(stores, "EXPIRATION", me, "s2", days=-1)  # the store one ran out
+    until = stores.get("/api/me").json()["user"]["plus_until"]
+    assert until and datetime.fromisoformat(until) > datetime.now(UTC) + timedelta(days=15)  # web month kept
+    assert stores.get("/api/me").json()["user"]["plus"] is True
+
+
+def test_app_user_ids_round_trip_and_reject_tampering():
+    s = Settings(secret_key="k" * 40)
+    good = B.app_user_id(s, 42)
+    assert B.account_of_app_user(s, good) == 42
+    assert B.account_of_app_user(s, good.replace("snz42", "snz43")) is None
+    assert B.account_of_app_user(Settings(secret_key="z" * 40), good) is None
+    for bad in (None, 42, "", "snz", "snzx.y", "42.abc", "$RCAnonymousID:abc"):
+        assert B.account_of_app_user(s, bad) is None
+    assert B.store_status("RENEWAL") == "active" and B.store_status("EXPIRATION") == "expired"
+    assert B.store_status("TRANSFER") is None

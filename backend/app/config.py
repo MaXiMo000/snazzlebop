@@ -127,6 +127,9 @@ class Settings:
     # Optional: Google AdSense on the lobby and results screens (billing.py). Unset = no ads.
     adsense_client: str = ""  # ca-pub-...
     adsense_slot: str = ""  # the display ad unit's id
+    # Optional: Plus bought in the Android and iOS apps (Google Play, App Store) through RevenueCat.
+    revenuecat_webhook_auth: str = field(default="", repr=False)  # the webhook's Authorization value
+    revenuecat_entitlement: str = "plus"  # the RevenueCat entitlement that means Plus
 
     # Confirmed email addresses that get Plus without paying (friends of the site). Personal data:
     # set it in the dashboard, never in the repo.
@@ -268,6 +271,8 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         adsense_client=adsense_client,
         adsense_slot=e.get("ADSENSE_SLOT", "").strip(),
         plus_friends=_emails(e.get("PLUS_FRIENDS")),
+        revenuecat_webhook_auth=e.get("REVENUECAT_WEBHOOK_AUTH", "").strip(),
+        revenuecat_entitlement=e.get("REVENUECAT_ENTITLEMENT", "plus").strip() or "plus",
         jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
         jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )

@@ -253,6 +253,12 @@ class LobbyMixin:
         room.accounts[pid] = user_id
         self._persist(room)
 
+    def set_look(self, room: Room, pid: str, look: dict[str, str], slots: int) -> None:
+        """A signed-in seat's unlocks as its account stands when it connects (checked by progress.py)."""
+        if pid in room.accounts:
+            room.looks[pid] = dict(look)
+            room.power_slots[pid] = slots
+
     def set_plus(self, room: Room, pid: str, on: bool) -> None:
         """Show (or drop) the Plus badge by a signed-in seat, as their account stands when they connect."""
         if on and pid in room.accounts and pid not in room.plus:

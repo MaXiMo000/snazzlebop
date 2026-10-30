@@ -76,6 +76,49 @@ def account_of(settings: Settings, custom: object) -> int | None:
     return int(acct)
 
 
+# -- the app stores, through RevenueCat: one Plus for the website and the apps --------------------------
+# The app tells RevenueCat who is buying with app_user_id(): the account and a signature only this
+# server makes, so a store purchase can only land on the account that made it.
+STORE_ACTIVE = {
+    "INITIAL_PURCHASE",
+    "RENEWAL",
+    "PRODUCT_CHANGE",
+    "UNCANCELLATION",
+    "SUBSCRIPTION_EXTENDED",
+    "TEMPORARY_ENTITLEMENT_GRANT",
+}
+STORE_STATUS = {
+    "CANCELLATION": "canceled",
+    "BILLING_ISSUE": "past_due",
+    "EXPIRATION": "expired",
+    "SUBSCRIPTION_PAUSED": "paused",
+}
+STORES = {"APP_STORE": "app_store", "PLAY_STORE": "play_store"}  # Paddle is handled directly, not here
+
+
+def app_user_id(settings: Settings, user_id: int) -> str:
+    ref = account_ref(settings, user_id)
+    return f"snz{ref['account']}.{ref['sig']}"
+
+
+def account_of_app_user(settings: Settings, value: object) -> int | None:
+    if not isinstance(value, str) or not value.startswith("snz") or "." not in value:
+        return None
+    acct, _, sig = value[3:].partition(".")
+    return account_of(settings, {"account": acct, "sig": sig})
+
+
+def store_status(event_type: str) -> str | None:
+    """A RevenueCat event as a subscription status (as Paddle's), or None for events that change nothing."""
+    return "active" if event_type in STORE_ACTIVE else STORE_STATUS.get(event_type)
+
+
+def revenuecat_ok(settings: Settings, header: str) -> bool:
+    """RevenueCat sends the Authorization value set in its dashboard with every webhook."""
+    want = settings.revenuecat_webhook_auth
+    return bool(want) and hmac.compare_digest(header.encode(), want.encode())
+
+
 def verify(secret: str, header: str, body: bytes, now: float | None = None) -> bool:
     """Paddle-Signature: "ts=<unix>;h1=<hex>" (more than one h1 while a secret is being rotated)."""
     if not secret or not header:

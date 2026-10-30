@@ -80,6 +80,20 @@
         "title": "AdIds",
         "type": "object"
       },
+      "AppUser": {
+        "additionalProperties": false,
+        "properties": {
+          "app_user_id": {
+            "title": "App User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "app_user_id"
+        ],
+        "title": "AppUser",
+        "type": "object"
+      },
       "BackupCodes": {
         "additionalProperties": false,
         "description": "Shown once: each works once if the phone is lost.",
@@ -2746,6 +2760,61 @@
         "title": "LoginBody",
         "type": "object"
       },
+      "LookBody": {
+        "additionalProperties": false,
+        "properties": {
+          "frame": {
+            "maxLength": 16,
+            "title": "Frame",
+            "type": "string"
+          },
+          "win": {
+            "maxLength": 16,
+            "title": "Win",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame",
+          "win"
+        ],
+        "title": "LookBody",
+        "type": "object"
+      },
+      "LookOption": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plus": {
+            "title": "Plus",
+            "type": "boolean"
+          },
+          "unlocked": {
+            "title": "Unlocked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "level",
+          "plus",
+          "unlocked"
+        ],
+        "title": "LookOption",
+        "type": "object"
+      },
       "Market": {
         "additionalProperties": false,
         "properties": {
@@ -3124,6 +3193,62 @@
         "title": "Mvp",
         "type": "object"
       },
+      "MyLook": {
+        "additionalProperties": false,
+        "description": "Your level unlocks: power-up slots, avatar frames and victory animations, and your picks.",
+        "properties": {
+          "frame": {
+            "title": "Frame",
+            "type": "string"
+          },
+          "frames": {
+            "items": {
+              "$ref": "#/components/schemas/LookOption"
+            },
+            "title": "Frames",
+            "type": "array"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "plus": {
+            "title": "Plus",
+            "type": "boolean"
+          },
+          "slot_level": {
+            "title": "Slot Level",
+            "type": "integer"
+          },
+          "slots": {
+            "title": "Slots",
+            "type": "integer"
+          },
+          "win": {
+            "title": "Win",
+            "type": "string"
+          },
+          "wins": {
+            "items": {
+              "$ref": "#/components/schemas/LookOption"
+            },
+            "title": "Wins",
+            "type": "array"
+          }
+        },
+        "required": [
+          "level",
+          "plus",
+          "slots",
+          "slot_level",
+          "frame",
+          "win",
+          "frames",
+          "wins"
+        ],
+        "title": "MyLook",
+        "type": "object"
+      },
       "MyPlace": {
         "additionalProperties": false,
         "properties": {
@@ -3208,6 +3333,17 @@
             "title": "Gift",
             "type": "boolean"
           },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
           "status": {
             "anyOf": [
               {
@@ -3236,7 +3372,8 @@
           "until",
           "status",
           "can_manage",
-          "gift"
+          "gift",
+          "source"
         ],
         "title": "MyPlus",
         "type": "object"
@@ -4029,6 +4166,10 @@
       "Powers": {
         "additionalProperties": false,
         "properties": {
+          "left": {
+            "title": "Left",
+            "type": "integer"
+          },
           "mine": {
             "anyOf": [
               {
@@ -4054,6 +4195,10 @@
             "title": "Offer",
             "type": "array"
           },
+          "slots": {
+            "title": "Slots",
+            "type": "integer"
+          },
           "used": {
             "title": "Used",
             "type": "boolean"
@@ -4062,6 +4207,8 @@
         "required": [
           "offer",
           "used",
+          "left",
+          "slots",
           "news",
           "mine"
         ],
@@ -5029,6 +5176,16 @@
             "title": "Last Standings",
             "type": "array"
           },
+          "looks": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Looks",
+            "type": "object"
+          },
           "market": {
             "anyOf": [
               {
@@ -5175,6 +5332,7 @@
           "chat",
           "call",
           "faces",
+          "looks",
           "night",
           "entrance",
           "crowd",
@@ -7694,6 +7852,105 @@
         "summary": "Verify"
       }
     },
+    "/api/billing/app-user": {
+      "get": {
+        "description": "The id the store app gives RevenueCat for a purchase: this account, signed by this server.",
+        "operationId": "app_user_api_billing_app_user_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppUser"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "App User"
+      }
+    },
     "/api/billing/checkout": {
       "post": {
         "operationId": "checkout_api_billing_checkout_post",
@@ -7907,6 +8164,105 @@
           }
         },
         "summary": "Paddle Webhook"
+      }
+    },
+    "/api/billing/revenuecat": {
+      "post": {
+        "description": "Plus bought in the apps (App Store, Google Play), as RevenueCat reports it. Refused without the\nshared Authorization value; only accounts this server signed can be credited.",
+        "operationId": "revenuecat_webhook_api_billing_revenuecat_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Revenuecat Webhook"
       }
     },
     "/api/blocks": {
@@ -12740,6 +13096,211 @@
           }
         },
         "summary": "Identities"
+      }
+    },
+    "/api/me/look": {
+      "get": {
+        "description": "Your unlocks: the avatar frames and victory animations open to your level, and your picks.",
+        "operationId": "my_look_api_me_look_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyLook"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "My Look"
+      },
+      "post": {
+        "operationId": "set_look_api_me_look_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyLook"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Set Look"
       }
     },
     "/api/me/mfa": {

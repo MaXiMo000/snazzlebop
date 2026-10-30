@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import WebSocket
 
-from . import accounts, billing
+from . import accounts, billing, progress
 from .rooms import Hub, Room
 from .security import RateLimiter, client_ip, verify_token
 
@@ -127,7 +127,12 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
                 hub.link_account(room, pid, user.id)
         if pid in room.accounts and state.db.ready:
             owner = await state.db.user_by_id(room.accounts[pid])
-            hub.set_plus(room, pid, owner is not None and billing.has_plus(owner))
+            plus = owner is not None and billing.has_plus(owner)
+            hub.set_plus(room, pid, plus)
+            if owner is not None:
+                level = progress.level_of(owner.xp or 0)
+                look = progress.clean_look(owner.look, level, plus)
+                hub.set_look(room, pid, look, progress.power_slots(level, plus))
         await hub.connect(room, pid, conn)
 
         bucket = RateLimiter(settings.ws_msgs_per_second, settings.ws_msg_burst, max_keys=1)

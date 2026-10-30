@@ -236,3 +236,36 @@ class RoomTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(hub.view_for(room, guest)["powers"]["offer"], [])
         await hub.handle_message(room, guest, conns[guest], {"t": "power", "item": "trivia_time"})
         self.assertIn("signed_out", conns[guest].errors())
+
+
+class SlotTests(unittest.IsolatedAsyncioTestCase):
+    """Power-up slots: a level-10 or Plus account can use two in one casual game, everyone else one."""
+
+    async def test_two_slots_allow_two_then_stop_and_reset_next_game(self):
+        wallet = Wallet({(1, "trivia_fifty"): 2, (1, "trivia_time"): 2, (2, "trivia_time"): 2})
+        hub, room, pids, conns = await room_of(3)
+        hub.spend_powerup, hub.refund_powerup = wallet.spend, wallet.refund
+        hub.set_look(room, pids[0], {"frame": "gold", "win": "confetti"}, 2)
+        hub.set_look(room, pids[1], {"frame": "none", "win": "confetti"}, 1)
+        await hub.handle_message(room, pids[0], conns[pids[0]], {"t": "start", "game": "trivia"})
+        a, b = pids[0], pids[1]
+        await hub.handle_message(room, a, conns[a], {"t": "power", "item": "trivia_fifty"})
+        view = hub.view_for(room, a)["powers"]
+        self.assertEqual((view["left"], view["slots"], view["used"]), (1, 2, False))
+        await hub.handle_message(room, a, conns[a], {"t": "power", "item": "trivia_time"})
+        self.assertTrue(hub.view_for(room, a)["powers"]["used"])
+        await hub.handle_message(room, a, conns[a], {"t": "power", "item": "trivia_time"})
+        self.assertIn("already_used", conns[a].errors())  # a third is refused...
+        self.assertEqual(wallet.owned[(1, "trivia_time")], 1)  # ...and not spent
+        await hub.handle_message(room, b, conns[b], {"t": "power", "item": "trivia_time"})
+        await hub.handle_message(room, b, conns[b], {"t": "power", "item": "trivia_time"})
+        self.assertIn("already_used", conns[b].errors())  # one slot: one a game
+        room.game_no += 1  # the next game: slots are fresh
+        self.assertEqual(hub.view_for(room, a)["powers"]["left"], 2)
+
+    async def test_looks_are_cosmetic_public_and_gone_when_a_player_leaves(self):
+        hub, room, pids, conns = await room_of(3)
+        hub.set_look(room, pids[1], {"frame": "neon", "win": "disco"}, 1)
+        self.assertEqual(hub.view_for(room, pids[2])["looks"][pids[1]], {"frame": "neon", "win": "disco"})
+        await hub.handle_message(room, pids[1], conns[pids[1]], {"t": "leave"})
+        self.assertNotIn(pids[1], hub.view_for(room, pids[2])["looks"])

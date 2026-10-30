@@ -117,6 +117,8 @@ class User(Base):
     xp: Mapped[int] = mapped_column(Integer, default=0)  # the cached sum of xp_events (progress.py)
     # Snazzlebop Plus is on until then (billing.py; set only by Paddle's signed webhooks).
     plus_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # The cosmetics this account picked ({"frame": id, "win": id}); progress.clean_look checks unlocks.
+    look: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=dict)
 
 
 class EmailToken(Base):
@@ -2018,9 +2020,11 @@ class Database:
         period_end: datetime | None,
         at: datetime,
     ) -> None:
-        """Remember a subscription's state and move the account's Plus end date with it. `at`: when
-        Paddle says it happened; an older event arriving late changes nothing."""
-        until = billinglib.plus_until(status, period_end, datetime.now(UTC))
+        """Remember a subscription's state (Paddle's sub_..., or a store's app_store:/play_store:...) and
+        move the account's Plus end date with it: the latest that any of its subscriptions gives, so a
+        lapsed store subscription never cuts short a paid month on the web, or the other way round.
+        `at`: when the payment service says it happened; an older event arriving late changes nothing."""
+        now = datetime.now(UTC)
         async with self.sessions() as session:
             row = await session.get(Subscription, sub_id[:64])
             if row is None:
@@ -2030,6 +2034,12 @@ class Database:
                 return  # someone else's subscription, or old news
             row.customer_id, row.status, row.period_end = customer_id[:64], status[:16], period_end
             row.updated_at = at
+            await session.flush()
+            ends = [
+                billinglib.plus_until(s.status, aware(s.period_end) if s.period_end else None, now)
+                for s in await session.scalars(select(Subscription).where(Subscription.user_id == user_id))
+            ]
+            until = max((e for e in ends if e is not None), default=None)
             await session.execute(update(User).where(User.id == user_id).values(plus_until=until))
             await session.commit()
 
@@ -3283,6 +3293,11 @@ class Database:
                 )
             )
             return set(rows.scalars())
+
+    async def set_look(self, user_id: int, look: dict[str, str]) -> None:
+        async with self.sessions() as session:
+            await session.execute(update(User).where(User.id == user_id).values(look=look))
+            await session.commit()
 
     async def set_place_boards(self, user_id: int, on: bool) -> None:
         async with self.sessions() as session:

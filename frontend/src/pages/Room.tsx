@@ -262,7 +262,7 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
       <JumpScare count={state.scare} room={code} you={state.you} />
       <ReactionOverlay reactions={state.reactions} />
       <PartyOverlay state={state} />
-      <FaceHost all={state.faces} champion={state.night?.belt.holder} you={state.you} send={send} />
+      <FaceHost all={state.faces} frames={state.looks} champion={state.night?.belt.holder} you={state.you} send={send} />
       <Entrance entrance={state.entrance} you={state.you} room={code} />
       {state.chat && <ChatDock chat={state.chat} you={state.you} send={send} />}
       <CallHost
@@ -536,7 +536,7 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
       <h1 className="sr-only">Snazzlebop TV, room {code}</h1>
       <ReactionOverlay reactions={state.reactions} />
       <PartyOverlay state={state} />
-      <FaceHost all={state.faces} champion={state.night?.belt.holder} you={state.you} />
+      <FaceHost all={state.faces} frames={state.looks} champion={state.night?.belt.holder} you={state.you} />
       <Entrance entrance={state.entrance} you={state.you} room={code} />
       {state.chat && <ChatTicker chat={state.chat} />}
       <CallHost available={!!state.call?.available} allowed={!!state.call?.allowed} send={watch} auto />

@@ -7,8 +7,9 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 
-from . import schemas
+from . import billing, progress, schemas
 from .accounts import check_same_origin, session_user
 from .config import Settings
 from .rooms import HubError
@@ -21,6 +22,25 @@ WHY = {
 }
 
 
+class LookBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    frame: str = Field(max_length=16)
+    win: str = Field(max_length=16)
+
+
+def _look(user: Any) -> dict[str, Any]:
+    level = progress.level_of(user.xp or 0)
+    plus = billing.has_plus(user)
+    return {
+        "level": level,
+        "plus": plus,
+        "slots": progress.power_slots(level, plus),
+        "slot_level": progress.SLOT_LEVEL,
+        **progress.clean_look(user.look, level, plus),
+        **progress.look_options(level, plus),
+    }
+
+
 def router(settings: Settings, db: Any) -> APIRouter:
     api = APIRouter()
 
@@ -31,6 +51,26 @@ def router(settings: Settings, db: Any) -> APIRouter:
         if user is None:
             raise HubError("signed_out", "Sign in first", 401)
         return user
+
+    @api.get("/api/me/look", response_model=schemas.MyLook, responses=schemas.ERRORS)
+    async def my_look(request: Request) -> JSONResponse:
+        """Your unlocks: the avatar frames and victory animations open to your level, and your picks."""
+        user = await me(request)
+        return JSONResponse(_look(user), headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/me/look", response_model=schemas.MyLook, responses=schemas.ERRORS)
+    async def set_look(body: LookBody, request: Request) -> JSONResponse:
+        check_same_origin(request, settings)
+        user = await me(request)
+        level, plus = progress.level_of(user.xp or 0), billing.has_plus(user)
+        for pick, table in ((body.frame, progress.FRAMES), (body.win, progress.WINS)):
+            if pick not in table:
+                raise HubError("bad_look", "That isn't one of the looks", 400)
+            if not progress.unlocked(table[pick][1], level, plus):
+                raise HubError("locked", "Unlock that one first", 403)
+        await db.set_look(user.id, {"frame": body.frame, "win": body.win})
+        user.look = {"frame": body.frame, "win": body.win}
+        return JSONResponse(_look(user), headers={"Cache-Control": "no-store"})
 
     @api.get("/api/me/progress", response_model=schemas.Progress, responses=schemas.ERRORS)
     async def my_progress(request: Request) -> JSONResponse:

@@ -178,6 +178,7 @@ Everything is read from the environment; [.env.example](.env.example) lists ever
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | no | turns on voice and video calls |
 | `PADDLE_CLIENT_TOKEN`, `PADDLE_WEBHOOK_SECRET`, `PADDLE_PLUS_PRICE` (+ `PADDLE_ENV`, `PADDLE_API_KEY`) | no | sells Snazzlebop Plus worldwide through Paddle |
 | `ADSENSE_CLIENT`, `ADSENSE_SLOT` | no | Google AdSense ads on the lobby and results screens |
+| `REVENUECAT_WEBHOOK_AUTH` (+ `REVENUECAT_ENTITLEMENT`) | no | Plus bought in the Android and iOS apps, through RevenueCat; one Plus across web and apps |
 | `PLUS_FRIENDS` | no | email addresses that get Plus free once confirmed on their account (no ads, emote packs, badge) |
 | `OPERATOR_NAME`, `PRIVACY_CONTACT` | for payments | who runs the site (legal name) and how to reach them, shown on Terms and Privacy |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no | turns on sign in with Google (redirect URI `<PUBLIC_URL>/api/auth/google/callback`) |

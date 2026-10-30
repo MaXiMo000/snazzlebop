@@ -6,7 +6,7 @@ import { Btn } from "./ui";
 
 type Send = (msg: Record<string, unknown>) => void;
 
-/** During a casual game: this game's own power-ups, one per game. The room sees that you used one;
+/** During a casual game: this game's own power-ups, one per game (two from level 10 or with Plus). The room sees that you used one;
  * anything it shows you (a struck answer, a die) is yours alone. */
 export function GamePowers({ state, send }: { state: RoomState; send: Send }) {
   const { user } = useAccount();
@@ -30,7 +30,7 @@ export function GamePowers({ state, send }: { state: RoomState; send: Send }) {
         </p>
       )}
       {p.used ? (
-        <p className="muted">You've used yours this game.</p>
+        <p className="muted">{p.slots > 1 ? `You've used all ${p.slots} this game.` : "You've used yours this game."}</p>
       ) : mine.length ? (
         <>
           <ul className="power-row">
@@ -55,7 +55,19 @@ export function GamePowers({ state, send }: { state: RoomState; send: Send }) {
               </li>
             ))}
           </ul>
-          <p className="muted power-note">One per game. Everyone sees when you use one.</p>
+          <p className="muted power-note">
+            {p.slots > 1 ? (
+              <>
+                <span className="keep">
+                  {p.left} of {p.slots} left
+                </span>{" "}
+                this game.
+              </>
+            ) : (
+              "One per game."
+            )}{" "}
+            Everyone sees when you use one.
+          </p>
         </>
       ) : (
         <p className="muted power-note">

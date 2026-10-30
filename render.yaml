@@ -63,6 +63,9 @@ services:
       # Optional: confirmed email addresses that get Plus free (comma separated). Personal data.
       - key: PLUS_FRIENDS
         sync: false
+      # Optional: Plus bought in the apps (Google Play, App Store) through RevenueCat's webhook.
+      - key: REVENUECAT_WEBHOOK_AUTH
+        sync: false
       # Optional account email: MAIL_FROM plus Resend (RESEND_API_KEY) or SMTP (host, user, pass).
       # Unset = no email. PUBLIC_URL only for a custom domain (links default to the Render address).
       - key: MAIL_FROM

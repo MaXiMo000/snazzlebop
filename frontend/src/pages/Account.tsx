@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AccountPerks } from "../components/nav";
 import { inApp } from "../lib/app";
+import { YourLook } from "../components/look";
 import {
   Alert,
   AuthMessage,
@@ -510,6 +511,7 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
 
       {tab === "profile" && (
         <>
+          <YourLook username={user.username} />
           <div className="grid">
             <Card aria-labelledby="board-h">
               <h3 id="board-h">{month ? `${month} leaderboard` : "Season leaderboard"}</h3>

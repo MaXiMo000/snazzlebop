@@ -281,6 +281,7 @@ class RoutingMixin:
                 del room.players[pid]
                 room.total_scores.pop(pid, None)
                 room.faces.pop(pid, None)
+                room.looks.pop(pid, None)
                 conn = room.conns.pop(pid, None)
                 if conn is not None:
                     asyncio.get_running_loop().create_task(conn.close(1000))
@@ -312,6 +313,7 @@ class RoutingMixin:
         del room.players[target]
         room.total_scores.pop(target, None)
         room.faces.pop(target, None)
+        room.looks.pop(target, None)
         self._drop_from_call(room, target)
         conn = room.conns.pop(target, None)
         if conn is not None:

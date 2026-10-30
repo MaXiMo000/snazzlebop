@@ -791,3 +791,209 @@ li,
 .prose-page .card p + p {
   margin-top: 10px;
 }
+
+/* ---- level unlocks: avatar frames (a ring outside the avatar, so the champion's belt still shows) ---- */
+.avatar.frame-bronze {
+  outline: 2.5px solid #c07a3e;
+  outline-offset: 2px;
+}
+.avatar.frame-silver {
+  outline: 2.5px solid #c9d1db;
+  outline-offset: 2px;
+}
+.avatar.frame-gold {
+  outline: 3px solid var(--mustard);
+  outline-offset: 2px;
+}
+.avatar.frame-neon {
+  outline: 3px solid #36f1cd;
+  outline-offset: 2px;
+  filter: drop-shadow(0 0 5px rgb(54 241 205 / 0.7));
+}
+.avatar.frame-rainbow {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px #ff6b2c,
+    0 0 0 6px #f2b705,
+    0 0 0 8px #0b7476;
+}
+.avatar.frame-starlight {
+  outline: 2.5px solid #fff1dc;
+  outline-offset: 2px;
+  animation: frame-twinkle 2.4s ease-in-out infinite;
+}
+.avatar.frame-plus {
+  outline: 3px solid var(--tangerine);
+  outline-offset: 2px;
+  animation: frame-glow 2s ease-in-out infinite;
+}
+@keyframes frame-twinkle {
+  50% {
+    filter: drop-shadow(0 0 7px rgb(255 241 220 / 0.9));
+  }
+}
+@keyframes frame-glow {
+  50% {
+    filter: drop-shadow(0 0 8px rgb(255 107 44 / 0.85));
+  }
+}
+
+/* ---- level unlocks: a winner's victory animation on the podium, seen by the whole room ---- */
+.podium-who {
+  position: relative;
+}
+.podium-win {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.win-fireworks .podium-win {
+  animation: win-burst 1.2s ease-out 1.4s 3 both;
+}
+.win-disco .podium-win {
+  animation: win-swing 1.6s ease-in-out 1.4s infinite;
+  transform-origin: top center;
+}
+.win-rocket .podium-win {
+  animation: win-launch 1.8s ease-in 1.4s 2 both;
+}
+.win-crown .podium-win {
+  animation: win-fall 1.4s ease-in 1.4s 3 both;
+}
+.win-spotlight .podium-who::before {
+  content: "";
+  position: absolute;
+  inset: -70px -26px -8px;
+  z-index: -1;
+  background: radial-gradient(ellipse at 50% 0%, rgb(255 241 220 / 0.45), transparent 70%);
+  animation: win-light 1s ease-out 1.4s both;
+}
+.win-disco .podium-who {
+  animation: win-disco 1.2s linear 1.4s infinite;
+}
+@keyframes win-burst {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.3);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.25);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.5);
+  }
+}
+@keyframes win-swing {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-12deg);
+  }
+  50% {
+    transform: translateX(-50%) rotate(12deg);
+  }
+}
+@keyframes win-launch {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 40px);
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -90px);
+  }
+}
+@keyframes win-fall {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -60px) rotate(-20deg);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 30px) rotate(15deg);
+  }
+}
+@keyframes win-light {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes win-disco {
+  0%,
+  100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(60deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar.frame-starlight,
+  .avatar.frame-plus,
+  .podium-win,
+  .win-disco .podium-who,
+  .win-spotlight .podium-who::before {
+    animation: none;
+  }
+}
+/* the profile's look picker */
+.look-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.look-head p {
+  margin: 0;
+}
+.look-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 112px), 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.look-option {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  min-height: 96px;
+  padding: 14px 8px 10px;
+  border: 1.5px solid var(--card-edge, var(--edge));
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 0.9rem / 1.2 var(--body);
+  text-align: center;
+  cursor: pointer;
+}
+.look-option[aria-pressed="true"] {
+  border-color: var(--mustard);
+  box-shadow: 0 0 0 2px var(--mustard);
+}
+.look-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.look-option:focus-visible {
+  outline: 3px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.look-lock {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.look-icon {
+  font-size: 1.8rem;
+  line-height: 36px;
+}

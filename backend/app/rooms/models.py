@@ -259,7 +259,9 @@ class Room:
     game_accounts: dict[str, int] = field(default_factory=dict)
     # Power-ups v2 (a game's own POWERS): who used one in which game, what everyone saw, and the line
     # each player's own power-up showed them alone.
-    power_used: dict[str, int] = field(default_factory=dict)  # pid -> game_no
+    power_used: dict[str, int] = field(default_factory=dict)  # pid -> game_no of their last power-up
+    power_uses: dict[str, int] = field(default_factory=dict)  # pid -> power-ups used in that game
+    power_slots: dict[str, int] = field(default_factory=dict)  # pid -> slots their account has (level, Plus)
     power_news: list[dict[str, Any]] = field(default_factory=list)
     power_private: dict[str, str] = field(default_factory=dict)
     # Party items (party.py): the latest effects everyone plays, and when each player last used one.
@@ -268,6 +270,7 @@ class Room:
     party_last: dict[str, float] = field(default_factory=dict)
     emote_packs: dict[str, list[str]] = field(default_factory=dict)  # pid -> emote packs they own (checked)
     plus: list[str] = field(default_factory=list)  # seats whose account is a Plus member (the badge)
+    looks: dict[str, dict[str, str]] = field(default_factory=dict)  # pid -> unlocked frame and victory
     react_logged: dict[str, int] = field(
         default_factory=dict
     )  # pid -> the game a reaction was last logged in

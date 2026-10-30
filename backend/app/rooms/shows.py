@@ -144,9 +144,16 @@ class ShowMixin:
             raise HubError("no_power", "That power-up isn't in this game")
         if pid not in room.game.player_ids:
             raise HubError("no_power", "You're not in this game")
-        if room.power_used.get(pid) == room.game_no:
-            raise HubError("already_used", "One power-up per game")
+        if self._powers_left(room, pid) <= 0:
+            slots = room.power_slots.get(pid, 1)
+            limit = "One power-up per game" if slots == 1 else f"{slots} power-ups per game"
+            raise HubError("already_used", limit)
         return room.game_no
+
+    @staticmethod
+    def _powers_left(room: Room, pid: str) -> int:
+        used = room.power_uses.get(pid, 1) if room.power_used.get(pid) == room.game_no else 0
+        return max(0, room.power_slots.get(pid, 1) - used)
 
     async def _use_power(self, room: Room, pid: str, msg: dict[str, Any]) -> None:
         """Spend one of your power-ups on the game being played. The room sees who used what; anything
@@ -166,7 +173,10 @@ class ShowMixin:
                 if game is None:
                     raise HubError("too_late", "That game has finished")
                 line = game.use_power(pid, str(item))
+                if room.power_used.get(pid) != game_no:
+                    room.power_uses[pid] = 0
                 room.power_used[pid] = game_no
+                room.power_uses[pid] = room.power_uses.get(pid, 0) + 1
                 info = game.POWERS[str(item)]
                 room.power_news = [
                     *room.power_news[-7:],

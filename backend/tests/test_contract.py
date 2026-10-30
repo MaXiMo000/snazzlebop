@@ -246,6 +246,10 @@ def test_every_route_matches_its_declared_model(client):
     c.call("POST", "/api/billing/checkout")  # payments are off here: an error body
     c.call("POST", "/api/billing/paddle", content=b"{}")  # unsigned: refused
     c.call("GET", "/api/me/plus")
+    c.call("GET", "/api/billing/app-user")
+    c.call("POST", "/api/billing/revenuecat", json={"event": {}})  # no shared secret: refused
+    c.call("GET", "/api/me/look")
+    c.call("POST", "/api/me/look", json={"frame": "none", "win": "confetti"})
     c.call("POST", "/api/me/plus/manage")  # nothing to manage: an error body
     c.call(
         "POST", "/api/me/quests/win1/claim", "/api/me/quests/{quest}/claim"

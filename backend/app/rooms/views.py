@@ -56,6 +56,7 @@ class ViewsMixin:
                 "hush": room.call_hush,
             },
             "faces": room.faces,
+            "looks": room.looks,  # cosmetics only (frame and victory ids), the same for everyone
             "night": self._night_view(room),
             "entrance": room.entrance or None,
             "crowd": self._crowd_view(room, pid),
@@ -85,7 +86,9 @@ class ViewsMixin:
                 "offer": [{"id": k, **v} for k, v in self._power_offer(room).items()]
                 if pid in room.players and pid in room.accounts
                 else [],
-                "used": room.power_used.get(pid) == room.game_no and room.phase == "game",
+                "used": self._powers_left(room, pid) <= 0 and room.phase == "game",
+                "left": self._powers_left(room, pid),
+                "slots": room.power_slots.get(pid, 1),
                 "news": room.power_news if room.phase in ("game", "results") else [],
                 "mine": room.power_private.get(pid) if room.phase == "game" else None,
             },

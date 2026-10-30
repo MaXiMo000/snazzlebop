@@ -3,6 +3,7 @@ import { initials } from "./ui";
 
 type Send = (msg: Record<string, unknown>) => void;
 export type Faces = Record<string, number[]>;
+export type Looks = Record<string, Record<string, string>>;
 
 /** The faces people can pick (the server only stores an index into this list). */
 export const FACES = [
@@ -15,6 +16,7 @@ const KEY = "snazzlebop:avatar";
 
 // The room publishes everyone's picked look here, so any screen can draw an avatar from just an id.
 let faces: Faces = {};
+let looks: Looks = {}; // pid -> the frame and victory animation their level unlocked (server-checked)
 let belt: string | null = null; // who wears the champion's crown
 const subs = new Set<() => void>();
 const useFaces = () =>
@@ -24,6 +26,14 @@ const useFaces = () =>
       return () => void subs.delete(fn);
     },
     () => faces,
+  );
+export const useLooks = () =>
+  useSyncExternalStore(
+    (fn) => {
+      subs.add(fn);
+      return () => void subs.delete(fn);
+    },
+    () => looks,
   );
 const useBelt = () =>
   useSyncExternalStore(
@@ -56,20 +66,23 @@ export const toneOf = (pid: string, all: Faces = faces) => all[pid]?.[1] ?? fall
 /** Mounted by the room page: shares the room's looks and sends this device's saved look once. */
 export function FaceHost({
   all,
+  frames,
   champion = null,
   you,
   send,
 }: {
   all: Faces | undefined;
+  frames?: Looks;
   champion?: string | null;
   you: string;
   send?: Send;
 }) {
   useEffect(() => {
     faces = all ?? {};
+    looks = frames ?? {};
     belt = champion;
     for (const fn of subs) fn();
-  }, [all, champion]);
+  }, [all, frames, champion]);
   const mine = all?.[you];
   useEffect(() => {
     const want = stored();
@@ -94,12 +107,13 @@ export function Avatar({
   className?: string;
 }) {
   const all = useFaces();
+  const frame = useLooks()[pid]?.frame;
   const champion = useBelt() === pid;
   const face = all[pid]?.[0];
   const colour = all[pid]?.[1] ?? (tone === undefined ? toneOf(pid, all) : tone % TONES);
   return (
     <span
-      className={`avatar tone-${colour} ${face === undefined ? "" : "face"} ${champion ? "belt" : ""} ${className}`}
+      className={`avatar tone-${colour} ${face === undefined ? "" : "face"} ${champion ? "belt" : ""} ${frame && frame !== "none" ? `frame-${frame}` : ""} ${className}`}
       aria-hidden="true"
     >
       {face === undefined ? initials(name) : FACES[face]}

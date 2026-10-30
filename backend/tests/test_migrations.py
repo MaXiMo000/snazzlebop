@@ -35,6 +35,7 @@ LATER_COLUMNS = {
         "place_boards",
         "xp",
         "plus_until",
+        "look",
     ],
     "sessions": ["device", "created_at", "last_seen"],
 }

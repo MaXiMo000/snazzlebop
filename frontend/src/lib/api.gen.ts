@@ -171,6 +171,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/billing/app-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * App User
+         * @description The id the store app gives RevenueCat for a purchase: this account, signed by this server.
+         */
+        get: operations["app_user_api_billing_app_user_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/billing/checkout": {
         parameters: {
             query?: never;
@@ -219,6 +239,27 @@ export interface paths {
          * @description Paddle's signed notifications. Anything unsigned, stale or about someone else is refused.
          */
         post: operations["paddle_webhook_api_billing_paddle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/revenuecat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revenuecat Webhook
+         * @description Plus bought in the apps (App Store, Google Play), as RevenueCat reports it. Refused without the
+         *     shared Authorization value; only accounts this server signed can be credited.
+         */
+        post: operations["revenuecat_webhook_api_billing_revenuecat_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1002,6 +1043,27 @@ export interface paths {
         get: operations["identities_api_me_identities_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/look": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Look
+         * @description Your unlocks: the avatar frames and victory animations open to your level, and your picks.
+         */
+        get: operations["my_look_api_me_look_get"];
+        put?: never;
+        /** Set Look */
+        post: operations["set_look_api_me_look_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1910,6 +1972,11 @@ export interface components {
             /** Slot */
             slot: string;
         };
+        /** AppUser */
+        AppUser: {
+            /** App User Id */
+            app_user_id: string;
+        };
         /**
          * BackupCodes
          * @description Shown once: each works once if the phone is lost.
@@ -2802,6 +2869,26 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** LookBody */
+        LookBody: {
+            /** Frame */
+            frame: string;
+            /** Win */
+            win: string;
+        };
+        /** LookOption */
+        LookOption: {
+            /** Id */
+            id: string;
+            /** Level */
+            level: number;
+            /** Name */
+            name: string;
+            /** Plus */
+            plus: boolean;
+            /** Unlocked */
+            unlocked: boolean;
+        };
         /** Market */
         Market: {
             /** Bonus */
@@ -2940,6 +3027,28 @@ export interface components {
             /** You Voted */
             you_voted: string | null;
         };
+        /**
+         * MyLook
+         * @description Your level unlocks: power-up slots, avatar frames and victory animations, and your picks.
+         */
+        MyLook: {
+            /** Frame */
+            frame: string;
+            /** Frames */
+            frames: components["schemas"]["LookOption"][];
+            /** Level */
+            level: number;
+            /** Plus */
+            plus: boolean;
+            /** Slot Level */
+            slot_level: number;
+            /** Slots */
+            slots: number;
+            /** Win */
+            win: string;
+            /** Wins */
+            wins: components["schemas"]["LookOption"][];
+        };
         /** MyPlace */
         MyPlace: {
             /** Expires At */
@@ -2976,6 +3085,8 @@ export interface components {
             can_manage: boolean;
             /** Gift */
             gift: boolean;
+            /** Source */
+            source: string | null;
             /** Status */
             status: string | null;
             /** Until */
@@ -3250,12 +3361,16 @@ export interface components {
         };
         /** Powers */
         Powers: {
+            /** Left */
+            left: number;
             /** Mine */
             mine: string | null;
             /** News */
             news: components["schemas"]["PowerUse"][];
             /** Offer */
             offer: components["schemas"]["PowerItem"][];
+            /** Slots */
+            slots: number;
             /** Used */
             used: boolean;
         };
@@ -3585,6 +3700,12 @@ export interface components {
             intro: components["schemas"]["Intro"] | null;
             /** Last Standings */
             last_standings: components["schemas"]["Standing"][];
+            /** Looks */
+            looks: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
             market: components["schemas"]["Market"] | null;
             night: components["schemas"]["Night"];
             party: components["schemas"]["Party"];
@@ -4980,6 +5101,98 @@ export interface operations {
             };
         };
     };
+    app_user_api_billing_app_user_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppUser"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     checkout_api_billing_checkout_post: {
         parameters: {
             query?: never;
@@ -5093,6 +5306,98 @@ export interface operations {
         };
     };
     paddle_webhook_api_billing_paddle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    revenuecat_webhook_api_billing_revenuecat_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -9289,6 +9594,194 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Identities"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    my_look_api_me_look_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyLook"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    set_look_api_me_look_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LookBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyLook"];
                 };
             };
             /** @description Bad request */
