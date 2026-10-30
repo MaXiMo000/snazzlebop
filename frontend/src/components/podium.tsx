@@ -18,7 +18,8 @@ export function Podium({ state }: { state: RoomState }) {
     played.current = true;
     const t = window.setTimeout(() => {
       sfx.fanfare();
-      if (spots[0] && spots[0].id === state.you) fx.celebrate();
+      // every winner gets confetti, tied ones too
+      if (spots.some((x) => x.id === state.you && x.points === spots[0]!.points)) fx.celebrate();
     }, 1200);
     return () => window.clearTimeout(t);
   }, [spots, state.you, fx]);
@@ -37,7 +38,8 @@ export function Podium({ state }: { state: RoomState }) {
           const s = spots[i]!;
           const place = placeOf(s.points);
           return (
-            <li key={s.id} className={`podium-spot p${i + 1}`}>
+            // styled by the place earned (a tie shares the step), not by position in the list
+            <li key={s.id} className={`podium-spot p${place + 1}`}>
               <span className="podium-who">
                 {place === 0 && (
                   <span className="podium-crown" aria-hidden="true">
