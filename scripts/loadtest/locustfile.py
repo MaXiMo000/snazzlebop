@@ -130,7 +130,7 @@ class Suite:
             try:
                 extra = self.connect()
             except websocket.WebSocketBadStatusException as exc:
-                return f"{SOCKET_CAP} sockets accepted; one more refused at handshake (HTTP {exc.status_code})"
+                return f"{SOCKET_CAP} sockets accepted; one more refused (HTTP {exc.status_code})"
             extra.close()
             raise Fail(f"socket {SOCKET_CAP + 1} from one IP was accepted")
         finally:
