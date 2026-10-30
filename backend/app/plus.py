@@ -162,7 +162,8 @@ def router(settings: Settings, db: Any) -> APIRouter:
         user = await me(request)
         sub = await db.my_subscription(user.id)
         body = {
-            "active": billing.is_plus(user.plus_until),
+            "active": billing.has_plus(user),
+            "gift": billing.is_friend(user) and not billing.is_plus(user.plus_until),
             "until": aware(user.plus_until).isoformat() if user.plus_until else None,
             "status": sub.status if sub is not None else None,
             "can_manage": bool(sub is not None and sub.customer_id and settings.paddle_api_key),

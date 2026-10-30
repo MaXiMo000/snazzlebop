@@ -887,7 +887,7 @@ test("every page, signed out and signed in: fits the screen, passes axe, 44px ta
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(e.message));
   const found: string[] = [];
-  const pages = ["/", "/clubs", "/quests", "/ratings", "/battles", "/coins", "/plus", "/account", "/privacy", "/safety", "/places", "/inbox"];
+  const pages = ["/", "/clubs", "/quests", "/ratings", "/battles", "/coins", "/plus", "/account", "/privacy", "/terms", "/safety", "/places", "/inbox"];
   const visit = async (who: string) => {
     for (const path of pages) {
       await page.goto(path);
@@ -954,7 +954,7 @@ test("layout sweep: every page at 320, phone, tablet, laptop and TV widths, both
   test.skip(info.project.name !== "desktop", "one sweep covers every width");
   test.setTimeout(600_000);
   const found: string[] = [];
-  const pages = ["/", "/clubs", "/quests", "/ratings", "/battles", "/coins", "/plus", "/account", "/privacy", "/safety", "/places", "/inbox"];
+  const pages = ["/", "/clubs", "/quests", "/ratings", "/battles", "/coins", "/plus", "/account", "/privacy", "/terms", "/safety", "/places", "/inbox"];
   const ctx = await context(browser, { baseURL });
   const name = `Ly${Date.now() % 100000}`;
   const r = await ctx.request.post(`${baseURL}/api/auth/signup`, { data: { username: name, password: "layout sweep check 42" }, headers: { Origin: baseURL! } });

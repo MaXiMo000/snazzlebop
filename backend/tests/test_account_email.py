@@ -142,7 +142,8 @@ def test_changing_and_removing_the_email(client):
         "email_verified": False,
         "has_password": True,
         "plus_until": None,
-        "ads": False,
+        "plus": False,
+        "ads": True,
     }
     sent = dict((to, m.subject) for to, m in outbox(client))
     assert sent == {

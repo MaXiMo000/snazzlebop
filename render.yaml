@@ -60,6 +60,9 @@ services:
         sync: false
       - key: ADSENSE_SLOT
         sync: false
+      # Optional: confirmed email addresses that get Plus free (comma separated). Personal data.
+      - key: PLUS_FRIENDS
+        sync: false
       # Optional account email: MAIL_FROM plus Resend (RESEND_API_KEY) or SMTP (host, user, pass).
       # Unset = no email. PUBLIC_URL only for a custom domain (links default to the Render address).
       - key: MAIL_FROM
@@ -81,6 +84,8 @@ services:
         sync: false
       # Where privacy requests go, shown on the privacy notice.
       - key: PRIVACY_CONTACT
+        sync: false
+      - key: OPERATOR_NAME
         sync: false
       # Optional: report events to a webhook, and a token for systems that write back.
       - key: REPORT_WEBHOOK_URL

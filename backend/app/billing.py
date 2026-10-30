@@ -21,7 +21,9 @@ from __future__ import annotations
 import hashlib
 import hmac
 import time
+from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from .config import Settings
 
@@ -103,9 +105,25 @@ def is_plus(until: datetime | None, now: datetime | None = None) -> bool:
     return until is not None and _aware(until) > (now or datetime.now(UTC))
 
 
-def shows_ads(plus: datetime | None, now: datetime | None = None) -> bool:
-    """Ads for this account? Everyone sees the two between-game spots except Plus members."""
-    return not is_plus(plus, now)
+# Confirmed email addresses that have Plus without paying (PLUS_FRIENDS), set once at startup.
+_friends: frozenset[str] = frozenset()
+
+
+def set_friends(emails: Iterable[str]) -> None:
+    global _friends
+    _friends = frozenset(e.lower() for e in emails)
+
+
+def is_friend(user: Any) -> bool:
+    """On the friends list, by an address the account has confirmed (an unconfirmed one proves nothing)."""
+    email = getattr(user, "email", None)
+    return bool(_friends and email and getattr(user, "email_verified", False) and email.lower() in _friends)
+
+
+def has_plus(user: Any, now: datetime | None = None) -> bool:
+    """Plus for everything a member gets (no ads, emote packs, the badge): paid, or on the friends list.
+    The monthly coins and items still come only with a paid month."""
+    return is_plus(getattr(user, "plus_until", None), now) or is_friend(user)
 
 
 def parse_time(raw: object) -> datetime | None:

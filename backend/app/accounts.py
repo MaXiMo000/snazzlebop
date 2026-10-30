@@ -296,7 +296,8 @@ def public_user(user: Any) -> dict[str, Any]:
         "email_verified": bool(user.email_verified),
         "has_password": bool(user.pw_hash),
         "plus_until": aware(user.plus_until).isoformat() if billing.is_plus(user.plus_until) else None,
-        "ads": billing.shows_ads(user.plus_until),
+        "plus": billing.has_plus(user),
+        "ads": not billing.has_plus(user),
     }
 
 

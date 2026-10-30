@@ -22,11 +22,18 @@ function Link({ to, go, children }: { to: string; go: Go; children: string }) {
 /** The privacy notice: what's kept, why, for how long, who else touches it, and your rights. */
 export function Privacy({ go }: { go: Go }) {
   const [contact, setContact] = useState<string | null>(null);
+  const [operator, setOperator] = useState<string | null>(null);
   const [billing, setBilling] = useState<BillingConfig | null>(null);
   useEffect(() => void billingConfig().then(setBilling, () => undefined), []);
   useEffect(() => {
     document.title = "Privacy · Snazzlebop";
-    siteInfo().then((s) => setContact(s.privacy_contact), () => undefined);
+    siteInfo().then(
+      (s) => {
+        setContact(s.privacy_contact);
+        setOperator(s.operator);
+      },
+      () => undefined,
+    );
   }, []);
 
   return (
@@ -35,6 +42,7 @@ export function Privacy({ go }: { go: Go }) {
         <p className="sign">Privacy</p>
         <h1 className="space-top prose-title">What we keep, and why</h1>
         <p className="space-top">Short version: as little as we can, never sold, never used for ads that follow you around.</p>
+        {operator && <p className="space-top">Snazzlebop is run by {operator}, who is responsible for your data here.</p>}
       </Card>
 
       <Card aria-labelledby="pv-play">
@@ -88,6 +96,7 @@ export function Privacy({ go }: { go: Go }) {
           <li><b>Fix it:</b> change your email or password on your <Link to="/account" go={go}>account page</Link>.</li>
           <li><b>Delete it:</b> deleting your account removes it and everything tied to it straight away. Other people's game results stay correct but no longer point to you.</li>
           <li><b>Ask us:</b> {contact ? <>write to <b className="prose-contact">{contact}</b>. We answer within 30 days.</> : "use the contact on this page once it's set up for this site."}</li>
+          <li><b>Complain:</b> if we don't sort it out, you can go to your data protection authority (in India, the Data Protection Board of India; in the EU or UK, your national regulator).</li>
         </ul>
       </Card>
 

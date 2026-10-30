@@ -1,6 +1,6 @@
 """Snazzlebop Plus and ads: only Paddle's signed webhooks turn Plus on or pay its perks (unsigned, stale,
-forged, resent or someone else's events change nothing), the month's perks pay once, ads stay off for
-new accounts and Plus members, and the page only loads third-party code when it's configured."""
+forged, resent or someone else's events change nothing), the month's perks pay once, ads stay off only for
+Plus members (paid, or a confirmed address on the friends list), and the page only loads third-party code when it's configured."""
 
 from __future__ import annotations
 
@@ -54,9 +54,9 @@ class RuleTests(unittest.TestCase):
 
     def test_ads_and_plus(self):
         now = datetime.now(UTC)
-        self.assertTrue(B.shows_ads(None, now))  # a brand-new account: no free period to game
-        self.assertTrue(B.shows_ads(now - timedelta(days=1), now))  # Plus has run out
-        self.assertFalse(B.shows_ads(now + timedelta(days=3), now))  # Plus
+        self.assertFalse(B.is_plus(None, now))  # a brand-new account: no free period to game
+        self.assertFalse(B.is_plus(now - timedelta(days=1), now))  # Plus has run out
+        self.assertTrue(B.is_plus(now + timedelta(days=3), now))
         end = now + timedelta(days=20)
         self.assertEqual(B.plus_until("active", end, now), end + B.GRACE)
         self.assertEqual(B.plus_until("canceled", end, now), end)  # paid time is kept
@@ -240,3 +240,52 @@ def test_malformed_signed_events_change_nothing(shop):
     assert shop.get("/api/me").json()["user"]["plus_until"] is None  # without a period end, no Plus
     plus = shop.get("/api/me/plus").json()
     assert plus["until"] is None
+
+
+def test_friends_get_plus_only_by_a_confirmed_address(tmp_path):
+    s = settings(tmp_path, rate_auth_burst=1000, plus_friends=("pal@example.com",))
+    with TestClient(create_app(s)) as c:
+        db = c.app.state.db
+        signup(c)
+        user = c.portal.call(db.user_by_name, "Ana_99")
+        assert c.get("/api/me").json()["user"]["plus"] is False
+
+        # Typing a friend's address on your own account proves nothing until it's confirmed.
+        c.portal.call(db.set_email, user.id, "PAL@example.com")
+        me = c.get("/api/me").json()["user"]
+        assert me["plus"] is False and me["ads"] is True
+        assert c.get("/api/me/plus").json()["active"] is False
+
+        assert c.portal.call(db.confirm_email, user.id, "pal@example.com")
+        me = c.get("/api/me").json()["user"]
+        assert me["plus"] is True and me["ads"] is False and me["plus_until"] is None
+        mine = c.get("/api/me/plus").json()
+        assert mine["active"] is True and mine["gift"] is True and mine["can_manage"] is False
+        assert c.portal.call(db.owns_item, user.id, "emote_spooky")  # every emote pack, as a member
+
+        # A new address (unconfirmed) ends it; so does an address that isn't on the list.
+        c.portal.call(db.set_email, user.id, "someone@example.com")
+        assert c.get("/api/me").json()["user"]["plus"] is False
+        assert c.portal.call(db.confirm_email, user.id, "someone@example.com")
+        assert c.get("/api/me").json()["user"]["plus"] is False
+
+
+def test_the_friends_list_reads_only_addresses():
+    from app.config import _emails
+
+    raw = " Pal@Example.com, bo@x.io\nnot-an-email  ,@x.com, cy@site "
+    assert _emails(raw) == ("pal@example.com", "bo@x.io")
+    assert _emails(None) == ()
+    shown = repr(Settings(secret_key="k" * 40, plus_friends=("pal@example.com",)))
+    assert "pal@example.com" not in shown  # personal data never lands in logs
+
+
+def test_ads_txt_names_only_the_configured_publisher(tmp_path):
+    with TestClient(create_app(settings(tmp_path))) as c:
+        r = c.get("/ads.txt")
+        assert r.status_code == 200 and r.text == ""  # ads off: nothing to declare
+    s = settings(tmp_path, adsense_client="ca-pub-1234567890123456", adsense_slot="1234567890")
+    with TestClient(create_app(s)) as c:
+        r = c.get("/ads.txt")
+        assert r.text == "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n"
+        assert r.headers["content-type"].startswith("text/plain")

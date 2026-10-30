@@ -2974,6 +2974,8 @@ export interface components {
             active: boolean;
             /** Can Manage */
             can_manage: boolean;
+            /** Gift */
+            gift: boolean;
             /** Status */
             status: string | null;
             /** Until */
@@ -3318,6 +3320,8 @@ export interface components {
             email_verified: boolean;
             /** Has Password */
             has_password: boolean;
+            /** Plus */
+            plus: boolean;
             /** Plus Until */
             plus_until: string | null;
             /** Powerups */
@@ -3826,6 +3830,8 @@ export interface components {
         };
         /** SiteInfo */
         SiteInfo: {
+            /** Operator */
+            operator: string | null;
             /** Privacy Contact */
             privacy_contact: string | null;
         };

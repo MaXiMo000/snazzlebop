@@ -99,6 +99,7 @@ function SignIn({ onCode, start, notice }: { onCode: (code: string) => void; sta
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
+  const [adult, setAdult] = useState(false);
   const [otp, setOtp] = useState<string | null>(null); // null until the server asks for a code
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +139,7 @@ function SignIn({ onCode, start, notice }: { onCode: (code: string) => void; sta
       : "Get back in with the recovery code you saved at sign-up.",
   };
   const ready =
-    !!username.trim() && !!password && otp?.trim() !== "" && (tab !== "forgot" || recoveryCode.trim().length >= 10) && (tab !== "up" || password.length >= 8);
+    !!username.trim() && !!password && otp?.trim() !== "" && (tab !== "forgot" || recoveryCode.trim().length >= 10) && (tab !== "up" || (password.length >= 8 && adult));
 
   return (
     <div className="stack enter acct auth">
@@ -198,6 +199,13 @@ function SignIn({ onCode, start, notice }: { onCode: (code: string) => void; sta
             {google && tab !== "forgot" && (
               <div className="space-top">
                 <GoogleButton label={tab === "up" ? "Sign up with Google" : "Continue with Google"} />
+                <p className="muted acct-hint center">
+                  A new account with Google means you're 18 or older and agree to the{" "}
+                  <a href="/terms" target="_blank" rel="noopener">
+                    Terms
+                  </a>
+                  .
+                </p>
                 <OrLine />
               </div>
             )}
@@ -282,6 +290,17 @@ function SignIn({ onCode, start, notice }: { onCode: (code: string) => void; sta
                     </button>
                   )}
                 </div>
+              )}
+              {tab === "up" && (
+                <label className="check">
+                  <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} />
+                  <span>
+                    I'm 18 or older and agree to the{" "}
+                    <a href="/terms" target="_blank" rel="noopener">
+                      Terms
+                    </a>
+                  </span>
+                </label>
               )}
               {otp !== null && tab !== "up" && <OtpField id={`${id}-otp`} value={otp} set={setOtp} />}
               <Alert text={error} />
@@ -446,7 +465,7 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
             Your ratings
           </Btn>
           <Btn variant="ghost" onClick={() => go("/plus")}>
-            {user.plus_until ? "Your Plus" : "Get Plus"}
+            {user.plus ? "Your Plus" : "Get Plus"}
           </Btn>
           <Btn variant="ghost" onClick={() => go("/battles")}>
             Your battles

@@ -3204,6 +3204,10 @@
             "title": "Can Manage",
             "type": "boolean"
           },
+          "gift": {
+            "title": "Gift",
+            "type": "boolean"
+          },
           "status": {
             "anyOf": [
               {
@@ -3231,7 +3235,8 @@
           "active",
           "until",
           "status",
-          "can_manage"
+          "can_manage",
+          "gift"
         ],
         "title": "MyPlus",
         "type": "object"
@@ -4230,6 +4235,10 @@
             "title": "Has Password",
             "type": "boolean"
           },
+          "plus": {
+            "title": "Plus",
+            "type": "boolean"
+          },
           "plus_until": {
             "anyOf": [
               {
@@ -4261,6 +4270,7 @@
           "email_verified",
           "has_password",
           "plus_until",
+          "plus",
           "ads"
         ],
         "title": "PublicUser",
@@ -5780,6 +5790,17 @@
       "SiteInfo": {
         "additionalProperties": false,
         "properties": {
+          "operator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator"
+          },
           "privacy_contact": {
             "anyOf": [
               {
@@ -5793,7 +5814,8 @@
           }
         },
         "required": [
-          "privacy_contact"
+          "privacy_contact",
+          "operator"
         ],
         "title": "SiteInfo",
         "type": "object"

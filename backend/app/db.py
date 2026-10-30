@@ -2069,7 +2069,7 @@ class Database:
             user = await session.get(User, user_id)
             if user is None:
                 return False
-            if item.startswith("emote_") and billinglib.is_plus(user.plus_until):
+            if item.startswith("emote_") and billinglib.has_plus(user):
                 return True
             return (user.powerups or {}).get(item, 0) > 0
 

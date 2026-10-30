@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import (
@@ -57,9 +57,9 @@ from .ws import ConnectionCounter, serve_socket
 log = logging.getLogger("snazzlebop")
 
 # The SPA's own pages (App.tsx): /, /r/<CODE>, /account (and /forgot, /reset, /verify), /inbox, /clubs,
-# /clubs/<slug> (and /reports), /join/<invite>, /places, /privacy, /safety and /staff (and /places).
+# /clubs/<slug> (and /reports), /join/<invite>, /places, /privacy, /terms, /safety and /staff (and /places).
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|ratings|coins|battles|quests|plus|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|terms|ratings|coins|battles|quests|plus|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 
@@ -79,6 +79,7 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     setup_logging(settings.is_production)
+    billing.set_friends(settings.plus_friends)
     db = Database(settings.database_url)
     background: set[asyncio.Task[None]] = set()
 
@@ -236,6 +237,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/healthz", include_in_schema=False)
     async def healthz() -> dict[str, bool]:
         return {"ok": True}
+
+    @app.get("/ads.txt", include_in_schema=False)
+    async def ads_txt() -> PlainTextResponse:
+        """Who may sell this site's ad space (AdSense checks it). Empty when ads are off."""
+        line = ""
+        if billing.ads_on(settings):
+            pub = settings.adsense_client.removeprefix("ca-")
+            line = f"google.com, {pub}, DIRECT, f08c47fec0942fa0\n"
+        return PlainTextResponse(line, headers={"Cache-Control": "public, max-age=3600"})
 
     @app.get("/api/games", response_model=list[schemas.GameCard])
     async def games() -> list[dict[str, Any]]:

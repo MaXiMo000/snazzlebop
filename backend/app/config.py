@@ -13,6 +13,12 @@ def _csv(value: str | None) -> tuple[str, ...]:
     return tuple(x.strip() for x in (value or "").split(",") if x.strip())
 
 
+def _emails(value: str | None) -> tuple[str, ...]:
+    """Comma- or space-separated addresses, lower-cased; anything that isn't an address is dropped."""
+    found = (x.strip().lower() for x in re.split(r"[,\s]+", value or ""))
+    return tuple(x for x in found if re.fullmatch(r"[^@\s]{1,64}@[^@\s]{1,253}\.[a-z]{2,}", x))
+
+
 def normalize_database_url(url: str) -> str:
     """Render hands out postgres:// or postgresql:// URLs; SQLAlchemy async needs a driver."""
     url = url.strip()
@@ -106,6 +112,7 @@ class Settings:
     google_client_id: str = ""
     google_client_secret: str = field(default="", repr=False)
     privacy_contact: str = ""  # where privacy requests go (shown on the privacy notice)
+    operator_name: str = ""  # who runs the site (legal name, as on the payment account): Terms and Privacy
 
     # Optional: other systems working on reports (events.py, outbox.py, integrations.py).
     report_webhook_url: str = ""  # each report event is POSTed here, signed
@@ -120,6 +127,10 @@ class Settings:
     # Optional: Google AdSense on the lobby and results screens (billing.py). Unset = no ads.
     adsense_client: str = ""  # ca-pub-...
     adsense_slot: str = ""  # the display ad unit's id
+
+    # Confirmed email addresses that get Plus without paying (friends of the site). Personal data:
+    # set it in the dashboard, never in the repo.
+    plus_friends: tuple[str, ...] = field(default=(), repr=False)
 
     # Platform staff (staff.py): these usernames, and only with an authenticator app turned on.
     staff_usernames: tuple[str, ...] = field(default=(), repr=False)
@@ -244,6 +255,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         google_client_id=e.get("GOOGLE_CLIENT_ID", "").strip(),
         google_client_secret=e.get("GOOGLE_CLIENT_SECRET", "").strip(),
         privacy_contact=e.get("PRIVACY_CONTACT", "").strip()[:200],
+        operator_name=e.get("OPERATOR_NAME", "").strip()[:200],
         report_webhook_url=webhook,
         report_webhook_secret=webhook_secret,
         integration_token=integration_token,
@@ -255,6 +267,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         paddle_plus_price=e.get("PADDLE_PLUS_PRICE", "").strip(),
         adsense_client=adsense_client,
         adsense_slot=e.get("ADSENSE_SLOT", "").strip(),
+        plus_friends=_emails(e.get("PLUS_FRIENDS")),
         jumpscare=e.get("JUMPSCARE", "on").strip().lower() not in ("off", "0", "false", "no"),
         jumpscare_names=_csv(e.get("JUMPSCARE_NAMES")) or JUMPSCARE_DEFAULT_NAMES,
     )

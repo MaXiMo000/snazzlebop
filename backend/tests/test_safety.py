@@ -226,7 +226,7 @@ def test_too_many_reports_in_a_day(client):
 
 
 def test_download_my_data_and_the_privacy_contact(client):
-    assert client.get("/api/site").json() == {"privacy_contact": "privacy@example.com"}
+    assert client.get("/api/site").json() == {"privacy_contact": "privacy@example.com", "operator": None}
     be(client, "Bo_42")
     be(client, "Ana_99")
     client.post("/api/blocks", json={"username": "Bo_42"})

@@ -15,6 +15,7 @@ import { Room } from "./pages/Room";
 const ClubReports = lazy(() => import("./pages/ClubReports").then((m) => ({ default: m.ClubReports })));
 const InboxPage = lazy(() => import("./pages/Inbox").then((m) => ({ default: m.InboxPage })));
 const Privacy = lazy(() => import("./pages/Privacy").then((m) => ({ default: m.Privacy })));
+const Terms = lazy(() => import("./pages/Terms").then((m) => ({ default: m.Terms })));
 const Safety = lazy(() => import("./pages/Safety").then((m) => ({ default: m.Safety })));
 const Places = lazy(() => import("./pages/Places").then((m) => ({ default: m.Places })));
 const Coins = lazy(() => import("./pages/Coins").then((m) => ({ default: m.Coins })));
@@ -30,6 +31,7 @@ const CLUBS_PATH = /^\/clubs\/?$/;
 const CLUB_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/?$/;
 const CLUB_REPORTS_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/reports\/?$/;
 const PRIVACY_PATH = /^\/privacy\/?$/;
+const TERMS_PATH = /^\/terms\/?$/;
 const SAFETY_PATH = /^\/safety\/?$/;
 const STAFF_PATH = /^\/staff\/?$/;
 const STAFF_PLACES_PATH = /^\/staff\/places\/?$/;
@@ -189,6 +191,8 @@ export function App() {
           <ClubReports key={reportsMatch[1]} slug={reportsMatch[1]!} go={go} />
         ) : PRIVACY_PATH.test(path) ? (
           <Privacy go={go} />
+        ) : TERMS_PATH.test(path) ? (
+          <Terms go={go} />
         ) : SAFETY_PATH.test(path) ? (
           <Safety go={go} />
         ) : STAFF_PATH.test(path) ? (
@@ -240,6 +244,7 @@ function SiteFooter({ go }: { go: (p: string) => void }) {
     <footer className="site-footer">
       <nav aria-label="About this site">
         {link("/privacy", "Privacy")}
+        {link("/terms", "Terms")}
         {link("/safety", "Safety and data")}
         {link("/clubs", "Clubs")}
         {link("/ratings", "Ratings")}

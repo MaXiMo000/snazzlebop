@@ -121,6 +121,10 @@ export function Plus({ go }: { go: Go }) {
           <Btn className="space-top" variant="gold" onClick={() => go("/account")}>
             Sign in to join
           </Btn>
+        ) : mine?.gift ? (
+          <p className="space-top">
+            <span className="chip teal">Plus</span> A gift from Snazzlebop: every perk, nothing to pay or renew.
+          </p>
         ) : mine?.active ? (
           <div className="space-top stack-sm">
             <p>

@@ -78,7 +78,8 @@ class PublicUser(Strict):
     email_verified: bool
     has_password: bool  # false for an account that signs in only with Google
     plus_until: str | None  # Snazzlebop Plus is on until then (ISO 8601); None: not a member
-    ads: bool  # ads may show to this account (not Plus, and past its first ad-free days)
+    plus: bool  # every Plus perk is on: paid, or a confirmed address on the friends list
+    ads: bool  # ads may show to this account (everyone but Plus)
 
 
 class AdIds(Strict):
@@ -111,6 +112,7 @@ class MyPlus(Strict):
     until: str | None  # ISO 8601
     status: str | None  # Paddle's: active | canceled | past_due | paused ...
     can_manage: bool  # a link to Paddle's page to change or cancel is available
+    gift: bool  # Plus as a friend of the site (nothing to renew or cancel)
 
 
 class PlusManage(Strict):
@@ -749,6 +751,7 @@ class SessionList(Strict):
 
 class SiteInfo(Strict):
     privacy_contact: str | None
+    operator: str | None  # the legal name that runs the site
 
 
 class Invitee(Strict):

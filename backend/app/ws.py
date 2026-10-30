@@ -127,7 +127,7 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
                 hub.link_account(room, pid, user.id)
         if pid in room.accounts and state.db.ready:
             owner = await state.db.user_by_id(room.accounts[pid])
-            hub.set_plus(room, pid, owner is not None and billing.is_plus(owner.plus_until))
+            hub.set_plus(room, pid, owner is not None and billing.has_plus(owner))
         await hub.connect(room, pid, conn)
 
         bucket = RateLimiter(settings.ws_msgs_per_second, settings.ws_msg_burst, max_keys=1)

@@ -428,6 +428,8 @@ def router(settings: Settings, db: Any, hub: Hub, presence: Presence, outbox: Ou
     @api.get("/api/site", response_model=schemas.SiteInfo)
     async def site() -> JSONResponse:
         """Public facts the pages need: who to contact about privacy."""
-        return JSONResponse({"privacy_contact": settings.privacy_contact or None})
+        return JSONResponse(
+            {"privacy_contact": settings.privacy_contact or None, "operator": settings.operator_name or None}
+        )
 
     return api
