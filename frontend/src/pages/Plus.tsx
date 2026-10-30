@@ -149,7 +149,7 @@ export function Plus({ go }: { go: Go }) {
             )}
             {mine.can_manage && !inApp && (
               <Btn variant="ghost" disabled={busy} onClick={() => void manage()}>
-                Change or cancel
+                Update card or cancel
               </Btn>
             )}
           </div>

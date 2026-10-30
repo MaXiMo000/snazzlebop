@@ -175,6 +175,15 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     paddle_env = e.get("PADDLE_ENV", "sandbox").strip().lower() or "sandbox"
     if paddle_env not in ("sandbox", "production"):
         raise ValueError("PADDLE_ENV must be sandbox or production")
+    # Paddle ids are easy to mix up in the dashboard: refuse to start with the wrong kind, so the deploy
+    # log says what's wrong (and the running version stays up) instead of checkouts failing later.
+    plus_price = e.get("PADDLE_PLUS_PRICE", "").strip()
+    if plus_price and not re.fullmatch(r"pri_[a-z0-9]{10,64}", plus_price):
+        raise ValueError("PADDLE_PLUS_PRICE must be the price id (pri_...), not the product id (pro_...)")
+    client_token = e.get("PADDLE_CLIENT_TOKEN", "").strip()
+    want_prefix = "live_" if paddle_env == "production" else "test_"
+    if client_token and not client_token.startswith(want_prefix):
+        raise ValueError(f"PADDLE_ENV={paddle_env} needs a client token starting {want_prefix}")
     adsense_client = e.get("ADSENSE_CLIENT", "").strip()
     if adsense_client and not re.fullmatch(r"ca-pub-\d{10,20}", adsense_client):
         raise ValueError("ADSENSE_CLIENT must look like ca-pub-1234567890123456")
@@ -265,10 +274,10 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         integration_token=integration_token,
         staff_usernames=tuple(n.casefold() for n in _csv(e.get("STAFF_USERNAMES"))),
         paddle_env=paddle_env,
-        paddle_client_token=e.get("PADDLE_CLIENT_TOKEN", "").strip(),
+        paddle_client_token=client_token,
         paddle_api_key=e.get("PADDLE_API_KEY", "").strip(),
         paddle_webhook_secret=e.get("PADDLE_WEBHOOK_SECRET", "").strip(),
-        paddle_plus_price=e.get("PADDLE_PLUS_PRICE", "").strip(),
+        paddle_plus_price=plus_price,
         adsense_client=adsense_client,
         adsense_slot=e.get("ADSENSE_SLOT", "").strip(),
         plus_friends=_emails(e.get("PLUS_FRIENDS")),

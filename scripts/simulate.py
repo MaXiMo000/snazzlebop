@@ -2663,6 +2663,10 @@ async def play_boxes(host: Bot, bots: list[Bot], rng: random.Random) -> None:
         for b in rng.sample(bots, k=len(bots)):
             if rng.random() < 0.3:
                 await b.send(t="act", a="say", line=rng.randrange(5))
+                # wait for the claim to land: one still in flight when the host closes the auction is
+                # (rightly) refused with wrong_phase
+                said = b.pid
+                await host.until(lambda s, p=said: p in (s["game"].get("claims") or {}), "claim lands")
             coins = b.state["game"]["coins"][b.pid]  # type: ignore[index]
             amount = high + 10 * rng.randint(1, 8)
             if rng.random() < 0.5 and amount <= coins:

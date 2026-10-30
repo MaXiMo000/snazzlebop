@@ -225,7 +225,12 @@ def router(settings: Settings, db: Any) -> APIRouter:
             raise HubError("no_subscription", "There's no subscription to manage", 404)
         url = await asyncio.to_thread(_portal, settings, sub.customer_id)
         if url is None:
-            raise HubError("portal_down", "Paddle didn't answer: try again in a minute", 502)
+            raise HubError(
+                "portal_down",
+                "Couldn't open Paddle's page for this subscription: try again in a minute, "
+                "or use the link in your Paddle receipt email",
+                502,
+            )
         return JSONResponse({"url": url}, headers={"Cache-Control": "no-store"})
 
     return api

@@ -406,3 +406,19 @@ def test_a_full_size_paddle_event_gets_through_and_a_huge_body_does_not(shop):
         shop.post("/api/auth/login", content=form, headers={"content-type": "application/json"}).status_code
         == 413
     )
+
+
+def test_mixed_up_paddle_ids_stop_the_deploy_with_a_clear_reason():
+    from app.config import load_settings
+
+    base = {"SECRET_KEY": "k" * 40, "ALLOWED_HOSTS": "x.test", "PADDLE_ENV": "production"}
+    with pytest.raises(ValueError, match="price id"):
+        load_settings({**base, "PADDLE_PLUS_PRICE": "pro_01m67a6rrqfm87rjchqakd72bt"})
+    with pytest.raises(ValueError, match="live_"):
+        load_settings({**base, "PADDLE_CLIENT_TOKEN": "test_abc"})
+    with pytest.raises(ValueError, match="test_"):
+        load_settings({**base, "PADDLE_ENV": "sandbox", "PADDLE_CLIENT_TOKEN": "live_abc"})
+    ok = load_settings(
+        {**base, "PADDLE_CLIENT_TOKEN": "live_abc", "PADDLE_PLUS_PRICE": "pri_01m6742j71p0w02c9yvc25gep0"}
+    )
+    assert ok.paddle_plus_price.startswith("pri_") and ok.paddle_client_token == "live_abc"
