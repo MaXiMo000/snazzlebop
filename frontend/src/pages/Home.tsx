@@ -8,6 +8,7 @@ import { YourCorner } from "../components/nav";
 import { GameInfo, GameTile } from "../components/gamecards";
 import { Sheet } from "../components/sheet";
 import { Mascot } from "../components/mascot";
+import { AdSlot } from "../components/ad";
 import type { GameCard } from "../types";
 
 type Category = { id: string; label: string; title: string; blurb: string };
@@ -216,6 +217,7 @@ export function Home({ go }: { go: (path: string) => void }) {
       </section>
 
       <InstallApp />
+      <AdSlot go={go} lazy />
     </div>
   );
 }

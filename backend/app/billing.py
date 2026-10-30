@@ -12,7 +12,7 @@ webhooks: a checkout can't grant anything by itself.
   once per billing period through the coin ledger.
 
 Plus: no ads, coins and a few party items each month, every emote pack while it lasts, and a badge. Ads only
-show on the lobby and results screens, never during a game and never to Plus members.
+show in the lobby, on results and at the foot of the home page, never during a game and never to Plus members.
 Pure apart from the signature helpers (stdlib only).
 """
 

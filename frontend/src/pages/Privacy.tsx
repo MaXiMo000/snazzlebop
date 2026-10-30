@@ -78,7 +78,7 @@ export function Privacy({ go }: { go: Go }) {
           )}
           {billing?.ads && (
             <li>
-              Ads come from Google AdSense, only in the lobby and on the results screens, never during a game and never for Plus members. Google may use cookies to choose and measure them; where the law requires it, you're asked first and can say no.
+              Ads come from Google AdSense, only in the lobby, on the results screen and at the bottom of the home page, never during a game and never for Plus members. Google may use cookies to choose and measure them; where the law requires it, you're asked first and can say no.
             </li>
           )}
           <li>If we use a support or ticketing tool to handle reports, a report goes to it with the reported person's name and what they said, but no emails, and the person who reported only as an anonymous reference.</li>

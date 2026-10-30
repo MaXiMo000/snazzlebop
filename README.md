@@ -114,7 +114,7 @@ original has them.
 - **Snazzlebop Plus:** a cheap monthly membership sold worldwide through Paddle (local currencies,
   cards, PayPal, Apple Pay, Google Pay, UPI; tax handled): no ads, coins and party items every month,
   every emote pack and a badge. It turns on only from Paddle's signed notifications.
-- **Ads:** optional Google AdSense, only on the lobby and results screens, never during a game, never
+- **Ads:** optional Google AdSense, only in the lobby, on results and at the bottom of the home page, never during a game, never
   for Plus members.
 - **Party items:** confetti cannon, air horn, drum roll, standing ovation, spotlight and a slow-mo replay
   of the last game's big moment: used any time in a room, played on every screen (the TV too), no effect
@@ -177,7 +177,7 @@ Everything is read from the environment; [.env.example](.env.example) lists ever
 | `ANTHROPIC_API_KEY` | no | grows the content pools with fresh, validated items |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | no | turns on voice and video calls |
 | `PADDLE_CLIENT_TOKEN`, `PADDLE_WEBHOOK_SECRET`, `PADDLE_PLUS_PRICE` (+ `PADDLE_ENV`, `PADDLE_API_KEY`) | no | sells Snazzlebop Plus worldwide through Paddle |
-| `ADSENSE_CLIENT`, `ADSENSE_SLOT` | no | Google AdSense ads on the lobby and results screens |
+| `ADSENSE_CLIENT`, `ADSENSE_SLOT` | no | Google AdSense ads in the lobby, on results and at the bottom of the home page |
 | `REVENUECAT_WEBHOOK_AUTH` (+ `REVENUECAT_ENTITLEMENT`) | no | Plus bought in the Android and iOS apps, through RevenueCat; one Plus across web and apps |
 | `PLUS_FRIENDS` | no | email addresses that get Plus free once confirmed on their account (no ads, emote packs, badge) |
 | `OPERATOR_NAME`, `PRIVACY_CONTACT` | for payments | who runs the site (legal name) and how to reach them, shown on Terms and Privacy |

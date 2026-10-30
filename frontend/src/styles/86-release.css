@@ -1038,3 +1038,7 @@ li,
   text-align: center;
   transform: translate(-50%, -50%);
 }
+/* where a lazy ad will load once scrolled near: takes no room until then */
+.ad-spot {
+  height: 1px;
+}

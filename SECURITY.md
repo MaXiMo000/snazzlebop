@@ -66,7 +66,7 @@ Only the latest version on `main` (the live deployment) is supported.
   styles), plus framing, sniffing, referrer and cross-origin isolation headers, and HSTS in
   production. Third parties appear only when they're configured: the voice/video service for calls
   (camera and microphone for this site only), the payment provider's checkout for Plus, and the ad
-  network on the lobby and results screens. Without them the page stays same-origin and
+  network in the lobby, on results and at the bottom of the home page. Without them the page stays same-origin and
   cross-origin isolated.
 - **Payments.** Card details never touch this site: the payment provider's own checkout takes them.
   A membership turns on only from the provider's signed notifications (checked against a shared

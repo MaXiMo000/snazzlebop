@@ -124,7 +124,8 @@ class Settings:
     paddle_api_key: str = field(default="", repr=False)  # server key: only for "manage my subscription"
     paddle_webhook_secret: str = field(default="", repr=False)
     paddle_plus_price: str = ""  # the Plus monthly price id (pri_...)
-    # Optional: Google AdSense on the lobby and results screens (billing.py). Unset = no ads.
+    # Optional: Google AdSense in the lobby, on results and at the foot of the home page (billing.py).
+    # Unset = no ads.
     adsense_client: str = ""  # ca-pub-...
     adsense_slot: str = ""  # the display ad unit's id
     # Optional: Plus bought in the Android and iOS apps (Google Play, App Store) through RevenueCat.

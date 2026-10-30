@@ -68,7 +68,7 @@ export function About({ go }: { go: Go }) {
         <h2 id="ab-free">How it stays free</h2>
         <p>
           Every game is free. An optional free account adds coins, daily quests, ratings, clubs and voice and video calls. A small ad
-          may show in the lobby or on the results screen, never during a game.
+          may show in the lobby, on the results screen or at the bottom of the home page, never during a game.
           {!inApp && (
             <>
               {" "}

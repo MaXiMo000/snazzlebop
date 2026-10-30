@@ -170,7 +170,7 @@ export function Plus({ go }: { go: Go }) {
               <li>It renews each month until you cancel. Cancel any time and you keep Plus to the end of the month you paid for.</li>
             </>
           )}
-          <li>Ads only ever appear in the lobby and on the results screen, never during a game.</li>
+          <li>Ads only ever appear in the lobby, on the results screen and at the bottom of the home page, never during a game.</li>
         </ul>
       </Card>
     </div>
