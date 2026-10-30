@@ -292,9 +292,11 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
           {/* a team game: your team above the game; at the results, the team score is the headline */}
           <TeamBadge state={state} />
           {phase === "results" && <TeamResult state={state} />}
-          {phase === "results" && !state.teams?.news && <Podium state={state} />}
           <PowerNews state={state} />
-          <GameRouter state={state} receivedAt={receivedAt} send={send} />
+          <div className={`game-stage ${phase === "results" ? "with-podium" : ""}`}>
+            <GameRouter state={state} receivedAt={receivedAt} send={send} />
+            {phase === "results" && !state.teams?.news && <Podium state={state} />}
+          </div>
           {phase === "game" && <ReadyBar state={state} send={send} />}
           {phase === "game" && state.role === "player" && <GamePowers state={state} send={send} />}
           {phase === "game" && state.role === "player" && <PowerCard state={state} send={send} />}
