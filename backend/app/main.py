@@ -240,9 +240,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/ads.txt", include_in_schema=False)
     async def ads_txt() -> PlainTextResponse:
-        """Who may sell this site's ad space (AdSense checks it). Empty when ads are off."""
+        """Who may sell this site's ad space. Served from the publisher id alone: AdSense checks it
+        before approving the site, and the ad slot only exists after approval."""
         line = ""
-        if billing.ads_on(settings):
+        if settings.adsense_client:
             pub = settings.adsense_client.removeprefix("ca-")
             line = f"google.com, {pub}, DIRECT, f08c47fec0942fa0\n"
         return PlainTextResponse(line, headers={"Cache-Control": "public, max-age=3600"})

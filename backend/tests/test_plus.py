@@ -284,7 +284,7 @@ def test_ads_txt_names_only_the_configured_publisher(tmp_path):
     with TestClient(create_app(settings(tmp_path))) as c:
         r = c.get("/ads.txt")
         assert r.status_code == 200 and r.text == ""  # ads off: nothing to declare
-    s = settings(tmp_path, adsense_client="ca-pub-1234567890123456", adsense_slot="1234567890")
+    s = settings(tmp_path, adsense_client="ca-pub-1234567890123456")  # before approval: no slot yet
     with TestClient(create_app(s)) as c:
         r = c.get("/ads.txt")
         assert r.text == "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n"
