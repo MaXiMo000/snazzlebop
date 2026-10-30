@@ -86,22 +86,5 @@ export async function buyPlus(cfg: BillingConfig, dark: boolean, onDone: () => v
   });
 }
 
-const FIRST_SEEN = "snazzlebop:first-seen";
-/** Days since this device first visited (guests get the same ad-free start as new accounts). */
-function guestDays(): number {
-  try {
-    const raw = localStorage.getItem(FIRST_SEEN);
-    const first = raw ? Number(raw) : NaN;
-    if (!Number.isFinite(first)) {
-      localStorage.setItem(FIRST_SEEN, String(Date.now()));
-      return 0;
-    }
-    return (Date.now() - first) / 86_400_000;
-  } catch {
-    return 0; // no storage: no ads rather than ads every time
-  }
-}
-
-/** Ads for this person here? The server decides for accounts (Plus, first days); guests by first visit. */
-export const adsFor = (cfg: BillingConfig, user: Account | null) =>
-  !!cfg.ads && (user ? user.ads : guestDays() >= cfg.ad_free_days);
+/** Ads for this person here? Only if the site has ads; the server decides for accounts (Plus has none). */
+export const adsFor = (cfg: BillingConfig, user: Account | null) => !!cfg.ads && (user ? user.ads : true);

@@ -26,6 +26,18 @@ export function Card({
   );
 }
 
+/** Placeholder bars while something loads; "page" for a whole page, plain for a section. */
+export function Loading({ page, label = "Loading…" }: { page?: boolean; label?: string }) {
+  return (
+    <div className={`loading ${page ? "page" : ""}`} role="status">
+      <span className="sr-only">{label}</span>
+      <span className="skeleton wide" aria-hidden="true" />
+      <span className="skeleton" aria-hidden="true" />
+      {page && <span className="skeleton block" aria-hidden="true" />}
+    </div>
+  );
+}
+
 export function Btn({
   variant,
   size,

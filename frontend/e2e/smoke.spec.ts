@@ -21,7 +21,9 @@ test.afterEach(async () => {
 
 function watchConsole(page: Page, problems: string[]) {
   page.on("console", (m) => {
-    if (m.type() === "error") problems.push(m.text());
+    // An ad the network refuses or a blocker stops is the ad provider's business, not a site error.
+    const ad = /googlesyndication|doubleclick|adtrafficquality|^Framing 'https:\/\/www\.google\.com\//;
+    if (m.type() === "error" && !ad.test(m.location().url) && !ad.test(m.text())) problems.push(m.text());
   });
   page.on("pageerror", (e) => problems.push(e.message));
 }
@@ -928,7 +930,7 @@ async function layout(page: Page, where: string, found: string[]) {
     const vw = document.documentElement.clientWidth;
     for (const el of document.querySelectorAll("main *")) {
       const r = el.getBoundingClientRect();
-      if (r.width && r.right > vw + 1 && !el.closest(".scroll-row, .lc-hand, .react-overlay, .confetti, .stinger, .sr-only, dialog") && getComputedStyle(el).position !== "fixed") {
+      if (r.width && r.right > vw + 1 && !el.closest(".table-scroll, .scroll-row, .lc-hand, .react-overlay, .confetti, .stinger, .sr-only, dialog") && getComputedStyle(el).position !== "fixed") {
         out.push(`past the screen edge: ${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}`);
         break;
       }
@@ -973,4 +975,46 @@ test("layout sweep: every page at 320, phone, tablet, laptop and TV widths, both
     }
   }
   expect(found).toEqual([]);
+});
+
+test("server unreachable: a calm notice with a retry, never a false 'sign in', and it recovers", async ({ page }) => {
+  let down = true;
+  await page.route("**/api/**", (r) => (down ? r.abort() : r.continue()));
+  await page.goto("/coins");
+  const notice = page.getByRole("status").filter({ hasText: "Can’t reach Snazzlebop" });
+  await expect(notice).toBeVisible();
+  await expect(page.getByText("Sign in to earn coins")).toHaveCount(0);
+  down = false;
+  await notice.getByRole("button", { name: "Try again" }).click();
+  await expect(notice).toHaveCount(0);
+  await expect(page.getByText("Sign in to earn coins")).toBeVisible();
+});
+
+test("a socket that keeps being refused: the waiting screen says so and offers Try now", async ({ page, browser, baseURL }) => {
+  await page.goto("/");
+  await page.locator("#host-name").fill("Ana");
+  await page.locator("#host-name").press("Enter");
+  await page.waitForURL(/\/r\/[A-Z]+/);
+  const code = /\/r\/([A-Z]+)/.exec(page.url())![1];
+  const ctx = await browser.newContext({ baseURL });
+  const p = await ctx.newPage();
+  await p.routeWebSocket(/\/ws\//, (ws) => ws.close({ code: 1013 }));
+  await p.goto(`/r/${code}`);
+  await p.locator("#join-name").fill("Bo");
+  await p.getByRole("button", { name: /Join as a contestant/ }).click();
+  await expect(p.getByRole("status").filter({ hasText: "Still trying" })).toBeVisible();
+  await expect(p.getByRole("button", { name: "Try now" })).toBeVisible();
+  await ctx.close();
+});
+
+test("leaving a room takes its call button with it", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#host-name").fill("Ana");
+  await page.locator("#host-name").press("Enter");
+  await page.waitForURL(/\/r\/[A-Z]+/);
+  await page.waitForSelector(".contestants");
+  test.skip((await page.locator(".call-button").count()) === 0, "calls are not configured on this server");
+  await page.locator("a.logo").click();
+  await page.waitForURL((u) => u.pathname === "/");
+  await expect(page.locator(".call-button")).toHaveCount(0);
 });

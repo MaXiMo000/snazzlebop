@@ -65,7 +65,8 @@ class Settings:
     token_ttl_seconds: float = 12 * 3600.0
 
     # Per-IP limits
-    max_ws_per_ip: int = 12
+    # one full room can share a home network: 8 seats, 30 audience and a TV
+    max_ws_per_ip: int = 40
     max_ws_total: int = 1500
     ws_msgs_per_second: float = 8.0
     ws_msg_burst: float = 16.0

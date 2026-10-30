@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, errText } from "../components/auth";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { refreshAccount, useAccount } from "../lib/account";
 import type { Progress } from "../lib/contract";
 import { claimQuest, claimSeason, claimWeekly, myProgress, rerollQuest } from "../lib/quests";
@@ -32,7 +32,7 @@ export function Quests({ go }: { go: Go }) {
     if (user) myProgress().then(setData, (e) => setNote({ ok: false, text: errText(e) }));
   }, [user]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!user)
     return (
       <Card tone="stage" className="center">
@@ -151,7 +151,7 @@ export function Quests({ go }: { go: Go }) {
 
       <Card aria-labelledby="quests-h">
         <h2 id="quests-h">Today's quests</h2>
-        {data === null ? <p className="muted">Loading…</p> : <ul className="quest-list">{data.quests.map((q) => row(q, data.reward, claim, data.reroll_left))}</ul>}
+        {data === null ? <Loading /> : <ul className="quest-list">{data.quests.map((q) => row(q, data.reward, claim, data.reroll_left))}</ul>}
         <p className="muted space-top">
           New quests every day at midnight (UTC), never the same one twice in a week. {data?.reroll_left ? "You can swap one today." : "You've swapped one today."}
         </p>

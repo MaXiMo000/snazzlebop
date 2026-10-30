@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
+import { AccountPerks } from "../components/nav";
 import {
   Alert,
   AuthMessage,
@@ -21,7 +22,7 @@ import {
   useGoogleOutcome,
 } from "../components/auth";
 import { Authenticator } from "../components/security";
-import { Btn, Card, CopyButton } from "../components/ui";
+import { Btn, Card, CopyButton, Loading } from "../components/ui";
 import { InviteWaiting } from "./Clubs";
 import { fetchGames } from "../lib/api";
 import {
@@ -57,7 +58,7 @@ export function Account({ go, view = "home" }: { go: (path: string) => void; vie
     if (user) setSignedOut(false);
   }, [user]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!available)
     return (
       <Card className="center">
@@ -146,7 +147,20 @@ function SignIn({ onCode, start, notice }: { onCode: (code: string) => void; sta
         <h2 className="space-top acct-title">Win coins. Climb the season. Buy power-ups.</h2>
       </Card>
       <Card className="auth-card">
-        <div className="auth-tabs" role="tablist" aria-label="Account">
+        <div
+          className="auth-tabs"
+          role="tablist"
+          aria-label="Account"
+          onKeyDown={(e) => {
+            const order: Tab[] = ["in", "up", "forgot"];
+            const i = order.indexOf(tab);
+            const next = e.key === "ArrowRight" ? order[(i + 1) % 3] : e.key === "ArrowLeft" ? order[(i + 2) % 3] : null;
+            if (!next) return;
+            e.preventDefault();
+            pick(next);
+            document.getElementById(`${id}-tab-${next}`)?.focus();
+          }}
+        >
           {(["in", "up", "forgot"] as Tab[]).map((t) => (
             <button
               key={t}
@@ -155,6 +169,7 @@ function SignIn({ onCode, start, notice }: { onCode: (code: string) => void; sta
               id={`${id}-tab-${t}`}
               aria-selected={tab === t}
               aria-controls={`${id}-panel`}
+              tabIndex={tab === t ? 0 : -1}
               className={`auth-tab ${tab === t ? "on" : ""}`}
               onClick={() => pick(t)}
             >
@@ -169,6 +184,7 @@ function SignIn({ onCode, start, notice }: { onCode: (code: string) => void; sta
             </div>
           )}
           <p className="auth-lead">{tab === "in" && byLink ? "No password needed: we'll email you a link that signs you in." : lead[tab]}</p>
+          {tab === "up" && <AccountPerks compact />}
           {tab === "forgot" && mail && !byCode ? (
             <div className="space-top">
               <ForgotEmail onRecoveryCode={() => setByCode(true)} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, errText } from "../components/auth";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { useAccount } from "../lib/account";
 import { myBattles, type BattleRecord } from "../lib/battles";
 import { Fold } from "../components/sheet";
@@ -20,7 +20,7 @@ export function Battles({ go }: { go: Go }) {
     if (user) myBattles().then(setData, (e) => setError(errText(e)));
   }, [user]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!user)
     return (
       <Card tone="stage" className="center">
@@ -91,7 +91,7 @@ export function Battles({ go }: { go: Go }) {
       <Card aria-labelledby="h2h-h">
         <h2 id="h2h-h">Head to head</h2>
         {data === null ? (
-          <p className="muted">Loading…</p>
+          <Loading />
         ) : data.head_to_head.length ? (
           <ul className="score-rows">
             {data.head_to_head.map((r) => (

@@ -54,9 +54,9 @@ class RuleTests(unittest.TestCase):
 
     def test_ads_and_plus(self):
         now = datetime.now(UTC)
-        self.assertFalse(B.shows_ads(now - timedelta(days=B.AD_FREE_DAYS - 1), None, now))  # new account
-        self.assertTrue(B.shows_ads(now - timedelta(days=B.AD_FREE_DAYS), None, now))
-        self.assertFalse(B.shows_ads(now - timedelta(days=90), now + timedelta(days=3), now))  # Plus
+        self.assertTrue(B.shows_ads(None, now))  # a brand-new account: no free period to game
+        self.assertTrue(B.shows_ads(now - timedelta(days=1), now))  # Plus has run out
+        self.assertFalse(B.shows_ads(now + timedelta(days=3), now))  # Plus
         end = now + timedelta(days=20)
         self.assertEqual(B.plus_until("active", end, now), end + B.GRACE)
         self.assertEqual(B.plus_until("canceled", end, now), end)  # paid time is kept
@@ -138,7 +138,7 @@ def subscription(ref, status="active", ends=None, price=PRICE, sub="sub_01abc"):
 
 def test_only_signed_events_for_the_plus_price_turn_plus_on(shop):
     signup(shop)
-    assert shop.get("/api/me").json()["user"]["ads"] is False  # a new account: ad-free days
+    assert shop.get("/api/me").json()["user"]["ads"] is True  # a new account sees ads until it has Plus
     ref = shop.post("/api/billing/checkout").json()["custom_data"]
     raw = json.dumps(event("subscription.activated", subscription(ref))).encode()
     assert (

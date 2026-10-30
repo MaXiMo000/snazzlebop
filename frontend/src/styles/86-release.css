@@ -519,3 +519,229 @@ body {
 .lobby-side > * {
   min-width: 0;
 }
+/* host tools: the title field on its own row, the two buttons sharing the next */
+.host-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.host-form > div {
+  flex: 1 1 100%;
+}
+.host-form > .btn {
+  flex: 1 1 auto;
+}
+/* a fold's summary already names its section: the card inside keeps its heading for screen readers only */
+.fold-content > .card > h3:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.fold-content > .card.soft,
+.fold-content > .card.accent {
+  background: transparent;
+}
+/* loading placeholders: soft bars that shimmer while a page or section loads */
+.loading {
+  display: grid;
+  gap: 10px;
+  padding: 8px 0;
+}
+.loading.page {
+  width: min(560px, 100%);
+  margin: 32px auto;
+  padding: 0 16px;
+}
+.skeleton {
+  display: block;
+  height: 16px;
+  width: 60%;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ink) 8%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 16%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 8%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.skeleton.wide {
+  width: 85%;
+}
+.skeleton.block {
+  height: 120px;
+  width: 100%;
+  border-radius: 16px;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+/* a button inside a lit notice: solid plum on the lamp colour, in both themes */
+.alert.calm .btn.ghost {
+  --bg: var(--plum);
+  --fg: var(--cream);
+}
+.offline-notice {
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+/* tabs share the row equally, so the last one is never hidden off a small phone */
+.tabs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  overflow: visible;
+}
+.tab {
+  padding: 8px 10px;
+}
+/* a table that wraps its text columns to fit a phone; the first column (a time) stays on one line */
+.table.fit th:not(:first-child),
+.table.fit td:not(:first-child) {
+  white-space: normal;
+}
+@media (max-width: 420px) {
+  .table.fit th,
+  .table.fit td {
+    padding: 8px;
+  }
+}
+/* small phones: each row of a .fit table is a card, the time and name on top and the rest below */
+@media (max-width: 520px) {
+  .table.fit,
+  .table.fit tbody,
+  .table.fit tr {
+    display: block;
+  }
+  .table.fit thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .table.fit tr {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--rule);
+  }
+  .table.fit tr:last-child {
+    border-bottom: 0;
+  }
+  .table.fit td {
+    padding: 0;
+    border: 0;
+  }
+  .table.fit td:first-child {
+    color: var(--muted);
+  }
+  .table.fit td:nth-child(2) {
+    font-weight: 700;
+    min-width: 0;
+  }
+  .table.fit td:last-child {
+    flex: 1 1 100%;
+  }
+}
+/* tablets and landscape phones: the eight links stay on one row */
+@media (min-width: 721px) and (max-width: 1039px) {
+  .site-nav ul {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 2px;
+  }
+  .site-nav a {
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+}
+@media (min-width: 721px) and (max-width: 900px) {
+  .site-nav-icon {
+    display: none;
+  }
+}
+/* top bar buttons never break their label; below laptop width they go icon-only, as on phones */
+.topbar .btn {
+  white-space: nowrap;
+}
+@media (max-width: 819px) {
+  .topbar .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+/* Mafia's reveal stamp stays inside a small phone once it lands */
+.mf-stamp {
+  max-width: 100%;
+  text-wrap: balance;
+}
+/* a short phrase that must not break across lines */
+.keep {
+  white-space: nowrap;
+}
+/* the TV keeps sound and theme, but nobody signs in on a TV */
+body:has(.tv) .acct-btn {
+  display: none;
+}
+/* a highlight line with a very long name stays on the screen; only a word longer than the line breaks */
+.highlight-list > li,
+.highlight-item > span:last-child {
+  min-width: 0;
+}
+.highlight-item > span:last-child {
+  overflow-wrap: break-word;
+}
+/* site-wide: a single word longer than its whole line (a 16-letter name on a small phone) may break */
+body {
+  overflow-wrap: break-word;
+}
+/* what a free account adds: a short icon list (home guest card, the Sign up tab) */
+.perks {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.perks li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-weight: 600;
+}
+.perks-icon {
+  flex: none;
+  width: 1.5em;
+  text-align: center;
+}
+.perks.compact {
+  gap: 4px;
+  margin: 8px 0 4px;
+  font-size: 0.92rem;
+}
+@media (min-width: 640px) {
+  .corner-guest .perks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
+  }
+}

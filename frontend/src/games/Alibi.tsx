@@ -368,20 +368,21 @@ function Board({
           <p className="muted">Nothing shared yet.</p>
         ) : (
           <div className="table-scroll" role="region" aria-label="The board" tabIndex={0}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">Time</th>
-                  <th scope="col">Who</th>
-                  <th scope="col">Says they were</th>
+            {/* explicit roles: on phones the rows restack as cards, and a table restyled that way can lose its semantics */}
+            <table className="table fit" role="table">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">Time</th>
+                  <th scope="col" role="columnheader">Who</th>
+                  <th scope="col" role="columnheader">Says they were</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {view.claims.map((c) => (
-                  <tr key={`${c.speaker}:${c.slot}`}>
-                    <td>{c.label}</td>
-                    <td>{nameOf(view.players, c.speaker)}</td>
-                    <td>
+                  <tr key={`${c.speaker}:${c.slot}`} role="row">
+                    <td role="cell">{c.label}</td>
+                    <td role="cell">{nameOf(view.players, c.speaker)}</td>
+                    <td role="cell">
                       {c.location}
                       {c.with.length ? ` with ${c.with.map((id) => nameOf(view.players, id)).join(", ")}` : " alone"}
                     </td>

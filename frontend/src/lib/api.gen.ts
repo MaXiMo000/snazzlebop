@@ -2012,8 +2012,6 @@ export interface components {
         };
         /** BillingConfig */
         BillingConfig: {
-            /** Ad Free Days */
-            ad_free_days: number;
             ads: components["schemas"]["AdIds"] | null;
             /** Client Token */
             client_token: string;

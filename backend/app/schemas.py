@@ -97,7 +97,6 @@ class BillingConfig(Strict):
     client_token: str  # Paddle.js client-side token ("" when off)
     plus_price: str  # Paddle price id for Plus ("" when off)
     ads: AdIds | None  # AdSense ids (None: no ads on this site)
-    ad_free_days: int  # new accounts (and a guest's first visit) see no ads for this long
     perks: PlusPerks
 
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { Alert, errText } from "../components/auth";
 import { byPriority, CaseCard, when } from "../components/casecard";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { ApiError } from "../lib/api";
 import { liftSuspension, staffAct, staffQueue, type StaffQueue } from "../lib/safety";
 
@@ -58,7 +58,7 @@ export function Staff({ go }: { go: Go }) {
     }
   };
 
-  if (gate === "loading") return <p className="muted center">Loading…</p>;
+  if (gate === "loading") return <Loading page />;
   if (gate === "closed")
     return (
       <Card className="center">

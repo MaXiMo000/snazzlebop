@@ -146,7 +146,16 @@ export function CallHost({
     };
     hushAll = () => send({ t: "hush" });
   }, [send]);
-  useEffect(() => () => leave(), []);
+  // Leaving the room ends the call and forgets it: no call button on pages outside a room.
+  useEffect(
+    () => () => {
+      leave();
+      joinWith = () => undefined;
+      hushAll = () => undefined;
+      set({ available: false, allowed: false, host: false, tv: false, audioBlocked: false, talking: false });
+    },
+    [],
+  );
   return null;
 }
 let joinWith: () => void = () => undefined;

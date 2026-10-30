@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { Alert, errText } from "../components/auth";
 import { Select } from "../components/Select";
 import { SEGMENT_ICON } from "../components/show";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { refreshAccount, useAccount } from "../lib/account";
 import { myClubs } from "../lib/clubs";
 import type { ClubList, MyPlaces } from "../lib/contract";
@@ -47,7 +47,7 @@ export function Ratings({ go }: { go: Go }) {
     myPlaces().then((r) => setPlaces(r.places.filter((p) => p.status === "verified")), () => undefined);
   }, [user]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!user)
     return (
       <Card tone="stage" className="center">
@@ -84,7 +84,7 @@ export function Ratings({ go }: { go: Go }) {
       <Card aria-labelledby="my-ratings-h">
         <h2 id="my-ratings-h">Every ranked game</h2>
         {mine === null ? (
-          <p className="muted">Loading…</p>
+          <Loading />
         ) : (
           <ul className="rating-grid">
             {mine.games.map((g) => (
@@ -199,7 +199,7 @@ function Board({
       </div>
       <Alert text={error} />
       {board === null && !error ? (
-        <p className="muted space-top">Loading…</p>
+        <Loading />
       ) : board && board.rows.length ? (
         <ol className="score-rows space-top">
           {board.rows.map((r, i) => (

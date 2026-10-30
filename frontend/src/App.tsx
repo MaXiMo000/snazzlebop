@@ -1,8 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { CallButton } from "./components/call";
 import { ChatButton } from "./components/chat";
-import { SoundToggle, ThemeToggle } from "./components/ui";
-import { useAccount } from "./lib/account";
+import { Btn, SoundToggle, ThemeToggle, Loading } from "./components/ui";
+import { refreshAccount, useAccount } from "./lib/account";
 import { useInbox } from "./lib/notify";
 import { Account, type AccountView } from "./pages/Account";
 import { ClubHome, Clubs, JoinClub } from "./pages/Clubs";
@@ -84,10 +84,34 @@ function InboxButton({ go, inRoom }: { go: (p: string) => void; inRoom: boolean 
   );
 }
 
-/** Top bar: your coins when signed in, otherwise a way to sign in. Hidden if accounts are down. */
-function AccountButton({ go }: { go: (p: string) => void }) {
+/** The server didn't answer: say so calmly, with a retry (it also retries when the device is back online). */
+function OfflineNotice() {
+  const { offline } = useAccount();
+  const [busy, setBusy] = useState(false);
+  if (!offline) return null;
+  return (
+    <div className="alert calm row between offline-notice" role="status">
+      <span>Can’t reach Snazzlebop right now. Check your connection.</span>
+      <Btn
+        size="small"
+        variant="ghost"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          void refreshAccount().finally(() => setBusy(false));
+        }}
+      >
+        Try again
+      </Btn>
+    </div>
+  );
+}
+
+/** Top bar: your coins when signed in; signed out, a way to sign in inside rooms (elsewhere the site
+ * navigation already has it). Hidden if accounts are down. */
+function AccountButton({ go, inRoom }: { go: (p: string) => void; inRoom: boolean }) {
   const { user, loaded, available } = useAccount();
-  if (!loaded || !available) return null;
+  if (!loaded || !available || (!user && !inRoom)) return null;
   return (
     <a
       className={`btn small acct-btn ${user ? "gold" : "ghost"}`}
@@ -146,14 +170,15 @@ export function App() {
           <CallButton go={go} />
           <ChatButton />
           <InboxButton go={go} inRoom={!!match} />
-          <AccountButton go={go} />
+          <AccountButton go={go} inRoom={!!match} />
           <ThemeToggle />
           <SoundToggle />
         </div>
       </header>
       {!match && <SiteNav path={path} go={go} />}
       <main id="main" className={`app ${match ? "" : "with-nav"}`}>
-        <Suspense fallback={<p className="muted center">Loading…</p>}>
+        {!match && <OfflineNotice />}
+        <Suspense fallback={<Loading page />}>
         {match ? (
           <Room key={match[1]} code={match[1]!.toUpperCase()} go={go} tv={new URLSearchParams(window.location.search).get("tv") === "1"} />
         ) : accountMatch ? (

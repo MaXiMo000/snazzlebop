@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { Alert, errText } from "../components/auth";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { Mascot } from "../components/mascot";
 import { useAccount } from "../lib/account";
 import {
@@ -38,7 +38,7 @@ export function InboxPage({ go }: { go: Go }) {
     document.title = inbox?.unread ? `(${inbox.unread}) Inbox · Snazzlebop` : "Inbox · Snazzlebop";
   }, [inbox?.unread]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!user)
     return (
       <Card tone="stage" className="center">
@@ -67,7 +67,7 @@ export function InboxPage({ go }: { go: Go }) {
           )}
         </div>
         {inbox === null ? (
-          <p className="muted">Loading…</p>
+          <Loading />
         ) : inbox.items.length ? (
           <ul className="inbox-list">
             {inbox.items.map((item) => (

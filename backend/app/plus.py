@@ -96,7 +96,6 @@ def router(settings: Settings, db: Any) -> APIRouter:
             "ads": {"client": settings.adsense_client, "slot": settings.adsense_slot}
             if billing.ads_on(settings)
             else None,
-            "ad_free_days": billing.AD_FREE_DAYS,
             "perks": {"coins": billing.PLUS_COINS, "items": dict(billing.PLUS_ITEMS)},
         }
         return JSONResponse(body, headers={"Cache-Control": "no-store"})

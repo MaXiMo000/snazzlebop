@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { Alert, errText } from "../components/auth";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { useAccount } from "../lib/account";
 import { confirmPlace, myPlaces, removePlace, startPlace, type MyPlaces } from "../lib/places";
 import { sfx } from "../lib/sfx";
@@ -55,7 +55,7 @@ export function Places({ go }: { go: Go }) {
     });
   };
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!user)
     return (
       <Card tone="stage" className="center">
@@ -80,7 +80,7 @@ export function Places({ go }: { go: Go }) {
       <Card aria-labelledby={`${id}-mine`}>
         <h2 id={`${id}-mine`}>Verified</h2>
         {data === null ? (
-          <p className="muted">Loading…</p>
+          <Loading />
         ) : data.places.length ? (
           <ul className="club-rooms">
             {data.places.map((p) => (

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, errText } from "../components/auth";
 import { byPriority, CaseCard, when } from "../components/casecard";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { useAccount } from "../lib/account";
 import { ApiError } from "../lib/api";
 import { actOnReport, clubReports, unmute, type ClubReports as Queue } from "../lib/safety";
@@ -55,7 +55,7 @@ export function ClubReports({ slug, go }: { slug: string; go: Go }) {
     }
   };
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   const back = (
     <Btn variant="ghost" onClick={() => go(`/clubs/${slug}`)}>
       Back to the club
@@ -69,7 +69,7 @@ export function ClubReports({ slug, go }: { slug: string; go: Go }) {
         <div className="space-top">{back}</div>
       </Card>
     );
-  if (!queue) return <p className="muted center">Loading…</p>;
+  if (!queue) return <Loading page />;
   const waiting = (r: Report) => r.status === "open" || r.status === "triaged";
   const open = byPriority(queue.reports.filter(waiting));
   const done = queue.reports.filter((r) => !waiting(r));

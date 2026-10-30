@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, errText } from "../components/auth";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { fetchGames } from "../lib/api";
 import { myCoins, shopItems, useAccount } from "../lib/account";
 import type { CoinHistory } from "../lib/contract";
@@ -36,7 +36,7 @@ export function Coins({ go }: { go: Go }) {
     shopItems().then((r) => setItems(Object.fromEntries(r.items.map((i) => [i.id, i.name]))), () => undefined);
   }, [user, user?.coins]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!user)
     return (
       <Card tone="stage" className="center">
@@ -89,7 +89,7 @@ export function Coins({ go }: { go: Go }) {
       <Card aria-labelledby="coins-history-h">
         <h2 id="coins-history-h">History</h2>
         {data === null ? (
-          <p className="muted">Loading…</p>
+          <Loading />
         ) : data.entries.length ? (
           <ul className="club-rooms coin-history">
             {data.entries.map((e, i) => {

@@ -391,10 +391,6 @@
       "BillingConfig": {
         "additionalProperties": false,
         "properties": {
-          "ad_free_days": {
-            "title": "Ad Free Days",
-            "type": "integer"
-          },
           "ads": {
             "anyOf": [
               {
@@ -431,7 +427,6 @@
           "client_token",
           "plus_price",
           "ads",
-          "ad_free_days",
           "perks"
         ],
         "title": "BillingConfig",

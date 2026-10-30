@@ -3,7 +3,7 @@ import { useAccount } from "../lib/account";
 import { ApiError, request } from "../lib/api";
 import { STATUS_TEXT } from "../lib/clubs";
 import type { Invitees, Ok } from "../lib/contract";
-import { Btn } from "./ui";
+import { Btn, Loading } from "./ui";
 
 /**
  * In the lobby, for a signed-in player: invite friends (who added you back) and, in a club room,
@@ -53,7 +53,7 @@ export function InviteFriends({ code }: { code: string }) {
           {error ? (
             <p className="muted">{error}</p>
           ) : people === null ? (
-            <p className="muted">Loading…</p>
+            <Loading />
           ) : people.length ? (
             <ul className="club-rooms invite-list">
               {people.map((p) => (

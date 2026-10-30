@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Btn, Card, CopyButton } from "../components/ui";
+import { Btn, Card, CopyButton, Loading } from "../components/ui";
 import { ReportForm } from "../components/report";
 import { UpForGame } from "../components/upgame";
 import { ClubBattles } from "../components/battle";
@@ -128,7 +128,7 @@ export function Clubs({ go }: { go: Go }) {
       );
   }, [user]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!available) return <Resting go={go} />;
   if (!user)
     return (
@@ -160,7 +160,7 @@ export function Clubs({ go }: { go: Go }) {
       <Card aria-labelledby="mine-h">
         <h3 id="mine-h">Clubs you're in</h3>
         {clubs === null ? (
-          <p className="muted">Loading…</p>
+          <Loading />
         ) : clubs.length ? (
           <ul className="club-list">
             {clubs.map((c) => (
@@ -255,7 +255,7 @@ export function JoinClub({ code, go }: { code: string; go: Go }) {
     });
   }, [code, user, loaded, available, go, run]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!available) return <Resting go={go} />;
   if (!user)
     return (
@@ -327,7 +327,7 @@ export function ClubHome({ slug, go }: { slug: string; go: Go }) {
     document.title = c ? `${c.name} · Snazzlebop` : "Club · Snazzlebop";
   }, [c]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
+  if (!loaded) return <Loading page />;
   if (!available) return <Resting go={go} />;
   if (!user) return <SignInFirst go={go} why="Sign in to see this club." />;
   if (missing)
@@ -343,7 +343,7 @@ export function ClubHome({ slug, go }: { slug: string; go: Go }) {
         </Btn>
       </Card>
     );
-  if (!c) return <p className="muted center">Loading…</p>;
+  if (!c) return <Loading page />;
 
   return (
     <div className="stack enter clubs">

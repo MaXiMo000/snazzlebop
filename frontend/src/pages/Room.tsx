@@ -10,7 +10,7 @@ import { ApiError, audienceSeat, clearSession, joinRoom, loadSession, tvSeat } f
 import { useRoom } from "../lib/useRoom";
 import { InviteFriends } from "../components/invite";
 import { ReportInRoom } from "../components/report";
-import { Btn, Card, Contestants, CopyButton, ErrorBanner, FlapCode } from "../components/ui";
+import { Btn, Card, Contestants, CopyButton, ErrorBanner, FlapCode, Loading } from "../components/ui";
 import {
   CrowdPanel,
   Finale,
@@ -240,7 +240,16 @@ function Live({ code, session, go, onLeave }: { code: string; session: Session; 
     return (
       <Card tone="stage" className="center">
         <h2>Warming up the studio…</h2>
-        <p className="muted">Grabbing your seat.</p>
+        {status === "reconnecting" ? (
+          <div role="status" className="stack-sm space-top">
+            <p className="muted">The studio is busy or your connection is slow. <span className="keep">Still trying (try {attempt})…</span></p>
+            <Btn variant="ghost" onClick={retry}>
+              Try now
+            </Btn>
+          </div>
+        ) : (
+          <p className="muted">Grabbing your seat.</p>
+        )}
       </Card>
     );
   }
@@ -387,7 +396,7 @@ function leaderLine(players: RoomState["players"]): string {
 
 function GameRouter(props: { state: RoomState; receivedAt: number; send: Send }) {
   return (
-    <Suspense fallback={<p className="muted center game-loading">Loading the game…</p>}>
+    <Suspense fallback={<Loading page label="Loading the game…" />}>
       <GameScreen {...props} />
     </Suspense>
   );
@@ -607,7 +616,7 @@ function HostTools({ state, send }: { state: RoomState; send: Send }) {
     <Card tone="soft" aria-labelledby="host-tools-h">
       <h3 id="host-tools-h">Host tools</h3>
       <form
-        className="ask-form"
+        className="host-form"
         onSubmit={(e) => {
           e.preventDefault();
           send({ t: "title", title: title.trim() });

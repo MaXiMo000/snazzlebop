@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { Alert, errText } from "../components/auth";
 import { when } from "../components/casecard";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { ApiError } from "../lib/api";
 import { declineRequest, savePlace, staffPlaces, type StaffPlaces as Data } from "../lib/places";
 
@@ -46,7 +46,7 @@ export function StaffPlaces({ go }: { go: Go }) {
     }
   };
 
-  if (gate === "loading") return <p className="muted center">Loading…</p>;
+  if (gate === "loading") return <Loading page />;
   if (gate !== "open" || !data)
     return (
       <Card className="center">

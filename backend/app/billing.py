@@ -12,8 +12,8 @@ webhooks: a checkout can't grant anything by itself.
   once per billing period through the coin ledger.
 
 Plus: no ads, coins and a few party items each month, every emote pack while it lasts, and a badge. Ads only
-show on the lobby and results screens, never during a game, never to Plus members and never in an
-account's first AD_FREE_DAYS days. Pure apart from the signature helpers (stdlib only).
+show on the lobby and results screens, never during a game and never to Plus members.
+Pure apart from the signature helpers (stdlib only).
 """
 
 from __future__ import annotations
@@ -25,7 +25,6 @@ from datetime import UTC, datetime, timedelta
 
 from .config import Settings
 
-AD_FREE_DAYS = 15  # a new account (or a guest's first visit) sees no ads for this long
 PLUS_COINS = 300  # each paid month
 PLUS_ITEMS = {"party_confetti": 2, "party_airhorn": 1, "party_replay": 1}  # each paid month
 GRACE = timedelta(days=1)  # Plus stays on this long past a period's end while a renewal goes through
@@ -104,10 +103,9 @@ def is_plus(until: datetime | None, now: datetime | None = None) -> bool:
     return until is not None and _aware(until) > (now or datetime.now(UTC))
 
 
-def shows_ads(created_at: datetime, plus: datetime | None, now: datetime | None = None) -> bool:
-    """Ads for this account? Never for Plus, never in its first AD_FREE_DAYS days."""
-    now = now or datetime.now(UTC)
-    return not is_plus(plus, now) and now - _aware(created_at) >= timedelta(days=AD_FREE_DAYS)
+def shows_ads(plus: datetime | None, now: datetime | None = None) -> bool:
+    """Ads for this account? Everyone sees the two between-game spots except Plus members."""
+    return not is_plus(plus, now)
 
 
 def parse_time(raw: object) -> datetime | None:

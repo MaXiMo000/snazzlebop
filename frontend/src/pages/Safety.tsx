@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, errText } from "../components/auth";
-import { Btn, Card } from "../components/ui";
+import { Btn, Card, Loading } from "../components/ui";
 import { useAccount } from "../lib/account";
 import { blocked, EXPORT_URL, unblock, type BlockList } from "../lib/safety";
 
@@ -18,7 +18,6 @@ export function Safety({ go }: { go: Go }) {
     if (user) void load();
   }, [user, load]);
 
-  if (!loaded) return <p className="muted center">Loading…</p>;
   return (
     <div className="stack enter prose-page">
       <Card tone="stage" className="center">
@@ -35,12 +34,14 @@ export function Safety({ go }: { go: Go }) {
         </ul>
       </Card>
 
-      {user ? (
+      {!loaded ? (
+        <Loading />
+      ) : user ? (
         <>
           <Card aria-labelledby="sf-blocked">
             <h2 id="sf-blocked">People you've blocked</h2>
             {list === null ? (
-              <p className="muted">Loading…</p>
+              <Loading />
             ) : list.length ? (
               <ul className="club-rooms">
                 {list.map((p) => (

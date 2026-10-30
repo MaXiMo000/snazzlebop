@@ -145,7 +145,7 @@ export function Plus({ go }: { go: Go }) {
           <li>Plus never changes who wins: ranked games and battles stay the same for everyone.</li>
           <li>Payments are handled by Paddle, our reseller, in your own currency. We never see your card.</li>
           <li>It renews each month until you cancel. Cancel any time and you keep Plus to the end of the month you paid for.</li>
-          <li>New accounts see no ads for their first {cfg?.ad_free_days ?? 15} days, Plus or not.</li>
+          <li>Ads only ever appear in the lobby and on the results screen, never during a game.</li>
         </ul>
       </Card>
     </div>

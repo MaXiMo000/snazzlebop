@@ -115,7 +115,7 @@ original has them.
   cards, PayPal, Apple Pay, Google Pay, UPI; tax handled): no ads, coins and party items every month,
   every emote pack and a badge. It turns on only from Paddle's signed notifications.
 - **Ads:** optional Google AdSense, only on the lobby and results screens, never during a game, never
-  for Plus members and never in an account's (or a new visitor's) first 15 days.
+  for Plus members.
 - **Party items:** confetti cannon, air horn, drum roll, standing ovation, spotlight and a slow-mo replay
   of the last game's big moment: used any time in a room, played on every screen (the TV too), no effect
   on scores, with spam limits. Emote packs (bought once, kept) add emoji to your live reactions.

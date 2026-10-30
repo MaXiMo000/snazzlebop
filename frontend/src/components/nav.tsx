@@ -54,6 +54,31 @@ const CORNER: { to: string; icon: string; label: string; text: string }[] = [
   { to: "/places", icon: "🎓", label: "Places", text: "Your college or company" },
 ];
 
+/** What a free account adds. Every game stays open to guests. */
+const PERKS: [string, string][] = [
+  ["🪙", "Coins for every game you finish, and a power-up shop"],
+  ["🎯", "Three new quests a day, levels and rewards"],
+  ["📈", "Ranked games, ratings and season leaderboards"],
+  ["🏠", "Clubs for your group, with battles and trophies"],
+  ["📞", "Voice and video calls with your room"],
+  ["🔔", "A heads-up when friends or your club start a game"],
+];
+
+export function AccountPerks({ compact = false }: { compact?: boolean }) {
+  return (
+    <ul className={`perks ${compact ? "compact" : ""}`}>
+      {PERKS.map(([icon, text]) => (
+        <li key={text}>
+          <span className="perks-icon" aria-hidden="true">
+            {icon}
+          </span>
+          <span>{text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Home page: every feature one tap away, near the top. Guests see what signing in unlocks. */
 export function YourCorner({ go }: { go: Go }) {
   const { user, available } = useAccount();
@@ -61,8 +86,9 @@ export function YourCorner({ go }: { go: Go }) {
   if (!user)
     return (
       <section className="card soft corner-guest" aria-labelledby="corner-h">
-        <h2 id="corner-h">More with an account</h2>
-        <p className="muted">Clubs, daily quests, ratings, battles and a power-up shop. Games stay free and open to everyone.</p>
+        <h2 id="corner-h">Why make a free account?</h2>
+        <p className="muted">Every game stays free and open to everyone. An account adds:</p>
+        <AccountPerks />
         <a
           className="btn gold"
           href="/account"

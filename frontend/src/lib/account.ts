@@ -17,8 +17,10 @@ interface AccountState {
   google: boolean;
   /** platform staff (the console also needs the authenticator app) */
   staff: boolean;
+  /** the last check couldn't reach the server */
+  offline: boolean;
 }
-let state: AccountState = { user: null, loaded: false, available: true, mail: false, google: false, staff: false };
+let state: AccountState = { user: null, loaded: false, available: true, mail: false, google: false, staff: false, offline: false };
 let fetching = false;
 const listeners = new Set<() => void>();
 
@@ -30,25 +32,29 @@ function set(next: Partial<AccountState>) {
 export async function refreshAccount(): Promise<Account | null> {
   try {
     const r = await request<Me>("/api/me");
-    set({ user: r.user, available: r.accounts, mail: r.mail, google: r.google, staff: r.staff });
+    set({ user: r.user, available: r.accounts, mail: r.mail, google: r.google, staff: r.staff, offline: false });
   } catch {
-    set({});
+    // keep whoever was signed in; with no answer yet, pages keep loading instead of showing "signed out"
+    set({ offline: true, loaded: state.loaded && !state.offline });
   }
   return state.user;
 }
 
+if (typeof window !== "undefined") window.addEventListener("online", () => void refreshAccount());
+
+// Stable, so React subscribes once per component. The first screen fetches the account; after a failed
+// check nothing retries on its own (that would loop): "Try again" or the device coming back online does.
+function subscribe(fn: () => void) {
+  listeners.add(fn);
+  if (!state.loaded && !state.offline && !fetching) {
+    fetching = true;
+    void refreshAccount().finally(() => (fetching = false));
+  }
+  return () => void listeners.delete(fn);
+}
+
 export function useAccount(): AccountState {
-  return useSyncExternalStore(
-    (fn) => {
-      listeners.add(fn);
-      if (!state.loaded && !fetching) {
-        fetching = true;
-        void refreshAccount().finally(() => (fetching = false));
-      }
-      return () => listeners.delete(fn);
-    },
-    () => state,
-  );
+  return useSyncExternalStore(subscribe, () => state);
 }
 
 const post = <T>(path: string, body?: unknown) =>
