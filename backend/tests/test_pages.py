@@ -54,7 +54,7 @@ class PageTests(unittest.TestCase):
         self.assertIn('<div id="root"><p>body</p></div>', out)
         xml = pages.sitemap("https://snazzlebop.com/", self.games)
         self.assertIn("<loc>https://snazzlebop.com/games/trivia</loc>", xml)
-        self.assertEqual(xml.count("<url>"), 6 + len(self.games))
+        self.assertEqual(xml.count("<url>"), 7 + len(self.games))
 
 
 if __name__ == "__main__":

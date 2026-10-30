@@ -63,7 +63,7 @@ log = logging.getLogger("snazzlebop")
 WEBHOOK_BYTES = 64 * 1024  # the most a payment provider's signed notification may be
 
 SPA_ROUTE = re.compile(
-    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|terms|about|games|games/[a-z0-9]{2,24}|ratings|coins|battles|quests|plus|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
+    r"(r/[A-Za-z]{3,8}|account(?:/forgot|/reset|/verify|/link)?|inbox|places|privacy|terms|refunds|about|games|games/[a-z0-9]{2,24}|ratings|coins|battles|quests|plus|safety|staff(?:/places)?|clubs|clubs/[a-z0-9-]{1,48}(?:/reports)?|join/[A-Za-z0-9-]{4,32})?/?"
 )
 
 

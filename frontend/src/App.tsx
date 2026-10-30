@@ -16,6 +16,7 @@ const ClubReports = lazy(() => import("./pages/ClubReports").then((m) => ({ defa
 const InboxPage = lazy(() => import("./pages/Inbox").then((m) => ({ default: m.InboxPage })));
 const Privacy = lazy(() => import("./pages/Privacy").then((m) => ({ default: m.Privacy })));
 const Terms = lazy(() => import("./pages/Terms").then((m) => ({ default: m.Terms })));
+const Refunds = lazy(() => import("./pages/Refunds").then((m) => ({ default: m.Refunds })));
 const About = lazy(() => import("./pages/About").then((m) => ({ default: m.About })));
 const GamesIndex = lazy(() => import("./pages/Games").then((m) => ({ default: m.GamesIndex })));
 const GamePage = lazy(() => import("./pages/Games").then((m) => ({ default: m.GamePage })));
@@ -35,6 +36,7 @@ const CLUB_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/?$/;
 const CLUB_REPORTS_PATH = /^\/clubs\/([a-z0-9-]{1,48})\/reports\/?$/;
 const PRIVACY_PATH = /^\/privacy\/?$/;
 const TERMS_PATH = /^\/terms\/?$/;
+const REFUNDS_PATH = /^\/refunds\/?$/;
 const ABOUT_PATH = /^\/about\/?$/;
 const GAMES_PATH = /^\/games\/?$/;
 const GAME_PATH = /^\/games\/([a-z0-9]{2,24})\/?$/;
@@ -199,6 +201,8 @@ export function App() {
           <Privacy go={go} />
         ) : TERMS_PATH.test(path) ? (
           <Terms go={go} />
+        ) : REFUNDS_PATH.test(path) ? (
+          <Refunds go={go} />
         ) : ABOUT_PATH.test(path) ? (
           <About go={go} />
         ) : GAMES_PATH.test(path) ? (
@@ -259,6 +263,7 @@ function SiteFooter({ go }: { go: (p: string) => void }) {
         {link("/games", "All games")}
         {link("/privacy", "Privacy")}
         {link("/terms", "Terms")}
+        {link("/refunds", "Refunds")}
         {link("/safety", "Safety and data")}
         {link("/clubs", "Clubs")}
         {link("/ratings", "Ratings")}

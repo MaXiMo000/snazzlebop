@@ -60,6 +60,7 @@ def _shell(body: str) -> str:
             ("/about", "About"),
             ("/plus", "Plus"),
             ("/terms", "Terms"),
+            ("/refunds", "Refunds"),
             ("/privacy", "Privacy"),
         )
     )
@@ -100,6 +101,7 @@ def page_for(path: str, games: Sequence[dict[str, Any]], categories: Sequence[di
         "about": ("About", "Who makes Snazzlebop, why, and how to get in touch."),
         "plus": ("Snazzlebop Plus", "No ads, monthly coins and party items, every emote pack and a badge."),
         "terms": ("Terms", "The house rules: who can play, fair play, coins, Plus billing and refunds."),
+        "refunds": ("Refunds", "Plus refunds: any payment back in full within 14 days, no questions asked."),
         "privacy": ("Privacy", "What Snazzlebop keeps, why, for how long, and your rights."),
     }
     if path in simple:
@@ -127,7 +129,8 @@ def render(index_html: str, page: Page, canonical: str = "") -> str:
 
 
 def sitemap(site: str, games: Sequence[dict[str, Any]]) -> str:
-    paths = ["", "games", "about", "plus", "terms", "privacy"] + [f"games/{g['id']}" for g in games]
+    pages = ["", "games", "about", "plus", "terms", "refunds", "privacy"]
+    paths = pages + [f"games/{g['id']}" for g in games]
     urls = "".join(f"<url><loc>{escape(site.rstrip('/'))}/{p}</loc></url>" for p in paths)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'

@@ -79,7 +79,7 @@ export function Terms({ go }: { go: Go }) {
           <ul className="prose-list">
             <li>Plus is a monthly subscription sold by Paddle.com, our reseller and merchant of record, which handles payment, tax and invoices in your currency. Paddle's buyer terms also apply.</li>
             <li>It renews each month until you cancel. Cancel any time from the <Link to="/plus" go={go}>Plus page</Link>: you keep Plus until the end of the month you paid for.</li>
-            <li>Refunds: you can ask for a full refund of any payment within 14 days of it, no questions asked{contact ? <>: write to {contact}</> : null}. Refunds go back through Paddle to the way you paid. Where the law gives you more rights, those apply.</li>
+            <li>Refunds: you can ask for a full refund of any payment within 14 days of it, no questions asked (see the <Link to="/refunds" go={go}>refund policy</Link>){contact ? <>: write to {contact}</> : null}. Refunds go back through Paddle to the way you paid. Where the law gives you more rights, those apply.</li>
             <li>Plus never changes who wins: ranked games and battles are the same for everyone.</li>
           </ul>
         </Card>
