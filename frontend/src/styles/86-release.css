@@ -255,7 +255,7 @@ body {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
     gap: 36px;
     align-items: center;
-    min-height: calc(100dvh - 190px);
+    min-height: min(calc(100dvh - 190px), 540px);
   }
   .home-top .home-hero h1 {
     font-size: clamp(2.4rem, 3.7vw, 3.4rem);
@@ -744,4 +744,24 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 18px;
   }
+}
+/* a chip is padded evenly; only one ending in a count badge tucks its right side in */
+.shelf-chip {
+  padding: 6px 16px;
+}
+.shelf-chip:has(> .shelf-count:last-child) {
+  padding-right: 8px;
+}
+/* a tile's facts sit side by side and wrap as whole pieces (no separator left dangling) */
+.game-tile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 10px;
+}
+/* site-wide: no lone word on the last line of a sentence */
+p,
+li,
+.perks span,
+.game-tile-blurb {
+  text-wrap: pretty;
 }

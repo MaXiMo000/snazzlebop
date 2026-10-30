@@ -148,7 +148,7 @@ export function Codes({ view, you, receivedAt, send, tv = false }: Props) {
               {(view.you.hints[current] ?? []).length > 0 && (
                 <p>
                   Hints:{" "}
-                  {(view.you.hints[current] ?? []).map((h) => `position ${h.pos + 1} is ${FRUIT_NAME[h.symbol]}`).join(" · ")}
+                  {(view.you.hints[current] ?? []).map((h) => `position ${h.pos + 1} is ${FRUIT_NAME[h.symbol]}`).join(" ·\u00a0")}
                 </p>
               )}
               {(view.you.hints[current] ?? []).length < view.max_hints && (

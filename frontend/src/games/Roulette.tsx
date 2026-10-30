@@ -130,7 +130,7 @@ export function Roulette({ view, you, receivedAt, send, tv = false }: Props) {
                   return (
                     <li key={p.id}>
                       <b>{p.name}</b>
-                      {p.id === you ? " (you)" : ""}: {bets.length ? bets.map(describe).join(" · ") : "no bets"}{" "}
+                      {p.id === you ? " (you)" : ""}: {bets.length ? bets.map(describe).join(" ·\u00a0") : "no bets"}{" "}
                       <span className={`chip ${net > 0 ? "teal" : net < 0 ? "cherry" : ""}`}>
                         {net > 0 ? "+" : ""}
                         {net}
@@ -241,7 +241,7 @@ function BetPanel({ view, you, send }: { view: RouletteView; you: string; send: 
     return (
       <Card tone="soft" className="center">
         <h3>Locked in</h3>
-        <p>{view.you.bets.length ? view.you.bets.map(describe).join(" · ") : "No bets this spin."}</p>
+        <p>{view.you.bets.length ? view.you.bets.map(describe).join(" ·\u00a0") : "No bets this spin."}</p>
       </Card>
     );
   }

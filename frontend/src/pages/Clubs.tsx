@@ -740,7 +740,7 @@ function Members({
                     {ROLE_NAMES[m.role] ?? m.role}
                     {!you && (
                       <>
-                        {" · "}
+                        {" ·\u00a0"}
                         {STATUS_TEXT[m.status]}
                       </>
                     )}

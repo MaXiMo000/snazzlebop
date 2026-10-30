@@ -140,7 +140,7 @@ export function Lonely({ view, you, receivedAt, send, tv = false }: Props) {
         </ul>
         {view.history && (
           <p className="muted">
-            Winning numbers: {view.history.map((h) => (h.winner ? h.picks[h.winner] : "–")).join(" · ")}
+            Winning numbers: {view.history.map((h) => (h.winner ? h.picks[h.winner] : "–")).join(" ·\u00a0")}
           </p>
         )}
       </Card>

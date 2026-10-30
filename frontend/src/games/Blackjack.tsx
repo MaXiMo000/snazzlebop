@@ -56,7 +56,7 @@ const OUTCOME: Record<string, string> = { win: "You win", blackjack: "Blackjack!
 function MyResult({ view, you }: { view: BlackjackView; you: string }) {
   const net = view.result!.net[you]!;
   const outcomes = view.result!.outcomes[you] ?? [];
-  const head = outcomes.length === 1 ? (OUTCOME[outcomes[0]!] ?? outcomes[0]) : outcomes.map((o) => OUTCOME[o] ?? o).join(" · ");
+  const head = outcomes.length === 1 ? (OUTCOME[outcomes[0]!] ?? outcomes[0]) : outcomes.map((o) => OUTCOME[o] ?? o).join(" ·\u00a0");
   // Bring the payout to the top of the screen when it lands (the Ready bar sits at the bottom).
   const top = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();

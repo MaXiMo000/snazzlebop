@@ -281,7 +281,7 @@ function Racers({ view, you, tv }: { view: WordRaceView; you: string; tv: boolea
                 ))}
               </div>
               {view.phase !== "play" && rows.some((row) => row.word) && (
-                <p className="wr-words muted">{rows.map((row) => row.word).join("\u00a0· ")}</p>
+                <p className="wr-words muted">{rows.map((row) => row.word).join(" ·\u00a0")}</p>
               )}
             </li>
           );

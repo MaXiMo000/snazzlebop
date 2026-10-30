@@ -19,12 +19,7 @@ export function GameTile({ g, dim = false, onOpen }: { g: GameCard; dim?: boolea
           </span>
           <span className="game-tile-meta">
             <span className="no-break">{playersLabel(g)} players</span>
-            {g.featured !== null && (
-              <>
-                {" · "}
-                <span className="no-break">⭐ easy start</span>
-              </>
-            )}
+            {g.featured !== null && <span className="no-break">⭐ easy start</span>}
           </span>
           <span id={`seg-${g.id}-blurb`} className="game-tile-blurb">
             {g.blurb}

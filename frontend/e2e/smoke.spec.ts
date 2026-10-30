@@ -948,6 +948,51 @@ async function layout(page: Page, where: string, found: string[]) {
     return [...new Set(out)].slice(0, 8);
   });
   for (const b of bad) found.push(`${where}: ${b}`);
+  for (const b of await page.evaluate(offCentre)) found.push(`${where}: ${b}`);
+}
+
+/** Buttons, chips and tabs whose visible content sits off-centre (uneven space left and right). Text for
+ * screen readers only doesn't count; a chip ending in a count badge is snug on the right by design. */
+function offCentre(): string[] {
+  const out: string[] = [];
+  const shown = (n: Node) => {
+    const el = n.nodeType === 1 ? (n as Element) : n.parentElement;
+    return !!el && !el.closest(".sr-only") && getComputedStyle(el).visibility !== "hidden";
+  };
+  const contentBox = (el: Element) => {
+    let l = Infinity;
+    let r = -Infinity;
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (!shown(n)) continue;
+      let box: DOMRect | null = null;
+      if (n.nodeType === 3 && n.textContent?.trim()) {
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        box = range.getBoundingClientRect();
+      } else if (n.nodeType === 1 && /^(svg|img|canvas)$/i.test((n as Element).tagName)) box = (n as Element).getBoundingClientRect();
+      if (box && box.width) {
+        l = Math.min(l, box.left);
+        r = Math.max(r, box.right);
+      }
+    }
+    return l < r ? { left: l, right: r, width: r - l } : null;
+  };
+  for (const el of document.querySelectorAll("main .shelf-chip, main .chip, main .btn, main [role=tab], main .tab, main .auth-tab, dialog .btn, dialog .shelf-chip")) {
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    if (!r.width || cs.visibility === "hidden" || el.closest(".sr-only, [aria-hidden=true]")) continue;
+    if (el.lastElementChild?.matches(".shelf-count, .chat-badge, .count")) continue;
+    const c = contentBox(el);
+    if (!c) continue;
+    const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+    const centred = cs.justifyContent === "center" || cs.textAlign === "center";
+    if (r.width - c.width - pad > 4 && !centred) continue; // start-aligned on purpose, with room to spare
+    const left = c.left - r.left;
+    const right = r.right - c.right;
+    if (Math.abs(left - right) > 6) out.push(`off-centre: "${el.textContent?.trim().slice(0, 20)}" ${Math.round(left)}px left / ${Math.round(right)}px right`);
+  }
+  return [...new Set(out)];
 }
 
 test("layout sweep: every page at 320, phone, tablet, laptop and TV widths, both themes", async ({ browser, baseURL }, info) => {

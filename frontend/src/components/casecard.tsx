@@ -68,7 +68,7 @@ export function CaseCard({ c, meta, actions, footer }: { c: CaseLike; meta?: str
           <p className="muted">
             {[typeof c.triage.score === "number" ? `${Math.round(c.triage.score * 100)}% sure` : "", c.triage.by ? `by ${c.triage.by}` : ""]
               .filter(Boolean)
-              .join(" · ")}
+              .join(" ·\u00a0")}
           </p>
           {c.triage.summary && <p className="muted">{c.triage.summary}</p>}
           <p className="muted acct-hint">A suggestion only: you decide.</p>

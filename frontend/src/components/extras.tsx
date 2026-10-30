@@ -313,7 +313,7 @@ export function MvpVote({ state, send }: { state: RoomState; send: Send }) {
       )}
       {votes.length > 0 && (
         <p className="space-top" aria-live="polite">
-          {votes.map(([pid, n]) => `${nameOf(state.players, pid)} ${n}`).join(" · ")}
+          {votes.map(([pid, n]) => `${nameOf(state.players, pid)} ${n}`).join(" ·\u00a0")}
         </p>
       )}
     </Card>
