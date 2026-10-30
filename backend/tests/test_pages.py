@@ -74,11 +74,15 @@ def test_the_server_sends_each_public_page_with_its_content(tmp_path):
         r = c.get("/games/trivia")
         assert r.status_code == 200 and "<title>Trivia Tonight: how to play" in r.text
         assert "How to play" in r.text and "<li>" in r.text
+        assert '<link rel="canonical" href="' in r.text and '/games/trivia" />' in r.text
         home = c.get("/").text
         assert 'href="/games/chess"' in home and "<title>Snazzlebop: party game show" in home
         assert c.get("/about").status_code == 200
         room = c.get("/r/ABCDE").text
         assert room == INDEX  # rooms: just the app, nothing for a crawler
         assert c.get("/games/nope").text == INDEX
+        assert c.head("/sitemap.xml").status_code == 200  # crawlers check before reading
+        assert c.head("/ads.txt").status_code == 200
+        assert c.head("/games/trivia").status_code == 200
         xml = c.get("/sitemap.xml")
         assert xml.headers["content-type"].startswith("application/xml") and "/games/trivia</loc>" in xml.text

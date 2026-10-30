@@ -109,9 +109,13 @@ def page_for(path: str, games: Sequence[dict[str, Any]], categories: Sequence[di
     return None
 
 
-def render(index_html: str, page: Page) -> str:
-    """index.html with this page's title, description and body in place."""
+def render(index_html: str, page: Page, canonical: str = "") -> str:
+    """index.html with this page's title, description, its own address (canonical) and body in place."""
     title, desc, body = page
+    if canonical:
+        index_html = index_html.replace(
+            "</head>", f'<link rel="canonical" href="{escape(canonical, quote=True)}" /></head>', 1
+        )
     out = re.sub(r"<title>.*?</title>", f"<title>{escape(title)}</title>", index_html, count=1, flags=re.S)
     out = re.sub(
         r'(<meta\s+name="description"\s+content=")[^"]*(")',

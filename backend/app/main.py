@@ -240,12 +240,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def healthz() -> dict[str, bool]:
         return {"ok": True}
 
-    @app.get("/sitemap.xml", include_in_schema=False)
+    # GET and HEAD: crawlers (Google, AdSense) may check that a file exists before reading it
+    @app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
     async def sitemap_xml() -> Response:
         body = pages.sitemap(settings.site, catalog())
         return Response(body, media_type="application/xml", headers={"Cache-Control": "public, max-age=3600"})
 
-    @app.get("/ads.txt", include_in_schema=False)
+    # GET and HEAD: crawlers (Google, AdSense) may check that a file exists before reading it
+    @app.api_route("/ads.txt", methods=["GET", "HEAD"], include_in_schema=False)
     async def ads_txt() -> PlainTextResponse:
         """Who may sell this site's ad space. Served from the publisher id alone: AdSense checks it
         before approving the site, and the ad slot only exists after approval."""
@@ -375,7 +377,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # public pages carry their own title, description and text for crawlers (pages.py)
             page = pages.page_for(full_path, catalog(), catalogue.categories())
             if page is not None:
-                html = pages.render(index.read_text(encoding="utf-8"), page)
+                canonical = f"{settings.site}/{full_path.strip('/')}" if settings.site else ""
+                html = pages.render(index.read_text(encoding="utf-8"), page, canonical)
                 return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
             return FileResponse(index, headers={"Cache-Control": "no-cache"})
         return _error(404, "not_found", "Not found")
