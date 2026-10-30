@@ -7,7 +7,7 @@ penalty box, so it goes last). Each one is reported to Locust as an "ABUSE" requ
 server defended itself the way SECURITY.md says it does. Locust exits non-zero if any fail.
 
   1 room_of_8         a legit room: 8 sockets connect, play a Price round, all see the reveal
-  2 socket_cap        12 sockets from one IP are accepted, the 13th is refused
+  2 socket_cap        40 sockets from one IP (a full room on one network) are accepted, the 41st is refused
   3 message_flood     50 msg/s on one socket is closed with 4008 (slow down)
   4 oversized_frames  a 3 KB frame (app limit 2 KB) and a 20 KB frame (uvicorn 16 KB) close with 1009
   5 slow_reader       a client that never reads is dropped while the room keeps playing
@@ -34,6 +34,8 @@ import requests
 import websocket
 from locust import User, events, task
 from locust.exception import StopUser
+
+SOCKET_CAP = 40  # live sockets per IP (config max_ws_per_ip)
 
 ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"
 
@@ -120,17 +122,17 @@ class Suite:
         gevent.sleep(1)
         return "8/8 sockets connected, played a round and saw the reveal"
 
-    def socket_cap(self) -> str:
+    def socket_cap(self) -> str:  # SOCKET_CAP matches max_ws_per_ip in app/config.py
         held = []
         try:
-            for _ in range(12):
+            for _ in range(SOCKET_CAP):
                 held.append(self.connect())  # unauthenticated still counts against the IP cap
             try:
                 extra = self.connect()
             except websocket.WebSocketBadStatusException as exc:
-                return f"12 sockets accepted; 13th refused at handshake (HTTP {exc.status_code})"
+                return f"{SOCKET_CAP} sockets accepted; one more refused at handshake (HTTP {exc.status_code})"
             extra.close()
-            raise Fail("13th socket from one IP was accepted")
+            raise Fail(f"socket {SOCKET_CAP + 1} from one IP was accepted")
         finally:
             for ws in held:
                 ws.close()
