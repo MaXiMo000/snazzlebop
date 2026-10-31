@@ -3,7 +3,9 @@
 - GET /api/billing/config: what the browser needs (Paddle's client token and the Plus price id, the
   AdSense ids), or that payments and ads are off.
 - POST /api/billing/checkout: a signed reference to your account for Paddle's checkout.
-- POST /api/billing/paddle: Paddle's webhooks, the only thing that turns Plus on or pays its perks.
+- POST /api/billing/coins: the same, for one coin pack.
+- POST /api/billing/paddle: Paddle's webhooks, the only thing that turns Plus on, pays its perks, credits
+  bought coins or takes refunded ones back.
 - GET /api/me/plus, POST /api/me/plus/manage: your Plus, and a link to Paddle's page to change or
   cancel it.
 """
@@ -20,6 +22,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict
 
 from . import billing, schemas
 from .accounts import check_same_origin, session_user
@@ -74,6 +77,23 @@ def _prices(data: dict[str, Any]) -> set[str]:
     }
 
 
+def _bought_coins(data: dict[str, Any], packs: dict[str, int]) -> int:
+    """The coins a completed one-time payment bought (0 if it held no coin pack)."""
+    total = 0
+    for i in data.get("items", []) or []:
+        if not isinstance(i, dict) or not isinstance(i.get("price"), dict):
+            continue
+        qty = i.get("quantity", 1)
+        qty = qty if isinstance(qty, int) and 1 <= qty <= 10 else 1
+        total += packs.get(str(i["price"].get("id", "")), 0) * qty
+    return total
+
+
+class CoinsBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    coins: int
+
+
 def router(settings: Settings, db: Any) -> APIRouter:
     api = APIRouter()
 
@@ -97,6 +117,9 @@ def router(settings: Settings, db: Any) -> APIRouter:
             if billing.ads_on(settings)
             else None,
             "perks": {"coins": billing.PLUS_COINS, "items": dict(billing.PLUS_ITEMS)},
+            "coin_packs": [{"coins": c, "price": p} for p, c in billing.coin_prices(settings).items()]
+            if on
+            else [],
         }
         return JSONResponse(body, headers={"Cache-Control": "no-store"})
 
@@ -112,6 +135,21 @@ def router(settings: Settings, db: Any) -> APIRouter:
             "email": user.email if user.email_verified else None,
         }
         return JSONResponse(body, headers={"Cache-Control": "no-store"})
+
+    @api.post("/api/billing/coins", response_model=schemas.PlusCheckout, responses=schemas.ERRORS)
+    async def coins_checkout(body: CoinsBody, request: Request) -> JSONResponse:
+        """A coin pack's checkout: the price and a signed reference to your account."""
+        check_same_origin(request, settings)
+        user = await me(request)
+        price = next((p for p, c in billing.coin_prices(settings).items() if c == body.coins), None)
+        if price is None:
+            raise HubError("no_pack", "That coin pack isn't on sale here", 404)
+        out = {
+            "price": price,
+            "custom_data": billing.account_ref(settings, user.id),
+            "email": user.email if user.email_verified else None,
+        }
+        return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
     @api.post("/api/billing/paddle", response_model=schemas.Ok, responses=schemas.ERRORS)
     async def paddle_webhook(request: Request) -> JSONResponse:
@@ -152,6 +190,17 @@ def router(settings: Settings, db: Any) -> APIRouter:
             )
             if user_id is not None and settings.paddle_plus_price in _prices(data):
                 await db.grant_plus_month(user_id, str(data.get("id", event_id)))
+        elif kind == "transaction.completed":
+            # a coin pack: only to the account that signed the checkout
+            user_id = billing.account_of(settings, data.get("custom_data"))
+            coins = _bought_coins(data, billing.coin_prices(settings))
+            if user_id is not None and coins:
+                await db.buy_coins(user_id, coins, str(data.get("id", event_id)))
+        elif kind in ("adjustment.created", "adjustment.updated"):
+            user_id = None
+            approved = data.get("action") in ("refund", "chargeback") and data.get("status") == "approved"
+            if approved and isinstance(data.get("transaction_id"), str):
+                await db.refund_coins(data["transaction_id"])
         else:
             user_id = None
         await db.billing_seen(event_id, kind, user_id)

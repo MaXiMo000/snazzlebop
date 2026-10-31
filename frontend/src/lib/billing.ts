@@ -50,32 +50,37 @@ export function loadScript(src: string, attrs: Record<string, string> = {}): Pro
 }
 
 let ready: Promise<PaddleJs> | null = null;
+let done: () => void = () => undefined; // the open checkout's "paid" step (Paddle.js is set up once)
 function paddle(cfg: BillingConfig, onDone: () => void): Promise<PaddleJs> {
+  done = onDone;
   ready ??= loadScript("https://cdn.paddle.com/paddle/v2/paddle.js").then(() => {
     const p = window.Paddle;
     if (!p) throw new Error("Paddle.js missing");
     if (cfg.environment === "sandbox") p.Environment.set("sandbox");
-    p.Initialize({ token: cfg.client_token, eventCallback: (e) => e.name === "checkout.completed" && onDone() });
+    p.Initialize({ token: cfg.client_token, eventCallback: (e) => e.name === "checkout.completed" && done() });
     return p;
   });
   return ready;
 }
 
-/** Plus's price in the buyer's own currency, as Paddle shows it ("$1.99", "₹99"...). */
-export async function plusPrice(cfg: BillingConfig): Promise<string | null> {
+/** Prices in the buyer's own currency, as Paddle shows them ("$1.99", "₹99"...), in the same order. */
+export async function localPrices(cfg: BillingConfig, ids: string[]): Promise<(string | null)[] | null> {
   try {
     // At most 5 s: a blocked script or a slow network shows the plain wording instead.
-    const late = new Promise<null>((done) => setTimeout(() => done(null), 5000));
+    const late = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
     const ask = (async () => {
-      const p = await paddle(cfg, () => undefined);
-      const r = await p.PricePreview({ items: [{ priceId: cfg.plus_price, quantity: 1 }] });
-      return r.data.details.lineItems[0]?.formattedTotals.total ?? null;
+      const p = await (ready ?? paddle(cfg, () => undefined));
+      const r = await p.PricePreview({ items: ids.map((priceId) => ({ priceId, quantity: 1 })) });
+      return ids.map((_, i) => r.data.details.lineItems[i]?.formattedTotals.total ?? null);
     })();
     return await Promise.race([ask, late]);
   } catch {
     return null;
   }
 }
+
+/** Plus's price in the buyer's own currency. */
+export const plusPrice = (cfg: BillingConfig) => localPrices(cfg, [cfg.plus_price]).then((r) => r?.[0] ?? null);
 
 /** Paddle's own checkout, over this page. Plus turns on when Paddle's signed webhook reaches the server. */
 export async function buyPlus(cfg: BillingConfig, dark: boolean, onDone: () => void): Promise<void> {
@@ -85,6 +90,20 @@ export async function buyPlus(cfg: BillingConfig, dark: boolean, onDone: () => v
     ...(mine.email ? { customer: { email: mine.email } } : {}),
     customData: mine.custom_data,
     settings: { displayMode: "overlay", theme: dark ? "dark" : "light", successUrl: `${location.origin}/plus?thanks=1` },
+  });
+}
+
+/** Paddle's checkout for one coin pack. The coins arrive when Paddle's signed webhook reaches the server. */
+export async function buyCoins(cfg: BillingConfig, coins: number, dark: boolean, onDone: () => void): Promise<void> {
+  const [p, mine] = await Promise.all([
+    paddle(cfg, onDone),
+    request<PlusCheckout>("/api/billing/coins", { method: "POST", body: JSON.stringify({ coins }) }),
+  ]);
+  p.Checkout.open({
+    items: [{ priceId: mine.price, quantity: 1 }],
+    ...(mine.email ? { customer: { email: mine.email } } : {}),
+    customData: mine.custom_data,
+    settings: { displayMode: "overlay", theme: dark ? "dark" : "light", allowQuantity: false },
   });
 }
 

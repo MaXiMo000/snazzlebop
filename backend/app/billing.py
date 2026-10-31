@@ -11,6 +11,9 @@ webhooks: a checkout can't grant anything by itself.
   limit), recorded once by its event id (a resend changes nothing), and the month's perks are paid
   once per billing period through the coin ledger.
 
+Coin packs: one-time purchases of coins, credited once per payment through the coin ledger, and taken back
+(as far as the balance allows) when the payment is refunded or charged back. Coins have no cash value.
+
 Plus: no ads, coins and a few party items each month, every emote pack while it lasts, and a badge. Ads only
 show in the lobby, on results and at the foot of the home page, never during a game and never to Plus members.
 Pure apart from the signature helpers (stdlib only).
@@ -27,6 +30,7 @@ from typing import Any
 
 from .config import Settings
 
+COIN_PACKS = (500, 1500, 4000)  # coins sold for money (each needs its PADDLE_COINS_<n> price id)
 PLUS_COINS = 300  # each paid month
 PLUS_ITEMS = {"party_confetti": 2, "party_airhorn": 1, "party_replay": 1}  # each paid month
 GRACE = timedelta(days=1)  # Plus stays on this long past a period's end while a renewal goes through
@@ -50,6 +54,13 @@ ADS_HOSTS = (
 def payments_on(settings: Settings) -> bool:
     return bool(
         settings.paddle_client_token and settings.paddle_webhook_secret and settings.paddle_plus_price
+    )
+
+
+def coin_prices(settings: Settings) -> dict[str, int]:
+    """Paddle price id -> the coins it buys (only while payments are on)."""
+    return (
+        dict((price, coins) for coins, price in settings.paddle_coin_packs) if payments_on(settings) else {}
     )
 
 

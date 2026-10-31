@@ -92,6 +92,11 @@ class PlusPerks(Strict):
     items: dict[str, int]  # party items each paid month
 
 
+class CoinPack(Strict):
+    coins: int
+    price: str  # Paddle price id
+
+
 class BillingConfig(Strict):
     payments: bool  # Plus is on sale (Paddle is set up)
     environment: str  # sandbox | production
@@ -99,6 +104,7 @@ class BillingConfig(Strict):
     plus_price: str  # Paddle price id for Plus ("" when off)
     ads: AdIds | None  # AdSense ids (None: no ads on this site)
     perks: PlusPerks
+    coin_packs: list[CoinPack]  # coins on sale for money ([] when off)
 
 
 class PlusCheckout(Strict):

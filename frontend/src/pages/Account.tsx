@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AccountPerks } from "../components/nav";
 import { inApp } from "../lib/app";
+import { CoinStore } from "../components/coinstore";
 import { YourLook } from "../components/look";
 import {
   Alert,
@@ -510,6 +511,7 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
       {tab === "shop" && (
         <>
           <YourLook username={user.username} go={go} />
+          <CoinStore />
           {shopCard}
         </>
       )}

@@ -422,3 +422,105 @@ def test_mixed_up_paddle_ids_stop_the_deploy_with_a_clear_reason():
         {**base, "PADDLE_CLIENT_TOKEN": "live_abc", "PADDLE_PLUS_PRICE": "pri_01m6742j71p0w02c9yvc25gep0"}
     )
     assert ok.paddle_plus_price.startswith("pri_") and ok.paddle_client_token == "live_abc"
+
+
+COIN_PRICES = {500: "pri_01coins500x", 1500: "pri_01coins1500", 4000: "pri_01coins4000"}
+
+
+@pytest.fixture()
+def coinshop(tmp_path):
+    s = settings(
+        tmp_path,
+        rate_auth_burst=1000,
+        paddle_client_token="test_abc",
+        paddle_webhook_secret=SECRET,
+        paddle_plus_price=PRICE,
+        paddle_coin_packs=tuple(COIN_PRICES.items()),
+    )
+    with TestClient(create_app(s)) as c:
+        yield c
+
+
+def coin_payment(ref, price, txn="txn_01coins1", qty=1):
+    return {"id": txn, "custom_data": ref, "items": [{"price": {"id": price}, "quantity": qty}]}
+
+
+def refund(txn, status="approved", action="refund"):
+    return {"id": "adj_01refund1", "action": action, "status": status, "transaction_id": txn}
+
+
+def test_coin_packs_pay_once_only_to_the_signed_account_and_refunds_take_them_back(coinshop):
+    signup(coinshop)
+    packs = coinshop.get("/api/billing/config").json()["coin_packs"]
+    assert {p["coins"]: p["price"] for p in packs} == COIN_PRICES
+    assert coinshop.post("/api/billing/coins", json={"coins": 999}).status_code == 404  # no such pack
+    mine = coinshop.post("/api/billing/coins", json={"coins": 1500}).json()
+    assert mine["price"] == COIN_PRICES[1500]
+    ref = mine["custom_data"]
+    coins = lambda: coinshop.get("/api/me").json()["user"]["coins"]  # noqa: E731
+    start = coins()
+    # unsigned, someone else's account, an unknown price or the Plus price: nothing
+    raw = json.dumps(event("transaction.completed", coin_payment(ref, COIN_PRICES[1500]))).encode()
+    assert (
+        coinshop.post(
+            "/api/billing/paddle", content=raw, headers={"Paddle-Signature": "ts=1;h1=0"}
+        ).status_code
+        == 401
+    )
+    send(
+        coinshop,
+        event(
+            "transaction.completed", coin_payment({**ref, "account": "999"}, COIN_PRICES[1500], "t2"), "e2"
+        ),
+    )
+    send(coinshop, event("transaction.completed", coin_payment(ref, "pri_01somethingelse", "t3"), "e3"))
+    send(coinshop, event("transaction.completed", coin_payment(None, COIN_PRICES[1500], "t4"), "e4"))
+    assert coins() == start
+    # paid: credited once, however often Paddle says so
+    pay = coin_payment(ref, COIN_PRICES[1500])
+    for eid in ("e5", "e5", "e6"):
+        send(coinshop, event("transaction.completed", pay, eid))
+    assert coins() == start + 1500
+    # a refund that isn't approved yet changes nothing; an approved one takes the coins back, once
+    send(coinshop, event("adjustment.created", refund("txn_01coins1", "pending_approval"), "e7"))
+    assert coins() == start + 1500
+    send(coinshop, event("adjustment.updated", refund("txn_01coins1"), "e8"))
+    send(coinshop, event("adjustment.updated", refund("txn_01coins1"), "e9"))
+    assert coins() == start
+    # spent coins aren't chased below zero
+    send(coinshop, event("transaction.completed", coin_payment(ref, COIN_PRICES[500], "txn_01coins2"), "e10"))
+    set_coins(coinshop, 100)
+    send(coinshop, event("adjustment.updated", refund("txn_01coins2", action="chargeback"), "e11"))
+    assert coins() == 0
+    history = coinshop.get("/api/me/coins").json()["entries"]
+    assert {"bought", "refund"} <= {e["reason"] for e in history}
+
+
+def set_coins(client, n):
+    from sqlalchemy import update
+
+    from app.db import User
+
+    db = client.app.state.db
+
+    async def go():
+        async with db.sessions() as session:
+            await session.execute(update(User).values(coins=n))
+            await session.commit()
+
+    client.portal.call(go)
+
+
+def test_coin_packs_stay_off_without_payments_and_bad_ids_stop_the_deploy(tmp_path):
+    from app.config import load_settings
+
+    s = settings(tmp_path, rate_auth_burst=1000, paddle_coin_packs=tuple(COIN_PRICES.items()))
+    with TestClient(create_app(s)) as c:
+        assert c.get("/api/billing/config").json()["coin_packs"] == []
+        signup(c)
+        assert c.post("/api/billing/coins", json={"coins": 500}).status_code == 404
+    base = {"SECRET_KEY": "k" * 40, "ALLOWED_HOSTS": "x.test"}
+    with pytest.raises(ValueError, match="PADDLE_COINS_500"):
+        load_settings({**base, "PADDLE_COINS_500": "pro_01m67a6rrqfm87rjchqakd72bt"})
+    ok = load_settings({**base, "PADDLE_COINS_500": "pri_01m67wqw63s7wcvrbvvhdac4p8"})
+    assert ok.paddle_coin_packs == ((500, "pri_01m67wqw63s7wcvrbvvhdac4p8"),)

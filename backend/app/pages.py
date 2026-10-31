@@ -225,8 +225,14 @@ def page_for(
             "Who makes Snazzlebop, a free online party game show for friends, and how to reach us.",
         ),
         "plus": ("Snazzlebop Plus", "No ads, monthly coins and party items, every emote pack and a badge."),
-        "terms": ("Terms", "The house rules: who can play, fair play, coins, Plus billing and refunds."),
-        "refunds": ("Refunds", "Plus refunds: any payment back in full within 14 days, no questions asked."),
+        "terms": (
+            "Terms",
+            "The house rules: who can play, fair play, coins and coin packs, Plus billing and refunds.",
+        ),
+        "refunds": (
+            "Refunds",
+            "Any payment, for Plus or a coin pack, back in full within 14 days, no questions asked.",
+        ),
         "privacy": ("Privacy", "What Snazzlebop keeps, why, for how long, and your rights."),
     }
     if path in simple:

@@ -18,7 +18,7 @@ function Link({ to, go, children }: { to: string; go: Go; children: string }) {
   );
 }
 
-/** The refund policy for Snazzlebop Plus: 14 days, no questions asked, refunded through Paddle. */
+/** The refund policy for Plus and coin packs: 14 days, no questions asked, refunded through Paddle. */
 export function Refunds({ go }: { go: Go }) {
   const [contact, setContact] = useState<string | null>(null);
   const [operator, setOperator] = useState<string | null>(null);
@@ -38,15 +38,18 @@ export function Refunds({ go }: { go: Go }) {
       <Card tone="stage" className="center">
         <p className="sign">Refunds</p>
         <h1 className="space-top prose-title">Changed your mind? No problem</h1>
-        <p className="space-top">Every payment for Snazzlebop Plus can be refunded in full within 14 days, no questions asked.</p>
+        <p className="space-top">Every payment, for Snazzlebop Plus or a coin pack, can be refunded in full within 14 days, no questions asked.</p>
       </Card>
 
       <Card aria-labelledby="rf-policy">
         <h2 id="rf-policy">The policy</h2>
         <ul className="prose-list">
           <li>
-            <b>14 days, in full:</b> ask within 14 days of any payment (the first month or a renewal) and you get that payment back
-            in full. You don't need to give a reason.
+            <b>14 days, in full:</b> ask within 14 days of any payment (a Plus month, a renewal or a coin pack) and you get that
+            payment back in full. You don't need to give a reason.
+          </li>
+          <li>
+            <b>Coin packs:</b> a refund takes that pack's coins back off your balance, as far as your balance goes.
           </li>
           <li>
             <b>After 14 days:</b> you can still cancel at any time, and Plus stays on until the end of the month you paid for. We

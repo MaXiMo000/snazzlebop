@@ -124,6 +124,7 @@ class Settings:
     paddle_api_key: str = field(default="", repr=False)  # server key: only for "manage my subscription"
     paddle_webhook_secret: str = field(default="", repr=False)
     paddle_plus_price: str = ""  # the Plus monthly price id (pri_...)
+    paddle_coin_packs: tuple[tuple[int, str], ...] = ()  # (coins, one-time price id) for each coin pack
     # Optional: Google AdSense in the lobby, on results and at the foot of the home page (billing.py).
     # Unset = no ads.
     adsense_client: str = ""  # ca-pub-...
@@ -180,6 +181,13 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     plus_price = e.get("PADDLE_PLUS_PRICE", "").strip()
     if plus_price and not re.fullmatch(r"pri_[a-z0-9]{10,64}", plus_price):
         raise ValueError("PADDLE_PLUS_PRICE must be the price id (pri_...), not the product id (pro_...)")
+    coin_packs = []
+    for coins in (500, 1500, 4000):  # billing.COIN_PACKS
+        price = e.get(f"PADDLE_COINS_{coins}", "").strip()
+        if price and not re.fullmatch(r"pri_[a-z0-9]{10,64}", price):
+            raise ValueError(f"PADDLE_COINS_{coins} must be the price id (pri_...), not the product id")
+        if price:
+            coin_packs.append((coins, price))
     client_token = e.get("PADDLE_CLIENT_TOKEN", "").strip()
     want_prefix = "live_" if paddle_env == "production" else "test_"
     if client_token and not client_token.startswith(want_prefix):
@@ -278,6 +286,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         paddle_api_key=e.get("PADDLE_API_KEY", "").strip(),
         paddle_webhook_secret=e.get("PADDLE_WEBHOOK_SECRET", "").strip(),
         paddle_plus_price=plus_price,
+        paddle_coin_packs=tuple(coin_packs),
         adsense_client=adsense_client,
         adsense_slot=e.get("ADSENSE_SLOT", "").strip(),
         plus_friends=_emails(e.get("PLUS_FRIENDS")),

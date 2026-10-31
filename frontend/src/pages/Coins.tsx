@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, errText } from "../components/auth";
+import { CoinStore } from "../components/coinstore";
 import { Btn, Card, Loading } from "../components/ui";
 import { fetchGames } from "../lib/api";
 import { myCoins, shopItems, useAccount } from "../lib/account";
@@ -17,6 +18,9 @@ const REWARDS: Record<string, [string, string, string]> = {
   battle: ["⚔️", "Battle prize", "Battles"],
   club_challenge: ["🏠", "Club challenge", "Clubs"],
   season_ch: ["🏅", "Season challenge", "Quests"],
+  plus: ["⭐", "Plus monthly coins", "Snazzlebop Plus"],
+  bought: ["💳", "Bought coins", "Coin pack"],
+  refund: ["↩️", "Coin pack refunded", "Coins taken back"],
 };
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
@@ -73,6 +77,7 @@ export function Coins({ go }: { go: Go }) {
           </Btn>
         </div>
       </Card>
+      <CoinStore />
       <Alert text={error} />
 
       {data && (

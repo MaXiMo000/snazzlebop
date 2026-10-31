@@ -67,7 +67,10 @@ export function Terms({ go }: { go: Go }) {
       <Card aria-labelledby="tm-coins">
         <h2 id="tm-coins">Coins, power-ups and ratings</h2>
         <ul className="prose-list">
-          <li>Coins are earned by playing and spent in the power-up shop. They have no cash value: they can't be bought and sold between players, exchanged for money or prizes, or cashed out.</li>
+          <li>Coins are earned by playing{billing?.coin_packs.length ? <>, and can also be bought in packs</> : null}, and spent in the shop on looks, emote packs and power-ups. They're a licence to use inside Snazzlebop, not money: they have no cash value and can't be sold or traded between players, transferred, exchanged for money or prizes, or cashed out.</li>
+          {billing?.coin_packs.length ? (
+            <li>Coin packs are one-time purchases sold by Paddle.com, our reseller and merchant of record. You can ask for a full refund within 14 days (see the <Link to="/refunds" go={go}>refund policy</Link>); a refund takes the pack's coins back off your balance, as far as it goes.</li>
+          ) : null}
           <li>No game takes coins as an entry fee or a stake.</li>
           <li>We may adjust coins, power-ups or ratings gained by cheating or by a bug, and we may change prices and rewards over time.</li>
         </ul>

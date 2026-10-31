@@ -1208,3 +1208,50 @@
   flex-wrap: wrap;
   gap: 10px;
 }
+
+/* ---- coin packs for money ------------------------------------------------------------------------ */
+.coin-packs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.coin-pack {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 22px 12px 14px;
+  border: 1.5px solid var(--card-edge, var(--edge));
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  text-align: center;
+}
+.coin-pack.best {
+  border-color: var(--mustard);
+  box-shadow: 0 0 0 2px var(--mustard);
+}
+.coin-pack-flag {
+  position: absolute;
+  top: -11px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--mustard);
+  color: #2b1239;
+  font: 700 0.75rem / 1.4 var(--body);
+  white-space: nowrap;
+}
+.coin-pack-pile {
+  font-size: 1.6rem;
+  line-height: 1;
+  letter-spacing: -0.3em;
+}
+.coin-pack-amount {
+  font: 400 1.15rem / 1.2 var(--display);
+}
+.coin-fine {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+}

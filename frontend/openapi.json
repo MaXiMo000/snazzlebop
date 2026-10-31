@@ -419,6 +419,13 @@
             "title": "Client Token",
             "type": "string"
           },
+          "coin_packs": {
+            "items": {
+              "$ref": "#/components/schemas/CoinPack"
+            },
+            "title": "Coin Packs",
+            "type": "array"
+          },
           "environment": {
             "title": "Environment",
             "type": "string"
@@ -441,7 +448,8 @@
           "client_token",
           "plus_price",
           "ads",
-          "perks"
+          "perks",
+          "coin_packs"
         ],
         "title": "BillingConfig",
         "type": "object"
@@ -1543,6 +1551,39 @@
           "place"
         ],
         "title": "CoinNews",
+        "type": "object"
+      },
+      "CoinPack": {
+        "additionalProperties": false,
+        "properties": {
+          "coins": {
+            "title": "Coins",
+            "type": "integer"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coins",
+          "price"
+        ],
+        "title": "CoinPack",
+        "type": "object"
+      },
+      "CoinsBody": {
+        "additionalProperties": false,
+        "properties": {
+          "coins": {
+            "title": "Coins",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "coins"
+        ],
+        "title": "CoinsBody",
         "type": "object"
       },
       "ConfirmBody": {
@@ -8077,6 +8118,115 @@
           }
         },
         "summary": "Checkout"
+      }
+    },
+    "/api/billing/coins": {
+      "post": {
+        "description": "A coin pack's checkout: the price and a signed reference to your account.",
+        "operationId": "coins_checkout_api_billing_coins_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoinsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlusCheckout"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too many requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unavailable"
+          }
+        },
+        "summary": "Coins Checkout"
       }
     },
     "/api/billing/config": {

@@ -2064,6 +2064,34 @@ class Database:
             await session.commit()
         return True
 
+    async def buy_coins(self, user_id: int, coins: int, ref: str) -> bool:
+        """Coins bought with a payment, once per payment (the ledger's reference rule)."""
+        async with self.sessions() as session:
+            await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+            done = await self._post(session, user_id, coins, "bought", "payment", ref)
+            await session.commit()
+        return done
+
+    async def refund_coins(self, ref: str) -> bool:
+        """A refunded or charged-back coin payment: its coins come back off the balance, as far as the
+        balance goes (spent coins aren't chased), once."""
+        async with self.sessions() as session:
+            bought = await session.scalar(
+                select(LedgerEntry).where(
+                    LedgerEntry.reason == "bought",
+                    LedgerEntry.ref_type == "payment",
+                    LedgerEntry.ref_id == ref[:64],
+                )
+            )
+            if bought is None:
+                return False
+            row = await session.execute(select(User).where(User.id == bought.user_id).with_for_update())
+            user = row.scalar_one_or_none()
+            take = min(bought.delta, max(user.coins, 0)) if user is not None else 0
+            done = await self._post(session, bought.user_id, -take, "refund", "payment", ref)
+            await session.commit()
+        return done
+
     async def my_subscription(self, user_id: int) -> Subscription | None:
         async with self.sessions() as session:
             return await session.scalar(
