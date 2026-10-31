@@ -76,7 +76,11 @@ def test_the_server_sends_each_public_page_with_its_content(tmp_path):
     (static / "index.html").write_text(INDEX, encoding="utf-8")
     with TestClient(create_app(settings(tmp_path, static_dir=str(static)))) as c:
         r = c.get("/games/trivia")
-        assert r.status_code == 200 and "<title>Trivia Tonight: Free Online" in r.text
+        assert (
+            r.status_code == 200
+            and "<title>Play Trivia Quiz Online Free With Friends: Trivia Tonight" in r.text
+            and "Also known as: pub quiz" in r.text
+        )
         assert "How to play" in r.text and "<li>" in r.text
         assert '<link rel="canonical" href="' in r.text and '/games/trivia" />' in r.text
         home = c.get("/").text

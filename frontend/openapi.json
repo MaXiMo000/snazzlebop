@@ -1953,6 +1953,13 @@
       "GameCard": {
         "additionalProperties": false,
         "properties": {
+          "aka": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aka",
+            "type": "array"
+          },
           "blurb": {
             "title": "Blurb",
             "type": "string"
@@ -2020,6 +2027,10 @@
             ],
             "title": "Ranked Min"
           },
+          "search": {
+            "title": "Search",
+            "type": "string"
+          },
           "show": {
             "title": "Show",
             "type": "boolean"
@@ -2047,7 +2058,9 @@
           "category",
           "featured",
           "ranked",
-          "ranked_min"
+          "ranked_min",
+          "search",
+          "aka"
         ],
         "title": "GameCard",
         "type": "object"

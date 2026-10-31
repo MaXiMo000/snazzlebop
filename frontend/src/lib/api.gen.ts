@@ -2608,6 +2608,8 @@ export interface components {
         };
         /** GameCard */
         GameCard: {
+            /** Aka */
+            aka: string[];
             /** Blurb */
             blurb: string;
             /** Category */
@@ -2632,6 +2634,8 @@ export interface components {
             ranked: boolean;
             /** Ranked Min */
             ranked_min: number | null;
+            /** Search */
+            search: string;
             /** Show */
             show: boolean;
             /** Teams */

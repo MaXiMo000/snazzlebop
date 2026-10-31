@@ -61,6 +61,51 @@ CATEGORY_OF: Final[dict[str, str]] = {
     "tycoon": "classics",
 }
 
+# What people type into a search engine for each game: the name in its page title, then the other names
+# it goes by. Generic game names only (never another company's brand).
+SEARCH: Final[dict[str, tuple[str, tuple[str, ...]]]] = {
+    "trivia": ("Trivia Quiz", ("pub quiz", "general knowledge quiz", "trivia night")),
+    "rather": ("Would You Rather", ("would you rather questions", "this or that")),
+    "frenemy": ("Most Likely To", ("who's most likely to", "ranking game", "friendship quiz")),
+    "alibi": ("Murder Mystery", ("whodunit", "murder mystery party game", "find the killer")),
+    "price": ("Guess the Price", ("price guessing game", "higher or lower")),
+    "telepathy": ("Mind Reading Game", ("think alike", "great minds game", "majority vote game")),
+    "mural": ("Find the Spy", ("spy game", "odd one out", "art bluffing game")),
+    "blackjack": ("Blackjack", ("21", "twenty-one", "card game with friends")),
+    "crossword": ("Crossword Race", ("multiplayer crossword", "crossword puzzle")),
+    "dice": ("Liar's Dice", ("bluff dice", "dudo", "dice bluffing game")),
+    "split": ("Split or Steal", ("prisoner's dilemma game", "trust game")),
+    "chicken": ("Push Your Luck", ("cash out game", "chicken game", "bomb timer game")),
+    "wits": ("Guess and Bet Trivia", ("betting quiz", "number guessing quiz")),
+    "codes": ("Code Breaker", ("bulls and cows", "crack the code", "code breaking game")),
+    "roulette": ("Roulette", ("roulette wheel", "spin the wheel")),
+    "lonely": ("Lowest Unique Number", ("unique number game", "number bluff")),
+    "boxes": ("Mystery Box Auction", ("auction game", "bidding game", "mystery box")),
+    "codewords": ("Spymaster Word Game", ("word association game", "team word game", "spymaster")),
+    "truthdare": ("Truth or Dare", ("truth or dare questions", "spin the bottle")),
+    "wordrace": (
+        "Five-Letter Word Game",
+        ("guess the word in six tries", "daily word game", "word guessing"),
+    ),
+    "lastcard": ("Last Card", ("crazy eights", "colour matching card game", "switch")),
+    "ludo": ("Ludo", ("pachisi", "ludo online", "ludo with friends")),
+    "chess": ("Chess", ("chess with friends", "chess online")),
+    "drawguess": ("Draw and Guess", ("drawing game", "draw and guess online", "sketch and guess")),
+    "telephone": ("Draw Telephone", ("telephone drawing game", "broken telephone", "draw and describe")),
+    "tycoon": ("Property Trading Game", ("property board game", "real estate board game", "trading game")),
+    "mafia": ("Mafia", ("werewolf", "mafia party game", "social deduction game")),
+    "bomb": ("Hot Potato", ("word bomb", "pass the bomb", "word chain game")),
+    "reflex": ("Reaction Time Game", ("reflex test", "fastest finger", "quick draw")),
+    "snakes": ("Snakes and Ladders", ("snakes and ladders online", "ladders board game")),
+    "ships": ("Battleships", ("battleship game", "sea battle", "sink the fleet")),
+    "four": ("Four in a Row", ("four in a line", "drop four", "line up four")),
+    "lists": ("Category Game", ("name place animal thing", "stop the bus", "categories game")),
+    "hangman": ("Hangman", ("hangman word game", "guess the word")),
+    "fivedice": ("Five Dice", ("dice poker", "yacht dice", "five dice game")),
+    "onhead": ("Forehead Guessing Game", ("charades", "who am I", "guess the word on your head")),
+    "imposter": ("Imposter Game", ("who is the imposter", "undercover word game", "find the spy")),
+}
+
 # Shown first to new players: learned in a minute, good with people you just met, one of each kind of fun.
 FEATURED: Final = ("imposter", "trivia", "drawguess", "rather", "dice", "four")
 
@@ -86,6 +131,8 @@ def entry(game_id: str) -> dict[str, object]:
         "featured": FEATURED.index(game_id) if game_id in FEATURED else None,
         "ranked": game_id in RANKED,
         "ranked_min": ranked_min(game_id),
+        "search": SEARCH[game_id][0],
+        "aka": list(SEARCH[game_id][1]),
     }
 
 

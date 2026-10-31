@@ -52,6 +52,8 @@ class GameCard(Strict):
     featured: int | None
     ranked: bool
     ranked_min: int | None  # players a ranked game needs (None: not played ranked)
+    search: str  # the name people search for it by (its page title)
+    aka: list[str]  # other names it goes by
 
 
 class RoomPass(Strict):

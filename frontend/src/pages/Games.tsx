@@ -7,7 +7,6 @@ import type { GameCard } from "../types";
 
 type Go = (path: string) => void;
 type Category = { id: string; label: string; title: string; blurb: string };
-// What each shelf is called in searches (the server's pages.GENRE says the same).
 // Each shelf's page title, in the words people search with (pages.SHELF_NAME on the server).
 const SHELF_NAME: Record<string, string> = {
   party: "Party Games",
@@ -15,13 +14,6 @@ const SHELF_NAME: Record<string, string> = {
   bluff: "Bluffing and Social Deduction Games",
   nerve: "Game Show Games",
   classics: "Classic Board and Card Games",
-};
-const GENRE: Record<string, string> = {
-  party: "Party Game",
-  quiz: "Quiz and Word Game",
-  bluff: "Bluffing Game",
-  nerve: "Game Show Game",
-  classics: "Classic Game",
 };
 
 function useCatalogue() {
@@ -117,7 +109,10 @@ export function GamePage({ id, go }: { id: string; go: Go }) {
   const g = games?.find((x) => x.id === id);
   const shelf = cats.find((c) => c.id === id);
   useEffect(() => {
-    if (g) document.title = `${g.title}: Free Online ${GENRE[g.category] ?? "Party Game"} for Friends · Snazzlebop`;
+    if (!g) return;
+    // the same title the server sends (backend app/pages.py)
+    const lead = `Play ${g.search} Online Free With Friends`;
+    document.title = g.search.toLowerCase().includes(g.title.toLowerCase()) ? `${lead} · Snazzlebop` : `${lead}: ${g.title} · Snazzlebop`;
   }, [g]);
   if (games === null || (!g && !catsReady)) return <Loading page />;
   if (shelf) return <ShelfPage cat={shelf} games={games} go={go} />;
@@ -141,6 +136,7 @@ export function GamePage({ id, go }: { id: string; go: Go }) {
         <p className="space-top">
           <span className="chip plum">{playersLabel(g)} players</span>
         </p>
+        {g.aka.length > 0 && <p className="space-top muted">Also known as: {g.aka.join(", ")}.</p>}
       </Card>
       <Card aria-labelledby="game-how-h">
         <h2 id="game-how-h">How to play</h2>
@@ -149,6 +145,13 @@ export function GamePage({ id, go }: { id: string; go: Go }) {
             <li key={step}>{step}</li>
           ))}
         </ol>
+      </Card>
+      <Card aria-labelledby="game-faq-h">
+        <h2 id="game-faq-h">How do I play {g.search} online with friends?</h2>
+        <p className="space-top">
+          Host a room and share the five-letter code or the invite link. Everyone joins on their phone, and the host picks {g.title}. Put the show on a TV if
+          you like. It's free: no download and no sign-up.
+        </p>
       </Card>
       <Card className="center">
         <p>Free in the browser: one person hosts on a laptop or TV, everyone else joins from their phone.</p>

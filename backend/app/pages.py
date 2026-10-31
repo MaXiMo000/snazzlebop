@@ -108,6 +108,7 @@ def _game_data(g: dict[str, Any], url: str) -> dict[str, Any]:
             "maxValue": g["max_players"],
         },
         "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+        **({"alternateName": [g["search"], *g["aka"]]} if g.get("aka") else {}),
     }
 
 
@@ -203,16 +204,27 @@ def page_for(
             return None
         genre = GENRE.get(str(g.get("category")), "party game")
         steps = "".join(f"<li>{escape(s)}</li>" for s in g.get("how_to") or [])
+        search = str(g.get("search") or g["title"])
+        aka = [str(a) for a in g.get("aka") or []]
+        players = _players(g)
+        also = f"<p>Also known as: {escape(', '.join(aka))}.</p>" if aka else ""
         body = (
-            f"<h1>{escape(g['title'])}: a free online {escape(genre)} for friends</h1>"
-            f"<p>{escape(g['blurb'])}</p>"
-            f"<p>{_players(g)}. Free, in the browser: one person hosts, everyone else joins by phone.</p>"
-            f"<h2>How to play</h2><ol>{steps}</ol><p>{_link('/', 'Host a room and play it')}</p>"
+            f"<h1>Play {escape(search)} online with friends, free</h1>"
+            f"<p>{escape(g['title'])}: {escape(g['blurb'])}</p>{also}"
+            f"<p>{players}. A free online {escape(genre)} in the browser: one person hosts, everyone else "
+            "joins by phone.</p>"
+            f"<h2>How to play</h2><ol>{steps}</ol>"
+            f"<h2>How do I play {escape(search)} online with friends?</h2>"
+            "<p>Open snazzlebop.com, host a room and share the five-letter code or the invite link. "
+            f"Everyone joins on their phone, and the host picks {escape(g['title'])}. "
+            "Put the show on a TV if you like.</p>"
+            f"<h2>Is it free?</h2><p>Yes: free, no download and no sign-up. {players}.</p>"
+            f"<p>{_link('/', 'Host a room and play it')}</p>"
         )
-        title = f"{g['title']}: Free Online {genre.title()} for Friends · {SITE}"
-        desc = (
-            f"{g['blurb']} {_players(g)}, free in the browser. How to play {g['title']} with friends online."
-        )
+        lead = f"Play {search} Online Free With Friends"
+        named = g["title"].lower() in search.lower()
+        title = f"{lead} · {SITE}" if named else f"{lead}: {g['title']} · {SITE}"
+        desc = f"Play {search} online free with friends: {players}, no download, no sign-up. {g['blurb']}"
         url = f"{base}/games/{key}"
         data = [
             _game_data(g, url),
