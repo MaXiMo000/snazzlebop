@@ -262,6 +262,8 @@ class SecurityHeaders:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         is_api = scope.get("path", "").startswith("/api/")
+        # Link previews: other sites (Reddit, X, chat apps) show these images on their own pages.
+        shared = scope.get("path", "") in SHAREABLE
 
         async def wrapped(message: dict[str, Any]) -> None:
             if message["type"] == "http.response.start":
@@ -276,7 +278,7 @@ class SecurityHeaders:
                     b"cross-origin-opener-policy": b"same-origin-allow-popups"
                     if self.open
                     else b"same-origin",
-                    b"cross-origin-resource-policy": b"same-origin",
+                    b"cross-origin-resource-policy": b"cross-origin" if shared else b"same-origin",
                 }
                 if not self.open:
                     add[b"cross-origin-embedder-policy"] = b"require-corp"  # everything is same-origin
@@ -290,6 +292,9 @@ class SecurityHeaders:
             await send(message)
 
         await self.app(scope, receive, wrapped)
+
+
+SHAREABLE = frozenset({"/og.png", "/icon-512.png", "/icon-192.png", "/apple-touch-icon.png", "/favicon.svg"})
 
 
 class BodyLimit:

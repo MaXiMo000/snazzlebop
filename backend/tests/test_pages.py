@@ -120,3 +120,19 @@ class SearchTests(unittest.TestCase):
         self.assertIn("Online With Friends", title)
         for g in (x for x in self.games if x.get("category") == "classics"):
             self.assertIn(f'href="/games/{g["id"]}"', body)
+
+
+def test_link_preview_images_can_be_shown_on_other_sites_and_nothing_else_can(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from app.main import create_app
+    from tests.test_api import settings
+
+    static = tmp_path / "static"
+    static.mkdir()
+    (static / "index.html").write_text(INDEX, encoding="utf-8")
+    (static / "og.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    with TestClient(create_app(settings(tmp_path, static_dir=str(static)))) as c:
+        assert c.get("/og.png").headers["cross-origin-resource-policy"] == "cross-origin"
+        assert c.get("/").headers["cross-origin-resource-policy"] == "same-origin"
+        assert c.get("/api/games").headers["cross-origin-resource-policy"] == "same-origin"
