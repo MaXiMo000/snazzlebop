@@ -580,6 +580,8 @@ function TvRoom({ code, go }: { code: string; go: (p: string) => void }) {
           <div className="stack">
             <TeamBadge state={state} tv />
             <PowerNews state={state} />
+            {/* the podium first on the big screen: the winner's victory animation is for the whole room */}
+            {phase === "results" && !state.teams?.news && <Podium state={state} />}
             <GameRouter state={state} receivedAt={receivedAt} send={watch} />
             {phase === "game" && <CardsDown state={state} />}
             {phase === "results" && (

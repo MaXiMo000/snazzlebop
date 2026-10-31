@@ -1255,3 +1255,17 @@
   margin: 12px 0 0;
   font-size: 0.85rem;
 }
+
+/* the big screen: the podium's winners, and their victory animations, at TV size */
+.tv .podium-who .avatar.lg {
+  width: 104px;
+  height: 104px;
+  font-size: 2.2rem;
+}
+.tv .podium-who .avatar.lg.face {
+  font-size: 3.6rem;
+}
+.tv .podium .wfx {
+  --wfx-top: 52px;
+  scale: 1.7;
+}
