@@ -65,29 +65,46 @@ const COOLDOWN_MS = 900; // the server ignores taps closer than 0.8 s anyway
 
 export function ReactionBar({ send }: { send: Send }) {
   const { user } = useAccount();
-  const extra = Object.entries(EMOTE_PACKS).flatMap(([pack, emoji]) => ((user?.powerups[pack] ?? 0) > 0 ? emoji : []));
+  // emote packs: bought ones, or all of them with Plus (the server checks either way)
+  const extra = Object.entries(EMOTE_PACKS).flatMap(([pack, emoji]) => (user?.plus || (user?.powerups[pack] ?? 0) > 0 ? emoji : []));
+  const [more, setMore] = useState(false);
   const [cooling, setCooling] = useState(false);
   const timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
+  const button = ([e, label]: [string, string]) => (
+    <button
+      key={e}
+      type="button"
+      className="react-btn"
+      aria-label={label}
+      disabled={cooling}
+      onClick={() => {
+        send({ t: "react", e });
+        sfx.pop();
+        setCooling(true);
+        timer.current = window.setTimeout(() => setCooling(false), COOLDOWN_MS);
+      }}
+    >
+      <span aria-hidden="true">{e}</span>
+    </button>
+  );
   return (
-    <div className="react-bar" role="group" aria-label="Send a reaction to the room">
-      {[...REACTIONS, ...extra].map(([e, label]) => (
-        <button
-          key={e}
-          type="button"
-          className="react-btn"
-          aria-label={label}
-          disabled={cooling}
-          onClick={() => {
-            send({ t: "react", e });
-            sfx.pop();
-            setCooling(true);
-            timer.current = window.setTimeout(() => setCooling(false), COOLDOWN_MS);
-          }}
-        >
-          <span aria-hidden="true">{e}</span>
-        </button>
-      ))}
+    <div className="react-wrap">
+      <div className="react-bar" role="group" aria-label="Send a reaction to the room">
+        {REACTIONS.map(button)}
+      </div>
+      {extra.length > 0 && (
+        <>
+          <button type="button" className="react-more" aria-expanded={more} onClick={() => setMore(!more)}>
+            {more ? "Fewer emotes" : `Your emotes (${extra.length})`}
+          </button>
+          {more && (
+            <div className="react-bar react-extra" role="group" aria-label="Your emote packs">
+              {extra.map(button)}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

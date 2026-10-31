@@ -2871,6 +2871,8 @@ export interface components {
         };
         /** LookBody */
         LookBody: {
+            /** Char */
+            char?: string | null;
             /** Frame */
             frame: string;
             /** Win */
@@ -2886,6 +2888,8 @@ export interface components {
             name: string;
             /** Plus */
             plus: boolean;
+            /** Price */
+            price: number;
             /** Unlocked */
             unlocked: boolean;
         };
@@ -3032,6 +3036,10 @@ export interface components {
          * @description Your level unlocks: power-up slots, avatar frames and victory animations, and your picks.
          */
         MyLook: {
+            /** Char */
+            char: string;
+            /** Chars */
+            chars: components["schemas"]["LookOption"][];
             /** Frame */
             frame: string;
             /** Frames */

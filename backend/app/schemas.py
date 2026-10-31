@@ -110,8 +110,9 @@ class PlusCheckout(Strict):
 class LookOption(Strict):
     id: str
     name: str
-    level: int  # the level that unlocks it (0: Plus members only)
-    plus: bool
+    level: int  # the level that unlocks it (0: Plus or the shop)
+    plus: bool  # Plus members only
+    price: int  # coins in the shop (0: not sold)
     unlocked: bool
 
 
@@ -123,8 +124,10 @@ class MyLook(Strict):
     slots: int  # power-ups you can use in one casual game
     slot_level: int  # the level that opens a second slot
     frame: str
+    char: str
     win: str
     frames: list[LookOption]
+    chars: list[LookOption]
     wins: list[LookOption]
 
 
@@ -1151,7 +1154,7 @@ class RoomFrame(Strict):
     chat: Chat
     call: Call
     faces: dict[str, list[int]]
-    looks: dict[str, dict[str, str]]  # pid -> the frame and victory animation their level unlocked
+    looks: dict[str, dict[str, str]]  # pid -> their unlocked frame, character and victory animation
     night: Night
     entrance: Entrance | None
     crowd: Crowd

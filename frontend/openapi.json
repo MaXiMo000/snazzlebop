@@ -2763,6 +2763,18 @@
       "LookBody": {
         "additionalProperties": false,
         "properties": {
+          "char": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Char"
+          },
           "frame": {
             "maxLength": 16,
             "title": "Frame",
@@ -2800,6 +2812,10 @@
             "title": "Plus",
             "type": "boolean"
           },
+          "price": {
+            "title": "Price",
+            "type": "integer"
+          },
           "unlocked": {
             "title": "Unlocked",
             "type": "boolean"
@@ -2810,6 +2826,7 @@
           "name",
           "level",
           "plus",
+          "price",
           "unlocked"
         ],
         "title": "LookOption",
@@ -3197,6 +3214,17 @@
         "additionalProperties": false,
         "description": "Your level unlocks: power-up slots, avatar frames and victory animations, and your picks.",
         "properties": {
+          "char": {
+            "title": "Char",
+            "type": "string"
+          },
+          "chars": {
+            "items": {
+              "$ref": "#/components/schemas/LookOption"
+            },
+            "title": "Chars",
+            "type": "array"
+          },
           "frame": {
             "title": "Frame",
             "type": "string"
@@ -3242,8 +3270,10 @@
           "slots",
           "slot_level",
           "frame",
+          "char",
           "win",
           "frames",
+          "chars",
           "wins"
         ],
         "title": "MyLook",

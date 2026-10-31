@@ -2,11 +2,10 @@ import { useEffect, useRef } from "react";
 import { sfx } from "../lib/sfx";
 import type { RoomState } from "../types";
 import { Avatar, useLooks } from "./avatar";
+import { WinFx } from "./cosmetics";
 import { useShow } from "./fx";
 
 const PLACE = ["1st", "2nd", "3rd"];
-// A winner's victory animation (unlocked by level): what plays around them, for the whole room.
-const WIN_ICON: Record<string, string> = { fireworks: "🎆", spotlight: "", disco: "🪩", rocket: "🚀", crown: "👑" };
 
 /** Results: this game's top three on a podium, revealed third to first; confetti for the winner. */
 export function Podium({ state }: { state: RoomState }) {
@@ -42,13 +41,10 @@ export function Podium({ state }: { state: RoomState }) {
           const place = placeOf(s.points);
           return (
             // styled by the place earned (a tie shares the step), not by position in the list
-            <li key={s.id} className={`podium-spot p${place + 1} ${place === 0 ? `win-${looks[s.id]?.win ?? "confetti"}` : ""}`}>
+            <li key={s.id} className={`podium-spot p${place + 1}`}>
               <span className="podium-who">
-                {place === 0 && (looks[s.id]?.win ?? "confetti") !== "confetti" && (
-                  <span className="podium-win" aria-hidden="true">
-                    {WIN_ICON[looks[s.id]?.win ?? ""] ?? ""}
-                  </span>
-                )}
+                {/* the winner's victory animation, for the whole room */}
+                {place === 0 && <WinFx kind={looks[s.id]?.win ?? "confetti"} />}
                 {place === 0 && (
                   <span className="podium-crown" aria-hidden="true">
                     👑

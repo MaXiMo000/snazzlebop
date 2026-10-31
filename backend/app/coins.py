@@ -35,7 +35,27 @@ GAME_POWER_PRICES = {
 }
 # Emote packs (party.py): bought once, kept for good.
 EMOTE_PRICES = {
-    pack: 40 for pack in ("emote_spooky", "emote_animals", "emote_snacks", "emote_royal", "emote_weather")
+    pack: 40
+    for pack in (
+        "emote_spooky",
+        "emote_animals",
+        "emote_snacks",
+        "emote_royal",
+        "emote_weather",
+        "emote_party",
+        "emote_love",
+        "emote_gamer",
+        "emote_hype",
+        "emote_sports",
+        "emote_music",
+        "emote_space",
+        "emote_ocean",
+        "emote_faces",
+        "emote_salty",
+        "emote_magic",
+        "emote_sweets",
+        "emote_retro",
+    )
 }
 # Party items (party.py): no effect on scores, used anywhere in a room.
 PARTY_PRICES = {

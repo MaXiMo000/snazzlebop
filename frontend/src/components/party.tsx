@@ -23,6 +23,19 @@ export const EMOTE_PACKS: Record<string, [string, string][]> = {
   emote_snacks: [["🍕", "Pizza"], ["🌮", "Taco"], ["🍩", "Doughnut"], ["🍿", "Popcorn"]],
   emote_royal: [["👑", "Crown"], ["💎", "Diamond"], ["🏆", "Trophy"], ["🥇", "Gold medal"]],
   emote_weather: [["🌈", "Rainbow"], ["⚡", "Lightning"], ["🌪️", "Tornado"], ["❄️", "Snowflake"]],
+  emote_party: [["🎉", "Party popper"], ["🥳", "Party face"], ["🎊", "Confetti ball"], ["🪅", "Piñata"]],
+  emote_love: [["❤️", "Heart"], ["😍", "Heart eyes"], ["💘", "Cupid"], ["🥰", "Adoring"]],
+  emote_gamer: [["🎮", "Controller"], ["🕹️", "Joystick"], ["👾", "Space invader"], ["🏅", "Medal"]],
+  emote_hype: [["🚀", "Rocket"], ["💯", "Hundred"], ["🙌", "Raised hands"], ["🤩", "Star struck"]],
+  emote_sports: [["⚽", "Football"], ["🏀", "Basketball"], ["🎯", "Bullseye"], ["🏓", "Ping pong"]],
+  emote_music: [["🎵", "Note"], ["🎸", "Guitar"], ["🥁", "Drum"], ["🎤", "Microphone"]],
+  emote_space: [["🪐", "Planet"], ["👽", "Alien"], ["🌙", "Moon"], ["☄️", "Comet"]],
+  emote_ocean: [["🐬", "Dolphin"], ["🦈", "Shark"], ["🐳", "Whale"], ["🌊", "Wave"]],
+  emote_faces: [["🤔", "Thinking"], ["😏", "Smirk"], ["🙄", "Eye roll"], ["😭", "Sobbing"]],
+  emote_salty: [["🧂", "Salty"], ["🤡", "Clown"], ["🫠", "Melting"], ["😤", "Huff"]],
+  emote_magic: [["🔮", "Crystal ball"], ["✨", "Sparkles"], ["🪄", "Magic wand"], ["🧙", "Wizard"]],
+  emote_sweets: [["🍰", "Cake"], ["🧁", "Cupcake"], ["🍦", "Ice cream"], ["🍪", "Cookie"]],
+  emote_retro: [["📺", "TV"], ["📼", "Tape"], ["☎️", "Phone"], ["💾", "Floppy disk"]],
 };
 const REPLAY_MS = 6000;
 type Moment = NonNullable<RoomState["party"]["effects"][number]["moment"]>;

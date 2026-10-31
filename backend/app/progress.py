@@ -174,29 +174,88 @@ def level_gift(user_id: int, level: int) -> str:
     return LEVEL_GIFTS[_seed("gift", user_id, level) % len(LEVEL_GIFTS)]
 
 
-# -- unlocks: what levels (and Plus) open up. Cosmetic only, never an advantage in ranked or battles. --
-# id -> (name, level needed); level 0 = Plus members only.
-FRAMES: dict[str, tuple[str, int]] = {
-    "none": ("No frame", 1),
-    "bronze": ("Bronze", 3),
-    "silver": ("Silver", 6),
-    "gold": ("Gold", 10),
-    "neon": ("Neon", 15),
-    "rainbow": ("Rainbow", 20),
-    "starlight": ("Starlight", 30),
-    "plus": ("Plus spotlight", 0),
+# -- unlocks: what levels, Plus and the shop open up. Cosmetic only, never an advantage in ranked or battles.
+# id -> (name, how it opens, amount): ("level", n) at level n, ("plus", 0) while a Plus member,
+# ("shop", price) bought once with coins and kept.
+Unlock = tuple[str, str, int]
+FRAMES: dict[str, Unlock] = {  # the animated decoration around an avatar
+    "none": ("No frame", "level", 1),
+    "bronze": ("Bronze shine", "level", 3),
+    "silver": ("Silver shine", "level", 6),
+    "gold": ("Gold sparkle", "level", 10),
+    "neon": ("Neon pulse", "level", 15),
+    "rainbow": ("Rainbow spin", "level", 20),
+    "starlight": ("Starlight orbit", "level", 30),
+    "plus": ("Plus spotlight", "plus", 0),
+    "comet": ("Comet", "plus", 0),
+    "orbit": ("Orbiting sparks", "shop", 250),
+    "hearts": ("Floating hearts", "shop", 250),
+    "bubbles": ("Bubbles", "shop", 250),
+    "catears": ("Cat ears", "shop", 300),
+    "halo": ("Halo", "shop", 300),
+    "horns": ("Little devil", "shop", 300),
+    "sakura": ("Cherry blossom", "shop", 350),
+    "frost": ("Frost", "shop", 350),
+    "pixel": ("Pixel glitch", "shop", 400),
+    "aurora": ("Aurora", "shop", 400),
+    "headphones": ("DJ headphones", "shop", 450),
+    "inferno": ("Inferno", "shop", 500),
+    "electric": ("Thunderstorm", "shop", 500),
+    "galaxy": ("Galaxy", "shop", 600),
 }
-WINS: dict[str, tuple[str, int]] = {  # the victory animation the room sees when you win
-    "confetti": ("Confetti", 1),
-    "fireworks": ("Fireworks", 5),
-    "spotlight": ("Spotlight", 8),
-    "disco": ("Disco ball", 12),
-    "rocket": ("Rocket", 18),
-    "crown": ("Crown rain", 25),
+CHARS: dict[str, Unlock] = {  # an animated character in place of the picked face
+    "none": ("Your face", "level", 1),
+    "blob": ("Jelly", "level", 2),
+    "robot": ("Robo", "level", 4),
+    "ghost": ("Boo", "level", 7),
+    "cat": ("Whiskers", "level", 9),
+    "alien": ("Zorp", "level", 12),
+    "frog": ("Ribbit", "level", 16),
+    "penguin": ("Waddles", "level", 20),
+    "dino": ("Rex", "level", 25),
+    "tvhost": ("Showstopper", "plus", 0),
+    "pumpkin": ("Jack", "shop", 250),
+    "panda": ("Bamboo", "shop", 300),
+    "bee": ("Buzz", "shop", 300),
+    "octo": ("Inky", "shop", 350),
+    "ninja": ("Shadow", "shop", 400),
+    "wizard": ("Merlin", "shop", 450),
+    "vampire": ("The Count", "shop", 450),
+    "dragon": ("Ember", "shop", 600),
 }
-DEFAULT_LOOK = {"frame": "none", "win": "confetti"}
+WINS: dict[str, Unlock] = {  # the victory animation the room sees when you win
+    "confetti": ("Confetti", "level", 1),
+    "fireworks": ("Fireworks", "level", 5),
+    "spotlight": ("Spotlight", "level", 8),
+    "disco": ("Disco ball", "level", 12),
+    "rocket": ("Rocket", "level", 18),
+    "crown": ("Crown rain", "level", 25),
+    "supernova": ("Supernova", "plus", 0),
+    "hearts": ("Heart storm", "shop", 300),
+    "balloons": ("Balloons", "shop", 300),
+    "snow": ("Snowstorm", "shop", 300),
+    "trophy": ("Trophy lift", "shop", 350),
+    "lightning": ("Lightning strike", "shop", 400),
+    "stardust": ("Stardust", "shop", 400),
+    "lasers": ("Laser show", "shop", 450),
+}
+LOOKS: dict[str, dict[str, Unlock]] = {"frame": FRAMES, "char": CHARS, "win": WINS}
+DEFAULT_LOOK = {"frame": "none", "char": "none", "win": "confetti"}
 SLOT_LEVEL = 10  # a second power-up slot from this level
 MAX_SLOTS = 2
+
+
+def shop_id(kind: str, pick: str) -> str:
+    """The shop item that holds a bought look (kept in the account's items, like emote packs)."""
+    return f"look_{kind}_{pick}"
+
+
+LOOK_PRICES = {
+    shop_id(kind, pick): amount
+    for kind, table in LOOKS.items()
+    for pick, (_, how, amount) in table.items()
+    if how == "shop"
+}
 
 
 def power_slots(level: int, plus: bool) -> int:
@@ -204,29 +263,50 @@ def power_slots(level: int, plus: bool) -> int:
     return MAX_SLOTS if plus or level >= SLOT_LEVEL else 1
 
 
-def unlocked(need: int, level: int, plus: bool) -> bool:
-    return plus if need == 0 else level >= need
+def owned_looks(items: object) -> frozenset[str]:
+    """The bought looks among an account's items."""
+    if not isinstance(items, dict):
+        return frozenset()
+    return frozenset(k for k, n in items.items() if k.startswith("look_") and isinstance(n, int) and n > 0)
 
 
-def clean_look(raw: object, level: int, plus: bool) -> dict[str, str]:
-    """The look an account shows: its saved pick where still unlocked (Plus can lapse), else the default."""
+def unlocked(kind: str, pick: str, level: int, plus: bool, owned: frozenset[str] = frozenset()) -> bool:
+    _, how, amount = LOOKS[kind][pick]
+    if how == "plus":
+        return plus
+    if how == "shop":
+        return shop_id(kind, pick) in owned
+    return level >= amount
+
+
+def clean_look(raw: object, level: int, plus: bool, owned: frozenset[str] = frozenset()) -> dict[str, str]:
+    """The look an account shows: its saved picks where still unlocked (Plus can lapse), else the default."""
     saved = raw if isinstance(raw, dict) else {}
     look = dict(DEFAULT_LOOK)
-    for key, table in (("frame", FRAMES), ("win", WINS)):
-        pick = saved.get(key)
-        if isinstance(pick, str) and pick in table and unlocked(table[pick][1], level, plus):
-            look[key] = pick
+    for kind, table in LOOKS.items():
+        pick = saved.get(kind)
+        if isinstance(pick, str) and pick in table and unlocked(kind, pick, level, plus, owned):
+            look[kind] = pick
     return look
 
 
-def look_options(level: int, plus: bool) -> dict[str, list[dict[str, object]]]:
-    def rows(table: dict[str, tuple[str, int]]) -> list[dict[str, object]]:
+def look_options(
+    level: int, plus: bool, owned: frozenset[str] = frozenset()
+) -> dict[str, list[dict[str, object]]]:
+    def rows(kind: str) -> list[dict[str, object]]:
         return [
-            {"id": k, "name": name, "level": need, "plus": need == 0, "unlocked": unlocked(need, level, plus)}
-            for k, (name, need) in table.items()
+            {
+                "id": pick,
+                "name": name,
+                "level": amount if how == "level" else 0,
+                "plus": how == "plus",
+                "price": amount if how == "shop" else 0,
+                "unlocked": unlocked(kind, pick, level, plus, owned),
+            }
+            for pick, (name, how, amount) in LOOKS[kind].items()
         ]
 
-    return {"frames": rows(FRAMES), "wins": rows(WINS)}
+    return {"frames": rows("frame"), "chars": rows("char"), "wins": rows("win")}
 
 
 def day_number(day: date) -> int:

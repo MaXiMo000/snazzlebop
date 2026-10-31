@@ -33,6 +33,19 @@ EMOTES: dict[str, dict[str, object]] = {
     "emote_snacks": {"name": "Snack emotes", "icon": "🍕", "emoji": ("🍕", "🌮", "🍩", "🍿")},
     "emote_royal": {"name": "Royal emotes", "icon": "👑", "emoji": ("👑", "💎", "🏆", "🥇")},
     "emote_weather": {"name": "Weather emotes", "icon": "🌈", "emoji": ("🌈", "⚡", "🌪️", "❄️")},
+    "emote_party": {"name": "Party emotes", "icon": "🎉", "emoji": ("🎉", "🥳", "🎊", "🪅")},
+    "emote_love": {"name": "Love emotes", "icon": "❤️", "emoji": ("❤️", "😍", "💘", "🥰")},
+    "emote_gamer": {"name": "Gamer emotes", "icon": "🎮", "emoji": ("🎮", "🕹️", "👾", "🏅")},
+    "emote_hype": {"name": "Hype emotes", "icon": "🚀", "emoji": ("🚀", "💯", "🙌", "🤩")},
+    "emote_sports": {"name": "Sports emotes", "icon": "⚽", "emoji": ("⚽", "🏀", "🎯", "🏓")},
+    "emote_music": {"name": "Music emotes", "icon": "🎸", "emoji": ("🎵", "🎸", "🥁", "🎤")},
+    "emote_space": {"name": "Space emotes", "icon": "🪐", "emoji": ("🪐", "👽", "🌙", "☄️")},
+    "emote_ocean": {"name": "Ocean emotes", "icon": "🐬", "emoji": ("🐬", "🦈", "🐳", "🌊")},
+    "emote_faces": {"name": "Face emotes", "icon": "🤔", "emoji": ("🤔", "😏", "🙄", "😭")},
+    "emote_salty": {"name": "Salty emotes", "icon": "🧂", "emoji": ("🧂", "🤡", "🫠", "😤")},
+    "emote_magic": {"name": "Magic emotes", "icon": "🔮", "emoji": ("🔮", "✨", "🪄", "🧙")},
+    "emote_sweets": {"name": "Sweet emotes", "icon": "🧁", "emoji": ("🍰", "🧁", "🍦", "🍪")},
+    "emote_retro": {"name": "Retro emotes", "icon": "📺", "emoji": ("📺", "📼", "☎️", "💾")},
 }
 PACK_OF: dict[str, str] = {e: pack for pack, info in EMOTES.items() for e in info["emoji"]}  # type: ignore[attr-defined]
 PLAYER_GAP = 20.0

@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { Character, Decor, hasCharacter } from "./cosmetics";
 import { initials } from "./ui";
 
 type Send = (msg: Record<string, unknown>) => void;
@@ -16,7 +17,7 @@ const KEY = "snazzlebop:avatar";
 
 // The room publishes everyone's picked look here, so any screen can draw an avatar from just an id.
 let faces: Faces = {};
-let looks: Looks = {}; // pid -> the frame and victory animation their level unlocked (server-checked)
+let looks: Looks = {}; // pid -> their frame, character and victory animation (server-checked)
 let belt: string | null = null; // who wears the champion's crown
 const subs = new Set<() => void>();
 const useFaces = () =>
@@ -44,7 +45,8 @@ const useBelt = () =>
     () => belt,
   );
 
-function stored(): [number, number] | null {
+/** This device's picked face and colour, if any. */
+export function stored(): [number, number] | null {
   try {
     const [f, t] = (localStorage.getItem(KEY) ?? "").split(",").map(Number);
     return Number.isInteger(f) && Number.isInteger(t) && f! >= 0 && f! < FACES.length && t! >= 0 && t! < TONES
@@ -107,16 +109,43 @@ export function Avatar({
   className?: string;
 }) {
   const all = useFaces();
-  const frame = useLooks()[pid]?.frame;
+  const look = useLooks()[pid];
   const champion = useBelt() === pid;
-  const face = all[pid]?.[0];
   const colour = all[pid]?.[1] ?? (tone === undefined ? toneOf(pid, all) : tone % TONES);
   return (
-    <span
-      className={`avatar tone-${colour} ${face === undefined ? "" : "face"} ${champion ? "belt" : ""} ${frame && frame !== "none" ? `frame-${frame}` : ""} ${className}`}
-      aria-hidden="true"
-    >
-      {face === undefined ? initials(name) : FACES[face]}
+    <AvatarView
+      name={name}
+      face={all[pid]?.[0]}
+      tone={colour}
+      frame={look?.frame}
+      char={look?.char}
+      className={`${champion ? "belt" : ""} ${className}`}
+    />
+  );
+}
+
+/** An avatar from its parts: a character, or a face emoji, or initials, on a colour, in a frame. */
+export function AvatarView({
+  name,
+  face,
+  tone,
+  frame,
+  char,
+  className = "",
+}: {
+  name: string;
+  face?: number;
+  tone: number;
+  frame?: string;
+  char?: string;
+  className?: string;
+}) {
+  const character = hasCharacter(char) ? char : undefined;
+  const kind = character ? "has-char" : face === undefined ? "" : "face";
+  return (
+    <span className={`avatar tone-${tone} ${kind} ${className}`} aria-hidden="true">
+      {character ? <Character id={character} /> : face === undefined ? initials(name) : FACES[face]}
+      {frame && frame !== "none" && <Decor id={frame} />}
     </span>
   );
 }

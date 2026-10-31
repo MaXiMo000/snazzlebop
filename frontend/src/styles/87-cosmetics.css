@@ -1,0 +1,1210 @@
+/* ---- cosmetics: animated avatar frames, animated characters and victory animations ---------------- */
+/* components/cosmetics.tsx draws them. Only transform and opacity move, and the resting picture is
+   complete, so reduced motion shows a still frame. */
+.avatar {
+  position: relative;
+}
+.avatar > .decor {
+  position: absolute;
+  top: -20%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
+  overflow: visible;
+  pointer-events: none;
+}
+.avatar > .char {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  clip-path: circle(50%);
+}
+.avatar.has-char {
+  font-size: 0;
+}
+/* the champion's crown sits where these would */
+.avatar.belt > .decor-halo,
+.avatar.belt > .decor-catears,
+.avatar.belt > .decor-horns {
+  display: none;
+}
+/* only the animated parts (they have classes): a shared origin would also move the SVG's own
+   rotate() attributes */
+.decor [class],
+.char [class] {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
+/* frames */
+.d-spin {
+  animation: d-spin 8s linear infinite;
+}
+.d-spin-slow {
+  animation: d-spin 20s linear infinite;
+}
+.d-spin-fast {
+  animation: d-spin 2.6s linear infinite;
+}
+.d-spin-rev {
+  animation: d-spin 12s linear infinite reverse;
+}
+.d-pulse {
+  animation: d-pulse 2.4s ease-in-out infinite alternate;
+}
+.d-pulse.late,
+.d-flicker.late {
+  animation-delay: -1.2s;
+}
+.d-flicker {
+  animation: d-flicker 3.2s steps(1) infinite;
+}
+.decor .d-twinkle,
+.decor .d-flame,
+.decor .d-ear,
+.char .c-blink,
+.char .c-squish,
+.char .c-wobble,
+.char .c-ear-l,
+.char .c-ear-r,
+.char .c-wings,
+.char .c-flutter,
+.char .c-twinkle,
+.char .c-chew,
+.char .c-smoke {
+  transform-box: fill-box;
+}
+.decor .d-twinkle {
+  transform-origin: 50% 50%;
+  animation: d-twinkle 1.8s ease-in-out infinite;
+}
+.decor .t1 {
+  animation-delay: -0.45s;
+}
+.decor .t2 {
+  animation-delay: -0.9s;
+}
+.decor .t3 {
+  animation-delay: -1.35s;
+}
+.decor .d-flame {
+  transform-origin: 50% 100%;
+  animation: d-flame 0.9s ease-in-out infinite alternate;
+}
+.decor .d-flame.f1 {
+  animation-duration: 0.7s;
+  animation-delay: -0.3s;
+}
+.decor .d-flame.f2 {
+  animation-duration: 1.1s;
+  animation-delay: -0.6s;
+}
+.decor .d-flame.f3 {
+  animation-duration: 0.8s;
+  animation-delay: -0.15s;
+}
+.d-ember {
+  animation: d-ember 1.8s ease-out infinite;
+}
+.d-ember.e1 {
+  animation-delay: -0.4s;
+}
+.d-ember.e2 {
+  animation-delay: -0.8s;
+}
+.d-ember.e3 {
+  animation-delay: -1.1s;
+}
+.d-ember.e4 {
+  animation-delay: -1.5s;
+}
+.d-rise {
+  animation: d-rise 3s ease-out infinite;
+}
+.d-fall {
+  animation: d-fall 4.5s linear infinite;
+}
+.d-rise.r1 {
+  animation-delay: -0.4s;
+}
+.d-rise.r2 {
+  animation-delay: -0.9s;
+}
+.d-rise.r3 {
+  animation-delay: -1.3s;
+}
+.d-rise.r4 {
+  animation-delay: -1.8s;
+}
+.d-rise.r5 {
+  animation-delay: -2.2s;
+}
+.d-rise.r6 {
+  animation-delay: -2.6s;
+}
+.d-rise.r7 {
+  animation-delay: -1.1s;
+}
+.d-fall.r1 {
+  animation-delay: -1.5s;
+}
+.d-fall.r2 {
+  animation-delay: -3s;
+}
+.decor .d-ear {
+  transform-origin: 50% 100%;
+}
+.decor .d-ear.right {
+  animation: d-ear 4s ease-in-out infinite;
+}
+.decor .d-ear.left {
+  animation: d-ear 5.5s ease-in-out -2s infinite;
+}
+.d-bob {
+  animation: d-bob 2.6s ease-in-out infinite alternate;
+}
+.decor .d-wiggle {
+  transform-origin: 50% 20%;
+  animation: d-wiggle 3s ease-in-out infinite;
+}
+.d-glitch {
+  opacity: 0;
+  animation: d-glitch 2.2s steps(1) infinite;
+}
+.d-glitch.b {
+  animation-delay: -0.35s;
+}
+.d-blink {
+  animation: d-blink 1.4s steps(1) infinite;
+}
+.d-thump {
+  animation: d-thump 0.6s ease-out infinite;
+}
+.d-wave {
+  opacity: 0;
+  animation: d-wave 1.2s ease-out infinite;
+}
+.d-wave.w1 {
+  animation-delay: -0.6s;
+}
+.d-zap {
+  animation: d-zap 1.6s steps(1) infinite;
+}
+
+/* characters */
+.char .c-blink {
+  transform-origin: 50% 50%;
+  animation: c-blink 4.2s ease-in-out infinite;
+}
+.char .c-squish {
+  transform-origin: 50% 100%;
+  animation: c-squish 1.6s ease-in-out infinite;
+}
+.c-light {
+  animation: d-blink 1.2s steps(1) infinite;
+}
+.c-float {
+  animation: c-float 2.4s ease-in-out infinite alternate;
+}
+.char .c-ear-l,
+.char .c-ear-r {
+  transform-origin: 50% 100%;
+}
+.char .c-ear-r {
+  animation: d-ear 3.6s ease-in-out infinite;
+}
+.char .c-ear-l {
+  animation: d-ear 5s ease-in-out -1.7s infinite;
+}
+.char .c-wobble {
+  transform-origin: 50% 100%;
+  animation: c-wobble 2.2s ease-in-out infinite alternate;
+}
+.char .c-waddle {
+  transform-origin: 50% 100%;
+  animation: c-tilt 1.4s ease-in-out infinite alternate;
+}
+.c-scan {
+  animation: c-scan 2.4s linear infinite;
+}
+.c-glow {
+  animation: c-glow 1.8s steps(1) infinite;
+}
+.char .c-chew {
+  transform-origin: 0% 100%;
+  animation: c-tilt 1.2s ease-in-out infinite alternate;
+}
+.char .c-wings {
+  transform-origin: 50% 100%;
+  animation: c-wings 0.18s linear infinite alternate;
+}
+.c-tentacles {
+  animation: c-sway 1.8s ease-in-out infinite alternate;
+}
+.char .c-flutter {
+  transform-origin: 0% 50%;
+  animation: c-flutter 0.7s ease-in-out infinite alternate;
+}
+.char .c-twinkle {
+  transform-origin: 50% 50%;
+  animation: d-twinkle 1.6s ease-in-out infinite;
+}
+.char .c-twinkle.late {
+  animation-delay: -0.8s;
+}
+.c-brows {
+  animation: c-brows 3.4s ease-in-out infinite;
+}
+.char .c-smoke {
+  transform-origin: 50% 100%;
+  animation: c-smoke 2.4s ease-out infinite;
+}
+
+@keyframes d-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes d-pulse {
+  from {
+    opacity: 0.35;
+  }
+}
+@keyframes d-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  41% {
+    opacity: 0.4;
+  }
+  43% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.3;
+  }
+  47% {
+    opacity: 1;
+  }
+}
+@keyframes d-twinkle {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.45) rotate(45deg);
+  }
+}
+@keyframes d-flame {
+  from {
+    transform: scale(0.85, 0.75);
+  }
+  to {
+    transform: scale(1.05, 1.18);
+  }
+}
+@keyframes d-ember {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(3px, -18px);
+  }
+}
+@keyframes d-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+@keyframes d-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(10px, 110px) rotate(320deg);
+  }
+}
+@keyframes d-ear {
+  0%,
+  86%,
+  100% {
+    transform: rotate(0deg);
+  }
+  90% {
+    transform: rotate(-9deg);
+  }
+  94% {
+    transform: rotate(5deg);
+  }
+}
+@keyframes d-bob {
+  to {
+    transform: translateY(5px);
+  }
+}
+@keyframes d-wiggle {
+  0%,
+  70%,
+  100% {
+    transform: rotate(0deg);
+  }
+  78% {
+    transform: rotate(-4deg);
+  }
+  86% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes d-glitch {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  10% {
+    opacity: 0.85;
+    transform: translate(-3px, 1px);
+  }
+  14% {
+    opacity: 0.85;
+    transform: translate(3px, -2px);
+  }
+  18% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 0.85;
+    transform: translate(2px, 2px);
+  }
+  63% {
+    opacity: 0;
+  }
+}
+@keyframes d-blink {
+  50% {
+    opacity: 0.15;
+  }
+}
+@keyframes d-thump {
+  0% {
+    transform: scale(1.045);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes d-wave {
+  0% {
+    opacity: 1;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+@keyframes d-zap {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0;
+  }
+  26% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.1;
+  }
+  60% {
+    opacity: 1;
+  }
+}
+@keyframes c-blink {
+  0%,
+  90%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes c-squish {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.06, 0.93);
+  }
+}
+@keyframes c-float {
+  to {
+    transform: translateY(-5px);
+  }
+}
+@keyframes c-wobble {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+@keyframes c-tilt {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}
+@keyframes c-scan {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(37px);
+  }
+}
+@keyframes c-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 0.7;
+  }
+  34% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.8;
+  }
+}
+@keyframes c-wings {
+  to {
+    transform: scaleY(0.55);
+  }
+}
+@keyframes c-sway {
+  from {
+    transform: translateX(-2px);
+  }
+  to {
+    transform: translateX(2px);
+  }
+}
+@keyframes c-flutter {
+  from {
+    transform: rotate(-8deg) scaleX(0.9);
+  }
+  to {
+    transform: rotate(8deg);
+  }
+}
+@keyframes c-brows {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  86% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes c-smoke {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(1.4);
+  }
+}
+
+/* ---- victory animations: around the winner on the podium (and in the look preview) ------------- */
+.wfx {
+  position: absolute;
+  top: var(--wfx-top, 26px);
+  left: 50%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  --wd: 1.4s; /* after the podium reveal */
+  --wn: 3;
+}
+.wfx > * {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  opacity: 0;
+  animation-delay: calc(var(--wd) + var(--d, 0s));
+  animation-iteration-count: var(--wn);
+  animation-fill-mode: both;
+}
+.wfx > i::before,
+.wfx-core::before {
+  display: block;
+  font: 400 1.4rem / 1 system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  transform: translate(-50%, -50%);
+}
+.wfx > i:nth-child(2) {
+  --x: -7px;
+  --y: -78px;
+  --a: -5deg;
+  --lane: -100px;
+  --d: 0s;
+  --s: 0.75;
+}
+.wfx > i:nth-child(3) {
+  --x: 44px;
+  --y: -68px;
+  --a: 33deg;
+  --lane: -23px;
+  --d: 0.13s;
+  --s: 0.95;
+}
+.wfx > i:nth-child(4) {
+  --x: 61px;
+  --y: -58px;
+  --a: 46deg;
+  --lane: 54px;
+  --d: 0.26s;
+  --s: 1.15;
+}
+.wfx > i:nth-child(5) {
+  --x: 87px;
+  --y: -9px;
+  --a: 84deg;
+  --lane: -85px;
+  --d: 0.39s;
+  --s: 0.85;
+}
+.wfx > i:nth-child(6) {
+  --x: 89px;
+  --y: 12px;
+  --a: 98deg;
+  --lane: -8px;
+  --d: 0.52s;
+  --s: 1.05;
+}
+.wfx > i:nth-child(7) {
+  --x: 65px;
+  --y: 66px;
+  --a: 136deg;
+  --lane: 69px;
+  --d: 0.65s;
+  --s: 0.75;
+}
+.wfx > i:nth-child(8) {
+  --x: 49px;
+  --y: 83px;
+  --a: 149deg;
+  --lane: -69px;
+  --d: 0.78s;
+  --s: 0.95;
+}
+.wfx > i:nth-child(9) {
+  --x: -12px;
+  --y: 98px;
+  --a: 187deg;
+  --lane: 8px;
+  --d: 0.01s;
+  --s: 1.15;
+}
+.wfx > i:nth-child(10) {
+  --x: -36px;
+  --y: 95px;
+  --a: 201deg;
+  --lane: 85px;
+  --d: 0.14s;
+  --s: 0.85;
+}
+.wfx > i:nth-child(11) {
+  --x: -89px;
+  --y: 55px;
+  --a: 238deg;
+  --lane: -54px;
+  --d: 0.27s;
+  --s: 1.05;
+}
+.wfx > i:nth-child(12) {
+  --x: -103px;
+  --y: 33px;
+  --a: 252deg;
+  --lane: 23px;
+  --d: 0.4s;
+  --s: 0.75;
+}
+.wfx > i:nth-child(13) {
+  --x: -104px;
+  --y: -38px;
+  --a: 290deg;
+  --lane: 100px;
+  --d: 0.53s;
+  --s: 0.95;
+}
+.wfx > i:nth-child(14) {
+  --x: -67px;
+  --y: -44px;
+  --a: 304deg;
+  --lane: -38px;
+  --d: 0.66s;
+  --s: 1.15;
+}
+.wfx > i:nth-child(15) {
+  --x: -27px;
+  --y: -79px;
+  --a: 341deg;
+  --lane: 38px;
+  --d: 0.79s;
+  --s: 0.85;
+}
+
+/* fireworks: bursts of coloured sparks */
+.wfx-fireworks > i {
+  width: 7px;
+  height: 7px;
+  margin: -3.5px;
+  border-radius: 50%;
+  color: #ffd23f;
+  background: currentColor;
+  box-shadow: 0 0 8px 2px currentColor;
+  animation-name: wfx-burst;
+  animation-duration: 1.3s;
+  animation-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+.wfx-fireworks > i:nth-child(3n) {
+  color: #ff5e8a;
+}
+.wfx-fireworks > i:nth-child(3n + 1) {
+  color: #5ef0ff;
+}
+.wfx-fireworks > i:nth-child(n),
+.wfx-supernova > i:nth-child(n) {
+  --d: 0s;
+}
+.wfx-fireworks > .wfx-core,
+.wfx-supernova > .wfx-core,
+.wfx-lightning > .wfx-core {
+  width: 120px;
+  height: 120px;
+  margin: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 246 214 / 0.85), transparent 65%);
+  animation-name: wfx-flash;
+  animation-duration: 1.3s;
+}
+/* spotlight: a beam from above */
+.wfx-spotlight > .wfx-core {
+  width: 170px;
+  height: 230px;
+  margin: -190px 0 0 -85px;
+  background: linear-gradient(to bottom, rgb(255 241 220 / 0), rgb(255 241 220 / 0.5));
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  animation-name: wfx-beam;
+  animation-duration: 2.4s;
+  --wn: 1;
+}
+/* disco: a mirror ball and its spots of light */
+.wfx-disco > .wfx-core::before {
+  content: "🪩";
+  font-size: 2rem;
+}
+.wfx-disco > .wfx-core {
+  top: -50px;
+  transform-origin: 0 -40px;
+  animation-name: wfx-swing;
+  animation-duration: 1.6s;
+  animation-timing-function: ease-in-out;
+  --wn: infinite;
+}
+.wfx-disco > i {
+  width: 12px;
+  height: 12px;
+  margin: -6px;
+  border-radius: 50%;
+  background: #ff5ec4;
+  animation-name: wfx-spots;
+  animation-duration: 1.6s;
+  animation-timing-function: ease-in-out;
+  --wn: infinite;
+}
+.wfx-disco > i:nth-child(2n) {
+  background: #5ef0ff;
+}
+.wfx-disco > i:nth-child(3n) {
+  background: #ffe14d;
+}
+/* rocket: off it goes, with a trail */
+.wfx-rocket > .wfx-core::before {
+  content: "🚀";
+  font-size: 2rem;
+}
+.wfx-rocket > .wfx-core {
+  animation-name: wfx-launch;
+  animation-duration: 1.8s;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5);
+  --wn: 2;
+}
+.wfx-rocket > i {
+  width: 14px;
+  height: 14px;
+  margin: -7px;
+  border-radius: 50%;
+  background: rgb(255 246 230 / 0.85);
+  animation-name: wfx-puff;
+  animation-duration: 1.8s;
+  --wn: 2;
+}
+/* crown rain, heart storm, balloons, snowstorm: emoji falling or rising across the podium */
+.wfx-crown > i::before {
+  content: "👑";
+}
+.wfx-hearts > i::before {
+  content: "💖";
+}
+.wfx-hearts > i:nth-child(3n)::before {
+  content: "💘";
+}
+.wfx-balloons > i::before {
+  content: "🎈";
+  font-size: 1.9rem;
+}
+.wfx-snow > i::before {
+  content: "❄️";
+  font-size: 1rem;
+}
+.wfx-crown > i,
+.wfx-snow > i {
+  animation-name: wfx-fall;
+  animation-duration: 1.8s;
+  animation-timing-function: ease-in;
+}
+.wfx-snow > i {
+  animation-duration: 3s;
+  animation-timing-function: linear;
+}
+.wfx-hearts > i {
+  animation-name: wfx-burst-up;
+  animation-duration: 1.6s;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+}
+.wfx-balloons > i {
+  animation-name: wfx-float-up;
+  animation-duration: 3.2s;
+  animation-timing-function: ease-out;
+  --wn: 2;
+}
+/* trophy: lifted overhead, glinting */
+.wfx-trophy > .wfx-core::before {
+  content: "🏆";
+  font-size: 2.2rem;
+}
+.wfx-trophy > .wfx-core {
+  animation-name: wfx-lift;
+  animation-duration: 2.2s;
+  animation-timing-function: cubic-bezier(0.3, 1.4, 0.5, 1);
+  --wn: 1;
+}
+.wfx-trophy > i::before,
+.wfx-stardust > i::before {
+  content: "✨";
+  font-size: 0.9rem;
+}
+.wfx-trophy > i {
+  top: -72px;
+  animation-name: wfx-glint;
+  animation-duration: 1.2s;
+  animation-delay: calc(var(--wd) + 0.8s + var(--d, 0s));
+}
+/* supernova: rays and a ring that blast outward */
+.wfx-supernova > i {
+  width: 4px;
+  height: 46px;
+  margin: -23px -2px;
+  border-radius: 2px;
+  background: linear-gradient(#fff7cf, #ff9f1a);
+  animation-name: wfx-ray;
+  animation-duration: 1.4s;
+  animation-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+.wfx-supernova > .wfx-core {
+  background: radial-gradient(circle, transparent 52%, rgb(255 210 120 / 0.9) 58%, transparent 66%);
+  animation-name: wfx-ring;
+  animation-duration: 1.4s;
+}
+/* lightning: bolts strike, the stage flashes */
+.wfx-lightning > i::before {
+  content: "⚡";
+  font-size: 2.2rem;
+}
+.wfx-lightning > i {
+  animation-name: wfx-strike;
+  animation-duration: 1.1s;
+}
+.wfx-lightning > .wfx-core {
+  animation-duration: 1.1s;
+}
+/* stardust: glitter spiralling out */
+.wfx-stardust > i {
+  animation-name: wfx-spiral;
+  animation-duration: 2s;
+  animation-timing-function: ease-out;
+}
+/* lasers: beams sweeping from behind the winner */
+.wfx-lasers > i {
+  width: 3px;
+  height: 160px;
+  margin: -160px -1.5px 0;
+  border-radius: 2px;
+  background: linear-gradient(to top, #ff2e88, rgb(255 46 136 / 0));
+  transform-origin: 50% 100%;
+  animation-name: wfx-sweep;
+  animation-duration: 1.6s;
+  animation-timing-function: ease-in-out;
+  animation-direction: alternate;
+  --wn: 4;
+}
+.wfx-lasers > i:nth-child(2n) {
+  background: linear-gradient(to top, #2ef0ff, rgb(46 240 255 / 0));
+}
+.wfx-lasers > i:nth-child(3n) {
+  background: linear-gradient(to top, #b6ff2e, rgb(182 255 46 / 0));
+}
+
+@keyframes wfx-burst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.4);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x), var(--y)) scale(var(--s));
+  }
+}
+@keyframes wfx-burst-up {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x), calc(var(--y) - 60px)) scale(var(--s));
+  }
+}
+@keyframes wfx-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+@keyframes wfx-beam {
+  0% {
+    opacity: 0;
+  }
+  30%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes wfx-swing {
+  0%,
+  100% {
+    opacity: 1;
+    transform: rotate(-14deg);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(14deg);
+  }
+}
+@keyframes wfx-spots {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: translate(calc(var(--x) * 0.9), calc(var(--y) * 0.5));
+  }
+  50% {
+    opacity: 0.5;
+    transform: translate(calc(var(--x) * -0.7), calc(var(--y) * 0.7));
+  }
+}
+@keyframes wfx-launch {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(-45deg);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, -260px) rotate(-45deg);
+  }
+}
+@keyframes wfx-puff {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3);
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--lane) * 0.25), 30px) scale(1.6);
+  }
+}
+@keyframes wfx-fall {
+  0% {
+    opacity: 0;
+    transform: translate(var(--lane), -150px) rotate(-20deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--lane) + 12px), 60px) rotate(25deg);
+  }
+}
+@keyframes wfx-float-up {
+  0% {
+    opacity: 0;
+    transform: translate(var(--lane), 70px);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--lane) + 16px), -190px);
+  }
+}
+@keyframes wfx-lift {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.4);
+  }
+  40%,
+  100% {
+    opacity: 1;
+    transform: translateY(-72px) scale(1);
+  }
+}
+@keyframes wfx-glint {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--x) * 0.4), calc(var(--y) * 0.3)) scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(calc(var(--x) * 0.4), calc(var(--y) * 0.3)) scale(1);
+  }
+}
+@keyframes wfx-ray {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--a)) translateY(-20px) scaleY(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateY(-110px) scaleY(1);
+  }
+}
+@keyframes wfx-ring {
+  0% {
+    opacity: 1;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+@keyframes wfx-strike {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--lane) * 0.9), -40px) scale(var(--s));
+  }
+  10%,
+  30% {
+    opacity: 1;
+    transform: translate(calc(var(--lane) * 0.9), -40px) scale(var(--s));
+  }
+  20% {
+    opacity: 0.2;
+    transform: translate(calc(var(--lane) * 0.9), -40px) scale(var(--s));
+  }
+}
+@keyframes wfx-spiral {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg) translate(0, 0) scale(0.2);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(140deg) translate(var(--x), var(--y)) scale(var(--s));
+  }
+}
+@keyframes wfx-sweep {
+  from {
+    opacity: 0.9;
+    transform: rotate(calc(var(--a) * 0.25 - 40deg));
+  }
+  to {
+    opacity: 0.9;
+    transform: rotate(calc(var(--a) * 0.25 + 5deg));
+  }
+}
+
+/* reduced motion: still frames and characters, no victory animation */
+@media (prefers-reduced-motion: reduce) {
+  .wfx {
+    display: none;
+  }
+}
+
+/* ---- your look: a spotlit stage to try things on, then the options ---------------------------- */
+.look-stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 22px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+}
+.look-who {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 200px;
+  max-width: 100%;
+  height: 190px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(60% 70% at 50% 40%, rgb(255 231 161 / 0.22), transparent 70%),
+    var(--stage);
+}
+.look-who .wfx {
+  --wd: 0s;
+  --wn: 1;
+  --wfx-top: 50%;
+}
+.look-info {
+  display: grid;
+  flex: 1 1 200px;
+  gap: 8px;
+  justify-items: start;
+  max-width: 340px;
+}
+.look-title {
+  font: 400 1.25rem / 1.2 var(--display);
+}
+.look-note {
+  font-size: 0.9rem;
+}
+.look-slots {
+  margin: 14px 0 0;
+}
+.look-tabs {
+  margin-top: 14px;
+}
+.look-option {
+  min-height: 118px;
+  padding-top: 18px;
+}
+.look-option .avatar {
+  margin-bottom: 4px;
+}
+.look-name {
+  overflow-wrap: anywhere;
+}
+.look-tag {
+  font: 600 0.78rem / 1.2 var(--body);
+  color: var(--muted);
+}
+.look-tag.on {
+  color: var(--ink);
+  font-weight: 700;
+}
+@media (max-width: 479px) {
+  .look-info {
+    justify-items: center;
+    text-align: center;
+  }
+}
+
+/* live reactions: the emote packs you own, folded under the six everyone has */
+.react-wrap {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+.react-more {
+  min-height: 44px;
+  padding: 0 16px;
+  border: var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 0.9rem / 1 var(--body);
+  cursor: pointer;
+}
+.react-more:focus-visible {
+  outline: 3px solid var(--tangerine);
+  outline-offset: 2px;
+}
+.react-extra {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.look-teaser {
+  flex-wrap: wrap;
+  gap: 10px;
+}

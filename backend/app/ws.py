@@ -131,7 +131,7 @@ async def serve_socket(ws: WebSocket, code: str) -> None:
             hub.set_plus(room, pid, plus)
             if owner is not None:
                 level = progress.level_of(owner.xp or 0)
-                look = progress.clean_look(owner.look, level, plus)
+                look = progress.clean_look(owner.look, level, plus, progress.owned_looks(owner.powerups))
                 hub.set_look(room, pid, look, progress.power_slots(level, plus))
         await hub.connect(room, pid, conn)
 

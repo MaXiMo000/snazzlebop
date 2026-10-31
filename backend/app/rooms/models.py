@@ -270,7 +270,8 @@ class Room:
     party_last: dict[str, float] = field(default_factory=dict)
     emote_packs: dict[str, list[str]] = field(default_factory=dict)  # pid -> emote packs they own (checked)
     plus: list[str] = field(default_factory=list)  # seats whose account is a Plus member (the badge)
-    looks: dict[str, dict[str, str]] = field(default_factory=dict)  # pid -> unlocked frame and victory
+    # pid -> their unlocked frame, character and victory animation
+    looks: dict[str, dict[str, str]] = field(default_factory=dict)
     react_logged: dict[str, int] = field(
         default_factory=dict
     )  # pid -> the game a reaction was last logged in

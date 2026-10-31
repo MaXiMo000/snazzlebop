@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app import coins  # noqa: E402
 from app.config import Settings  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.progress import LOOK_PRICES
 from app.rooms import Hub, HubError  # noqa: E402
 from tests.test_api import settings  # noqa: E402
 from tests.test_rooms import FAST, Clock, FakeConn  # noqa: E402
@@ -185,9 +186,8 @@ def test_coins_for_places_daily_cap_shop_and_leaderboard(client):
     board = client.get("/api/leaderboard").json()
     assert board["rows"][0]["username"] == "Ana_99" and board["rows"][0]["points"] == 600
     items = client.get("/api/shop").json()["items"]
-    assert {i["id"] for i in items} == set(coins.GAME_POWER_PRICES) | set(coins.PARTY_PRICES) | set(
-        coins.EMOTE_PRICES
-    ) and all(i["game"] for i in items)
+    sold = set(coins.GAME_POWER_PRICES) | set(coins.PARTY_PRICES) | set(coins.EMOTE_PRICES) | set(LOOK_PRICES)
+    assert {i["id"] for i in items} == sold and all(i["game"] for i in items)
     client.post("/api/auth/logout")
     assert client.post("/api/shop/buy", json={"item": "peek"}).status_code == 401
 

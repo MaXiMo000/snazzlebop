@@ -26,18 +26,20 @@ class LookBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     frame: str = Field(max_length=16)
     win: str = Field(max_length=16)
+    char: str | None = Field(default=None, max_length=16)  # left out: keep the current character
 
 
 def _look(user: Any) -> dict[str, Any]:
     level = progress.level_of(user.xp or 0)
     plus = billing.has_plus(user)
+    owned = progress.owned_looks(user.powerups)
     return {
         "level": level,
         "plus": plus,
         "slots": progress.power_slots(level, plus),
         "slot_level": progress.SLOT_LEVEL,
-        **progress.clean_look(user.look, level, plus),
-        **progress.look_options(level, plus),
+        **progress.clean_look(user.look, level, plus, owned),
+        **progress.look_options(level, plus, owned),
     }
 
 
@@ -63,13 +65,18 @@ def router(settings: Settings, db: Any) -> APIRouter:
         check_same_origin(request, settings)
         user = await me(request)
         level, plus = progress.level_of(user.xp or 0), billing.has_plus(user)
-        for pick, table in ((body.frame, progress.FRAMES), (body.win, progress.WINS)):
-            if pick not in table:
+        owned = progress.owned_looks(user.powerups)
+        char = (
+            body.char if body.char is not None else progress.clean_look(user.look, level, plus, owned)["char"]
+        )
+        look = {"frame": body.frame, "char": char, "win": body.win}
+        for kind, pick in look.items():
+            if pick not in progress.LOOKS[kind]:
                 raise HubError("bad_look", "That isn't one of the looks", 400)
-            if not progress.unlocked(table[pick][1], level, plus):
+            if not progress.unlocked(kind, pick, level, plus, owned):
                 raise HubError("locked", "Unlock that one first", 403)
-        await db.set_look(user.id, {"frame": body.frame, "win": body.win})
-        user.look = {"frame": body.frame, "win": body.win}
+        await db.set_look(user.id, look)
+        user.look = look
         return JSONResponse(_look(user), headers={"Cache-Control": "no-store"})
 
     @api.get("/api/me/progress", response_model=schemas.Progress, responses=schemas.ERRORS)

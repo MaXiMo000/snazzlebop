@@ -362,7 +362,7 @@ const ACCT_TABS: [AcctTab, string][] = [
 const SHOP_GROUPS: [string, (game: string) => boolean][] = [
   ["Party items: any game", (g) => g.startsWith("Party")],
   ["Emote packs", (g) => g === "Emotes"],
-  ["Power-ups for each game", (g) => !g.startsWith("Party") && g !== "Emotes"],
+  ["Power-ups for each game", (g) => !g.startsWith("Party") && g !== "Emotes" && g !== "Looks"],
 ];
 
 function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSignedOut: () => void; notice: Notice }) {
@@ -384,7 +384,7 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
   if (!user) return null;
   const shopCard = (
     <Card aria-labelledby="shop-h">
-      <h3 id="shop-h">Shop</h3>
+      <h2 id="shop-h">Power-ups, party items and emotes</h2>
       <p className="muted">
         Power-ups work one per game in casual rooms (never ranked games or battles), and everyone sees when you use one. Party items work anywhere; emote packs are
         yours for good.
@@ -398,7 +398,7 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
             <ul className="shop-grid">
               {group.map((it) => {
                 const owned = user.powerups[it.id] ?? 0;
-                const kept = it.id.startsWith("emote_"); // emote packs are bought once and kept
+                const kept = it.id.startsWith("emote_") || it.id.startsWith("look_"); // bought once and kept
                 return (
                   <li key={it.id} className="shop-item">
                     <span className="shop-item-icon" aria-hidden="true">
@@ -507,11 +507,31 @@ function Profile({ go, onSignedOut, notice }: { go: (path: string) => void; onSi
         ))}
       </div>
 
-      {tab === "shop" && shopCard}
+      {tab === "shop" && (
+        <>
+          <YourLook username={user.username} go={go} />
+          {shopCard}
+        </>
+      )}
 
       {tab === "profile" && (
         <>
-          <YourLook username={user.username} />
+          <Card className="row between look-teaser">
+            <span>
+              <b>Your look</b>
+              <span className="muted"> Animated frames, characters and victory animations</span>
+            </span>
+            <Btn
+              size="small"
+              variant="gold"
+              onClick={() => {
+                setTab("shop");
+                history.replaceState(null, "", "#shop");
+              }}
+            >
+              Change your look
+            </Btn>
+          </Card>
           <div className="grid">
             <Card aria-labelledby="board-h">
               <h3 id="board-h">{month ? `${month} leaderboard` : "Season leaderboard"}</h3>

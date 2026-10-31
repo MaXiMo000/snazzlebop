@@ -117,7 +117,8 @@ class User(Base):
     xp: Mapped[int] = mapped_column(Integer, default=0)  # the cached sum of xp_events (progress.py)
     # Snazzlebop Plus is on until then (billing.py; set only by Paddle's signed webhooks).
     plus_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    # The cosmetics this account picked ({"frame": id, "win": id}); progress.clean_look checks unlocks.
+    # The cosmetics this account picked ({"frame": id, "char": id, "win": id}); progress.clean_look
+    # checks the unlocks.
     look: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=dict)
 
 

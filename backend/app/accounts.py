@@ -47,6 +47,7 @@ from .config import Settings
 from .db import aware, suspended
 from .games import REGISTRY
 from .mailer import Mailer
+from .progress import LOOK_PRICES, LOOKS, shop_id
 from .rooms import HubError
 from .security import RateLimiter, client_ip
 
@@ -90,6 +91,12 @@ LINK_SECONDS = 15 * 60  # an emailed sign-in link
 GOOGLE_CODE_SECONDS = 5 * 60  # after Google, to enter the authenticator code
 FRESH_SECONDS = 15 * 60  # how recent a sign-in stands in for a password (accounts without one)
 RESET_GAP = 60.0  # one reset email per account per minute, whatever the rate limits allow
+# The shop shelf for each kind of look: its icon and what it is.
+LOOK_SHELF = {
+    "frame": ("💫", "An animated frame around your avatar, seen in every room"),
+    "char": ("🎭", "An animated character in place of your face, seen in every room"),
+    "win": ("🏆", "A victory animation the whole room sees when you win"),
+}
 
 
 # -- validation --------------------------------------------------------------------------------------
@@ -1073,17 +1080,38 @@ def router(
                     "text": text,
                 }
             )
+        for kind, table in LOOKS.items():
+            icon, what = LOOK_SHELF[kind]
+            for pick, (name, how, price) in table.items():
+                if how == "shop":
+                    text = f"{what}. Yours to keep: wear it from Your look"
+                    items.append(
+                        {
+                            "id": shop_id(kind, pick),
+                            "price": price,
+                            "game": "Looks",
+                            "name": name,
+                            "icon": icon,
+                            "text": text,
+                        }
+                    )
         return {"items": items}
 
     @api.post("/api/shop/buy", response_model=schemas.UserBody, responses=schemas.ERRORS)
     async def buy(body: BuyBody, request: Request) -> JSONResponse:
         same_origin(request)
         user = await require_user(request)
-        price = GAME_POWER_PRICES.get(body.item) or PARTY_PRICES.get(body.item) or EMOTE_PRICES.get(body.item)
+        price = (
+            GAME_POWER_PRICES.get(body.item)
+            or PARTY_PRICES.get(body.item)
+            or EMOTE_PRICES.get(body.item)
+            or LOOK_PRICES.get(body.item)
+        )
         if price is None:
             raise HubError("bad_item", "That's not in the shop")
-        if body.item in EMOTE_PRICES and (user.powerups or {}).get(body.item):
-            raise HubError("owned", "You have that emote pack already")
+        kept = body.item in EMOTE_PRICES or body.item in LOOK_PRICES  # bought once, kept for good
+        if kept and (user.powerups or {}).get(body.item):
+            raise HubError("owned", "You have that one already")
         updated = await db.buy(user.id, body.item, price)
         if updated is None:
             raise HubError("not_enough_coins", "Not enough coins for that yet")
