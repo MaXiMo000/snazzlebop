@@ -6,6 +6,24 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+.acct-btn .coins-narrow {
+  display: none;
+}
+/* the smallest phones: a four-figure balance and every button still fit on one line */
+@media (max-width: 359px) {
+  .topbar-tools {
+    gap: 5px;
+  }
+  .topbar-tools .acct-btn {
+    padding-inline: 8px;
+  }
+  .acct-btn .coins-wide {
+    display: none;
+  }
+  .acct-btn .coins-narrow {
+    display: inline;
+  }
+}
 .acct-title {
   font-size: clamp(1.4rem, 5.5vw, 2rem);
   line-height: 1.15;

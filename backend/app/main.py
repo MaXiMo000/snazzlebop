@@ -385,6 +385,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 html = pages.render(index.read_text(encoding="utf-8"), page, canonical, settings.site)
                 return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
             return FileResponse(index, headers={"Cache-Control": "no-cache"})
+        if index.is_file():
+            # A mistyped address: the site's own "not found" page, still a 404 and kept out of search.
+            html = pages.render(index.read_text(encoding="utf-8"), pages.NOT_FOUND, "", settings.site)
+            html = html.replace("</head>", '<meta name="robots" content="noindex" /></head>', 1)
+            return HTMLResponse(html, status_code=404, headers={"Cache-Control": "no-cache"})
         return _error(404, "not_found", "Not found")
 
     return app

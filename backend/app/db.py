@@ -1986,14 +1986,21 @@ class Database:
             "asked": by_name((i, n) for i, n in theirs.items() if i not in mine),
         }
 
-    async def buy(self, user_id: int, item: str, price: int) -> User | None:
-        """Spend coins on a power-up in one step: None (and nothing spent) if there aren't enough."""
+    async def buy(self, user_id: int, item: str, price: int, once: bool = False) -> User | None:
+        """Spend coins on a power-up in one step: None (and nothing spent) if there aren't enough. `once`:
+        an item that's kept (a look, an emote pack) is never charged for twice, even by two taps at once."""
         async with self.sessions() as session:
             row = await session.execute(select(User).where(User.id == user_id).with_for_update())
             user = row.scalar_one_or_none()
+            if user is not None and once and (user.powerups or {}).get(item):
+                return user
             if user is None or user.coins < price:
                 return None
-            await self._post(session, user_id, -price, "shop", "item", f"{item}:{secrets.token_hex(6)}")
+            # a kept item's purchase has one fixed reference, so the ledger refuses a second one outright
+            ref = item if once else f"{item}:{secrets.token_hex(6)}"
+            if not await self._post(session, user_id, -price, "shop", "item", ref):
+                await session.rollback()
+                return await session.get(User, user_id)
             await session.refresh(user)
             owned = dict(user.powerups or {})
             owned[item] = owned.get(item, 0) + 1

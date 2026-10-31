@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { CallButton } from "./components/call";
 import { ChatButton } from "./components/chat";
-import { Btn, SoundToggle, ThemeToggle, Loading } from "./components/ui";
+import { Btn, Card, SoundToggle, ThemeToggle, Loading } from "./components/ui";
 import { refreshAccount, useAccount } from "./lib/account";
 import { useInbox } from "./lib/notify";
 import { Account, type AccountView } from "./pages/Account";
@@ -117,6 +117,11 @@ function OfflineNotice() {
   );
 }
 
+// A big balance reads short in the top bar ("12.5K"), from 1,000 on the smallest phones; the button's label
+// still says the exact number.
+const short = (n: number, from: number, decimals = 1) =>
+  n >= from ? new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: decimals }).format(n) : String(n);
+
 /** Top bar: your coins when signed in; signed out, a way to sign in inside rooms (elsewhere the site
  * navigation already has it). Hidden if accounts are down. */
 function AccountButton({ go, inRoom }: { go: (p: string) => void; inRoom: boolean }) {
@@ -134,7 +139,8 @@ function AccountButton({ go, inRoom }: { go: (p: string) => void; inRoom: boolea
     >
       {user ? (
         <>
-          <span aria-hidden="true">🪙</span> {user.coins}
+          <span aria-hidden="true">🪙</span> <span className="coins-wide">{short(user.coins, 10_000)}</span>
+          <span className="coins-narrow">{short(user.coins, 1_000, user.coins < 10_000 ? 1 : 0)}</span>
         </>
       ) : (
         <>
@@ -233,13 +239,37 @@ export function App() {
           <InboxPage go={go} />
         ) : joinMatch ? (
           <JoinClub code={joinMatch[1]!} go={go} />
-        ) : (
+        ) : path === "/" ? (
           <Home go={go} />
+        ) : (
+          <NotFound go={go} />
         )}
         </Suspense>
       </main>
       {!match && <SiteFooter go={go} />}
     </>
+  );
+}
+
+/** A mistyped address (the server answers it with a 404 too). */
+function NotFound({ go }: { go: (p: string) => void }) {
+  useEffect(() => {
+    document.title = "Page not found · Snazzlebop";
+  }, []);
+  return (
+    <Card tone="stage" className="center">
+      <p className="sign">Not found</p>
+      <h1 className="space-top prose-title">That page isn't part of the show</h1>
+      <p className="space-top">The address may be mistyped or the page has moved.</p>
+      <div className="row center space-top">
+        <Btn variant="gold" onClick={() => go("/")}>
+          Host or join a room
+        </Btn>
+        <Btn variant="ghost" onClick={() => go("/games")}>
+          All games
+        </Btn>
+      </div>
+    </Card>
   );
 }
 

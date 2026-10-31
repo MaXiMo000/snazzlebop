@@ -127,3 +127,26 @@ def test_shop_looks_are_bought_once_then_worn(client):
         == 403
     )
     assert client.post("/api/me/look", json={"frame": "none", "win": "x" * 17}).status_code == 422
+
+
+def test_a_kept_item_is_never_charged_twice_even_at_once(client):
+    signup(client)
+    item = P.shop_id("char", "dragon")
+    price = P.LOOK_PRICES[item]
+    set_user(client, coins=price * 3)
+    db = client.app.state.db
+    user = client.portal.call(db.user_by_name, "Ana_99")
+
+    client.portal.call(db.buy, user.id, item, price, True)
+    client.portal.call(db.buy, user.id, item, price, True)  # a second tap, however it arrives
+    # even past the "already owned" check, the ledger takes one payment per kept item
+    client.portal.call(db.set_look, user.id, {})
+    owned_before = client.portal.call(db.user_by_id, user.id)
+
+    async def sneak():
+        async with db.sessions() as session:
+            return await db._post(session, user.id, -price, "shop", "item", item)
+
+    assert client.portal.call(sneak) is False and owned_before.coins == price * 2
+    me = client.get("/api/me").json()["user"]
+    assert me["coins"] == price * 2 and me["powerups"][item] == 1

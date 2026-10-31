@@ -254,6 +254,16 @@ def page_for(
     return None
 
 
+NOT_FOUND: Page = (
+    f"Page not found · {SITE}",
+    "That page isn't part of the show. Host a room or browse the games instead.",
+    _shell(
+        "<h1>That page isn't part of the show</h1><p>The address may be mistyped or the page has moved.</p>"
+    ),
+    [],
+)
+
+
 def _ld(data: list[dict[str, Any]]) -> str:
     """JSON-LD as a data block (not run as a script, so the Content Security Policy doesn't apply);
     "<" is escaped so no value can close the element early."""

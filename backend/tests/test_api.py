@@ -142,13 +142,17 @@ def test_room_code_guessing_gets_rate_limited(tmp_path):
 def test_production_hides_docs(tmp_path):
     # With a built SPA present, like the real image: the catch-all must not answer for these.
     (tmp_path / "static").mkdir()
-    (tmp_path / "static" / "index.html").write_text("<html>app</html>")
+    (tmp_path / "static" / "index.html").write_text(
+        '<html><head><title>app</title></head><body><div id="root"></div></body></html>'
+    )
     s = settings(
         tmp_path, env="production", allowed_hosts=("testserver",), allowed_origins=("https://testserver",)
     )
     with TestClient(create_app(s)) as c:
         for path in ("/docs", "/openapi.json", "/redoc", "/admin", "/r/ABCDE/extra"):
-            assert c.get(path).status_code == 404, path
+            r = c.get(path)
+            # a 404 with the site's own page, kept out of search: never the API docs
+            assert r.status_code == 404 and "noindex" in r.text and "openapi" not in r.text, path
         assert c.get("/").status_code == 200
         assert c.get("/r/ABCDE").status_code == 200
         head = c.head("/")

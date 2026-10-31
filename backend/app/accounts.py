@@ -1112,7 +1112,7 @@ def router(
         kept = body.item in EMOTE_PRICES or body.item in LOOK_PRICES  # bought once, kept for good
         if kept and (user.powerups or {}).get(body.item):
             raise HubError("owned", "You have that one already")
-        updated = await db.buy(user.id, body.item, price)
+        updated = await db.buy(user.id, body.item, price, once=kept)
         if updated is None:
             raise HubError("not_enough_coins", "Not enough coins for that yet")
         return JSONResponse({"user": public_user(updated)}, headers={"Cache-Control": "no-store"})

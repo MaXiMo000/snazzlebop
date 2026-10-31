@@ -609,6 +609,13 @@ body {
 .tab {
   padding: 8px 10px;
 }
+/* the smallest phones: three tabs with a count ("Board (12)") still fit their third of the row */
+@media (max-width: 359px) {
+  .tab {
+    padding-inline: 4px;
+    font-size: 0.88rem;
+  }
+}
 /* a table that wraps its text columns to fit a phone; the first column (a time) stays on one line */
 .table.fit th:not(:first-child),
 .table.fit td:not(:first-child) {
