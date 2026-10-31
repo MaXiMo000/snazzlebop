@@ -206,8 +206,10 @@
 }
 /* The reveal: a rubber stamp. */
 .mf-stamp {
+  max-width: calc(100% - 16px); /* room for the tilt on a narrow phone */
   margin: 4px 0 0;
   padding: 6px 16px;
+  overflow-wrap: anywhere;
   border: 4px solid currentColor;
   border-radius: 10px;
   color: #7fe3a8;

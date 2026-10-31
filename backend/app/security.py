@@ -294,7 +294,18 @@ class SecurityHeaders:
         await self.app(scope, receive, wrapped)
 
 
-SHAREABLE = frozenset({"/og.png", "/icon-512.png", "/icon-192.png", "/apple-touch-icon.png", "/favicon.svg"})
+SHAREABLE = frozenset(
+    {
+        "/og.png",
+        "/icon-512.png",
+        "/icon-192.png",
+        "/apple-touch-icon.png",
+        "/favicon.svg",
+        "/favicon.ico",
+        "/favicon-48.png",
+        "/favicon-96.png",
+    }
+)
 
 
 class BodyLimit:
